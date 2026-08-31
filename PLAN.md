@@ -108,6 +108,18 @@
 - [ ] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
 - [ ] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
 
+> **Faz 3'ten devreden notlar (Faz 4'te dikkat edilecek):**
+> - `Grind.Api.Common.Exceptions.ValidationException`, `System.ComponentModel.DataAnnotations.ValidationException`
+>   ile aynı kısa ada sahip. DTO'lara DataAnnotations `using`'i geldiğinde tam nitelikli ad ya da
+>   `using ValidationException = Grind.Api.Common.Exceptions.ValidationException;` alias'ı gerekecek.
+> - **404-over-403 kararını hiçbir tip veya test korumuyor.** `GlobalExceptionHandler`, 4xx'lerde
+>   `exception.Message`'ı `detail` olarak Production'da da aynen yansıtıyor. Karar ancak her servis
+>   NÖTR bir `NotFoundException` mesajı yazdığı sürece geçerli — `new NotFoundException("Bu egzersiz
+>   size ait değil")` gibi bir mesaj, kararın kapattığı enumerasyon sızıntısını geri açar.
+> - Kimlik SADECE `ICurrentUserService` üzerinden okunacak. `User.Identity.Name` artık dolu
+>   (`NameClaimType = AppClaims.Username`) ama claim'lere elle uzanmak sahiplik kontrolünü atlamayı
+>   kolaylaştırır.
+
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
 - [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
       güncelleme, arşivleme (soft delete)
