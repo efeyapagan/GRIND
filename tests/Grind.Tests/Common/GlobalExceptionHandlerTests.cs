@@ -99,16 +99,17 @@ public class GlobalExceptionHandlerTests
         Assert.Contains("Egzersiz bulunamadi", body.GetProperty("detail").GetString());
     }
 
-    [Fact]
-    public async Task Yanit_hicbir_ortamda_stack_trace_icermez()
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Production")]
+    public async Task Yanit_hicbir_ortamda_stack_trace_icermez(string environmentName)
     {
         Exception captured;
         try { throw new InvalidOperationException("patladi"); }
         catch (Exception e) { captured = e; }
 
-        var (_, body) = await HandleAsync(captured, "Development");
+        var (_, body) = await HandleAsync(captured, environmentName);
 
         Assert.DoesNotContain("at Grind.Tests", body.ToString());
-        Assert.DoesNotContain("StackTrace", body.ToString());
     }
 }

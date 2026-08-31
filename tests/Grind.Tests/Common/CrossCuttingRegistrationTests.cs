@@ -1,13 +1,24 @@
 using Grind.Api.Common;
+using Grind.Api.Common.ErrorHandling;
 using Grind.Api.Common.Security;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Grind.Tests.Common;
 
 public class CrossCuttingRegistrationTests
 {
+    private sealed class FakeEnvironment(string environmentName = "Production") : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+        public string ApplicationName { get; set; } = "Grind.Api.Tests";
+        public string ContentRootPath { get; set; } = string.Empty;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
+            new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+
     private static JwtSettings ValidSettings() => new()
     {
         Key = "bu-yalnizca-test-icin-kullanilan-en-az-256-bitlik-bir-anahtardir",
@@ -20,7 +31,7 @@ public class CrossCuttingRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddCrossCutting(ValidSettings());
+        services.AddCrossCutting(ValidSettings(), new FakeEnvironment());
         return services.BuildServiceProvider(validateScopes: true);
     }
 
@@ -44,9 +55,11 @@ public class CrossCuttingRegistrationTests
         // yerine sadece IExceptionHandler kaydinin var oldugu dogrulanir (bkz. task-5 kararlari).
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddCrossCutting(ValidSettings());
+        services.AddCrossCutting(ValidSettings(), new FakeEnvironment());
 
-        Assert.Contains(services, d => d.ServiceType == typeof(IExceptionHandler));
+        Assert.Contains(services, d =>
+            d.ServiceType == typeof(IExceptionHandler) &&
+            d.ImplementationType == typeof(GlobalExceptionHandler));
     }
 
     [Fact]
@@ -59,7 +72,7 @@ public class CrossCuttingRegistrationTests
         settings.Key = "cok-kisa";
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddCrossCutting(settings));
+            () => services.AddCrossCutting(settings, new FakeEnvironment()));
 
         Assert.Contains("Jwt:Key", exception.Message);
     }
@@ -71,6 +84,7 @@ public class CrossCuttingRegistrationTests
         var settings = ValidSettings();
         settings.Key = string.Empty;
 
-        Assert.Throws<InvalidOperationException>(() => services.AddCrossCutting(settings));
+        Assert.Throws<InvalidOperationException>(
+            () => services.AddCrossCutting(settings, new FakeEnvironment()));
     }
 }
