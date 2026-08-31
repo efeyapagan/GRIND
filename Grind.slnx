@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Grind.Api/Grind.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Grind.Tests/Grind.Tests.csproj" />
+  </Folder>
+</Solution>
