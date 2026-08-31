@@ -50,6 +50,7 @@ public class GlobalExceptionHandlerTests
     [Theory]
     [InlineData(typeof(NotFoundException), 404)]
     [InlineData(typeof(ValidationException), 400)]
+    [InlineData(typeof(UnauthorizedException), 401)]
     [InlineData(typeof(ForbiddenException), 403)]
     [InlineData(typeof(ConflictException), 409)]
     public async Task Domain_exceptionlari_dogru_duruma_eslenir(Type exceptionType, int expected)
@@ -97,6 +98,16 @@ public class GlobalExceptionHandlerTests
         var (_, body) = await HandleAsync(new NotFoundException("Egzersiz bulunamadi"), "Production");
 
         Assert.Contains("Egzersiz bulunamadi", body.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public async Task Yetkisiz_hatasinin_mesaji_yanita_aynen_yansir()
+    {
+        var (statusCode, body) = await HandleAsync(
+            new UnauthorizedException("Kullanıcı adı veya şifre hatalı."));
+
+        Assert.Equal(401, statusCode);
+        Assert.Equal("Kullanıcı adı veya şifre hatalı.", body.GetProperty("detail").GetString());
     }
 
     [Theory]
