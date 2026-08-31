@@ -6,6 +6,11 @@ on:
   push:
     branches: [master, dev]
 
+# Ayni branch'e arka arkaya push yapilinca devam eden eski run iptal edilir.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     name: Derle ve test et
@@ -43,19 +48,32 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: NuGet paketlerini onbellekten al
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '.config/dotnet-tools.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Bagimliliklari geri yukle
         run: dotnet restore
 
       - name: Derle
         run: dotnet build --no-restore --configuration Release
 
-      - name: EF Core araclarini kur
-        run: |
-          dotnet tool install --global dotnet-ef
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+      # dotnet-ef surumu .config/dotnet-tools.json'da sabitli — her run'da en son
+      # surumu cekip bir gun sessizce kirilmasin diye.
+      - name: EF Core araclarini geri yukle
+        run: dotnet tool restore
+
+      # Sema ile model arasindaki sessiz ayrisma bu projede en pahali hata sinifi:
+      # biri bir konfigurasyon sinifini degistirip migration uretmeyi unutursa
+      # burada durur. Drift yoksa 0, varsa 1 doner.
+      - name: Migration drift kontrolu
+        run: dotnet dotnet-ef migrations has-pending-model-changes --project src/Grind.Api --configuration Release --no-build
 
       - name: Semayi uygula (migration)
-        run: dotnet ef database update --project src/Grind.Api --configuration Release --no-build
+        run: dotnet dotnet-ef database update --project src/Grind.Api --configuration Release --no-build
 
       - name: Testleri calistir
         run: dotnet test --no-build --configuration Release --verbosity normal
