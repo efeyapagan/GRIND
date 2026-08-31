@@ -11,8 +11,8 @@
 | 0 | Ortam ve iskelet | ✅ |
 | 1 | Domain + Persistence | ✅ |
 | 2 | Repository + Unit of Work | ✅ |
-| 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ⏳ sırada |
-| 4 | Feature: Auth | ☐ |
+| 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
+| 4 | Feature: Auth | ⏳ sırada |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
 | 6 | Feature: WorkoutTemplate | ☐ |
 | 7 | Feature: WorkoutSession | ☐ |
@@ -86,14 +86,20 @@
 - [x] 2.4 DI kayıtları (`Program.cs` / `DependencyInjection` extension)
 
 ## Faz 3 — Cross-cutting
-- [ ] 3.1 Domain exception hiyerarşisi: `NotFoundException`, `ValidationException`,
+- [x] 3.1 Domain exception hiyerarşisi: `NotFoundException`, `ValidationException`,
       `ForbiddenException`, `ConflictException`
-- [ ] 3.2 Global exception handling middleware → RFC 7807 ProblemDetails, prod'da stack
+- [x] 3.2 Global exception handling middleware → RFC 7807 ProblemDetails, prod'da stack
       trace sızdırmaz, loglar (path + zaman + UserId)
-- [ ] 3.3 JWT üretimi/doğrulaması — token SADECE `UserId` + `Username` taşır
-- [ ] 3.4 `ICurrentUserService` — `HttpContext`'ten aktif kullanıcı
-- [ ] 3.5 Ortak sahiplik kontrolü yardımcısı (UserId == current || UserId == null) — DRY
-- [ ] 3.6 FluentValidation pipeline + Swagger (JWT bearer destekli)
+- [x] 3.3 JWT üretimi/doğrulaması — token SADECE `UserId` + `Username` taşır
+- [x] 3.4 `ICurrentUserService` — `HttpContext`'ten aktif kullanıcı
+- [x] 3.5 Ortak sahiplik kontrolü yardımcısı (UserId == current || UserId == null) — DRY
+- [x] 3.6 Doğrulama: DataAnnotations + `[ApiController]`'ın otomatik 400'ü (RFC 7807 uyumlu
+      `ValidationProblemDetails` zaten üretiyor). **FluentValidation eklenmiyor** — Faz 0 kararı
+      (satır 36) geçerli; buradaki eski satır onunla çelişiyordu. + Swagger (JWT bearer)
+- [x] 3.7 `Grind.Api.Common.DependencyInjection.AddCrossCutting` — JWT/authn/authz,
+      `ICurrentUserService`, global exception handler tek noktada DI'a kaydedildi;
+      `Program.cs` pipeline'a bağlandı (`UseExceptionHandler` → `UseAuthentication` →
+      `UseAuthorization`), Swagger'a Bearer güvenlik şeması eklendi
 
 ## Faz 4 — Feature: Auth
 - [ ] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse
@@ -101,6 +107,18 @@
       username çakışma kontrolü → 409
 - [ ] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
 - [ ] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
+
+> **Faz 3'ten devreden notlar (Faz 4'te dikkat edilecek):**
+> - `Grind.Api.Common.Exceptions.ValidationException`, `System.ComponentModel.DataAnnotations.ValidationException`
+>   ile aynı kısa ada sahip. DTO'lara DataAnnotations `using`'i geldiğinde tam nitelikli ad ya da
+>   `using ValidationException = Grind.Api.Common.Exceptions.ValidationException;` alias'ı gerekecek.
+> - **404-over-403 kararını hiçbir tip veya test korumuyor.** `GlobalExceptionHandler`, 4xx'lerde
+>   `exception.Message`'ı `detail` olarak Production'da da aynen yansıtıyor. Karar ancak her servis
+>   NÖTR bir `NotFoundException` mesajı yazdığı sürece geçerli — `new NotFoundException("Bu egzersiz
+>   size ait değil")` gibi bir mesaj, kararın kapattığı enumerasyon sızıntısını geri açar.
+> - Kimlik SADECE `ICurrentUserService` üzerinden okunacak. `User.Identity.Name` artık dolu
+>   (`NameClaimType = AppClaims.Username`) ama claim'lere elle uzanmak sahiplik kontrolünü atlamayı
+>   kolaylaştırır.
 
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
 - [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
