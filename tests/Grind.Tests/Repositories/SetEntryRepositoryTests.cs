@@ -8,6 +8,7 @@ public class SetEntryRepositoryTests
 {
     private const long PullUpId = 6;   // seed
     private const long SquatId = 11;   // seed
+    private const long LatPulldownId = 8;   // seed
 
     private static SetEntry NewSet(WorkoutSession session, long exerciseId, int reps, DateTime createdAt)
         => new()
@@ -102,6 +103,11 @@ public class SetEntryRepositoryTests
         context.SetEntries.Add(NewSet(session, PullUpId, 8, DateTime.UtcNow));
         context.SetEntries.Add(NewSet(session, PullUpId, 6, DateTime.UtcNow));
         context.SetEntries.Add(NewSet(session, SquatId, 5, DateTime.UtcNow));
+
+        // Second session with a different exercise to verify session scoping
+        var session2 = TestDatabase.NewSession(user);
+        context.WorkoutSessions.Add(session2);
+        context.SetEntries.Add(NewSet(session2, LatPulldownId, 10, DateTime.UtcNow));
         await context.SaveChangesAsync();
 
         var ids = await repository.GetDistinctExerciseIdsForSessionAsync(session.Id);
@@ -109,6 +115,7 @@ public class SetEntryRepositoryTests
         Assert.Equal(2, ids.Count);
         Assert.Contains(PullUpId, ids);
         Assert.Contains(SquatId, ids);
+        Assert.DoesNotContain(LatPulldownId, ids);
         await transaction.RollbackAsync();
     }
 }
