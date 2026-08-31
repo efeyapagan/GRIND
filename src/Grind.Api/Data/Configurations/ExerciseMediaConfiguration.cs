@@ -12,5 +12,10 @@ public class ExerciseMediaConfiguration : IEntityTypeConfiguration<ExerciseMedia
     {
         builder.Property(m => m.MediaType).HasConversion(new EnumToStringConverter<MediaType>()).HasMaxLength(20).IsRequired();
         builder.Property(m => m.Url).HasMaxLength(500).IsRequired();
+
+        builder.HasOne(m => m.Exercise)
+            .WithMany(e => e.Media)
+            .HasForeignKey(m => m.ExerciseId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

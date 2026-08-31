@@ -14,5 +14,20 @@ public class AiInsightConfiguration : IEntityTypeConfiguration<AiInsight>
         builder.Property(a => a.Content).IsRequired();
         builder.Property(a => a.Model).HasMaxLength(100).IsRequired();
         builder.Property(a => a.EstimatedCostUsd).HasPrecision(10, 6);
+
+        builder.HasOne(a => a.User)
+            .WithMany(u => u.AiInsights)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(a => a.WorkoutSession)
+            .WithMany(s => s.AiInsights)
+            .HasForeignKey(a => a.WorkoutSessionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(a => a.SetEntry)
+            .WithMany(s => s.AiInsights)
+            .HasForeignKey(a => a.SetEntryId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

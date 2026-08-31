@@ -9,5 +9,10 @@ public class WorkoutTemplateConfiguration : IEntityTypeConfiguration<WorkoutTemp
     public void Configure(EntityTypeBuilder<WorkoutTemplate> builder)
     {
         builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
+
+        builder.HasOne(t => t.User)
+            .WithMany(u => u.WorkoutTemplates)
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

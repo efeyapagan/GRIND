@@ -12,5 +12,10 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
     {
         builder.Property(e => e.Name).HasMaxLength(100).IsRequired();
         builder.Property(e => e.Category).HasConversion(new EnumToStringConverter<ExerciseCategory>()).HasMaxLength(20).IsRequired();
+
+        builder.HasOne(e => e.User)
+            .WithMany(u => u.Exercises)
+            .HasForeignKey(e => e.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

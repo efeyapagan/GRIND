@@ -9,5 +9,10 @@ public class BodyWeightLogConfiguration : IEntityTypeConfiguration<BodyWeightLog
     public void Configure(EntityTypeBuilder<BodyWeightLog> builder)
     {
         builder.Property(b => b.Weight).HasPrecision(6, 2);
+
+        builder.HasOne(b => b.User)
+            .WithMany(u => u.BodyWeightLogs)
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
