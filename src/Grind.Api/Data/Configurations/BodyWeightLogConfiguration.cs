@@ -16,5 +16,8 @@ public class BodyWeightLogConfiguration : IEntityTypeConfiguration<BodyWeightLog
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(b => new { b.UserId, b.RecordedAt });
+
+        builder.ToTable(t =>
+            t.HasCheckConstraint("CK_BodyWeightLog_Weight_Positive", "\"Weight\" > 0"));
     }
 }

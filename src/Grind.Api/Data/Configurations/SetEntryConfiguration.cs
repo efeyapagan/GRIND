@@ -24,5 +24,12 @@ public class SetEntryConfiguration : IEntityTypeConfiguration<SetEntry>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(s => new { s.ExerciseId, s.WorkoutSessionId });
+
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_SetEntry_Weight_NonNegative", "\"Weight\" >= 0");
+            t.HasCheckConstraint("CK_SetEntry_Reps_Positive", "\"Reps\" > 0");
+            t.HasCheckConstraint("CK_SetEntry_Rir_NonNegative", "\"Rir\" IS NULL OR \"Rir\" >= 0");
+        });
     }
 }

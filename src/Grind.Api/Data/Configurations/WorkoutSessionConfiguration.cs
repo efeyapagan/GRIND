@@ -19,5 +19,10 @@ public class WorkoutSessionConfiguration : IEntityTypeConfiguration<WorkoutSessi
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(s => new { s.UserId, s.StartedAt });
+
+        builder.ToTable(t =>
+            t.HasCheckConstraint(
+                "CK_WorkoutSession_EndedAt_After_StartedAt",
+                "\"EndedAt\" IS NULL OR \"EndedAt\" > \"StartedAt\""));
     }
 }

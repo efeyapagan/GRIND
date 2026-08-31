@@ -19,5 +19,8 @@ public class TemplateExerciseConfiguration : IEntityTypeConfiguration<TemplateEx
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(te => new { te.WorkoutTemplateId, te.OrderIndex });
+
+        builder.ToTable(t =>
+            t.HasCheckConstraint("CK_TemplateExercise_PlannedSets_Positive", "\"PlannedSets\" > 0"));
     }
 }
