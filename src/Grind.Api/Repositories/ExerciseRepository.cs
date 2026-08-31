@@ -22,11 +22,19 @@ public class ExerciseRepository(AppDbContext context)
     public Task<bool> NameExistsAsync(
         long userId, string name, CancellationToken cancellationToken = default)
     {
-        // ILike kullanılmıyor: isimdeki '%' ve '_' karakterleri joker olarak yorumlanır
-        // ve yanlış eşleşme üretir. lower() karşılaştırması güvenli.
-        var normalized = name.ToLowerInvariant();
+        // name.ToLowerInvariant() (.NET) ile e.Name.ToLower() (PostgreSQL) iki farklı
+        // case-folding uygulaması olduğu için U+0130 (Türkçe büyük noktalı İ) gibi
+        // karakterlerde birbirini tutmazlar: PostgreSQL lower('İ') = 'i' üretirken .NET'in
+        // invariant eşlemesi 'İ'yi değiştirmeden bırakır. Bunun yerine tek tarafta
+        // (PostgreSQL'de) case-fold yapan EF.Functions.ILike kullanılıyor. İsimdeki '%' ve
+        // '_' karakterleri joker olarak yorumlanmasın diye escape karakteri olarak '\'
+        // kullanılıp isim önce kaçırılıyor.
+        var escaped = name
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
         return Set.AnyAsync(
-            e => (e.UserId == userId || e.UserId == null) && e.Name.ToLower() == normalized,
+            e => (e.UserId == userId || e.UserId == null) && EF.Functions.ILike(e.Name, escaped, "\\"),
             cancellationToken);
     }
 }

@@ -13,7 +13,7 @@ public class PersistenceRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddPersistence(TestDatabase.ConnectionString);
-        return services.BuildServiceProvider();
+        return services.BuildServiceProvider(validateScopes: true);
     }
 
     [Theory]

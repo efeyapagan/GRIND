@@ -26,6 +26,30 @@ public class ExerciseRepositoryTests
     }
 
     [Fact]
+    public async Task GetVisibleAsync_isme_gore_sirali_dondurur()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        context.Users.Add(user);
+        var suffix = Guid.NewGuid().ToString("N");
+        var first = TestDatabase.NewExercise(user, $"Aaa_Once_{suffix}");
+        var second = TestDatabase.NewExercise(user, $"Zzz_Sonra_{suffix}");
+        context.Exercises.AddRange(second, first); // ekleme sırası bilerek ters
+        await context.SaveChangesAsync();
+
+        var visible = await repository.GetVisibleAsync(user.Id);
+
+        var firstIndex = visible.ToList().FindIndex(e => e.Id == first.Id);
+        var secondIndex = visible.ToList().FindIndex(e => e.Id == second.Id);
+        Assert.True(firstIndex >= 0 && secondIndex >= 0);
+        Assert.True(firstIndex < secondIndex);
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
     public async Task GetVisibleAsync_baskasinin_ozel_egzersizini_dondurmez()
     {
         await using var context = TestDatabase.CreateContext();
@@ -82,6 +106,30 @@ public class ExerciseRepositoryTests
 
         Assert.Null(await repository.GetVisibleByIdAsync(secret.Id, stranger.Id));
         Assert.NotNull(await repository.GetVisibleByIdAsync(secret.Id, owner.Id));
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task GetVisibleByIdAsync_arsivlenmis_egzersizi_de_dondurur()
+    {
+        // Geçmiş SetEntry/TemplateExercise kayıtları arşivlenmiş bir egzersize referans
+        // verebilir; bu metod bilerek arşiv filtresi uygulamaz, aksi halde o kayıtlar
+        // çözülemez hale gelir.
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        context.Users.Add(user);
+        var archived = TestDatabase.NewExercise(user, $"Arsiv_{Guid.NewGuid():N}");
+        archived.IsArchived = true;
+        context.Exercises.Add(archived);
+        await context.SaveChangesAsync();
+
+        var found = await repository.GetVisibleByIdAsync(archived.Id, user.Id);
+
+        Assert.NotNull(found);
+        Assert.True(found.IsArchived);
         await transaction.RollbackAsync();
     }
 
@@ -171,6 +219,46 @@ public class ExerciseRepositoryTests
         await context.SaveChangesAsync();
 
         Assert.False(await repository.NameExistsAsync(stranger.Id, name));
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task NameExistsAsync_turkce_buyuk_I_noktali_ile_ayni_ismi_yakalar()
+    {
+        // PostgreSQL'in lower('İ') = 'i' ürettiği, .NET'in ToLowerInvariant()'ının ise
+        // 'İ'yi değiştirmeden bıraktığı durum. İki farklı case-folding birbirini
+        // tutmazsa aynı bayt dizisi "farklı isim" sanılır ve global egzersiz gölgelenebilir.
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        context.Users.Add(user);
+        var name = $"İncline_{Guid.NewGuid():N}";
+        context.Exercises.Add(TestDatabase.NewExercise(user, name));
+        await context.SaveChangesAsync();
+
+        Assert.True(await repository.NameExistsAsync(user.Id, name));
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task NameExistsAsync_yuzde_karakterini_joker_olarak_yorumlamaz()
+    {
+        // ILike'a escape'siz geçilirse '%' ve '_' joker sayılır ve alakasız bir isimle
+        // eşleşebilir. Escape doğru uygulanmışsa sadece bayt-bayt aynı isim eşleşmeli.
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        context.Users.Add(user);
+        var name = $"100%_{Guid.NewGuid():N}";
+        context.Exercises.Add(TestDatabase.NewExercise(user, name));
+        await context.SaveChangesAsync();
+
+        Assert.False(await repository.NameExistsAsync(user.Id, "100%_totally_different_name"));
+        Assert.True(await repository.NameExistsAsync(user.Id, name));
         await transaction.RollbackAsync();
     }
 }

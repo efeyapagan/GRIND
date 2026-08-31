@@ -2,7 +2,9 @@ using Grind.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddPersistence(builder.Configuration.GetConnectionString("Postgres")!);
+builder.Services.AddPersistence(
+    builder.Configuration.GetConnectionString("Postgres")
+    ?? throw new InvalidOperationException("ConnectionStrings:Postgres tanımlı değil."));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

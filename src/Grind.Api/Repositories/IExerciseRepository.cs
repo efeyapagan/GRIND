@@ -10,7 +10,10 @@ public interface IExerciseRepository : IRepository<Exercise>
 
     /// <summary>
     /// Yalnızca kullanıcının erişebildiği bir egzersizi döndürür; başkasının özel
-    /// egzersizinde null döner (IDOR koruması).
+    /// egzersizinde null döner (IDOR koruması). Arşivlenmiş egzersizler bilerek dahil
+    /// edilir — geçmiş <c>SetEntry</c>/<c>TemplateExercise</c> kayıtları bu egzersize
+    /// referans verir ve çözülebilir kalmalıdır; burada arşiv filtresi uygulamak
+    /// geçmiş kayıtları bozar.
     /// </summary>
     Task<Exercise?> GetVisibleByIdAsync(long id, long userId, CancellationToken cancellationToken = default);
 
