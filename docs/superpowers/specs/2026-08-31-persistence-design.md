@@ -149,6 +149,38 @@ yani global egzersizlerde hiçbir şey korumaz. PostgreSQL 15+ `NULLS NOT DISTIN
 yazılamaz. Bu kontrol ve isimlerin büyük/küçük harf normalizasyonu Faz 5'te Service katmanında
 yapılır (CLAUDE.md: "en azından uygulama katmanında kontrol edilmeli").
 
+**Arşivleme ve isim çakışması.** `IX_Exercises_UserId_Name` benzersiz kalır ve bir egzersiz
+arşivlenince (`IsArchived = true`) adı serbest bırakılmaz — bu bilinçlidir: `WHERE NOT
+"IsArchived"` gibi kısmi bir index kullanılsaydı, aynı isim bir satır arşivliyken ikinci bir
+satıya (aynı `UserId` altında) geçebilirdi, ki bu iki farklı "Cable Crossover" kaydının aynı
+anda var olması demektir — istenen bu değil. Bedeli: kullanıcı kendi "Cable Crossover"ını
+arşivleyip sonra aynı isimle yeniden eklemeye çalışırsa ham PostgreSQL `23505` (unique
+violation) hatası alır, yani işlenmemiş bir 500. Index doğru olduğu için düzeltme burada değil,
+Faz 5'te: Service katmanı yeni egzersiz eklerken "bu isim zaten var ve satır arşivli" durumunu
+bir çakışma (409) olarak değil, bir **arşivden çıkarma** (unarchive: `IsArchived = false`)
+işlemi olarak ele almalı.
+
+**Kısıtlanamayan çapraz kullanıcı referansları.** Yukarıdaki gibi bir ilişkisel şema, "bu FK
+başka bir kullanıcıya ait bir satırı işaret etmesin" kuralını kendi başına ifade edemez — bunun
+için her tabloda composite `(Id, UserId)` anahtar ve composite foreign key gerekirdi; bu, bu
+ölçekteki bir kişisel uygulama için haklı çıkarılamayacak gerçek bir karmaşıklık artışıdır
+(bkz. `solid-dry-kiss`, YAGNI). Bu yüzden aşağıdaki dört durumun her biri, CLAUDE.md'nin zaten
+belirttiği genel sahiplik/yetkilendirme kuralının (bkz. CLAUDE.md "Yetkilendirme Kuralı") somut
+bir örneğidir ve ilgili fazda açık bir Service-katmanı sahiplik kontrolüne dönüşür — hiçbiri DB
+seviyesinde yakalanmaz:
+
+- `TemplateExercise.ExerciseId`, başka bir kullanıcının özel egzersizini işaret edebilir →
+  Faz 6 (WorkoutTemplate) bunu doğrulamalı.
+- `WorkoutSession.TemplateId`, başka bir kullanıcının şablonunu işaret edebilir → Faz 7
+  (WorkoutSession) bunu doğrulamalı.
+- `SetEntry.ExerciseId`, başka bir kullanıcının özel egzersizini işaret edebilir → Faz 8
+  (SetEntry + PR motoru) bunu doğrulamalı.
+- `AiInsight.WorkoutSessionId` / `AiInsight.SetEntryId`, başka bir kullanıcının session'ını
+  veya setini işaret edebilir → Faz 12 (AiInsight altyapısı) bunu doğrulamalı.
+
+Bu liste, ilgili fazlar CLAUDE.md'yi yeniden okumadan bu yükümlülüğü unutmasın diye buradadır —
+kural yeni değildir, sadece burada somutlaştırılmıştır.
+
 ### CHECK kısıtları
 
 Uygulama doğrulamasının yerine değil, son savunma hattı olarak:
@@ -157,9 +189,13 @@ Uygulama doğrulamasının yerine değil, son savunma hattı olarak:
 - `PlannedSets > 0`
 - `Rir IS NULL OR Rir >= 0`
 - `EndedAt IS NULL OR EndedAt > StartedAt`
-- `Weight >= 0` — **sıfır dahil**: barfiks, dips gibi vücut ağırlığı hareketleri 0 kg'dır.
-  Faz 8'i de ilgilendirir: 0 kg'lık bir harekette ağırlık rekoru hiç kırılmaz, yalnızca tekrar
-  rekoru işler; PR motoru bunu ek bir özel duruma gerek kalmadan doğal olarak ele alır.
+- `SetEntry.Weight >= 0` — **sıfır dahil**: barfiks, dips gibi vücut ağırlığı hareketleri
+  0 kg'dır. Faz 8'i de ilgilendirir: 0 kg'lık bir harekette ağırlık rekoru hiç kırılmaz, yalnızca
+  tekrar rekoru işler; PR motoru bunu ek bir özel duruma gerek kalmadan doğal olarak ele alır.
+- `BodyWeightLog.Weight > 0` — burada sıfır dahil değildir: `SetEntry.Weight` bir harekette
+  kaldırılan ek ağırlığı temsil eder (0 = sadece vücut ağırlığı, geçerli bir değer), ama
+  `BodyWeightLog.Weight` kullanıcının kendi vücut ağırlığının doğrudan ölçümüdür — hiçbir insan
+  0 kg değildir, bu yüzden burada kısıt `>= 0` değil `> 0`'dır.
 
 ---
 

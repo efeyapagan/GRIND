@@ -8,7 +8,7 @@
 ## Durum Özeti
 | Faz | Başlık | Durum |
 |---|---|---|
-| 0 | Ortam ve iskelet | 🔶 Docker daemon hariç tamam |
+| 0 | Ortam ve iskelet | ✅ |
 | 1 | Domain + Persistence | ✅ |
 | 2 | Repository + Unit of Work | ⏳ sırada |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ☐ |
@@ -27,8 +27,8 @@
 
 ## Faz 0 — Ortam ve İskelet
 - [x] 0.1 .NET 10 SDK kuruldu (winget) — 10.0.400
-- [x] 0.2 Docker Desktop kuruldu (4.88.1) — **daemon henüz başlatılmadı** (ilk açılışta
-      lisans onayı / WSL2 kurulumu gerekiyor, GUI adımı)
+- [x] 0.2 Docker Desktop kuruldu (4.88.1) — daemon başlatıldı (WSL2 önce kurulmalıydı, kurulum
+      sonrası makine yeniden başlatıldı)
 - [x] 0.3 `git init` + `.gitignore`
 - [x] 0.4 `Grind.sln`, `src/Grind.Api` (webapi, controllers), `tests/Grind.Tests` (xunit)
 - [x] 0.5 NuGet: Npgsql.EFCore.PostgreSQL 10.0.3, EFCore.Design, JwtBearer, BCrypt.Net-Next,
@@ -43,7 +43,9 @@
 - [x] 0.7 Secrets `dotnet user-secrets`'e yazıldı (connection string + rastgele JWT key);
       `appsettings.json` sadece boş placeholder + JWT issuer/audience/expiry tutuyor
 - [x] 0.8a `dotnet build` → 0 uyarı, 0 hata
-- [ ] 0.8b `docker compose up -d` ile DB ayağa kalkması — Docker Desktop açılmayı bekliyor
+- [x] 0.8b `docker compose up -d` ile DB ayağa kalkması — WSL2 kurulumu ve makine yeniden
+      başlatmasının ardından Docker Desktop daemon'ı başlatıldı, `grind-db` konteyneri
+      `0.0.0.0:5433->5432/tcp` ile ayakta
 
 ## Faz 1 — Domain + Persistence (Code-First)
 
