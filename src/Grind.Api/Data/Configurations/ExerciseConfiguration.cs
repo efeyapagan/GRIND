@@ -17,5 +17,9 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
             .WithMany(u => u.Exercises)
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => new { e.UserId, e.Name })
+            .IsUnique()
+            .AreNullsDistinct(false);
     }
 }

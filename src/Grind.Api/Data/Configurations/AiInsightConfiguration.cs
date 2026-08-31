@@ -29,5 +29,7 @@ public class AiInsightConfiguration : IEntityTypeConfiguration<AiInsight>
             .WithMany(s => s.AiInsights)
             .HasForeignKey(a => a.SetEntryId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(a => new { a.UserId, a.CreatedAt });
     }
 }

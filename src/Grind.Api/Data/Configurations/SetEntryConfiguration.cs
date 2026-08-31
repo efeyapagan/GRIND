@@ -22,5 +22,7 @@ public class SetEntryConfiguration : IEntityTypeConfiguration<SetEntry>
             .WithMany(e => e.SetEntries)
             .HasForeignKey(s => s.ExerciseId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(s => new { s.ExerciseId, s.WorkoutSessionId });
     }
 }

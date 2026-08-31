@@ -14,5 +14,7 @@ public class BodyWeightLogConfiguration : IEntityTypeConfiguration<BodyWeightLog
             .WithMany(u => u.BodyWeightLogs)
             .HasForeignKey(b => b.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(b => new { b.UserId, b.RecordedAt });
     }
 }

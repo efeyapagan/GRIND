@@ -17,5 +17,7 @@ public class TemplateExerciseConfiguration : IEntityTypeConfiguration<TemplateEx
             .WithMany(e => e.TemplateExercises)
             .HasForeignKey(te => te.ExerciseId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(te => new { te.WorkoutTemplateId, te.OrderIndex });
     }
 }

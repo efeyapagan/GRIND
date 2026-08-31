@@ -1,5 +1,6 @@
 using Grind.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Grind.Tests;
@@ -16,7 +17,14 @@ internal static class TestModel
             .UseNpgsql("Host=localhost;Database=grind_model_only")
             .Options;
         using var context = new AppDbContext(options);
-        return context.Model;
+
+        // context.Model, sorgu çalıştırma için optimize edilmiş, "finalize edilmiş"
+        // (runtime) modeli döner; bu model yalnızca sorgu motorunun ihtiyaç duyduğu
+        // özellikleri taşır ve DDL'e özgü bazı sağlayıcı annotation'larını (örn. Npgsql'in
+        // NULLS NOT DISTINCT ayarı) düşürür. Migration'ların gerçekte kullandığı model
+        // "design-time model"dir (IDesignTimeModel) — index/kısıt testleri şemanın
+        // GERÇEKTE ne üreteceğini bu modelden okumalı.
+        return context.GetService<IDesignTimeModel>().Model;
     });
 
     public static IModel Model => Lazy.Value;
