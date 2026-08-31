@@ -47,6 +47,7 @@ public class CheckConstraintTests
         var sql = SqlOf<WorkoutSession>("CK_WorkoutSession_EndedAt_After_StartedAt");
         Assert.Contains("IS NULL", sql);
         Assert.Contains("\"StartedAt\"", sql);
+        Assert.Contains("\"EndedAt\" > \"StartedAt\"", sql);
     }
 
     [Fact]

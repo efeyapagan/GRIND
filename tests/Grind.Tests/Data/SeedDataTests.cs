@@ -47,6 +47,27 @@ public class SeedDataTests
     }
 
     [Fact]
+    public void Seed_isimleri_beklenenle_birebir_eslesir()
+    {
+        // Bir global egzersiz kullanıcı geçmişinde göründükten sonra ismi fiilen kalıcıdır
+        // (düzeltmek bir UpdateData migration'ı gerektirir) — bu yüzden 15 ismin tamamı
+        // burada sabitlenir; tek bir yazım hatası bile sessizce geçmemeli.
+        string[] expected =
+        [
+            "Bench Press", "Incline Dumbbell Press", "Overhead Press", "Dips", "Triceps Pushdown",
+            "Pull-up", "Barbell Row", "Lat Pulldown", "Barbell Curl", "Face Pull",
+            "Squat", "Deadlift", "Romanian Deadlift", "Leg Press", "Leg Curl"
+        ];
+
+        var actual = Seed()
+            .OrderBy(row => (long)row["Id"]!)
+            .Select(row => (string)row["Name"]!)
+            .ToArray();
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public void Kullanici_kayitlari_seed_id_leriyle_carpismaz()
     {
         // HasData ile sabit Id yazmak identity sequence'ini İLERLETMEZ. Bu ayar olmadan

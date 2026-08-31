@@ -1,5 +1,6 @@
 using Grind.Api.Data;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Grind.Tests.Data;
@@ -16,6 +17,16 @@ public class DatabaseSmokeTests
 
     private static AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options);
+
+    private static User CreateUser() => new()
+    {
+        Username = $"smoke_{Guid.NewGuid():N}",
+        PasswordHash = "not-a-real-hash",
+        CreatedAt = DateTime.UtcNow
+    };
+
+    private static WorkoutSession CreateSession(User user) =>
+        new() { User = user, StartedAt = DateTime.UtcNow };
 
     [Fact]
     public async Task Onbes_global_egzersiz_veritabaninda_mevcut()
@@ -35,15 +46,10 @@ public class DatabaseSmokeTests
         await using var context = CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = new User
-        {
-            Username = $"smoke_{Guid.NewGuid():N}",
-            PasswordHash = "not-a-real-hash",
-            CreatedAt = DateTime.UtcNow
-        };
+        var user = CreateUser();
         context.Users.Add(user);
 
-        var session = new WorkoutSession { User = user, StartedAt = DateTime.UtcNow };
+        var session = CreateSession(user);
         context.WorkoutSessions.Add(session);
 
         var entry = new SetEntry
@@ -67,15 +73,10 @@ public class DatabaseSmokeTests
         await using var context = CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = new User
-        {
-            Username = $"smoke_{Guid.NewGuid():N}",
-            PasswordHash = "not-a-real-hash",
-            CreatedAt = DateTime.UtcNow
-        };
+        var user = CreateUser();
         context.Users.Add(user);
 
-        var session = new WorkoutSession { User = user, StartedAt = DateTime.UtcNow };
+        var session = CreateSession(user);
         context.WorkoutSessions.Add(session);
 
         context.SetEntries.Add(new SetEntry
@@ -97,19 +98,14 @@ public class DatabaseSmokeTests
         await using var context = CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = new User
-        {
-            Username = $"smoke_{Guid.NewGuid():N}",
-            PasswordHash = "not-a-real-hash",
-            CreatedAt = DateTime.UtcNow
-        };
+        var user = CreateUser();
         context.Users.Add(user);
 
         var exercise = new Exercise
         {
             User = user,
             Name = "Cable Crossover",
-            Category = Grind.Api.Models.Enums.ExerciseCategory.Push
+            Category = ExerciseCategory.Push
         };
         context.Exercises.Add(exercise);
 
@@ -126,14 +122,17 @@ public class DatabaseSmokeTests
         await using var context = CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        context.Users.Add(new User
-        {
-            Username = $"smoke_{Guid.NewGuid():N}",
-            PasswordHash = "not-a-real-hash",
-            CreatedAt = new DateTime(2026, 8, 31, 12, 0, 0, DateTimeKind.Unspecified)
-        });
+        var user = CreateUser();
+        user.CreatedAt = new DateTime(2026, 8, 31, 12, 0, 0, DateTimeKind.Unspecified);
+        context.Users.Add(user);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => context.SaveChangesAsync());
+        // Npgsql, timestamptz sütununa Kind != Utc bir DateTime yazma denemesini
+        // ArgumentException ile reddeder — EF Core SaveChangesAsync bunu DbUpdateException'a
+        // sarar, bu yüzden awaitteki Task'ten fırlayan tip DbUpdateException'dır ve asıl bulgu
+        // (Npgsql'in attığı ArgumentException) InnerException'da durur. İkisi de deneysel
+        // olarak doğrulandı (bkz. görev raporu) — yalnızca dış tipi değil, asıl bulguyu pinler.
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        Assert.IsType<ArgumentException>(exception.InnerException);
         await transaction.RollbackAsync();
     }
 }
