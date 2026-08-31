@@ -93,7 +93,9 @@
 - [ ] 3.3 JWT üretimi/doğrulaması — token SADECE `UserId` + `Username` taşır
 - [ ] 3.4 `ICurrentUserService` — `HttpContext`'ten aktif kullanıcı
 - [ ] 3.5 Ortak sahiplik kontrolü yardımcısı (UserId == current || UserId == null) — DRY
-- [ ] 3.6 FluentValidation pipeline + Swagger (JWT bearer destekli)
+- [ ] 3.6 Doğrulama: DataAnnotations + `[ApiController]`'ın otomatik 400'ü (RFC 7807 uyumlu
+      `ValidationProblemDetails` zaten üretiyor). **FluentValidation eklenmiyor** — Faz 0 kararı
+      (satır 36) geçerli; buradaki eski satır onunla çelişiyordu. + Swagger (JWT bearer)
 
 ## Faz 4 — Feature: Auth
 - [ ] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse

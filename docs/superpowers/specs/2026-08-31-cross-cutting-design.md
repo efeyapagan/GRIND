@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-31
 **Kapsam:** PLAN.md Faz 3
-**Durum:** 🟡 ONAY BEKLİYOR — implementasyon başlamadı
+**Durum:** ✅ Onaylandı (2026-08-31) — dört sorunun da A seçeneği; FluentValidation eklenmiyor
 
 ## Bu Doküman Ne Değildir
 
