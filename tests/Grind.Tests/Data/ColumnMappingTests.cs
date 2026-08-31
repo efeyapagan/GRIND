@@ -19,6 +19,7 @@ public class ColumnMappingTests
             var converter = property.GetValueConverter();
             Assert.NotNull(converter);
             Assert.Equal(typeof(string), converter.ProviderClrType);
+            Assert.Equal("character varying(20)", property.GetColumnType());
         }
     }
 
