@@ -1,4 +1,3 @@
-using Grind.Api.Data;
 using Grind.Api.Models.Entities;
 using Grind.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -12,26 +11,10 @@ namespace Grind.Tests.Data;
 [Trait("Category", "Database")]
 public class DatabaseSmokeTests
 {
-    private const string ConnectionString =
-        "Host=localhost;Port=5433;Database=grind;Username=grind;Password=grind_dev_password";
-
-    private static AppDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options);
-
-    private static User CreateUser() => new()
-    {
-        Username = $"smoke_{Guid.NewGuid():N}",
-        PasswordHash = "not-a-real-hash",
-        CreatedAt = DateTime.UtcNow
-    };
-
-    private static WorkoutSession CreateSession(User user) =>
-        new() { User = user, StartedAt = DateTime.UtcNow };
-
     [Fact]
     public async Task Onbes_global_egzersiz_veritabaninda_mevcut()
     {
-        await using var context = CreateContext();
+        await using var context = TestDatabase.CreateContext();
 
         var globals = await context.Exercises.Where(e => e.UserId == null).ToListAsync();
 
@@ -43,13 +26,13 @@ public class DatabaseSmokeTests
     public async Task Sifir_kilo_set_kaydedilebilir()
     {
         // Barfiks: 0 kg. CHECK kısıtı ">= 0" olduğu için bu geçmelidir.
-        await using var context = CreateContext();
+        await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = CreateUser();
+        var user = TestDatabase.NewUser();
         context.Users.Add(user);
 
-        var session = CreateSession(user);
+        var session = TestDatabase.NewSession(user);
         context.WorkoutSessions.Add(session);
 
         var entry = new SetEntry
@@ -70,13 +53,13 @@ public class DatabaseSmokeTests
     [Fact]
     public async Task Sifir_tekrarli_set_reddedilir()
     {
-        await using var context = CreateContext();
+        await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = CreateUser();
+        var user = TestDatabase.NewUser();
         context.Users.Add(user);
 
-        var session = CreateSession(user);
+        var session = TestDatabase.NewSession(user);
         context.WorkoutSessions.Add(session);
 
         context.SetEntries.Add(new SetEntry
@@ -95,10 +78,10 @@ public class DatabaseSmokeTests
     [Fact]
     public async Task Kullanici_kayitlari_seed_id_leriyle_carpismaz()
     {
-        await using var context = CreateContext();
+        await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = CreateUser();
+        var user = TestDatabase.NewUser();
         context.Users.Add(user);
 
         var exercise = new Exercise
@@ -119,10 +102,10 @@ public class DatabaseSmokeTests
     public async Task Kind_utc_olmayan_zaman_damgasi_reddedilir()
     {
         // Spec §5 madde 11: bu davranışa güvenildiği için doğrulanır.
-        await using var context = CreateContext();
+        await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var user = CreateUser();
+        var user = TestDatabase.NewUser();
         user.CreatedAt = new DateTime(2026, 8, 31, 12, 0, 0, DateTimeKind.Unspecified);
         context.Users.Add(user);
 

@@ -10,8 +10,8 @@
 |---|---|---|
 | 0 | Ortam ve iskelet | ✅ |
 | 1 | Domain + Persistence | ✅ |
-| 2 | Repository + Unit of Work | ⏳ sırada |
-| 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ☐ |
+| 2 | Repository + Unit of Work | ✅ |
+| 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ⏳ sırada |
 | 4 | Feature: Auth | ☐ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
 | 6 | Feature: WorkoutTemplate | ☐ |
@@ -79,11 +79,11 @@
       satırları, CHECK kısıtları; ayrıca Kind≠Utc DateTime yazma testi
 
 ## Faz 2 — Repository + Unit of Work
-- [ ] 2.1 `IRepository<T>` (Get/Query/Add/Remove) + `Repository<T>` temel implementasyon
-- [ ] 2.2 Yalnızca gerçek ihtiyaç olan özel repo'lar (KISS): `IExerciseRepository`,
+- [x] 2.1 `IRepository<T>` (Get/Query/Add/Remove) + `Repository<T>` temel implementasyon
+- [x] 2.2 Yalnızca gerçek ihtiyaç olan özel repo'lar (KISS): `IExerciseRepository`,
       `IWorkoutSessionRepository`, `ISetEntryRepository`, `IUserRepository`
-- [ ] 2.3 `IUnitOfWork` — tek `SaveChangesAsync()`, gerektiğinde açık transaction
-- [ ] 2.4 DI kayıtları (`Program.cs` / `DependencyInjection` extension)
+- [x] 2.3 `IUnitOfWork` — tek `SaveChangesAsync()`, gerektiğinde açık transaction
+- [x] 2.4 DI kayıtları (`Program.cs` / `DependencyInjection` extension)
 
 ## Faz 3 — Cross-cutting
 - [ ] 3.1 Domain exception hiyerarşisi: `NotFoundException`, `ValidationException`,

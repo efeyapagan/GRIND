@@ -9,10 +9,22 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Grind.Api, Microsoft.EntityFrameworkCore.Design 10.0.11'e (PrivateAssets="all", bu
+      yüzden buraya aktarılmıyor) bağımlı olduğu için 10.0.11'e karşı derleniyor. Bu
+      projenin tek transitif EF Core kaynağı olan Npgsql.EntityFrameworkCore.PostgreSQL ise
+      yalnızca >=10.0.4 istiyor; Sqlite paketi (10.0.11) kaldırılınca bu proje daha düşük bir
+      sürüme çözülüp CS1705 ile derleme hatası veriyordu. Grind.Api'nin fiilen derlendiği
+      sürümle eşleştirmek için burada açıkça sabitleniyor.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
