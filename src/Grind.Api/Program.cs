@@ -11,7 +11,8 @@ builder.Services.AddPersistence(
 
 builder.Services.AddCrossCutting(
     builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
-    ?? throw new InvalidOperationException("Jwt bölümü tanımlı değil."));
+    ?? throw new InvalidOperationException("Jwt bölümü tanımlı değil."),
+    builder.Environment);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -45,6 +46,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

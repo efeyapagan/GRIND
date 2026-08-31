@@ -2,6 +2,7 @@ using System.Text;
 using Grind.Api.Common.ErrorHandling;
 using Grind.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Grind.Api.Common;
@@ -12,7 +13,7 @@ public static class DependencyInjection
     private const int MinimumKeyBytes = 32;
 
     public static IServiceCollection AddCrossCutting(
-        this IServiceCollection services, JwtSettings jwtSettings)
+        this IServiceCollection services, JwtSettings jwtSettings, IHostEnvironment environment)
     {
         if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < MinimumKeyBytes)
         {
@@ -37,6 +38,9 @@ public static class DependencyInjection
                 // .NET varsayılanı gelen "sub" claim'ini ClaimTypes.NameIdentifier'a
                 // yeniden adlandırır; kapatmazsak AppClaims.UserId ile okumak boş döner.
                 options.MapInboundClaims = false;
+                // Development dışında ayrıntılı doğrulama hatası (ör. token süresi, ne zaman
+                // geçerli olacağı) WWW-Authenticate başlığında client'a sızmasın.
+                options.IncludeErrorDetails = environment.IsDevelopment();
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidIssuer = jwtSettings.Issuer,
@@ -47,7 +51,10 @@ public static class DependencyInjection
                     ValidateAudience = true,
                     ValidateIssuerSigningKey = true,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.Zero,
+                    // Varsayılan ClaimTypes.Name eşlemesi token'da yok; ayarlamazsak
+                    // User.Identity.Name sessizce null döner.
+                    NameClaimType = AppClaims.Username
                 };
             });
 
