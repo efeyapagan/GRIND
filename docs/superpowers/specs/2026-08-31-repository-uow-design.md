@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-31
 **Kapsam:** PLAN.md Faz 2
-**Durum:** 🟡 ONAY BEKLİYOR — implementasyon başlamadı
+**Durum:** ✅ Onaylandı (2026-08-31) — üç sorunun da A seçeneği
 
 ## Bu Doküman Ne Değildir
 
@@ -98,12 +98,14 @@ egzersizler" gibi sorgular sunar, ama yetkilendirme kararını servis verir. CLA
 sahiplik kontrolünü servis metodlarına bağlıyor; repo'ya gömmek kuralı iki yere dağıtırdı.
 
 **Test:** repository'ler gerçek PostgreSQL'e karşı test edilir (Faz 1'de kurulan
-altyapıyla). In-memory sağlayıcı kullanılmaz — `NULLS NOT DISTINCT`, CHECK kısıtları ve
-`citext`-benzeri davranışlar orada yoktur ve testi yalancı yeşile çevirir.
+altyapıyla). In-memory sağlayıcı kullanılmaz — `NULLS NOT DISTINCT`, CHECK kısıtları,
+identity başlangıç değeri ve `timestamptz` Kind zorlaması orada yoktur; test yalancı
+yeşile döner. Faz 1'in `DatabaseSmokeTests` deseni (her test kendi transaction'ını açıp
+geri alır) aynen sürdürülür.
 
 ---
 
-## Neden burada durdum
+## Onay
 
 `solid-dry-kiss` ve brainstorming skill'i, implementasyondan önce tasarım onayı istiyor —
 ve Faz 2 tam olarak "yanlış soyutlama" riskinin en yüksek olduğu katman. Generic repository
