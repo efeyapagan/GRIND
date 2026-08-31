@@ -8,9 +8,9 @@
 ## Durum Özeti
 | Faz | Başlık | Durum |
 |---|---|---|
-| 0 | Ortam ve iskelet | 🔶 Docker daemon hariç tamam |
-| 1 | Domain + Persistence | ⏳ sırada |
-| 2 | Repository + Unit of Work | ☐ |
+| 0 | Ortam ve iskelet | ✅ |
+| 1 | Domain + Persistence | ✅ |
+| 2 | Repository + Unit of Work | ⏳ sırada |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ☐ |
 | 4 | Feature: Auth | ☐ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
@@ -27,8 +27,8 @@
 
 ## Faz 0 — Ortam ve İskelet
 - [x] 0.1 .NET 10 SDK kuruldu (winget) — 10.0.400
-- [x] 0.2 Docker Desktop kuruldu (4.88.1) — **daemon henüz başlatılmadı** (ilk açılışta
-      lisans onayı / WSL2 kurulumu gerekiyor, GUI adımı)
+- [x] 0.2 Docker Desktop kuruldu (4.88.1) — daemon başlatıldı (WSL2 önce kurulmalıydı, kurulum
+      sonrası makine yeniden başlatıldı)
 - [x] 0.3 `git init` + `.gitignore`
 - [x] 0.4 `Grind.sln`, `src/Grind.Api` (webapi, controllers), `tests/Grind.Tests` (xunit)
 - [x] 0.5 NuGet: Npgsql.EFCore.PostgreSQL 10.0.3, EFCore.Design, JwtBearer, BCrypt.Net-Next,
@@ -43,22 +43,24 @@
 - [x] 0.7 Secrets `dotnet user-secrets`'e yazıldı (connection string + rastgele JWT key);
       `appsettings.json` sadece boş placeholder + JWT issuer/audience/expiry tutuyor
 - [x] 0.8a `dotnet build` → 0 uyarı, 0 hata
-- [ ] 0.8b `docker compose up -d` ile DB ayağa kalkması — Docker Desktop açılmayı bekliyor
+- [x] 0.8b `docker compose up -d` ile DB ayağa kalkması — WSL2 kurulumu ve makine yeniden
+      başlatmasının ardından Docker Desktop daemon'ı başlatıldı, `grind-db` konteyneri
+      `0.0.0.0:5433->5432/tcp` ile ayakta
 
 ## Faz 1 — Domain + Persistence (Code-First)
 
 > Tasarım kararları: [docs/superpowers/specs/2026-08-31-persistence-design.md](docs/superpowers/specs/2026-08-31-persistence-design.md)
 > Sıra TDD'ye göre: model iddiaları önce test olarak yazılır (DB gerekmez), sonra karşılanır.
 
-- [ ] 1.1 Enum'lar: `ExerciseCategory`, `RecordType`, `MediaType`, `AiInsightKind`
-- [ ] 1.2 Entity'ler (anemik POCO, `long Id`, taban sınıf yok): User, Exercise,
+- [x] 1.1 Enum'lar: `ExerciseCategory`, `RecordType`, `MediaType`, `AiInsightKind`
+- [x] 1.2 Entity'ler (anemik POCO, `long Id`, taban sınıf yok): User, Exercise,
       WorkoutTemplate, TemplateExercise, WorkoutSession, SetEntry, BodyWeightLog,
       ExerciseMedia, AiInsight
-- [ ] 1.3 Model testleri (kırmızı): silme davranışları, enum→text, DateTime→timestamptz,
+- [x] 1.3 Model testleri (kırmızı): silme davranışları, enum→text, DateTime→timestamptz,
       numeric(6,2), unique index'ler, seed sayısı, identity startValue — `AppDbContext.Model`
       üzerinden, bağlantı açmadan
-- [ ] 1.4 `AppDbContext` + `ApplyConfigurationsFromAssembly` (OnModelCreating tek satır)
-- [ ] 1.5 9 adet `IEntityTypeConfiguration<T>` — testleri yeşile çevirir:
+- [x] 1.4 `AppDbContext` + `ApplyConfigurationsFromAssembly` (OnModelCreating tek satır)
+- [x] 1.5 9 adet `IEntityTypeConfiguration<T>` — testleri yeşile çevirir:
       - enum'lar `HasConversion<string>()`
       - `User(Username)` unique · `Exercise(UserId, Name)` unique **NULLS NOT DISTINCT**
         (desteklenmiyorsa iki kısmi index)
@@ -70,10 +72,10 @@
       - index: Session(UserId,StartedAt), SetEntry(ExerciseId,WorkoutSessionId),
         BodyWeightLog(UserId,RecordedAt), AiInsight(UserId,CreatedAt),
         TemplateExercise(TemplateId,OrderIndex)
-- [ ] 1.6 Seed: 15 global egzersiz `HasData` ile (Id 1–15, UserId = null) +
+- [x] 1.6 Seed: 15 global egzersiz `HasData` ile (Id 1–15, UserId = null) +
       `HasIdentityOptions(startValue: 1000)` — sequence çakışmasını önler
-- [ ] 1.7 İlk migration: `dotnet ef migrations add InitialCreate` (DB gerekmez)
-- [ ] 1.8 `dotnet ef database update` + psql doğrulaması (Docker gerekir) — tablolar, seed
+- [x] 1.7 İlk migration: `dotnet ef migrations add InitialCreate` (DB gerekmez)
+- [x] 1.8 `dotnet ef database update` + psql doğrulaması (Docker gerekir) — tablolar, seed
       satırları, CHECK kısıtları; ayrıca Kind≠Utc DateTime yazma testi
 
 ## Faz 2 — Repository + Unit of Work
