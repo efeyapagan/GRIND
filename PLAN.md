@@ -9,8 +9,8 @@
 | Faz | Başlık | Durum |
 |---|---|---|
 | 0 | Ortam ve iskelet | 🔶 Docker daemon hariç tamam |
-| 1 | Domain + Persistence | ⏳ sırada |
-| 2 | Repository + Unit of Work | ☐ |
+| 1 | Domain + Persistence | ✅ |
+| 2 | Repository + Unit of Work | ⏳ sırada |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ☐ |
 | 4 | Feature: Auth | ☐ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
@@ -50,15 +50,15 @@
 > Tasarım kararları: [docs/superpowers/specs/2026-08-31-persistence-design.md](docs/superpowers/specs/2026-08-31-persistence-design.md)
 > Sıra TDD'ye göre: model iddiaları önce test olarak yazılır (DB gerekmez), sonra karşılanır.
 
-- [ ] 1.1 Enum'lar: `ExerciseCategory`, `RecordType`, `MediaType`, `AiInsightKind`
-- [ ] 1.2 Entity'ler (anemik POCO, `long Id`, taban sınıf yok): User, Exercise,
+- [x] 1.1 Enum'lar: `ExerciseCategory`, `RecordType`, `MediaType`, `AiInsightKind`
+- [x] 1.2 Entity'ler (anemik POCO, `long Id`, taban sınıf yok): User, Exercise,
       WorkoutTemplate, TemplateExercise, WorkoutSession, SetEntry, BodyWeightLog,
       ExerciseMedia, AiInsight
-- [ ] 1.3 Model testleri (kırmızı): silme davranışları, enum→text, DateTime→timestamptz,
+- [x] 1.3 Model testleri (kırmızı): silme davranışları, enum→text, DateTime→timestamptz,
       numeric(6,2), unique index'ler, seed sayısı, identity startValue — `AppDbContext.Model`
       üzerinden, bağlantı açmadan
-- [ ] 1.4 `AppDbContext` + `ApplyConfigurationsFromAssembly` (OnModelCreating tek satır)
-- [ ] 1.5 9 adet `IEntityTypeConfiguration<T>` — testleri yeşile çevirir:
+- [x] 1.4 `AppDbContext` + `ApplyConfigurationsFromAssembly` (OnModelCreating tek satır)
+- [x] 1.5 9 adet `IEntityTypeConfiguration<T>` — testleri yeşile çevirir:
       - enum'lar `HasConversion<string>()`
       - `User(Username)` unique · `Exercise(UserId, Name)` unique **NULLS NOT DISTINCT**
         (desteklenmiyorsa iki kısmi index)
@@ -70,10 +70,10 @@
       - index: Session(UserId,StartedAt), SetEntry(ExerciseId,WorkoutSessionId),
         BodyWeightLog(UserId,RecordedAt), AiInsight(UserId,CreatedAt),
         TemplateExercise(TemplateId,OrderIndex)
-- [ ] 1.6 Seed: 15 global egzersiz `HasData` ile (Id 1–15, UserId = null) +
+- [x] 1.6 Seed: 15 global egzersiz `HasData` ile (Id 1–15, UserId = null) +
       `HasIdentityOptions(startValue: 1000)` — sequence çakışmasını önler
-- [ ] 1.7 İlk migration: `dotnet ef migrations add InitialCreate` (DB gerekmez)
-- [ ] 1.8 `dotnet ef database update` + psql doğrulaması (Docker gerekir) — tablolar, seed
+- [x] 1.7 İlk migration: `dotnet ef migrations add InitialCreate` (DB gerekmez)
+- [x] 1.8 `dotnet ef database update` + psql doğrulaması (Docker gerekir) — tablolar, seed
       satırları, CHECK kısıtları; ayrıca Kind≠Utc DateTime yazma testi
 
 ## Faz 2 — Repository + Unit of Work
