@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master, dev]
+  push:
+    branches: [master, dev]
+
+jobs:
+  build-and-test:
+    name: Derle ve test et
+    runs-on: ubuntu-latest
+
+    # Duman testleri gercek bir PostgreSQL istiyor. docker-compose.yml ile ayni
+    # imaj, ayni kimlik bilgileri, ayni host portu (5433) — testlerdeki baglanti
+    # dizesi birebir calissin diye.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: grind
+          POSTGRES_USER: grind
+          POSTGRES_PASSWORD: grind_dev_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U grind -d grind"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # user-secrets CI'da yok; ASP.NET Core yapilandirmasi ortam degiskenlerinde
+      # ':' yerine '__' kullanir.
+      ConnectionStrings__Postgres: "Host=localhost;Port=5433;Database=grind;Username=grind;Password=grind_dev_password"
+
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+
+      - name: .NET 10 SDK kur
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Bagimliliklari geri yukle
+        run: dotnet restore
+
+      - name: Derle
+        run: dotnet build --no-restore --configuration Release
+
+      - name: EF Core araclarini kur
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Semayi uygula (migration)
+        run: dotnet ef database update --project src/Grind.Api --configuration Release --no-build
+
+      - name: Testleri calistir
+        run: dotnet test --no-build --configuration Release --verbosity normal
