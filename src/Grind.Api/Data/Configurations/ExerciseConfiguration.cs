@@ -1,3 +1,4 @@
+using Grind.Api.Data.Seed;
 using Grind.Api.Models.Entities;
 using Grind.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -21,5 +22,11 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.HasIndex(e => new { e.UserId, e.Name })
             .IsUnique()
             .AreNullsDistinct(false);
+
+        builder.Property(e => e.Id)
+            .UseIdentityByDefaultColumn()
+            .HasIdentityOptions(startValue: 1000);
+
+        builder.HasData(GlobalExercises.All);
     }
 }
