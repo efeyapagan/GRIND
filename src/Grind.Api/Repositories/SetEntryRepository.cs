@@ -21,4 +21,11 @@ public class SetEntryRepository(AppDbContext context)
             .Select(s => s.ExerciseId)
             .Distinct()
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<long, int>> GetCompletedSetCountsAsync(
+        long sessionId, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(s => s.WorkoutSessionId == sessionId)
+            .GroupBy(s => s.ExerciseId)
+            .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
 }
