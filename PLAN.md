@@ -14,8 +14,8 @@
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
 | 4 | Feature: Auth | ✅ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ✅ |
-| 6 | Feature: WorkoutTemplate | ⏳ sırada |
-| 7 | Feature: WorkoutSession | ☐ |
+| 6 | Feature: WorkoutTemplate | ✅ |
+| 7 | Feature: WorkoutSession | ⏳ sırada |
 | 8 | Feature: SetEntry + PR motoru | ☐ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
 | 10 | Feature: BodyWeightLog | ☐ |
@@ -183,20 +183,62 @@
 >   spekülatif olurdu. Gerçek bir istemci alan bazlı eşleme istediğinde yeniden ele alınmalı;
 >   değişiklik `GlobalExceptionHandler`'da olur ve tüm fazları etkiler.
 > - **Faz 6 (WorkoutTemplate) için:**
->   (a) `TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır içinde
->   yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı — aksi
->   halde ince bir farkla farklı bir IDOR kontrolü sızabilir.
->   (b) `GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar çözülebilir
->   kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA reddetmeli, ama
->   template **okuma** onları yine çözebilmeli.
->   (c) Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir şablon
->   N ayrı gidiş-dönüşe mal olur.
+>   (a) [x] ~~`TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır
+>   içinde yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı —
+>   aksi halde ince bir farkla farklı bir IDOR kontrolü sızabilir.~~ **Faz 6'da karşılandı**:
+>   `WorkoutTemplateService.ReplaceExercisesAsync`, aynı görünürlük yüklemini satır içinde
+>   tekrar yazmak yerine `IExerciseRepository.GetVisibleByIdsAsync` üzerinden tek yerden çağırıyor.
+>   (b) [x] ~~`GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar
+>   çözülebilir kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA
+>   reddetmeli, ama template **okuma** onları yine çözebilmeli.~~ **Faz 6'da karşılandı**:
+>   `OwnedOrThrowAsync`/`ReloadAsync` (okuma) arşivlenmiş egzersizleri hâlâ çözüyor,
+>   `ReplaceExercisesAsync` (yazma) arşivlenmiş bir egzersiz görürse `ValidationException` (400)
+>   fırlatıyor.
+>   (c) [x] ~~Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir
+>   şablon N ayrı gidiş-dönüşe mal olur.~~ **Faz 6'da karşılandı**: `GetVisibleByIdsAsync` eklendi,
+>   `ReplaceExercisesAsync` şablondaki tüm egzersiz id'lerini tek sorguda doğruluyor.
 
 ## Faz 6 — Feature: WorkoutTemplate
-- [ ] 6.1 Template CRUD + `TemplateExercise` (OrderIndex, PlannedSets)
-- [ ] 6.2 Template'e eklenen her ExerciseId için erişilebilirlik doğrulaması
-- [ ] 6.3 Silme: TemplateExercise CASCADE, Session.TemplateId SET NULL
-- [ ] 6.4 Test
+- [x] 6.1 DTO + repository + `WorkoutTemplateService`: CRUD (`Create`/`Update`/`Patch`/`Delete`),
+      `TemplateExercise` listesi TOPTAN değiştirilir (`ReplaceExercisesAsync`) — `OrderIndex`
+      istemciden gelmez, dizideki konumdan türer; `PlannedSets` [1,50] aralığında
+- [x] 6.2 Template'e eklenen her `ExerciseId` için erişilebilirlik doğrulaması:
+      `ExerciseService`'in görünürlük deseni `IExerciseRepository.GetVisibleByIdsAsync` ile
+      toplu olarak yeniden kullanıldı (N ayrı gidiş-dönüş yok); arşivlenmiş bir egzersiz
+      şablona YAZILAMAZ ama var olan şablonlarda okunmaya devam eder; aynı egzersiz bir
+      şablona iki kez eklenemez
+- [x] 6.3 Silme: `TemplateExercise` CASCADE, `WorkoutSession.TemplateId` SET NULL (Faz 1'de DB
+      seviyesinde konfigüre edilmişti). **Düzeltme (2026-09-08 fix dalgası):** bu satır
+      önceden `Silinen_sablon_sonrasinda_404_verir`'i kanıt gösteriyordu — o test yalnızca
+      204 → 404 akışını doğrular, `TemplateExercise` satırlarına veya
+      `WorkoutSession.TemplateId`'ye hiç bakmaz. Gerçek kapsam `WorkoutTemplateServiceTests`
+      içinde: `Silinen_sablonun_TemplateExercise_satirlari_da_gider` ve
+      `Silinen_sablonun_oturumu_silinmez_TemplateId_null_olur`. Bu ikisi de fix dalgasında
+      güçlendirildi: artık `service.DeleteAsync` yerine `ChangeTracker.Clear()` +
+      `ExecuteDeleteAsync` kullanıyorlar, böylece EF'in aynı context'teki tracked child'lar
+      için kendi client-side cascade'i devreye giremiyor — sonucu üretebilecek TEK mekanizma
+      veritabanının kendi FK kuralı (CASCADE / SET NULL) kalıyor.
+- [x] 6.4 Test: `TemplatesController` üzerinde 401 (`Tokensiz_listeleme_401_verir`), 201
+      (`Olusturulan_sablon_listede_ve_detayda_gorunur`), 400 (`Gecersiz_plannedSets_400_verir`),
+      404 (`Baska_kullanicinin_sablonu_404_verir`) ve PATCH'in listeyi koruduğu
+      (`Patch_yalnizca_adi_degistirir_listeyi_korur`) doğrulanıyor + iç eleman doğrulaması için
+      gerçek HTTP üzerinden bir test (`Gecersiz_plannedSets_400_verir` —
+      `Validator.TryValidateObject` koleksiyon elemanlarına inmiyor, MVC'nin doğrulayıcısı
+      iniyor; birim test bu farkı kanıtlayamaz). **Düzeltme (2026-09-08 fix dalgası):** bu
+      satır önceden "409" ve "PUT'un listeyi TOPTAN değiştirdiği"nin de bu controller
+      testlerinde kanıtlandığını iddia ediyordu — `TemplateEndpointsTests` o ikisini hiç
+      içermiyordu. 409, yalnızca servis katmanında (`WorkoutTemplateServiceTests
+      .Ayni_sablon_adi_farkli_harf_buyuklugunde_reddedilir`) ve artık DB seviyesinde de
+      (`UnitOfWorkTests.SaveChangesAsync_sablon_adi_unique_ihlalinde_ConflictException_firlatir`)
+      kanıtlanıyor. PUT'un listeyi farklı bir listeyle TOPTAN değiştirmesi de yalnızca servis
+      katmanında (`Update_listeyi_toptan_degistirir`) kanıtlanıyor. Fix dalgasında
+      `TemplateEndpointsTests`'e PUT için iki gerçek HTTP testi eklendi —
+      `Put_exercises_atlanirsa_400_verir` (exercises alanı atlanırsa 400) ve
+      `Put_bos_exercises_listesiyle_200_ve_bos_liste_doner` (açık boş liste 200 döner) — ama
+      bunlar "atlama vs. boşaltma" ayrımını kanıtlıyor, "farklı bir listeyle TOPTAN değiştirme"yi
+      değil. Toplam 258 test yeşil (252 → +6); 2026-09-08 fix dalgasıyla 263'e çıktı (+5: 2
+      controller PUT testi, 2 servis arşiv testi, 1 DB-seviyeli unique testi). Ayrıca gerçek
+      sunucuya karşı 10 senaryolu uçtan uca duman testi.
 
 ## Faz 7 — Feature: WorkoutSession
 - [ ] 7.1 Session başlat (template'li / template'siz), bitir (`EndedAt`), not ekle

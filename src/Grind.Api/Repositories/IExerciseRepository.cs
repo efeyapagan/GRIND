@@ -32,4 +32,14 @@ public interface IExerciseRepository : IRepository<Exercise>
     /// </param>
     Task<bool> NameExistsAsync(
         long userId, string name, long? excludeId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen id'lerden yalnızca kullanıcının ERİŞEBİLDİKLERİNİ döndürür. Şablon gibi çok
+    /// egzersizli akışlar için toplu sorgu: N egzersiz için N ayrı gidiş-dönüş yapılmasın.
+    /// Erişilemeyen id'ler sonuçta HİÇ yer almaz — çağıran, dönen sayı ile istenen sayıyı
+    /// karşılaştırarak "hepsi erişilebilir mi" sorusunu tek adımda cevaplar.
+    /// Arşivlenmiş egzersizler bilerek dahil edilir (bkz. GetVisibleByIdAsync).
+    /// </summary>
+    Task<IReadOnlyList<Exercise>> GetVisibleByIdsAsync(
+        IReadOnlyCollection<long> ids, long userId, CancellationToken cancellationToken = default);
 }
