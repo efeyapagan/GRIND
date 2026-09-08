@@ -23,6 +23,13 @@ public static class TurkeyDay
     /// </summary>
     public static (DateTime FromUtcInclusive, DateTime ToUtcExclusive) RangeFor(DateTime utcInstant)
     {
+        if (utcInstant.Kind == DateTimeKind.Local)
+        {
+            throw new ArgumentException(
+                "TurkeyDay yalnızca UTC an kabul eder; yerel bir DateTime gün sınırını sessizce kaydırır.",
+                nameof(utcInstant));
+        }
+
         var localInstant = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, Turkey);
         var localDayStart = DateTime.SpecifyKind(localInstant.Date, DateTimeKind.Unspecified);
 

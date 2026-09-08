@@ -51,4 +51,29 @@ public class TurkeyDayTests
         Assert.Equal(DateTimeKind.Utc, baslangic.Kind);
         Assert.Equal(DateTimeKind.Utc, bitis.Kind);
     }
+
+    /// <summary>
+    /// Kind = Local sessizce yanlış gün sınırı üretebilir (yerel makine saat dilimine göre
+    /// kayar) — bu yüzden reddedilmeli, UTC'ye sessizce çevrilmemeli.
+    /// </summary>
+    [Fact]
+    public void Yerel_saat_reddedilir()
+    {
+        var yerelAn = new DateTime(2026, 3, 10, 20, 30, 0, DateTimeKind.Local);
+
+        Assert.Throws<ArgumentException>(() => TurkeyDay.RangeFor(yerelAn));
+    }
+
+    /// <summary>
+    /// Kind = Unspecified reddedilmiyor, UTC olarak okunuyor (Postgres round-trip'i ve
+    /// test yardımcıları bunu üretebilir) — bu davranışı burada belgeliyoruz.
+    /// </summary>
+    [Fact]
+    public void Belirtilmemis_kind_UTC_gibi_okunur()
+    {
+        var utc = new DateTime(2026, 3, 10, 20, 30, 0, DateTimeKind.Utc);
+        var belirtilmemis = DateTime.SpecifyKind(utc, DateTimeKind.Unspecified);
+
+        Assert.Equal(TurkeyDay.RangeFor(utc), TurkeyDay.RangeFor(belirtilmemis));
+    }
 }
