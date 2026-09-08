@@ -1,6 +1,7 @@
 using Grind.Api.Common;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
+using Grind.Api.Services;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,7 @@ builder.Services.AddCrossCutting(
     ?? throw new InvalidOperationException("Jwt bölümü tanımlı değil."),
     builder.Environment);
 
+builder.Services.AddApplicationServices();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
