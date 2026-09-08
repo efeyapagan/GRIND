@@ -53,6 +53,7 @@ public class GlobalExceptionHandler(
     {
         NotFoundException => (StatusCodes.Status404NotFound, "Kayıt bulunamadı"),
         ValidationException => (StatusCodes.Status400BadRequest, "Geçersiz istek"),
+        UnauthorizedException => (StatusCodes.Status401Unauthorized, "Kimlik doğrulanamadı"),
         ForbiddenException => (StatusCodes.Status403Forbidden, "İzin yok"),
         ConflictException => (StatusCodes.Status409Conflict, "Çakışma"),
         _ => (StatusCodes.Status500InternalServerError, "Beklenmeyen bir hata oluştu")
