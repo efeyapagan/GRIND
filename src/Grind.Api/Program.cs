@@ -39,9 +39,9 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Login'den dönen token'ı buraya yapıştırın (başına 'Bearer ' yazmayın)."
     });
 
-    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
+        { new OpenApiSecuritySchemeReference("Bearer", document), new List<string>() }
     });
 });
 
