@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Services;
 using Microsoft.OpenApi;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,15 @@ builder.Services.AddCrossCutting(
     builder.Environment);
 
 builder.Services.AddApplicationServices();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Enum'lar tel üzerinde METİN taşınır ("Push"), sayı değil. Varsayılan
+        // System.Text.Json bir enum'u metinden OKUYAMAZ (deneyle doğrulandı: JsonException),
+        // ve sayı göndermek hem okunmaz hem de veritabanındaki metin gösterimiyle
+        // (EnumToStringConverter) tutarsız olurdu.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
