@@ -170,4 +170,43 @@ public class ExerciseEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    /// <summary>
+    /// PATCH'in var olma sebebi, tel üzerinde doğrulanıyor: gövdede YALNIZCA kategori var,
+    /// ad hiç gönderilmiyor ve değişmemeli. Aynı işi PUT ile yapmak adı da göndermeyi
+    /// gerektirir; Swagger gövdeyi "name": "string" diye ön-doldurduğu için egzersizin adı
+    /// sessizce "string" oluyordu. Ham JSON kullanılıyor, çünkü tipli bir DTO "alan hiç
+    /// gönderilmedi" durumunu ifade edemez.
+    /// </summary>
+    [Fact]
+    public async Task Patch_yalnizca_kategoriyi_degistirir_ismi_korur()
+    {
+        var client = await AuthenticatedClientAsync();
+        var name = UniqueName();
+        var created = await client.PostAsJsonAsync("/api/exercises",
+            new CreateExerciseRequest { Name = name, Category = ExerciseCategory.Push }, Json);
+        var olusan = await created.Content.ReadFromJsonAsync<ExerciseResponse>(Json);
+
+        var response = await client.PatchAsync($"/api/exercises/{olusan!.Id}",
+            new StringContent("""{"category":"Pull"}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var guncel = await response.Content.ReadFromJsonAsync<ExerciseResponse>(Json);
+        Assert.Equal(ExerciseCategory.Pull, guncel!.Category);
+        Assert.Equal(name, guncel.Name);
+    }
+
+    [Fact]
+    public async Task Bos_govdeli_patch_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var created = await client.PostAsJsonAsync("/api/exercises",
+            new CreateExerciseRequest { Name = UniqueName(), Category = ExerciseCategory.Push }, Json);
+        var olusan = await created.Content.ReadFromJsonAsync<ExerciseResponse>(Json);
+
+        var response = await client.PatchAsync($"/api/exercises/{olusan!.Id}",
+            new StringContent("{}", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
