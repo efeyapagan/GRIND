@@ -54,3 +54,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// WebApplicationFactory<Program> (bkz. tests/Grind.Tests/Integration) Program sınıfının
+// erişilebilir olmasını ister; top-level statements bunu üretmez, elle eklenmesi gerekir.
+public partial class Program { }
