@@ -120,6 +120,28 @@
 >   (`NameClaimType = AppClaims.Username`) ama claim'lere elle uzanmak sahiplik kontrolünü atlamayı
 >   kolaylaştırır.
 
+> **Faz 4'ten devreden notlar (ileride dikkat edilecek):**
+> - **Rate limiting bilerek yapılmadı (YAGNI, kişisel ölçek).** ASP.NET Core'un yerleşik rate
+>   limiting middleware'i birkaç satırla eklenebilir. Uygulama internete açılırsa (tek kullanıcı
+>   dışına çıkarsa) bu karar yeniden gözden geçirilmeli.
+> - **`POST /api/auth/register`, kimlik doğrulaması istemeyen bir username-enumeration
+>   oracle'ıdır.** Login bilerek sertleştirildi (nötr hata mesajı + kullanıcı bulunamasa da
+>   çalışan sahte BCrypt doğrulaması, zamanlama farkını kapatmak için) ama register, "bu
+>   kullanıcı adı alınmış mı?" sorusuna doğrudan 409 ile cevap veriyor — üstelik bu çakışma yolu
+>   BCrypt'e hiç uğramadan kısa devre yapıyor (~2ms), başarılı kayıt ise hash'leme yüzünden
+>   ~230ms sürüyor. Yani mesajı nötrleştirmek tek başına yeterli olmazdı, zamanlama farkı zaten
+>   kayıtlı username'leri sayardı. Bu bir hata değil, kaydın doğası gereği bir sınır: bir kullanıcı
+>   seçtiği adın alınıp alınmadığını bilmek ZORUNDA. Rate limiting eklenene kadar login'in
+>   nötrlük garantisinin bilinen bir sınırı olarak not düşülüyor.
+> - **Faz 5 için: fallback authorization policy yok.** `AddAuthorization()` şu an hiçbir
+>   `FallbackPolicy` olmadan çağrılıyor ve `MapControllers()` de `RequireAuthorization()`
+>   almıyor — yani ayrıca işaretlenmeyen her endpoint varsayılan olarak anonim erişime açık.
+>   Faz 5'te unutulan bir `[Authorize]` bu yüzden "fail open" olur (varsayılan olarak kapalı
+>   değil, açık kalır). Faz 5 başında `options.FallbackPolicy =
+>   new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()` eklenmeli — bu hem
+>   açığı kapatır hem de `AuthController`'daki `[AllowAnonymous]`'u (şu an fiilen no-op, çünkü
+>   zaten karşılığında zorlayan bir fallback yok) gerçekten işlevsel hâle getirir.
+
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
 - [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
       güncelleme, arşivleme (soft delete)
