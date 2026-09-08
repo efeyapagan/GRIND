@@ -208,13 +208,37 @@
       şablona YAZILAMAZ ama var olan şablonlarda okunmaya devam eder; aynı egzersiz bir
       şablona iki kez eklenemez
 - [x] 6.3 Silme: `TemplateExercise` CASCADE, `WorkoutSession.TemplateId` SET NULL (Faz 1'de DB
-      seviyesinde konfigüre edilmişti, bu fazda `Silinen_sablon_sonrasinda_404_verir` ile
-      uçtan uca doğrulandı)
-- [x] 6.4 Test: `TemplatesController` (401/201/400/404/409, PATCH'in listeyi koruduğu, PUT'un
-      listeyi TOPTAN değiştirdiği) + iç eleman doğrulaması için gerçek HTTP üzerinden bir test
-      (`Gecersiz_plannedSets_400_verir` — `Validator.TryValidateObject` koleksiyon elemanlarına
-      inmiyor, MVC'nin doğrulayıcısı iniyor; birim test bu farkı kanıtlayamaz). Toplam 258 test
-      yeşil (252 → +6). Ayrıca gerçek sunucuya karşı 10 senaryolu uçtan uca duman testi.
+      seviyesinde konfigüre edilmişti). **Düzeltme (2026-09-08 fix dalgası):** bu satır
+      önceden `Silinen_sablon_sonrasinda_404_verir`'i kanıt gösteriyordu — o test yalnızca
+      204 → 404 akışını doğrular, `TemplateExercise` satırlarına veya
+      `WorkoutSession.TemplateId`'ye hiç bakmaz. Gerçek kapsam `WorkoutTemplateServiceTests`
+      içinde: `Silinen_sablonun_TemplateExercise_satirlari_da_gider` ve
+      `Silinen_sablonun_oturumu_silinmez_TemplateId_null_olur`. Bu ikisi de fix dalgasında
+      güçlendirildi: artık `service.DeleteAsync` yerine `ChangeTracker.Clear()` +
+      `ExecuteDeleteAsync` kullanıyorlar, böylece EF'in aynı context'teki tracked child'lar
+      için kendi client-side cascade'i devreye giremiyor — sonucu üretebilecek TEK mekanizma
+      veritabanının kendi FK kuralı (CASCADE / SET NULL) kalıyor.
+- [x] 6.4 Test: `TemplatesController` üzerinde 401 (`Tokensiz_listeleme_401_verir`), 201
+      (`Olusturulan_sablon_listede_ve_detayda_gorunur`), 400 (`Gecersiz_plannedSets_400_verir`),
+      404 (`Baska_kullanicinin_sablonu_404_verir`) ve PATCH'in listeyi koruduğu
+      (`Patch_yalnizca_adi_degistirir_listeyi_korur`) doğrulanıyor + iç eleman doğrulaması için
+      gerçek HTTP üzerinden bir test (`Gecersiz_plannedSets_400_verir` —
+      `Validator.TryValidateObject` koleksiyon elemanlarına inmiyor, MVC'nin doğrulayıcısı
+      iniyor; birim test bu farkı kanıtlayamaz). **Düzeltme (2026-09-08 fix dalgası):** bu
+      satır önceden "409" ve "PUT'un listeyi TOPTAN değiştirdiği"nin de bu controller
+      testlerinde kanıtlandığını iddia ediyordu — `TemplateEndpointsTests` o ikisini hiç
+      içermiyordu. 409, yalnızca servis katmanında (`WorkoutTemplateServiceTests
+      .Ayni_sablon_adi_farkli_harf_buyuklugunde_reddedilir`) ve artık DB seviyesinde de
+      (`UnitOfWorkTests.SaveChangesAsync_sablon_adi_unique_ihlalinde_ConflictException_firlatir`)
+      kanıtlanıyor. PUT'un listeyi farklı bir listeyle TOPTAN değiştirmesi de yalnızca servis
+      katmanında (`Update_listeyi_toptan_degistirir`) kanıtlanıyor. Fix dalgasında
+      `TemplateEndpointsTests`'e PUT için iki gerçek HTTP testi eklendi —
+      `Put_exercises_atlanirsa_400_verir` (exercises alanı atlanırsa 400) ve
+      `Put_bos_exercises_listesiyle_200_ve_bos_liste_doner` (açık boş liste 200 döner) — ama
+      bunlar "atlama vs. boşaltma" ayrımını kanıtlıyor, "farklı bir listeyle TOPTAN değiştirme"yi
+      değil. Toplam 258 test yeşil (252 → +6); 2026-09-08 fix dalgasıyla 263'e çıktı (+5: 2
+      controller PUT testi, 2 servis arşiv testi, 1 DB-seviyeli unique testi). Ayrıca gerçek
+      sunucuya karşı 10 senaryolu uçtan uca duman testi.
 
 ## Faz 7 — Feature: WorkoutSession
 - [ ] 7.1 Session başlat (template'li / template'siz), bitir (`EndedAt`), not ekle
