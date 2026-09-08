@@ -12,8 +12,8 @@
 | 1 | Domain + Persistence | ✅ |
 | 2 | Repository + Unit of Work | ✅ |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
-| 4 | Feature: Auth | ⏳ sırada |
-| 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
+| 4 | Feature: Auth | ✅ |
+| 5 | Feature: Exercise (+ ExerciseMedia) | ⏳ sırada |
 | 6 | Feature: WorkoutTemplate | ☐ |
 | 7 | Feature: WorkoutSession | ☐ |
 | 8 | Feature: SetEntry + PR motoru | ☐ |
@@ -102,11 +102,11 @@
       `UseAuthorization`), Swagger'a Bearer güvenlik şeması eklendi
 
 ## Faz 4 — Feature: Auth
-- [ ] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse
-- [ ] 4.2 `IAuthService` / `AuthService`: username lowercase normalizasyonu, BCrypt hash,
+- [x] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse
+- [x] 4.2 `IAuthService` / `AuthService`: username lowercase normalizasyonu, BCrypt hash,
       username çakışma kontrolü → 409
-- [ ] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
-- [ ] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
+- [x] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
+- [x] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
 
 > **Faz 3'ten devreden notlar (Faz 4'te dikkat edilecek):**
 > - `Grind.Api.Common.Exceptions.ValidationException`, `System.ComponentModel.DataAnnotations.ValidationException`
