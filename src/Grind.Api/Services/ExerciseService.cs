@@ -50,7 +50,7 @@ public class ExerciseService(
         {
             UserId = currentUser.UserId,
             Name = name,
-            Category = request.Category,
+            Category = request.Category!.Value,
             IsArchived = false
         };
 
@@ -68,7 +68,7 @@ public class ExerciseService(
         await EnsureNameFreeAsync(name, excludeId: exercise.Id, cancellationToken);
 
         exercise.Name = name;
-        exercise.Category = request.Category;
+        exercise.Category = request.Category!.Value;
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToResponse(exercise);
@@ -88,7 +88,7 @@ public class ExerciseService(
         var media = new ExerciseMedia
         {
             ExerciseId = exercise.Id,
-            MediaType = request.MediaType,
+            MediaType = request.MediaType!.Value,
             Url = request.Url.Trim(),
             CreatedAt = DateTime.UtcNow
         };

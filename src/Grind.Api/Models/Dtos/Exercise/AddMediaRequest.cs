@@ -6,8 +6,15 @@ namespace Grind.Api.Models.Dtos.Exercise;
 
 public class AddMediaRequest
 {
+    /// <summary>
+    /// [EnumDataType], tanımsız bir SAYI değerini yakalar ama alan hiç GÖNDERİLMEZSE
+    /// devreye girmez — model binder non-nullable bir enum'u sessizce 0'da
+    /// (<see cref="MediaType.Video"/>) bırakır. Bunu yakalayan [Required], sadece nullable
+    /// bir enum üzerinde anlamlıdır.
+    /// </summary>
+    [Required(ErrorMessage = "Medya tipi zorunlu.")]
     [EnumDataType(typeof(MediaType), ErrorMessage = "Geçersiz medya tipi.")]
-    public MediaType MediaType { get; set; }
+    public MediaType? MediaType { get; set; }
 
     [Required(ErrorMessage = "Medya adresi zorunlu.")]
     [StringLength(500, ErrorMessage = "Medya adresi en fazla 500 karakter olabilir.")]

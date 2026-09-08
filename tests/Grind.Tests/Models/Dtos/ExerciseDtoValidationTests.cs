@@ -49,6 +49,29 @@ public class ExerciseDtoValidationTests
         Assert.NotEmpty(Validate(Create("Geçerli Ad", (ExerciseCategory)99)));
     }
 
+    /// <summary>
+    /// [EnumDataType] tanımsız bir SAYI'yı yakalar ama alan hiç gönderilmezse devreye girmez —
+    /// model binder non-nullable bir enum'u sessizce 0'da (geçerli bir üye) bırakır. Category
+    /// bu yüzden nullable: [Required] "alan yok" durumunu ancak böyle görebilir.
+    /// </summary>
+    [Fact]
+    public void Kategorisi_olmayan_olusturma_istegi_reddedilir()
+    {
+        Assert.NotEmpty(Validate(new CreateExerciseRequest { Name = "Geçerli Ad", Category = null }));
+    }
+
+    [Fact]
+    public void Kategorisi_olmayan_guncelleme_istegi_reddedilir()
+    {
+        Assert.NotEmpty(Validate(new UpdateExerciseRequest { Name = "Geçerli Ad", Category = null }));
+    }
+
+    [Fact]
+    public void Medya_tipi_olmayan_ekleme_istegi_reddedilir()
+    {
+        Assert.NotEmpty(Validate(new AddMediaRequest { MediaType = null, Url = "https://ornek.com/video.mp4" }));
+    }
+
     [Theory]
     [InlineData("https://ornek.com/video.mp4", true)]
     [InlineData("http://ornek.com/hareket.gif", true)]

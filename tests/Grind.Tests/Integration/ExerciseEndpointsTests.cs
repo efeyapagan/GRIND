@@ -59,6 +59,34 @@ public class ExerciseEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
         Assert.Contains("\"Legs\"", body);
     }
 
+    /// <summary>
+    /// [EnumDataType] tanımsız bir SAYI'yı yakalar ama alanın hiç GÖNDERİLMEMESİNİ yakalayamaz:
+    /// model binder non-nullable bir enum'u sessizce 0'da (geçerli bir üye — Push) bırakırdı.
+    /// Bu tam olarak canlıda gözlemlenen hatanın kendisi: category'siz PUT, kaydı sessizce
+    /// Push'a çeviriyordu. Alanı tamamen atlamak için typed bir DTO yeterli değil, ham JSON
+    /// gövde gerekiyor.
+    /// </summary>
+    [Fact]
+    public async Task Kategorisi_atlanan_PUT_400_verir_ve_kaydi_sessizce_degistirmez()
+    {
+        var client = await AuthenticatedClientAsync();
+        var name = UniqueName();
+
+        var created = await client.PostAsJsonAsync("/api/exercises",
+            new CreateExerciseRequest { Name = name, Category = ExerciseCategory.Legs }, Json);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var olusan = await created.Content.ReadFromJsonAsync<ExerciseResponse>(Json);
+
+        var payload = new StringContent(
+            $$"""{"name":"{{name}}"}""", Encoding.UTF8, "application/json");
+        var response = await client.PutAsync($"/api/exercises/{olusan!.Id}", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var detail = await client.GetFromJsonAsync<ExerciseResponse>($"/api/exercises/{olusan.Id}", Json);
+        Assert.Equal(ExerciseCategory.Legs, detail!.Category);
+    }
+
     [Fact]
     public async Task Tanimsiz_kategori_sayisi_400_verir()
     {
