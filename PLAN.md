@@ -14,8 +14,8 @@
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
 | 4 | Feature: Auth | ✅ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ✅ |
-| 6 | Feature: WorkoutTemplate | ⏳ sırada |
-| 7 | Feature: WorkoutSession | ☐ |
+| 6 | Feature: WorkoutTemplate | ✅ |
+| 7 | Feature: WorkoutSession | ⏳ sırada |
 | 8 | Feature: SetEntry + PR motoru | ☐ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
 | 10 | Feature: BodyWeightLog | ☐ |
@@ -183,20 +183,38 @@
 >   spekülatif olurdu. Gerçek bir istemci alan bazlı eşleme istediğinde yeniden ele alınmalı;
 >   değişiklik `GlobalExceptionHandler`'da olur ve tüm fazları etkiler.
 > - **Faz 6 (WorkoutTemplate) için:**
->   (a) `TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır içinde
->   yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı — aksi
->   halde ince bir farkla farklı bir IDOR kontrolü sızabilir.
->   (b) `GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar çözülebilir
->   kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA reddetmeli, ama
->   template **okuma** onları yine çözebilmeli.
->   (c) Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir şablon
->   N ayrı gidiş-dönüşe mal olur.
+>   (a) [x] ~~`TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır
+>   içinde yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı —
+>   aksi halde ince bir farkla farklı bir IDOR kontrolü sızabilir.~~ **Faz 6'da karşılandı**:
+>   `WorkoutTemplateService.ReplaceExercisesAsync`, aynı görünürlük yüklemini satır içinde
+>   tekrar yazmak yerine `IExerciseRepository.GetVisibleByIdsAsync` üzerinden tek yerden çağırıyor.
+>   (b) [x] ~~`GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar
+>   çözülebilir kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA
+>   reddetmeli, ama template **okuma** onları yine çözebilmeli.~~ **Faz 6'da karşılandı**:
+>   `OwnedOrThrowAsync`/`ReloadAsync` (okuma) arşivlenmiş egzersizleri hâlâ çözüyor,
+>   `ReplaceExercisesAsync` (yazma) arşivlenmiş bir egzersiz görürse `ValidationException` (400)
+>   fırlatıyor.
+>   (c) [x] ~~Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir
+>   şablon N ayrı gidiş-dönüşe mal olur.~~ **Faz 6'da karşılandı**: `GetVisibleByIdsAsync` eklendi,
+>   `ReplaceExercisesAsync` şablondaki tüm egzersiz id'lerini tek sorguda doğruluyor.
 
 ## Faz 6 — Feature: WorkoutTemplate
-- [ ] 6.1 Template CRUD + `TemplateExercise` (OrderIndex, PlannedSets)
-- [ ] 6.2 Template'e eklenen her ExerciseId için erişilebilirlik doğrulaması
-- [ ] 6.3 Silme: TemplateExercise CASCADE, Session.TemplateId SET NULL
-- [ ] 6.4 Test
+- [x] 6.1 DTO + repository + `WorkoutTemplateService`: CRUD (`Create`/`Update`/`Patch`/`Delete`),
+      `TemplateExercise` listesi TOPTAN değiştirilir (`ReplaceExercisesAsync`) — `OrderIndex`
+      istemciden gelmez, dizideki konumdan türer; `PlannedSets` [1,50] aralığında
+- [x] 6.2 Template'e eklenen her `ExerciseId` için erişilebilirlik doğrulaması:
+      `ExerciseService`'in görünürlük deseni `IExerciseRepository.GetVisibleByIdsAsync` ile
+      toplu olarak yeniden kullanıldı (N ayrı gidiş-dönüş yok); arşivlenmiş bir egzersiz
+      şablona YAZILAMAZ ama var olan şablonlarda okunmaya devam eder; aynı egzersiz bir
+      şablona iki kez eklenemez
+- [x] 6.3 Silme: `TemplateExercise` CASCADE, `WorkoutSession.TemplateId` SET NULL (Faz 1'de DB
+      seviyesinde konfigüre edilmişti, bu fazda `Silinen_sablon_sonrasinda_404_verir` ile
+      uçtan uca doğrulandı)
+- [x] 6.4 Test: `TemplatesController` (401/201/400/404/409, PATCH'in listeyi koruduğu, PUT'un
+      listeyi TOPTAN değiştirdiği) + iç eleman doğrulaması için gerçek HTTP üzerinden bir test
+      (`Gecersiz_plannedSets_400_verir` — `Validator.TryValidateObject` koleksiyon elemanlarına
+      inmiyor, MVC'nin doğrulayıcısı iniyor; birim test bu farkı kanıtlayamaz). Toplam 258 test
+      yeşil (252 → +6). Ayrıca gerçek sunucuya karşı 10 senaryolu uçtan uca duman testi.
 
 ## Faz 7 — Feature: WorkoutSession
 - [ ] 7.1 Session başlat (template'li / template'siz), bitir (`EndedAt`), not ekle
