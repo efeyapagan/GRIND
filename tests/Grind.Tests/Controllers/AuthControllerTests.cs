@@ -77,6 +77,11 @@ public class AuthControllerTests
         Assert.NotEmpty(typeof(AuthController)
             .GetMethod(nameof(AuthController.Login))!
             .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
+
+        // Sınıf seviyesinde OLMAMALI: oraya konursa bu controller'a ileride eklenecek her
+        // action sessizce anonim olur ve fallback policy bunu ezemez.
+        Assert.Empty(typeof(AuthController)
+            .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
     }
 
     [Fact]

@@ -314,17 +314,24 @@ public class ExerciseServiceTests
     }
 
     /// <summary>
-    /// "  " hem [Required]'i (yalnızca boş dizeyi eler) hem MinimumLength=2'yi geçiyor;
-    /// Trim'den sonra boş kalıyor. Kontrol servis katmanında, çünkü Trim burada yapılıyor.
+    /// [Required], <c>AllowEmptyStrings = false</c> olduğunda dizeyi TRIM'leyip kontrol eder —
+    /// yani "   " (yalnızca boşluk) gerçek bir HTTP isteğinde zaten DTO katmanında reddedilir,
+    /// servise hiç ulaşmaz. Bu guard'ın asıl var olma sebebi PADDED bir isim: " A " gibi,
+    /// [Required]'i VE [StringLength(MinimumLength = 2)]'yi geçer (uzunluğu 3), ama Trim'den
+    /// sonra tek karaktere düşer — bunu ancak servis, Trim'den SONRA uzunluğa bakarak yakalar.
+    /// "   " için servisi doğrudan (DTO doğrulamasını atlayarak) çağırmak da aynı guard'a
+    /// takılır — bu ayrı bir savunma katmanı, ama guard'ın VAR OLMA sebebi o değil.
     /// </summary>
-    [Fact]
-    public async Task Yalnizca_bosluktan_olusan_isim_reddedilir()
+    [Theory]
+    [InlineData(" A ")]
+    [InlineData("   ")]
+    public async Task Trim_sonrasi_kisa_kalan_isim_reddedilir(string name)
     {
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
             await Assert.ThrowsAsync<ValidationException>(
-                () => service.CreateAsync(new CreateExerciseRequest { Name = "   ", Category = ExerciseCategory.Push }));
+                () => service.CreateAsync(new CreateExerciseRequest { Name = name, Category = ExerciseCategory.Push }));
         }
     }
 }

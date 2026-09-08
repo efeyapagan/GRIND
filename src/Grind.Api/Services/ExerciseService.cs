@@ -154,10 +154,13 @@ public class ExerciseService(
     }
 
     /// <summary>
-    /// "  " (yalnızca boşluk) hem [Required]'i (yalnızca boş dizeyi eler) hem
-    /// [StringLength(MinimumLength = 2)]'yi geçiyor; Trim'den sonra boş kalıyor. Bu yüzden
-    /// isim ÖNCE trim'lenir, SONRA uzunluğu kontrol edilir — ve doğrulanan/saklanan değer
-    /// hep bu trim'lenmiş hâl olur (Faz 5 Görev 3 incelemesinin bulduğu boşluk).
+    /// [Required], <c>AllowEmptyStrings = false</c> olduğunda dizeyi TRIM'leyip öyle
+    /// kontrol eder — yani "   " (yalnızca boşluk) zaten DTO katmanında reddedilir, buraya
+    /// hiç ulaşmaz. Bu guard'ın var olma sebebi PADDED bir isim: " A " gibi, [Required]'i VE
+    /// [StringLength(MinimumLength = 2)]'yi geçer (uzunluğu 3), ama Trim'den sonra tek
+    /// karaktere düşer. Bu yüzden isim ÖNCE trim'lenir, SONRA uzunluğu kontrol edilir — ve
+    /// doğrulanan/saklanan değer hep bu trim'lenmiş hâl olur (Faz 5 Görev 3 incelemesinin
+    /// bulduğu boşluk).
     /// </summary>
     private static string RequireTrimmedName(string name)
     {
