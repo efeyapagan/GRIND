@@ -1,0 +1,84 @@
+using Grind.Api.Common.Exceptions;
+using Grind.Api.Common.Security;
+using Grind.Api.Data;
+using Grind.Api.Models.Dtos.Auth;
+using Grind.Api.Models.Entities;
+using Grind.Api.Repositories;
+
+namespace Grind.Api.Services;
+
+public class AuthService(
+    IUserRepository userRepository,
+    IUnitOfWork unitOfWork,
+    ITokenService tokenService) : IAuthService
+{
+    /// <summary>~220 ms/hash. Donanım hızlandıkça yükseltilecek yer burasıdır.</summary>
+    private const int WorkFactor = 12;
+
+    /// <summary>
+    /// Kullanıcı yok da olsa şifre yanlış da olsa AYNI metin. Bir dalın mesajını
+    /// zenginleştirmek ("böyle bir kullanıcı yok") kararın tamamını geçersiz kılar.
+    /// </summary>
+    internal const string InvalidCredentials = "Kullanıcı adı veya şifre hatalı.";
+
+    /// <summary>
+    /// Kullanıcı bulunamadığında karşılaştırılacak GERÇEK bir BCrypt hash'i. Yer tutucu bir
+    /// metin olamaz: BCrypt.Verify bozuk hash'te SaltParseException fırlatır ve yanıt 500 olur.
+    /// </summary>
+    internal static readonly string DummyPasswordHash =
+        BCrypt.Net.BCrypt.HashPassword("kullanici-bulunamadi", WorkFactor);
+
+    public async Task<AuthResponse> RegisterAsync(
+        RegisterRequest request, CancellationToken cancellationToken = default)
+    {
+        var username = Normalize(request.Username);
+
+        if (await userRepository.UsernameExistsAsync(username, cancellationToken))
+        {
+            throw new ConflictException($"'{username}' kullanıcı adı zaten alınmış.");
+        }
+
+        var user = new User
+        {
+            Username = username,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, WorkFactor),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        userRepository.Add(user);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Respond(user);
+    }
+
+    public async Task<AuthResponse> LoginAsync(
+        LoginRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await userRepository.GetByUsernameAsync(Normalize(request.Username), cancellationToken);
+
+        // DİKKAT: Verify HER ZAMAN çalışmalı. Bunu `user is null || !Verify(...)` hâline
+        // getirmek kısa devre yapar; kullanıcı yokken yanıt ~1ms'de döner ve zamanlama farkı
+        // kayıtlı username'leri sayar hâle gelir. Değişken bu yüzden önce hesaplanıyor.
+        var passwordMatches = BCrypt.Net.BCrypt.Verify(
+            request.Password, user?.PasswordHash ?? DummyPasswordHash);
+
+        if (user is null || !passwordMatches)
+        {
+            throw new UnauthorizedException(InvalidCredentials);
+        }
+
+        return Respond(user);
+    }
+
+    /// <summary>
+    /// Username veritabanında her zaman küçük harf durur. DTO regex'i girdiyi ASCII'ye
+    /// kısıtladığı için ToLowerInvariant burada güvenli (Türkçe İ sorunu oluşamaz).
+    /// </summary>
+    private static string Normalize(string username) => username.Trim().ToLowerInvariant();
+
+    private AuthResponse Respond(User user)
+    {
+        var token = tokenService.CreateToken(user.Id, user.Username);
+        return new AuthResponse(token.Token, token.ExpiresAtUtc, user.Username);
+    }
+}

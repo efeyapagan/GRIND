@@ -12,8 +12,8 @@
 | 1 | Domain + Persistence | ✅ |
 | 2 | Repository + Unit of Work | ✅ |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
-| 4 | Feature: Auth | ⏳ sırada |
-| 5 | Feature: Exercise (+ ExerciseMedia) | ☐ |
+| 4 | Feature: Auth | ✅ |
+| 5 | Feature: Exercise (+ ExerciseMedia) | ⏳ sırada |
 | 6 | Feature: WorkoutTemplate | ☐ |
 | 7 | Feature: WorkoutSession | ☐ |
 | 8 | Feature: SetEntry + PR motoru | ☐ |
@@ -102,11 +102,11 @@
       `UseAuthorization`), Swagger'a Bearer güvenlik şeması eklendi
 
 ## Faz 4 — Feature: Auth
-- [ ] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse
-- [ ] 4.2 `IAuthService` / `AuthService`: username lowercase normalizasyonu, BCrypt hash,
+- [x] 4.1 DTO: RegisterRequest, LoginRequest, AuthResponse
+- [x] 4.2 `IAuthService` / `AuthService`: username lowercase normalizasyonu, BCrypt hash,
       username çakışma kontrolü → 409
-- [ ] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
-- [ ] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
+- [x] 4.3 `AuthController`: POST /api/auth/register, POST /api/auth/login
+- [x] 4.4 Test: kayıt, aynı username reddi (case-insensitive), hatalı şifre, token içeriği
 
 > **Faz 3'ten devreden notlar (Faz 4'te dikkat edilecek):**
 > - `Grind.Api.Common.Exceptions.ValidationException`, `System.ComponentModel.DataAnnotations.ValidationException`
@@ -119,6 +119,39 @@
 > - Kimlik SADECE `ICurrentUserService` üzerinden okunacak. `User.Identity.Name` artık dolu
 >   (`NameClaimType = AppClaims.Username`) ama claim'lere elle uzanmak sahiplik kontrolünü atlamayı
 >   kolaylaştırır.
+
+> **Faz 4'ten devreden notlar (ileride dikkat edilecek):**
+> - **Rate limiting bilerek yapılmadı (YAGNI, kişisel ölçek).** ASP.NET Core'un yerleşik rate
+>   limiting middleware'i birkaç satırla eklenebilir. Uygulama internete açılırsa (tek kullanıcı
+>   dışına çıkarsa) bu karar yeniden gözden geçirilmeli.
+> - **`POST /api/auth/register`, kimlik doğrulaması istemeyen bir username-enumeration
+>   oracle'ıdır.** Login bilerek sertleştirildi (nötr hata mesajı + kullanıcı bulunamasa da
+>   çalışan sahte BCrypt doğrulaması, zamanlama farkını kapatmak için) ama register, "bu
+>   kullanıcı adı alınmış mı?" sorusuna doğrudan 409 ile cevap veriyor — üstelik bu çakışma yolu
+>   BCrypt'e hiç uğramadan kısa devre yapıyor (~2ms), başarılı kayıt ise hash'leme yüzünden
+>   ~230ms sürüyor. Yani mesajı nötrleştirmek tek başına yeterli olmazdı, zamanlama farkı zaten
+>   kayıtlı username'leri sayardı. Bu bir hata değil, kaydın doğası gereği bir sınır: bir kullanıcı
+>   seçtiği adın alınıp alınmadığını bilmek ZORUNDA. Rate limiting eklenene kadar login'in
+>   nötrlük garantisinin bilinen bir sınırı olarak not düşülüyor.
+> - **Faz 5 için: fallback authorization policy yok.** `AddAuthorization()` şu an hiçbir
+>   `FallbackPolicy` olmadan çağrılıyor ve `MapControllers()` de `RequireAuthorization()`
+>   almıyor — yani ayrıca işaretlenmeyen her endpoint varsayılan olarak anonim erişime açık.
+>   Faz 5'te unutulan bir `[Authorize]` bu yüzden "fail open" olur (varsayılan olarak kapalı
+>   değil, açık kalır). Faz 5 başında `options.FallbackPolicy =
+>   new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()` eklenmeli — bu hem
+>   açığı kapatır hem de `AuthController`'daki `[AllowAnonymous]`'u (şu an fiilen no-op, çünkü
+>   zaten karşılığında zorlayan bir fallback yok) gerçekten işlevsel hâle getirir.
+> - **Faz 5 için: `GrindApiFactory` ortam değişkenlerini süreç genelinde bırakıyor.**
+>   `Program.cs` `builder.Configuration`'ı `Build()`'den ÖNCE okuduğu için `WebApplicationFactory`'nin
+>   `ConfigureAppConfiguration` hook'u çalışmıyor; fabrika bu yüzden `Jwt__Key` ve
+>   `ConnectionStrings__Postgres`'i kurucusunda `Environment.SetEnvironmentVariable` ile kuruyor ve
+>   hiç geri almıyor. Bugün bir yarış yok — yapılandırmayı okuyan tek test sınıfı o. Ama Faz 5
+>   ikinci bir `WebApplicationFactory` tabanlı test sınıfı eklerse (ör. "anahtar yoksa host
+>   ayağa kalkmamalı") aynı süreçte sızan bu değişkenlerle yarışır. O noktada `GrindApiFactory`'ye
+>   bir `Dispose` override'ı eklenip değişkenler temizlenmeli.
+> - **Entegrasyon testleri geliştirme veritabanına kalıcı satır yazıyor** (`itest_<guid>`
+>   kullanıcıları). Username'ler benzersiz olduğu için tekrar çalıştırmayı bozmuyor, ama zamanla
+>   birikiyor. Rahatsız olursa test sonunda silme ya da ayrı bir test veritabanı eklenebilir.
 
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
 - [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
