@@ -12,7 +12,6 @@ namespace Grind.Api.Controllers;
 [ApiController]
 [AllowAnonymous]
 [Route("api/auth")]
-[Produces("application/json")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
     /// <summary>Yeni kullanıcı oluşturur ve doğrudan giriş yapmış sayar (token döner).</summary>
