@@ -256,3 +256,19 @@
 ## Çalışma Kuralı
 Her fazın sonunda: `dotnet build` + ilgili testler yeşil → kısa özet → onay → sonraki faz.
 Bir fazda alınan mimari karar CLAUDE.md'ye not olarak eklenir.
+
+## Gerçek Kullanımdan Gelen İstekler (Faz 5 sonrası, 2026-09-08)
+Uygulama Swagger'dan elle denenirken çıkan geliştirme fikirleri. Henüz karara bağlanmadı.
+
+- **Egzersiz arama (isim ile).** Kullanıcı gerçek hayatta id ile değil isimle arıyor.
+  Düz `contains` araması ucuz. Asıl istenen "bunu mu demek istediniz?" (yazım hatasına
+  toleranslı öneri) ise ayrı bir iş: PostgreSQL `pg_trgm` uzantısı + `similarity()`,
+  yeni bir migration ve bir benzerlik eşiği kararı gerektirir.
+  > Önce şuna karar verilmeli: arama sunucuda mı olmalı? Liste 15 global + kullanıcının
+  > kendi egzersizleri, yani birkaç düzine satır. Arayüz listeyi bir kez çekip tarayıcıda
+  > filtrelerse arama anında olur ve her tuş vuruşunda istek gitmez. Sunucu tarafı arama,
+  > liste yüzlerce satıra çıktığında anlam kazanır.
+- **Kategori filtresi** (`GET /api/exercises?category=Push`). Küçük iş: mevcut
+  `GetVisibleAsync`'e bir parametre. Yukarıdaki soruyla aynı ödünleşmeye tabi.
+- Not: Faz 5 tasarımında ikisi de bilerek YAGNI diye dışarıda bırakılmıştı. Gerçek
+  kullanım aksini gösterdiği için yeniden değerlendiriliyor — YAGNI'nin amacı buydu.

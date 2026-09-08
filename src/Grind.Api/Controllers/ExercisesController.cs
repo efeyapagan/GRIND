@@ -49,6 +49,21 @@ public class ExercisesController(IExerciseService exerciseService) : ControllerB
         long id, UpdateExerciseRequest request, CancellationToken cancellationToken)
         => Ok(await exerciseService.UpdateAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// Kısmi güncelleme: yalnızca gönderilen alan değişir. Sadece kategoriyi düzeltmek için
+    /// <c>{ "category": "Pull" }</c> yeterlidir — PUT ile bunu yapmak adı da göndermeyi
+    /// gerektirir ve yanlış gönderirsen adı ezersin.
+    /// </summary>
+    [HttpPatch("{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ExerciseResponse>> Patch(
+        long id, PatchExerciseRequest request, CancellationToken cancellationToken)
+        => Ok(await exerciseService.PatchAsync(id, request, cancellationToken));
+
     /// <summary>Arşivler (soft delete) — geçmiş kayıtlar bozulmasın diye satır silinmez.</summary>
     [HttpDelete("{id:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

@@ -74,6 +74,36 @@ public class ExerciseService(
         return ToResponse(exercise);
     }
 
+    public async Task<ExerciseResponse> PatchAsync(
+        long id, PatchExerciseRequest request, CancellationToken cancellationToken = default)
+    {
+        var exercise = await OwnedOrThrowAsync(id, includeMedia: true, cancellationToken);
+
+        // Boş gövde DTO doğrulamasını geçer (nullable alanlarda kural yok), o yüzden burada
+        // durduruluyor. Sessizce hiçbir şey yapmamak, çağıranın 200 görüp isteğinin
+        // uygulandığını sanmasına yol açardı.
+        if (request.Name is null && request.Category is null)
+        {
+            throw new ValidationException("Güncellenecek en az bir alan gönderilmeli.");
+        }
+
+        if (request.Name is not null)
+        {
+            var name = RequireTrimmedName(request.Name);
+            await EnsureNameFreeAsync(name, excludeId: exercise.Id, cancellationToken);
+            exercise.Name = name;
+        }
+
+        if (request.Category is not null)
+        {
+            exercise.Category = request.Category.Value;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToResponse(exercise);
+    }
+
     public Task ArchiveAsync(long id, CancellationToken cancellationToken = default)
         => SetArchivedAsync(id, isArchived: true, cancellationToken);
 
