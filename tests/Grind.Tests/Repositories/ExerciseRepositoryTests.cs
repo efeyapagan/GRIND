@@ -264,6 +264,86 @@ public class ExerciseRepositoryTests
         await transaction.RollbackAsync();
     }
 
+    [Fact]
+    public async Task GetVisibleByIdsAsync_kendi_ve_global_egzersizleri_dondurur()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var kendi = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        repository.Add(kendi);
+        await context.SaveChangesAsync();
+
+        var bulunan = await repository.GetVisibleByIdsAsync([kendi.Id, 1L], user.Id);
+
+        Assert.Equal(2, bulunan.Count);
+        Assert.Contains(bulunan, e => e.Id == kendi.Id);
+        Assert.Contains(bulunan, e => e.Id == 1L);   // seed edilmiş global
+
+        await transaction.RollbackAsync();
+    }
+
+    /// <summary>
+    /// Şablona egzersiz eklerken IDOR'u kapatan tek yer burası: başkasının egzersizi
+    /// sonuçta HİÇ görünmemeli, ki servis "istenen sayı kadar bulamadım" diyebilsin.
+    /// </summary>
+    [Fact]
+    public async Task GetVisibleByIdsAsync_baskasinin_egzersizini_dondurmez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var digerKullanici = TestDatabase.NewUser();
+        var digerEgzersiz = TestDatabase.NewExercise(digerKullanici, $"Egzersiz {Guid.NewGuid():N}");
+        context.Add(user);
+        repository.Add(digerEgzersiz);
+        await context.SaveChangesAsync();
+
+        var bulunan = await repository.GetVisibleByIdsAsync([digerEgzersiz.Id], user.Id);
+
+        Assert.Empty(bulunan);
+
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task GetVisibleByIdsAsync_bos_listede_bos_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        var repository = new ExerciseRepository(context);
+
+        Assert.Empty(await repository.GetVisibleByIdsAsync([], 1L));
+    }
+
+    /// <summary>
+    /// Okurken hoşgörülü: arşivlenmiş egzersiz de dönmeli, yoksa onu içeren eski şablonlar
+    /// çözülemez hâle gelir. "Yeni ekleme yasak" kuralını servis katmanı uygular.
+    /// </summary>
+    [Fact]
+    public async Task GetVisibleByIdsAsync_arsivlenmis_egzersizi_de_dondurur()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var arsivli = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        arsivli.IsArchived = true;
+        repository.Add(arsivli);
+        await context.SaveChangesAsync();
+
+        var bulunan = await repository.GetVisibleByIdsAsync([arsivli.Id], user.Id);
+
+        Assert.Single(bulunan);
+        Assert.True(bulunan[0].IsArchived);
+
+        await transaction.RollbackAsync();
+    }
+
     /// <summary>
     /// Yeniden adlandırmanın çalışması için gerekli: kaydın kendi adı kendisiyle çakışmamalı.
     /// Bu olmadan yalnızca kategoriyi değiştirmek bile 409 verirdi.

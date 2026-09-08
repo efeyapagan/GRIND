@@ -43,4 +43,10 @@ public class ExerciseRepository(AppDbContext context)
                  && EF.Functions.ILike(e.Name, escaped, "\\"),
             cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Exercise>> GetVisibleByIdsAsync(
+        IReadOnlyCollection<long> ids, long userId, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(e => ids.Contains(e.Id) && (e.UserId == userId || e.UserId == null))
+            .ToListAsync(cancellationToken);
 }
