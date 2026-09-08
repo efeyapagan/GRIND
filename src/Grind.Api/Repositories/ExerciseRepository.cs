@@ -15,12 +15,16 @@ public class ExerciseRepository(AppDbContext context)
             .ToListAsync(cancellationToken);
 
     public Task<Exercise?> GetVisibleByIdAsync(
-        long id, long userId, CancellationToken cancellationToken = default)
-        => Set.FirstOrDefaultAsync(
+        long id, long userId, bool includeMedia = false, CancellationToken cancellationToken = default)
+    {
+        var query = (IQueryable<Exercise>)(includeMedia ? Set.Include(e => e.Media) : Set);
+
+        return query.FirstOrDefaultAsync(
             e => e.Id == id && (e.UserId == userId || e.UserId == null), cancellationToken);
+    }
 
     public Task<bool> NameExistsAsync(
-        long userId, string name, CancellationToken cancellationToken = default)
+        long userId, string name, long? excludeId = null, CancellationToken cancellationToken = default)
     {
         // name.ToLowerInvariant() (.NET) ile e.Name.ToLower() (PostgreSQL) iki farklı
         // case-folding uygulaması olduğu için U+0130 (Türkçe büyük noktalı İ) gibi
@@ -34,7 +38,9 @@ public class ExerciseRepository(AppDbContext context)
             .Replace("%", "\\%")
             .Replace("_", "\\_");
         return Set.AnyAsync(
-            e => (e.UserId == userId || e.UserId == null) && EF.Functions.ILike(e.Name, escaped, "\\"),
+            e => (e.UserId == userId || e.UserId == null)
+                 && (excludeId == null || e.Id != excludeId)
+                 && EF.Functions.ILike(e.Name, escaped, "\\"),
             cancellationToken);
     }
 }

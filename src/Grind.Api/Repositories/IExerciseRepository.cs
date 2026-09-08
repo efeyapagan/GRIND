@@ -15,11 +15,21 @@ public interface IExerciseRepository : IRepository<Exercise>
     /// referans verir ve çözülebilir kalmalıdır; burada arşiv filtresi uygulamak
     /// geçmiş kayıtları bozar.
     /// </summary>
-    Task<Exercise?> GetVisibleByIdAsync(long id, long userId, CancellationToken cancellationToken = default);
+    /// <param name="includeMedia">
+    /// true ise <c>Media</c> koleksiyonu da yüklenir. Varsayılan false: yazma akışlarının
+    /// çoğu medyaya dokunmuyor, gereksiz join yapılmasın.
+    /// </param>
+    Task<Exercise?> GetVisibleByIdAsync(
+        long id, long userId, bool includeMedia = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Bu isim kullanıcı için zaten dolu mu — kendi egzersizlerinde veya globallerde,
     /// büyük/küçük harf gözetmeden, arşivliler dâhil.
     /// </summary>
-    Task<bool> NameExistsAsync(long userId, string name, CancellationToken cancellationToken = default);
+    /// <param name="excludeId">
+    /// Verilirse bu Id'li kayıt sayılmaz. Yeniden adlandırmada gerekli: kaydın kendi adı
+    /// kendisiyle çakışmamalı, yoksa yalnızca kategoriyi değiştirmek bile 409 verirdi.
+    /// </param>
+    Task<bool> NameExistsAsync(
+        long userId, string name, long? excludeId = null, CancellationToken cancellationToken = default);
 }

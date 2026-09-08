@@ -1,3 +1,5 @@
+using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 
 namespace Grind.Tests.Repositories;
@@ -259,6 +261,105 @@ public class ExerciseRepositoryTests
 
         Assert.False(await repository.NameExistsAsync(user.Id, "100%_totally_different_name"));
         Assert.True(await repository.NameExistsAsync(user.Id, name));
+        await transaction.RollbackAsync();
+    }
+
+    /// <summary>
+    /// Yeniden adlandırmanın çalışması için gerekli: kaydın kendi adı kendisiyle çakışmamalı.
+    /// Bu olmadan yalnızca kategoriyi değiştirmek bile 409 verirdi.
+    /// </summary>
+    [Fact]
+    public async Task NameExistsAsync_dislanan_kaydi_saymaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        repository.Add(exercise);
+        await context.SaveChangesAsync();
+
+        Assert.True(await repository.NameExistsAsync(user.Id, exercise.Name));
+        Assert.False(await repository.NameExistsAsync(user.Id, exercise.Name, excludeId: exercise.Id));
+
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task NameExistsAsync_dislama_varken_baska_kaydi_saymaya_devam_eder()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var name = $"Egzersiz {Guid.NewGuid():N}";
+        var first = TestDatabase.NewExercise(user, name);
+        var second = TestDatabase.NewExercise(user, $"{name} ikinci");
+        repository.Add(first);
+        repository.Add(second);
+        await context.SaveChangesAsync();
+
+        // second'ı first'ün adına çevirmeye çalışıyoruz: dışlama second'da olsa bile
+        // first hâlâ o adı tutuyor, yani çakışma var.
+        Assert.True(await repository.NameExistsAsync(user.Id, name, excludeId: second.Id));
+
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task GetVisibleByIdAsync_istenirse_medyayi_yukler()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        exercise.Media.Add(new ExerciseMedia
+        {
+            MediaType = MediaType.Video,
+            Url = "https://ornek.com/video.mp4",
+            CreatedAt = DateTime.UtcNow
+        });
+        repository.Add(exercise);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var withMedia = await repository.GetVisibleByIdAsync(exercise.Id, user.Id, includeMedia: true);
+
+        Assert.NotNull(withMedia);
+        Assert.Single(withMedia.Media);
+        Assert.Equal("https://ornek.com/video.mp4", withMedia.Media.Single().Url);
+
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task GetVisibleByIdAsync_varsayilan_olarak_medyayi_yuklemez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new ExerciseRepository(context);
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        exercise.Media.Add(new ExerciseMedia
+        {
+            MediaType = MediaType.Gif,
+            Url = "https://ornek.com/hareket.gif",
+            CreatedAt = DateTime.UtcNow
+        });
+        repository.Add(exercise);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var withoutMedia = await repository.GetVisibleByIdAsync(exercise.Id, user.Id);
+
+        Assert.NotNull(withoutMedia);
+        Assert.Empty(withoutMedia.Media);
+
         await transaction.RollbackAsync();
     }
 }
