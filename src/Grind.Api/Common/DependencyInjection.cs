@@ -2,6 +2,7 @@ using System.Text;
 using Grind.Api.Common.ErrorHandling;
 using Grind.Api.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
@@ -58,7 +59,16 @@ public static class DependencyInjection
                 };
             });
 
-        services.AddAuthorization();
+        // Fallback: [Authorize] ya da [AllowAnonymous] TAŞIMAYAN her endpoint kimlik ister.
+        // Böylece yeni bir controller'da [Authorize] yazmayı unutmak endpoint'i açıkta
+        // bırakmaz, kapatır. Eşleşmeyen yollar da bu politikaya tabidir: kimliksiz bir
+        // istemci 404/401 farkından hangi rotaların var olduğunu çıkaramaz.
+        services.AddAuthorization(options =>
+        {
+            options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
+        });
 
         return services;
     }

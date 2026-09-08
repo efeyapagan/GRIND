@@ -13,8 +13,8 @@
 | 2 | Repository + Unit of Work | ✅ |
 | 3 | Cross-cutting (hata, doğrulama, JWT, Swagger) | ✅ |
 | 4 | Feature: Auth | ✅ |
-| 5 | Feature: Exercise (+ ExerciseMedia) | ⏳ sırada |
-| 6 | Feature: WorkoutTemplate | ☐ |
+| 5 | Feature: Exercise (+ ExerciseMedia) | ✅ |
+| 6 | Feature: WorkoutTemplate | ⏳ sırada |
 | 7 | Feature: WorkoutSession | ☐ |
 | 8 | Feature: SetEntry + PR motoru | ☐ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
@@ -133,14 +133,17 @@
 >   kayıtlı username'leri sayardı. Bu bir hata değil, kaydın doğası gereği bir sınır: bir kullanıcı
 >   seçtiği adın alınıp alınmadığını bilmek ZORUNDA. Rate limiting eklenene kadar login'in
 >   nötrlük garantisinin bilinen bir sınırı olarak not düşülüyor.
-> - **Faz 5 için: fallback authorization policy yok.** `AddAuthorization()` şu an hiçbir
+> - [x] **Faz 5 için: fallback authorization policy yok.** ~~`AddAuthorization()` şu an hiçbir
 >   `FallbackPolicy` olmadan çağrılıyor ve `MapControllers()` de `RequireAuthorization()`
 >   almıyor — yani ayrıca işaretlenmeyen her endpoint varsayılan olarak anonim erişime açık.
 >   Faz 5'te unutulan bir `[Authorize]` bu yüzden "fail open" olur (varsayılan olarak kapalı
 >   değil, açık kalır). Faz 5 başında `options.FallbackPolicy =
 >   new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()` eklenmeli — bu hem
 >   açığı kapatır hem de `AuthController`'daki `[AllowAnonymous]`'u (şu an fiilen no-op, çünkü
->   zaten karşılığında zorlayan bir fallback yok) gerçekten işlevsel hâle getirir.
+>   zaten karşılığında zorlayan bir fallback yok) gerçekten işlevsel hâle getirir.~~
+>   **Faz 5'te karşılandı** (Görev 1): `AddCrossCutting` içine `options.FallbackPolicy`
+>   eklendi (`src/Grind.Api/Common/DependencyInjection.cs`) — işaretlenmemiş her endpoint artık
+>   varsayılan olarak kimlik doğrulaması ister.
 > - **Faz 5 için: `GrindApiFactory` ortam değişkenlerini süreç genelinde bırakıyor.**
 >   `Program.cs` `builder.Configuration`'ı `Build()`'den ÖNCE okuduğu için `WebApplicationFactory`'nin
 >   `ConfigureAppConfiguration` hook'u çalışmıyor; fabrika bu yüzden `Jwt__Key` ve
@@ -154,13 +157,40 @@
 >   birikiyor. Rahatsız olursa test sonunda silme ya da ayrı bir test veritabanı eklenebilir.
 
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
-- [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
+- [x] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
       güncelleme, arşivleme (soft delete)
-- [ ] 5.2 Yetkilendirme: global egzersiz düzenlenemez/arşivlenemez; başkasının egzersizi
+- [x] 5.2 Yetkilendirme: global egzersiz düzenlenemez/arşivlenemez; başkasının egzersizi
       görünmez (IDOR koruması)
-- [ ] 5.3 Aynı isim çakışması kontrolü (kendi + global set içinde)
-- [ ] 5.4 ExerciseMedia CRUD — sahiplik kuralını Exercise'tan miras alır
-- [ ] 5.5 Test: IDOR senaryoları, isim çakışması, arşiv sonrası liste
+- [x] 5.3 Aynı isim çakışması kontrolü (kendi + global set içinde)
+- [x] 5.4 ExerciseMedia CRUD — sahiplik kuralını Exercise'tan miras alır
+- [x] 5.5 Test: IDOR senaryoları, isim çakışması, arşiv sonrası liste; ayrıca
+      `ExercisesController` + JSON `JsonStringEnumConverter` kaydı (enum tel üzerinde metin
+      taşır, `[EnumDataType]` tanımsız sayı değerlerini durdurur) ve uçtan uca duman testi
+
+> **Faz 5'ten devreden notlar (ileride dikkat edilecek):**
+> - **Minimal-API endpoint'leri de fallback policy'yi miras alır.** İleride eklenecek bir
+>   `/health` veya başka bir `MapGet` endpoint'i JWT talep edecek ve çalışması için açıkça
+>   `.AllowAnonymous()` isteyecek. Bu unutulursa bir config hatası gibi değil, bir kesinti
+>   (outage) gibi görünür.
+> - **Fallback policy'nin ürettiği 401'de `detail`/`instance` yok**, `GlobalExceptionHandler`'ın
+>   ürettiği 401'in aksine. Kozmetik; bilerek ertelendi.
+> - **Aynı hata sınıfı için iki farklı 400 gövde şekli var.** DataAnnotations doğrulama hatası
+>   alan bazlı bir `errors` nesnesi taşıyan `ValidationProblemDetails` döner; servisin fırlattığı
+>   bir `ValidationException` ise sadece `detail` alanı olan düz bir `ProblemDetails` döner.
+>   `body.errors.Name` okuyan bir istemci ikincisinde `undefined` alır. **Karar: şimdilik
+>   kabul edildi, birleştirilmedi** — servis katmanındaki bir `ValidationException` her zaman
+>   alan bazlı olmayan iş kurallarını da kapsıyor, ona alan bazlı bir sözleşme dayatmak
+>   spekülatif olurdu. Gerçek bir istemci alan bazlı eşleme istediğinde yeniden ele alınmalı;
+>   değişiklik `GlobalExceptionHandler`'da olur ve tüm fazları etkiler.
+> - **Faz 6 (WorkoutTemplate) için:**
+>   (a) `TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır içinde
+>   yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı — aksi
+>   halde ince bir farkla farklı bir IDOR kontrolü sızabilir.
+>   (b) `GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar çözülebilir
+>   kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA reddetmeli, ama
+>   template **okuma** onları yine çözebilmeli.
+>   (c) Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir şablon
+>   N ayrı gidiş-dönüşe mal olur.
 
 ## Faz 6 — Feature: WorkoutTemplate
 - [ ] 6.1 Template CRUD + `TemplateExercise` (OrderIndex, PlannedSets)

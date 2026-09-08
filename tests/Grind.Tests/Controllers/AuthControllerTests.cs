@@ -59,13 +59,28 @@ public class AuthControllerTests
     }
 
     /// <summary>
-    /// Kayıt ve giriş token'sız çağrılabilmeli. İleride global bir [Authorize] filtresi
-    /// eklenirse bu iki endpoint kilitlenmemeli.
+    /// [AllowAnonymous] bilerek sınıf değil, her action üzerinde ayrı ayrı duruyor. Sınıf
+    /// seviyesindeki bir [AllowAnonymous], bu controller'a ileride eklenecek her yeni action'ı
+    /// (örn. bir "change-password" endpoint'i) sessizce anonim erişime açardı — ve fallback
+    /// authorization politikası (bkz. DependencyInjection.AddCrossCutting) bunu YAKALAYAMAZ:
+    /// sınıf seviyesindeki [AllowAnonymous] fallback politikasını her zaman ezer. Bu yüzden
+    /// istisna, sadece gerçekten anonim kalması gereken iki action'a (Register, Login) tek tek
+    /// tanımlanır; yeni bir action varsayılan olarak korumalı kalır.
     /// </summary>
     [Fact]
-    public void Controller_kimlik_dogrulamasi_istemez()
+    public void Register_ve_Login_kimlik_dogrulamasi_istemez()
     {
         Assert.NotEmpty(typeof(AuthController)
+            .GetMethod(nameof(AuthController.Register))!
+            .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
+
+        Assert.NotEmpty(typeof(AuthController)
+            .GetMethod(nameof(AuthController.Login))!
+            .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
+
+        // Sınıf seviyesinde OLMAMALI: oraya konursa bu controller'a ileride eklenecek her
+        // action sessizce anonim olur ve fallback policy bunu ezemez.
+        Assert.Empty(typeof(AuthController)
             .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
     }
 
