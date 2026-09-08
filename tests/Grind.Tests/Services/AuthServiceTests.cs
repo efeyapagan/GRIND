@@ -145,12 +145,24 @@ public class AuthServiceTests
 
     /// <summary>
     /// İKİ şeyi birden korur:
-    /// (1) Kullanıcı bulunamadığında da BCrypt doğrulaması çalışmalı; yoksa yanıt ~1ms'de döner
-    ///     ve zamanlama farkı username'leri sayar hâle gelir. Alt sınır bilerek geniş: ölçülen
-    ///     maliyet ~220ms, eşik 25ms — yavaş bir CI makinesinde süre ARTAR, azalmaz.
+    /// (1) Kullanıcı bulunamadığında da BCrypt doğrulaması çalışmalı; yoksa yanıt tek haneli
+    ///     ms'de döner ve zamanlama farkı username'leri sayar hâle gelir.
     /// (2) Fırlatılan tipin UnauthorizedException olması. Sahte hash geçerli bir BCrypt hash'i
     ///     olmasaydı BCrypt.Verify SaltParseException fırlatırdı (deneyle doğrulandı) ve yanıt
     ///     401 yerine 500 olurdu — durum kodu tam da gizlemeye çalıştığımız bilgiyi sızdırırdı.
+    ///
+    /// ISINMA ÇAĞRISI KASITLI, SİLİNMESİN: Stopwatch başlamadan önce bir kez daha aynı şekilde
+    /// başarısız bir giriş denemesi yapılıyor. Sebep: bir test sürecinin İLK EF Core/Npgsql
+    /// sorgusu (model derleme + bağlantı açma) tek başına ~250ms tutuyor — bu, gerçek BCrypt
+    /// maliyetinden (~220ms) bile yüksek ve kısa devre yapılmış (short-circuit) bir hatalı koddan
+    /// tamamen bağımsız. Isınma çağrısı olmadan bu test, Verify tamamen atlansa bile (kısa devre
+    /// hatasıyla) hep YEŞİL kalıyordu — ölçülen soğuk-başlangıç gecikmesi eşiği kendi başına
+    /// aşıyordu (deneyle doğrulandı, bkz. Task 3 Fix Round 1 raporu). Isınma çağrısı bu soğuk
+    /// başlangıç maliyetini stopwatch'tan ÖNCEYE çekip ölçümün dışına alıyor; ayrıca JIT'i de
+    /// ısıtıyor. Alt sınır: eşik 100ms — ısınmış bir kısa devre yolu (tek DB round trip) tek
+    /// haneli ms sürer, ısınmış gerçek BCrypt maliyeti ise ~220ms; 100ms ikisinin ortasında,
+    /// gerçek maliyetin ~2 katı altında ve kırık yoldan ~20 kat yukarıda durur. Yine de bir ALT
+    /// sınır olduğu için yavaş bir CI makinesi testi sadece daha güvenli yapar, kırmadan gizlemez.
     /// </summary>
     [Fact]
     public async Task Olmayan_kullanicida_da_dogrulama_calisir_ve_yetkisiz_hatasi_verir()
@@ -158,12 +170,17 @@ public class AuthServiceTests
         var (service, _, transaction) = await CreateAsync();
         await using (transaction)
         {
+            // Isınma: soğuk EF Core/Npgsql maliyetini (bkz. yukarıdaki not) stopwatch'tan önce
+            // tüket. Kendi hatası önemsiz — tek görevi ısıtmak.
+            await Assert.ThrowsAsync<UnauthorizedException>(
+                () => service.LoginAsync(new LoginRequest { Username = UniqueUsername(), Password = Password }));
+
             var stopwatch = Stopwatch.StartNew();
 
             await Assert.ThrowsAsync<UnauthorizedException>(
                 () => service.LoginAsync(new LoginRequest { Username = UniqueUsername(), Password = Password }));
 
-            Assert.True(stopwatch.ElapsedMilliseconds > 25,
+            Assert.True(stopwatch.ElapsedMilliseconds > 100,
                 $"Doğrulama atlanmış görünüyor ({stopwatch.ElapsedMilliseconds}ms) — zamanlama sızıntısı.");
         }
     }
