@@ -167,6 +167,31 @@
       `ExercisesController` + JSON `JsonStringEnumConverter` kaydı (enum tel üzerinde metin
       taşır, `[EnumDataType]` tanımsız sayı değerlerini durdurur) ve uçtan uca duman testi
 
+> **Faz 5'ten devreden notlar (ileride dikkat edilecek):**
+> - **Minimal-API endpoint'leri de fallback policy'yi miras alır.** İleride eklenecek bir
+>   `/health` veya başka bir `MapGet` endpoint'i JWT talep edecek ve çalışması için açıkça
+>   `.AllowAnonymous()` isteyecek. Bu unutulursa bir config hatası gibi değil, bir kesinti
+>   (outage) gibi görünür.
+> - **Fallback policy'nin ürettiği 401'de `detail`/`instance` yok**, `GlobalExceptionHandler`'ın
+>   ürettiği 401'in aksine. Kozmetik; bilerek ertelendi.
+> - **Aynı hata sınıfı için iki farklı 400 gövde şekli var.** DataAnnotations doğrulama hatası
+>   alan bazlı bir `errors` nesnesi taşıyan `ValidationProblemDetails` döner; servisin fırlattığı
+>   bir `ValidationException` ise sadece `detail` alanı olan düz bir `ProblemDetails` döner.
+>   `body.errors.Name` okuyan bir istemci ikincisinde `undefined` alır. **Karar: şimdilik
+>   kabul edildi, birleştirilmedi** — servis katmanındaki bir `ValidationException` her zaman
+>   alan bazlı olmayan iş kurallarını da kapsıyor, ona alan bazlı bir sözleşme dayatmak
+>   spekülatif olurdu. Gerçek bir istemci alan bazlı eşleme istediğinde yeniden ele alınmalı;
+>   değişiklik `GlobalExceptionHandler`'da olur ve tüm fazları etkiler.
+> - **Faz 6 (WorkoutTemplate) için:**
+>   (a) `TemplateExercise` doğrulaması, `UserId == x || UserId == null` yüklemini satır içinde
+>   yeniden yazmak yerine `ExerciseService`'in görünürlük desenini yeniden kullanmalı — aksi
+>   halde ince bir farkla farklı bir IDOR kontrolü sızabilir.
+>   (b) `GetVisibleByIdAsync` bilerek `IsArchived`'i yok sayıyor ki geçmiş kayıtlar çözülebilir
+>   kalsın — bu yüzden template **oluşturma** arşivlenmiş egzersizleri AYRICA reddetmeli, ama
+>   template **okuma** onları yine çözebilmeli.
+>   (c) Toplu bir `GetVisibleByIdsAsync(ids, userId)` gerekecek, yoksa N egzersizli bir şablon
+>   N ayrı gidiş-dönüşe mal olur.
+
 ## Faz 6 — Feature: WorkoutTemplate
 - [ ] 6.1 Template CRUD + `TemplateExercise` (OrderIndex, PlannedSets)
 - [ ] 6.2 Template'e eklenen her ExerciseId için erişilebilirlik doğrulaması
