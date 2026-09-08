@@ -79,6 +79,11 @@ public class ExercisesController(IExerciseService exerciseService) : ControllerB
         long id, AddMediaRequest request, CancellationToken cancellationToken)
     {
         var media = await exerciseService.AddMediaAsync(id, request, cancellationToken);
+
+        // Location bilerek EBEVEYN egzersize işaret ediyor, gövdedeki ExerciseMediaResponse'a
+        // değil: tek bir medyayı döndüren bir GET endpoint'i yok, o yüzden gerçek anlamda
+        // doğru bir Location üretilemez. Ama GetById'nin döndürdüğü egzersiz temsili yeni
+        // eklenen medyayı da İÇERİR — yani link kırık değil, takip edilebilir ve faydalı.
         return CreatedAtAction(nameof(GetById), new { id }, media);
     }
 
