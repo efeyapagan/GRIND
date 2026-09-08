@@ -113,6 +113,49 @@ public class TemplateEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
         Assert.Single(guncel.Exercises);
     }
 
+    /// <summary>
+    /// "exercises" alanı JSON'dan tamamen ATLANMIŞ (açık null değil) — tam da istemcinin en
+    /// olası hatası. Tipli bir DTO bu senaryoyu ifade edemez (System.Text.Json eksik alanı
+    /// initializer'ıyla doldurur), bu yüzden ham JSON gövdesi gerekiyor. Bu, "PUT ile
+    /// exercises göndermeyi unutursan listen sessizce boşalır" regresyonunun canlı kanıtı.
+    /// </summary>
+    [Fact]
+    public async Task Put_exercises_atlanirsa_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var created = await client.PostAsJsonAsync("/api/templates", Create(UniqueName()), Json);
+        var olusan = await created.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+
+        var payload = new StringContent(
+            $$"""{"name":"{{UniqueName()}}"}""", Encoding.UTF8, "application/json");
+        var response = await client.PutAsync($"/api/templates/{olusan!.Id}", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Exercises", await response.Content.ReadAsStringAsync());
+
+        // Liste hâlâ yerinde olmalı — reddedilen istek hiçbir şeyi değiştirmemeli.
+        var sonra = await client.GetFromJsonAsync<TemplateResponse>($"/api/templates/{olusan.Id}", Json);
+        Assert.Single(sonra!.Exercises);
+    }
+
+    /// <summary>Açıkça boş liste ("exercises": []) atlanmış alandan FARKLI — meşru bir istek,
+    /// listeyi bilerek boşaltır ve 200 dönmeli.</summary>
+    [Fact]
+    public async Task Put_bos_exercises_listesiyle_200_ve_bos_liste_doner()
+    {
+        var client = await AuthenticatedClientAsync();
+        var created = await client.PostAsJsonAsync("/api/templates", Create(UniqueName()), Json);
+        var olusan = await created.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+
+        var payload = new StringContent(
+            $$"""{"name":"{{UniqueName()}}","exercises":[]}""", Encoding.UTF8, "application/json");
+        var response = await client.PutAsync($"/api/templates/{olusan!.Id}", payload);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var guncel = await response.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+        Assert.Empty(guncel!.Exercises);
+    }
+
     [Fact]
     public async Task Silinen_sablon_sonrasinda_404_verir()
     {

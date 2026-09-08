@@ -9,14 +9,15 @@ public class CreateTemplateRequest
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Boş liste ([]) olabilir: önce şablonu açıp sonra doldurmak doğal bir akış.
-    /// [Required] BİLEREK var: System.Text.Json, istemci "exercises": null gönderirse bu
-    /// alandaki "= []" varsayılanının üzerine null yazar (C#'ın nullable olmayan anotasyonu
-    /// deserialization sırasında uygulanmaz) — kontrolsüz bırakılırsa servis katmanında
-    /// Exercises.Select(...) çağrısı istemciden tetiklenebilen bir NullReferenceException'a
-    /// (500) döner. null ile [] farklı anlamlara geldiği için "?? []" ile sessizce
-    /// eşitlenmiyor; bunun yerine 400 ile açıkça reddediliyor.
+    /// ZORUNLU alan: bu alan hem hiç gönderilmezse (JSON'da eksikse) hem de açıkça
+    /// <c>null</c> gönderilirse 400 ile reddedilir. Boş liste ([]) göndermek geçerlidir —
+    /// önce şablonu açıp sonra doldurmak doğal bir akış. Property nullable ("List&lt;...&gt;?")
+    /// yapılıp initializer'sız bırakıldı: initializer "= []" olsaydı bu, [Required]'ın "eksik"
+    /// saydığı boş dizgeden (string.Empty) farklı olarak GEÇERLİ bir non-null değer olurdu ve
+    /// alan JSON'dan tamamen atlandığında [Required] hiç tetiklenmezdi (yalnızca açık
+    /// "exercises": null durumunu yakalardı) — istemcinin en olası hatası tam da bu atlama.
+    /// null ile [] farklı anlamlara geldiği için "?? []" ile sessizce eşitlenmiyor.
     /// </summary>
     [Required(ErrorMessage = "Egzersiz listesi zorunlu.")]
-    public List<TemplateExerciseRequest> Exercises { get; set; } = [];
+    public List<TemplateExerciseRequest>? Exercises { get; set; }
 }

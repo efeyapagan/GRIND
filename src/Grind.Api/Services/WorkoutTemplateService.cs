@@ -11,7 +11,6 @@ namespace Grind.Api.Services;
 public class WorkoutTemplateService(
     IWorkoutTemplateRepository templateRepository,
     IExerciseRepository exerciseRepository,
-    IRepository<TemplateExercise> templateExerciseRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser) : IWorkoutTemplateService
 {
@@ -50,10 +49,15 @@ public class WorkoutTemplateService(
         };
 
         templateRepository.Add(template);
-        await ReplaceExercisesAsync(template, request.Exercises, cancellationToken);
+        // request.Exercises! : [ApiController] model doğrulaması bu action'dan ÖNCE çalışır;
+        // [Required] alanı JSON'dan eksik veya null geldiğinde isteği zaten 400 ile reddeder,
+        // bu satıra hiçbir zaman null ulaşmaz (bkz. CreateTemplateRequest.Exercises doc'u).
+        await ReplaceExercisesAsync(template, request.Exercises!, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(await ReloadAsync(template.Id, cancellationToken));
+        // Yazdıktan sonra yeniden okunuyor: yanıt egzersizlerin adı/kategorisiyle dönüyor ve
+        // o veri yeni eklenen satırlarda henüz yüklü değil.
+        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
     }
 
     public async Task<TemplateResponse> UpdateAsync(
@@ -64,10 +68,13 @@ public class WorkoutTemplateService(
         await EnsureNameFreeAsync(name, excludeId: template.Id, cancellationToken);
 
         template.Name = name;
-        await ReplaceExercisesAsync(template, request.Exercises, cancellationToken);
+        // request.Exercises! : bkz. CreateAsync'teki açıklama — [ApiController] bu action'a
+        // hiçbir zaman null Exercises ile girmez.
+        await ReplaceExercisesAsync(template, request.Exercises!, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(await ReloadAsync(template.Id, cancellationToken));
+        // Yazdıktan sonra yeniden okunuyor: bkz. CreateAsync'teki açıklama.
+        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
     }
 
     public async Task<TemplateResponse> PatchAsync(
@@ -96,7 +103,8 @@ public class WorkoutTemplateService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(await ReloadAsync(template.Id, cancellationToken));
+        // Yazdıktan sonra yeniden okunuyor: bkz. CreateAsync'teki açıklama.
+        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
     }
 
     public async Task DeleteAsync(long id, CancellationToken cancellationToken = default)
@@ -136,18 +144,23 @@ public class WorkoutTemplateService(
             throw new NotFoundException(ExerciseNotFound);
         }
 
-        // Yazarken katı: arşivlenmiş egzersiz yeni bir seçime giremez. Okurken hoşgörülü
+        // Yazarken katı: arşivlenmiş bir egzersiz YENİ bir seçime giremez. Okurken hoşgörülü
         // olduğumuz için (repository arşivlileri döndürüyor) bu kontrol BURADA olmak zorunda.
-        if (visible.Any(e => e.IsArchived))
+        // Ama liste toptan gönderildiği için (bu servisin tasarımı) zaten şablonda olan bir
+        // satırı olduğu gibi korumak yeni bir seçim DEĞİLDİR — aksi halde sonradan arşivlenen
+        // tek bir egzersiz şablonun listesini kalıcı olarak kilitler (bir yeniden sıralama
+        // bile 400 döner). Kontrol yalnızca daha önce şablonda olmayan id'lere uygulanır.
+        var existingIds = template.TemplateExercises.Select(te => te.ExerciseId).ToHashSet();
+
+        if (visible.Any(e => e.IsArchived && !existingIds.Contains(e.Id)))
         {
             throw new ValidationException("Arşivlenmiş bir egzersiz şablona eklenemez.");
         }
 
-        foreach (var existing in template.TemplateExercises.ToList())
-        {
-            templateExerciseRepository.Remove(existing);
-        }
-
+        // Explicit Remove döngüsü YOK: TemplateExerciseConfiguration bu FK'yi
+        // DeleteBehavior.Cascade ile konfigüre ediyor ve yüklü koleksiyondan çıkarılan
+        // tracked dependent'lar EF tarafından zaten silinmek üzere işaretleniyor — ayrı bir
+        // Remove çağrısı gereksiz tekrardı.
         template.TemplateExercises.Clear();
 
         for (var index = 0; index < requested.Count; index++)
@@ -162,14 +175,6 @@ public class WorkoutTemplateService(
     }
 
     private async Task<WorkoutTemplate> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)
-        => await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
-           ?? throw new NotFoundException(TemplateNotFound);
-
-    /// <summary>
-    /// Yazdıktan sonra yeniden okur: yanıt, egzersizlerin adı ve kategorisiyle birlikte
-    /// dönüyor ve o veri yeni eklenen satırlarda henüz yüklü değil.
-    /// </summary>
-    private async Task<WorkoutTemplate> ReloadAsync(long id, CancellationToken cancellationToken)
         => await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(TemplateNotFound);
 
