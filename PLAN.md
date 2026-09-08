@@ -141,6 +141,17 @@
 >   new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()` eklenmeli — bu hem
 >   açığı kapatır hem de `AuthController`'daki `[AllowAnonymous]`'u (şu an fiilen no-op, çünkü
 >   zaten karşılığında zorlayan bir fallback yok) gerçekten işlevsel hâle getirir.
+> - **Faz 5 için: `GrindApiFactory` ortam değişkenlerini süreç genelinde bırakıyor.**
+>   `Program.cs` `builder.Configuration`'ı `Build()`'den ÖNCE okuduğu için `WebApplicationFactory`'nin
+>   `ConfigureAppConfiguration` hook'u çalışmıyor; fabrika bu yüzden `Jwt__Key` ve
+>   `ConnectionStrings__Postgres`'i kurucusunda `Environment.SetEnvironmentVariable` ile kuruyor ve
+>   hiç geri almıyor. Bugün bir yarış yok — yapılandırmayı okuyan tek test sınıfı o. Ama Faz 5
+>   ikinci bir `WebApplicationFactory` tabanlı test sınıfı eklerse (ör. "anahtar yoksa host
+>   ayağa kalkmamalı") aynı süreçte sızan bu değişkenlerle yarışır. O noktada `GrindApiFactory`'ye
+>   bir `Dispose` override'ı eklenip değişkenler temizlenmeli.
+> - **Entegrasyon testleri geliştirme veritabanına kalıcı satır yazıyor** (`itest_<guid>`
+>   kullanıcıları). Username'ler benzersiz olduğu için tekrar çalıştırmayı bozmuyor, ama zamanla
+>   birikiyor. Rahatsız olursa test sonunda silme ya da ayrı bir test veritabanı eklenebilir.
 
 ## Faz 5 — Feature: Exercise (+ ExerciseMedia)
 - [ ] 5.1 DTO + service: listeleme (global + kendi, arşivliler hariç), oluşturma,
