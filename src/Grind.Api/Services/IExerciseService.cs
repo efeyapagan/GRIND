@@ -22,6 +22,14 @@ public interface IExerciseService
     Task<ExerciseResponse> UpdateAsync(
         long id, UpdateExerciseRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Kısmi güncelleme: yalnızca <c>null</c> OLMAYAN alanlar uygulanır. Hiçbir alan
+    /// gönderilmezse ValidationException (400) — sessiz bir no-op, çağıranın isteğinin
+    /// uygulandığını sanmasına yol açardı.
+    /// </summary>
+    Task<ExerciseResponse> PatchAsync(
+        long id, PatchExerciseRequest request, CancellationToken cancellationToken = default);
+
     Task ArchiveAsync(long id, CancellationToken cancellationToken = default);
 
     Task RestoreAsync(long id, CancellationToken cancellationToken = default);
