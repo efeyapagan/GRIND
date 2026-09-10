@@ -16,6 +16,10 @@ builder.Services.AddCrossCutting(
     ?? throw new InvalidOperationException("Jwt bölümü tanımlı değil."),
     builder.Environment);
 
+// Saat bir bağımlılık: servisler DateTime.UtcNow çağırmaz, bunu enjekte alır.
+// Gün sınırı testleri ancak sahte bir sağlayıcıyla deterministik olabiliyor.
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddApplicationServices();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
