@@ -14,6 +14,12 @@ namespace Grind.Api.Controllers;
 [Route("api/sessions")]
 public class SessionsController(IWorkoutSessionService sessionService) : ControllerBase
 {
+    /// <summary>
+    /// Kullanıcının tüm oturumları, yeniden eskiye. DİKKAT: <c>templateId</c>/<c>templateName</c>
+    /// dolu gelir ama <c>progress</c> BURADA HER ZAMAN BOŞ LİSTEDİR — N+1'den kaçınmak için bu
+    /// uç ilerlemeyi hiç hesaplamaz, şablonlu bir oturum için bile. Gerçek ilerleme gerekiyorsa
+    /// <c>GET /api/sessions/{id}</c> veya <c>GET /api/sessions/open</c> çağrılmalı.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<SessionResponse>>> GetAll(
@@ -35,7 +41,9 @@ public class SessionsController(IWorkoutSessionService sessionService) : Control
 
     /// <summary>
     /// Başlatır. Bugüne ait açık bir oturum zaten varsa onu **200** ile döndürür;
-    /// yeni açıldıysa **201**. Böylece iki kez tıklamak hata üretmez.
+    /// yeni açıldıysa **201**. Böylece iki kez tıklamak hata üretmez. DİKKAT: 200 dönen
+    /// durumda gövdedeki <c>templateId</c>/<c>notes</c> UYGULANMAZ — var olan açık oturum
+    /// olduğu gibi döner, gönderilen not sessizce atılır.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
