@@ -411,7 +411,15 @@
 > **Faz 9'dan devreden notlar (Faz 10'da dikkat edilecek):**
 > 1. `GET /api/sessions` (Faz 7) hâlâ sayfalamasız — oturum sayısı büyürse `PagedResponse` ile
 >    hizalanmalı.
-> 2. Takvim/günlük hacim gruplaması bellekte; aralık binlerce oturuma çıkarsa SQL'e taşınmalı.
+> 2. Bellekte gruplamanın maliyet profili uçtan uca aynı değil: `GET /api/records`
+>    kullanıcının TÜM `SetEntry` satırlarını okur (bkz. Faz 8.4 düzeltme notu); `GET /api/history`
+>    yalnızca o SAYFANIN setlerini gruplar (sayfa boyutuyla sınırlı); takvim/günlük hacim uçları
+>    ise SQL'in zaten oturum başına topladığı satırları (OTURUM sayısı kadar, set sayısı kadar
+>    DEĞİL) belleğe alıp TR gününe göre gruplar. Üçü de aralık/veri büyüdükçe SQL'e taşınabilir
+>    ama en acil olanı `GET /api/records`'tur — diğer ikisinin girdisi zaten önceden küçültülmüş.
+>    Ayrıca `GET /api/stats/calendar`, seri (streak) ARALIKTAN BAĞIMSIZ olduğu için (spec Karar 5)
+>    her çağrıda kullanıcının TÜM antrenman yapılmış oturumlarının `StartedAt`'ini okur — istenen
+>    aralık ne kadar dar olursa olsun bu sorgu küçülmez.
 > 3. Haftalık/aylık hacim gruplaması yok (üçüncü bir uç gerektirir); gerçek ihtiyaç çıkarsa
 >    eklenir.
 

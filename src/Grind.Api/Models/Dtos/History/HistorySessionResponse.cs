@@ -10,6 +10,12 @@ namespace Grind.Api.Models.Dtos.History;
 /// DİKKAT: <c>exerciseId</c> filtresi verildiğinde <see cref="TotalVolume"/> ve
 /// <see cref="SetCount"/> YALNIZCA o egzersizin setlerini kapsar ve <see cref="Sets"/> ile
 /// birebir tutarlıdır (spec Karar 8) — ekranda "14 set" yazıp listede 4 set göstermemek için.
+///
+/// BİLEREK: hiç seti girilmemiş (açılıp hiç kullanılmamış) bir oturum burada
+/// <c>SetCount = 0, TotalVolume = 0</c> ile YİNE GÖRÜNÜR, ama takvim/günlük hacim/streak
+/// uçlarında hiç görünmez (spec Karar 3). Bu bir tutarsızlık değil: geçmiş bir oturum
+/// GÜNLÜĞÜdür (oturumun kendisi olay), istatistikler bir ANTRENMAN günlüğüdür (yalnızca
+/// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
 /// </summary>
 public record HistorySessionResponse(
     long SessionId,
