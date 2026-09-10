@@ -54,13 +54,16 @@ public class BodyWeightLogServiceTests
     [Fact]
     public async Task Zaman_verilmezse_saatin_ani_kaydedilir()
     {
-        var (_, _, service, transaction) = await CreateAsync();
+        var (context, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
             var eklenen = await service.CreateAsync(Yeni(82.4m));
 
-            Assert.Equal(An, eklenen.RecordedAt);
-            Assert.Equal(82.4m, eklenen.Weight);
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
+
+            Assert.Equal(An, satir.RecordedAt);
+            Assert.Equal(82.4m, satir.Weight);
         }
     }
 

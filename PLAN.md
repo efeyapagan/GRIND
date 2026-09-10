@@ -426,12 +426,13 @@
 >    eklenir.
 
 ## Faz 10 — Feature: BodyWeightLog
-- [x] 10.1 CRUD + tarih aralığı sorgusu — `WeightScale.EnsureAtMostTwoDecimals` (Görev 1) 0,01-999,99
-      aralığını ve en fazla iki ondalığı doğrular; `SetEntryService`'in kendi ölçek kontrolüyle
-      birlikte ortak yere taşındı (DRY). `PagedRangeQuery` (Görev 1, `Common`) `page`/`pageSize`
-      üstüne `from`/`to` (TR günü, `DateOnly?`, `from > to` → 400) ekleyen genel bir sayfalı-aralık
-      sözleşmesi — bu fazın ilk tüketicisi, ileride başka listeler (bkz. yukarıdaki Faz 9 devreden
-      notu) de kullanabilir. `IBodyWeightLogRepository` (Görev 2): `GetOwnedByIdAsync` (sahiplik
+- [x] 10.1 CRUD + tarih aralığı sorgusu — `WeightScale.EnsureAtMostTwoDecimals` (Görev 1, Faz 8'le
+      paylaşılan ortak sınıf) sadece en fazla iki ondalık kuralını doğrular; 0,01-999,99 aralığı
+      DTO'lardaki `[Range(0.01, 999.99)]` özniteliklerinde yaşar — `SetEntryService`'te 0 kg
+      geçerli olduğu için (barfiks, dips) bu ikisi kasıtlı olarak ayrı. `PagedRangeQuery`
+      (Görev 1, `Common`) `page`/`pageSize` üstüne `from`/`to` (TR günü, `DateOnly?`, `from > to`
+      → 400) ekleyen genel bir sayfalı-aralık sözleşmesi — `HistoryQuery` (Faz 9, Görev 1'den
+      sonra) zaten bundan türüyor, bu faz ikinci tüketicisi. `IBodyWeightLogRepository` (Görev 2): `GetOwnedByIdAsync` (sahiplik
       doğrudan `UserId` üzerinde, izlemeli — düzeltme/silme bu nesneyi değiştirir),
       `GetPageAsync` (sayfa + toplam sayı BİRLİKTE aynı filtreden, `RecordedAt` azalan/`Id` azalan
       belirli sıra, izlemesiz) ve `GetInRangeAsync` (karşılaştırma ucu için, izlemesiz).

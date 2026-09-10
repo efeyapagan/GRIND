@@ -54,9 +54,9 @@ public static class TurkeyDay
     }
 
     /// <summary>
-    /// <paramref name="utcInstant"/> anının düştüğü TR günü. Takvim ve günlük hacim gruplaması
-    /// bunu kullanır — gruplamayı SQL'de <c>AT TIME ZONE</c> ile tekrar yazmak, gün sınırı
-    /// kuralının ikinci bir kopyasını üretirdi (spec Karar 6).
+    /// <paramref name="utcInstant"/> anının düştüğü TR günü. Takvim, günlük hacim ve kilo/hacim
+    /// karşılaştırma (Faz 10) gruplamaları bunu kullanır — gruplamayı SQL'de <c>AT TIME ZONE</c>
+    /// ile tekrar yazmak, gün sınırı kuralının ikinci bir kopyasını üretirdi (spec Karar 6).
     /// </summary>
     public static DateOnly LocalDateOf(DateTime utcInstant)
     {

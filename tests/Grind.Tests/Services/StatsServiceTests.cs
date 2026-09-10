@@ -417,6 +417,9 @@ public class StatsServiceTests
 
             Assert.Equal(gunluk.Items, trend.Volume);
             Assert.Equal(2, trend.Volume.Count);
+            // Tartı sadece "Bugün" için girildi; hacmi olan ama tartısı olmayan (Bugun.AddDays(-1))
+            // gün, kilo serisine hiç girmemeli.
+            Assert.Single(trend.BodyWeight);
         }
     }
 

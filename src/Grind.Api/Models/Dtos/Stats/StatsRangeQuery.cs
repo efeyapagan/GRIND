@@ -1,9 +1,10 @@
 namespace Grind.Api.Models.Dtos.Stats;
 
 /// <summary>
-/// Üç istatistik ucunun ortak parametreleri. TR yerel günü, iki ucu da dahil, ikisi de
-/// opsiyonel (verilmezse o yönde sınır yok). Tek bir tip: üç uçta üç ayrı sorgu sınıfı
-/// tanımlamak aynı kuralı üç kez yazmak olurdu.
+/// Dört istatistik ucunun (<c>volume/daily</c>, <c>volume/by-exercise</c>, <c>calendar</c>,
+/// <c>body-weight-trend</c>) ortak parametreleri. TR yerel günü, iki ucu da dahil, ikisi de
+/// opsiyonel (verilmezse o yönde sınır yok). Tek bir tip: dört uçta dört ayrı sorgu sınıfı
+/// tanımlamak aynı kuralı dört kez yazmak olurdu.
 /// </summary>
 public class StatsRangeQuery
 {

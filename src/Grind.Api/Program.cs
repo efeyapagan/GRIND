@@ -18,9 +18,10 @@ builder.Services.AddCrossCutting(
 
 // Saat bir bağımlılık olarak enjekte edilir ki gün sınırı (TR yerel günü) mantığı sahte
 // bir TimeProvider ile deterministik test edilebilsin. Bunu kullananlar: WorkoutSessionService,
-// SetEntryService (Faz 8) ve StatsService (Faz 9, streak/takvim "bugün"ü için) — AuthService,
-// ExerciseService ve WorkoutTemplateService hâlâ CreatedAt'i doğrudan DateTime.UtcNow'dan
-// damgalıyor (o alan için gün sınırı gibi test edilmesi gereken bir karar yok).
+// SetEntryService (Faz 8), StatsService (Faz 9, streak/takvim "bugün"ü için) ve
+// BodyWeightLogService (Faz 10, gelecek zaman reddi için) — AuthService, ExerciseService ve
+// WorkoutTemplateService hâlâ CreatedAt'i doğrudan DateTime.UtcNow'dan damgalıyor (o alan için
+// gün sınırı gibi test edilmesi gereken bir karar yok).
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddApplicationServices();
