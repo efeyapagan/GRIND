@@ -17,7 +17,7 @@
 | 6 | Feature: WorkoutTemplate | ✅ |
 | 7 | Feature: WorkoutSession | ✅ |
 | 8 | Feature: SetEntry + PR motoru | ✅ |
-| 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
+| 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ✅ |
 | 10 | Feature: BodyWeightLog | ☐ |
 | 11 | Feature: Export | ☐ |
 | 12 | Feature: AiInsight altyapısı | ☐ |
@@ -277,7 +277,7 @@
 >    (`SetEntryServiceTests.Arsivlenmis_egzersize_set_girilemez`,
 >    `SetEndpointsTests.Arsivlenmis_egzersize_set_400_verir`). Arşivlemeden önce girilen
 >    setler okunmaya devam eder (`Arsivlemeden_once_girilen_setler_okunmaya_devam_eder`).
-> 3. **Faz 9'a devredildi:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
+> 3. **Faz 10'a devredildi:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
 >    `static readonly` bir initializer olduğu için, çok ince bir container imajında saat
 >    dilimi veritabanı (tzdata/ICU) yoksa çalışma anında düz bir `TimeZoneNotFoundException`
 >    ALINMAZ — bu, o tipi ilk kullanan istek anında fırlayan bir `TypeInitializationException`
@@ -286,7 +286,11 @@
 >    şekil (Dockerfile yazılınca):** `Turkey` alanını (ya da eşdeğer bir `TimeZoneInfo.FindSystemTimeZoneById`
 >    çağrısını) uygulama başlangıcında bir kez çözüp doğrulamak — tıpkı var olan `Jwt:Key`
 >    kontrolü gibi — eksik tzdata'nın ilk isteği değil BOOT'u başarısız kılması için. Bugün
->    henüz bir Dockerfile olmadığından bu kontrol UYGULANMADI, sadece not düşüldü.
+>    henüz bir Dockerfile olmadığından bu kontrol UYGULANMADI, sadece not düşüldü. Faz 9,
+>    `TurkeyDay`'e iki yeni metot (`RangeForLocalDate`, `LocalDateOf`) ekleyip bunları geçmiş/
+>    takvim/hacim uçlarının hepsinde kullanarak bu tipin kullanım yüzeyini artırdı — tzdata
+>    eksikse artık daha fazla uç bundan etkilenir; kontrolün BOOT'a taşınması Faz 10'da hâlâ
+>    bekliyor.
 > 4. **Bilinçli davranış:** açık bir oturum varken `POST /api/sessions` gövdedeki
 >    `templateId`/`notes` değerlerini UYGULAMAZ, var olan oturumu olduğu gibi döndürür — açık
 >    bir oturumu sessizce değiştirmek fark edilmeyen bir veri kaybı olurdu.
@@ -348,14 +352,68 @@
 > 3. `GET /api/records` gruplama işini bellekte yapıyor; final inceleme düzeltmesiyle artık
 >    kullanıcının TÜM setlerini okuyor (yalnızca rekor taşıyanları değil — bkz. 8.4'teki
 >    düzeltme notu). Kullanıcı başına set sayısı binlere çıkarsa gruplama SQL tarafına
->    (GROUP BY) taşınmalı.
+>    (GROUP BY) taşınmalı. **Faz 9 notu:** bu "bellekte gruplama" uyarısı artık
+>    `GET /api/history`, `GET /api/stats/volume/daily` ve `GET /api/stats/calendar` için de
+>    geçerli — bkz. aşağıdaki Faz 9 devreden notları.
+>
+> Notlar 1 ve 2 hâlâ AÇIK: `Rir` temizleme ve geçmişe dönük set girişi Faz 9'un kapsamında
+> değildi, ele alınmadı.
 
 ## Faz 9 — Feature: Sorgular
-- [ ] 9.1 Antrenman geçmişi: tarih aralığı + egzersiz filtresi, sayfalama
-- [ ] 9.2 Takvim/katılım: `StartedAt` UTC → TR yerel güne çevrilip gruplanır; toplam gün,
-      streak (yeni tablo YOK)
-- [ ] 9.3 Hacim: set / oturum / egzersiz bazında (Weight × Reps)
-- [ ] 9.4 Test: gece yarısı sınırı, streak kopması
+- [x] 9.1 Antrenman geçmişi: tarih aralığı + egzersiz filtresi, sayfalama — `LocalDayRange
+      .Resolve` (Görev 1) TR günü aralığını UTC'ye çevirir (`from > to` → `ValidationException`
+      → 400); `WorkoutSessionRepository.GetHistoryPageAsync` (Görev 3) sayfalı oturumları + aynı
+      filtreden türeyen toplam sayıyı döner (`StartedAt` azalan, eşitlikte `Id` azalan, belirli
+      sıra); `WorkoutHistoryService.GetAsync` (Görev 5) sayfanın TÜM setlerini
+      `ISetEntryRepository.GetForSessionsAsync` (Görev 4) ile TEK seferde çekip oturum bazında
+      gruplar (N+1 yok). `exerciseId` verilirse önce `IExerciseRepository.GetVisibleByIdAsync`
+      ile sahiplik kontrolü yapılır (erişilemezse nötr mesajla 404); bulunursa oturumun
+      `TotalVolume`/`SetCount` değerleri YALNIZCA o egzersizin setlerinden hesaplanır ve dönen
+      `Sets` listesiyle birebir tutarlıdır (spec Karar 8). `GET /api/history`
+      (`HistoryController`, Görev 7) `PagedResponse<HistorySessionResponse>` döner; setler için
+      Faz 8'in `SetEntryResponse`'u yeniden kullanılır (DRY — ikinci bir set DTO'su yok).
+- [x] 9.2 Takvim/katılım: `StartedAt` UTC → TR yerel güne çevrilip gruplanır; toplam gün,
+      streak (yeni tablo YOK) — `StreakCalculator.Calculate` (Görev 2) saf, DB'siz çekirdek:
+      bugün antrenman varsa bugünden, yoksa dünden geriye sayar (bugün antrenman yoksa mevcut
+      seri KIRILMAZ, spec Karar 3); `WorkoutSessionRepository.GetTrainedSessionStartsAsync`
+      (Görev 3) en az bir seti olan oturumların `StartedAt`'lerini TÜM geçmişten döner (seri
+      hesabı aralıktan BAĞIMSIZ, spec Karar 5); `StatsService.GetCalendarAsync` (Görev 6) aynı
+      `DailyBucketsAsync` yardımcısını (günlük hacimle paylaşılan, DRY) aralık için, ayrı bir
+      tüm-geçmiş sorgusunu seri için kullanır. `GET /api/stats/calendar` (`StatsController`,
+      Görev 7) `CalendarResponse` döner; seti olmayan oturum takvime/seriye HİÇ girmez.
+- [x] 9.3 Hacim: set / oturum / egzersiz bazında (Weight × Reps) —
+      `WorkoutSessionRepository.GetSessionAggregatesAsync` (Görev 3) oturum başına set sayısı +
+      hacmi SQL'de toplar; `SetEntryRepository.GetVolumeByExerciseAsync` (Görev 4) egzersiz
+      bazında SQL `GROUP BY` ile toplam hacim + set sayısı döner (filtre oturumun `StartedAt`'i
+      üzerinden, setin `CreatedAt`'i DEĞİL — spec Karar 7). `StatsService
+      .GetDailyVolumeAsync`/`GetVolumeByExerciseAsync` (Görev 6) bunları `VolumeSummaryResponse<T>`
+      zarfına sarar — gün bazlı ve egzersiz bazlı ayrı satır tipleri (spec Karar 4, tek tipte
+      yarısı null alan yok). Uçlar: `GET /api/stats/volume/daily`,
+      `GET /api/stats/volume/by-exercise` (`StatsController`, Görev 7).
+- [x] 9.4 Test: gece yarısı sınırı, streak kopması — saf çekirdek (`TurkeyDayTests` +6,
+      `LocalDayRangeTests` 5, `StreakCalculatorTests` 9 — Görev 1-2, DB'siz), repository
+      (`WorkoutSessionRepositoryTests` +9 — sayfalama/toplam sayı ayrışması, egzersiz filtresi +
+      filtreli toplam tutarlılığı, sahiplik izolasyonu, seti olmayan oturumun toplamlara/seriye
+      girmemesi; `SetEntryRepositoryTests` +7 — egzersiz hacmi gruplama, oturumun başlangıcına
+      göre filtre, IDOR, çoklu oturumun setlerinin tek sorguda dönmesi, boş oturum kümesi — Görev
+      3-4), servis (`WorkoutHistoryServiceTests` 11 — sayfalama, egzersiz filtresiyle IDOR (404),
+      ters aralık (400), egzersiz filtresi + toplam tutarlılığı; `StatsServiceTests` 11 — gece
+      yarısını aşan antrenmanın ertesi TR gününe yazılması, bugün antrenman yokken mevcut serinin
+      korunması, seti olmayan oturumun takvime/hacme girmemesi — Görev 5-6) ve uçtan uca
+      (`QueryEndpointsTests`, 13 — tokensiz istek 401 (4 uç), geçmiş oturumu setleriyle ve
+      toplamıyla döndürme, IDOR (başkasının oturumları görünmez, başkasının egzersiziyle
+      filtrelemek 404 verir), ters tarih aralığı 400, geçersiz sayfa boyutu 400, günlük hacim,
+      egzersiz bazlı hacim, takvim + seri, verisi olmayan kullanıcının boş özet alması (404
+      DEĞİL) — Görev 7). Toplam **455 test yeşil** (384 → +71, Faz 9 boyunca: Görev 1 +11, Görev
+      2 +9, Görev 3 +9, Görev 4 +7, Görev 5 +11, Görev 6 +11, Görev 7 +13). Release build: 0
+      uyarı, 0 hata.
+
+> **Faz 9'dan devreden notlar (Faz 10'da dikkat edilecek):**
+> 1. `GET /api/sessions` (Faz 7) hâlâ sayfalamasız — oturum sayısı büyürse `PagedResponse` ile
+>    hizalanmalı.
+> 2. Takvim/günlük hacim gruplaması bellekte; aralık binlerce oturuma çıkarsa SQL'e taşınmalı.
+> 3. Haftalık/aylık hacim gruplaması yok (üçüncü bir uç gerektirir); gerçek ihtiyaç çıkarsa
+>    eklenir.
 
 ## Faz 10 — Feature: BodyWeightLog
 - [ ] 10.1 CRUD + tarih aralığı sorgusu
