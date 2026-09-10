@@ -11,6 +11,8 @@ public static class DependencyInjection
         services.AddScoped<IWorkoutSessionService, WorkoutSessionService>();
         services.AddScoped<IPersonalRecordService, PersonalRecordService>();
         services.AddScoped<ISetEntryService, SetEntryService>();
+        services.AddScoped<IWorkoutHistoryService, WorkoutHistoryService>();
+        services.AddScoped<IStatsService, StatsService>();
         return services;
     }
 }

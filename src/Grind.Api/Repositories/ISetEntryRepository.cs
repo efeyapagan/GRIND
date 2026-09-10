@@ -1,4 +1,5 @@
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Projections;
 
 namespace Grind.Api.Repositories;
 
@@ -53,4 +54,28 @@ public interface ISetEntryRepository : IRepository<SetEntry>
     /// </summary>
     Task<IReadOnlyDictionary<long, int>> GetCompletedSetCountsAsync(
         long sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Egzersiz başına hacim (ağırlık × tekrar) ve set sayısı; gruplama ve toplama SQL'de.
+    /// Aralık filtresi setin <c>CreatedAt</c>'ine değil OTURUMUN <c>StartedAt</c>'ine bakar
+    /// (spec Karar 7): gece yarısını aşan bir antrenmanda ikisi farklı güne düşer ve takvimle
+    /// hacim ayrışırdı.
+    /// </summary>
+    Task<IReadOnlyList<ExerciseVolume>> GetVolumeByExerciseAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen oturumların setleri TEK sorguda, <c>Exercise</c> ile birlikte, kronolojik
+    /// (CreatedAt, eşitlikte Id). Geçmiş sayfası bunu kullanır: oturum başına ayrı sorgu N+1 olurdu.
+    /// <paramref name="exerciseId"/> verilirse yalnızca o egzersizin setleri döner.
+    /// Sahiplik yüklemi burada da taşınır — oturumlar zaten doğrulanmış olsa bile (CLAUDE.md).
+    /// </summary>
+    Task<IReadOnlyList<SetEntry>> GetForSessionsAsync(
+        IReadOnlyCollection<long> sessionIds,
+        long userId,
+        long? exerciseId,
+        CancellationToken cancellationToken = default);
 }
