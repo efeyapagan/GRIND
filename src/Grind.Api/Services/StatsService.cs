@@ -35,6 +35,9 @@ public class StatsService(
         var items = volumes
             .OrderByDescending(v => v.Volume)
             .ThenBy(v => v.ExerciseName)
+            // İsim benzersizliği BUGÜNKÜ bir invariant, GARANTİ edilen bir kural değil (Faz 8'in
+            // aynı dersi: ThenBy(Id) ile sıralamayı koşulsuz toplam hale getir).
+            .ThenBy(v => v.ExerciseId)
             .Select(v => new ExerciseVolumeResponse(v.ExerciseId, v.ExerciseName, v.Volume, v.SetCount))
             .ToList();
 

@@ -209,6 +209,45 @@ public class StatsServiceTests
         }
     }
 
+    /// <summary>
+    /// LOAD-BEARING: <see cref="StatsService.GetDailyVolumeAsync"/> ve
+    /// <see cref="StatsService.GetVolumeByExerciseAsync"/> AYNI toplam hacmi tamamen FARKLI SQL
+    /// yollarıyla hesaplıyor — biri oturum başına korele alt sorgu, diğeri
+    /// <c>ExerciseId</c>'ye göre <c>GROUP BY</c>. Bu eşitlik, ikisinin zamanla birbirinden
+    /// sapmasını önleyen invariant: aynı sınıftan bir sapma Faz 7'de engelleyici, Faz 8'de
+    /// kritik bir bulguya yol açmıştı. Aralık İKİ günü de (dolayısıyla iki egzersizi de)
+    /// kapsayacak şekilde açıkça veriliyor — bu, <see cref="StatsService.GetVolumeByExerciseAsync"/>
+    /// için şimdiye dek yalnızca alt sınırı test edilmiş üst sınırı da (To) egzersize sokuyor.
+    /// </summary>
+    [Fact]
+    public async Task Gunluk_ve_egzersiz_bazli_hacim_toplami_esittir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerEgzersiz = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.Add(digerEgzersiz);
+            await context.SaveChangesAsync();
+
+            Seed(context, user, exercise, Bugun, (100m, 10));                  // 1000, bugün
+            Seed(context, user, digerEgzersiz, Bugun.AddDays(-1), (20m, 10));  // 200, dün
+            await context.SaveChangesAsync();
+
+            var query = new StatsRangeQuery
+            {
+                From = new DateOnly(2026, 3, 11), To = new DateOnly(2026, 3, 12)
+            };
+
+            var gunluk = await service.GetDailyVolumeAsync(query);
+            var egzersizBazli = await service.GetVolumeByExerciseAsync(query);
+
+            const decimal beklenen = 1000m + 200m;
+            Assert.Equal(beklenen, gunluk.TotalVolume);
+            Assert.Equal(beklenen, egzersizBazli.TotalVolume);
+            Assert.Equal(gunluk.TotalVolume, egzersizBazli.TotalVolume);
+        }
+    }
+
     // ---- Takvim ----
 
     [Fact]
