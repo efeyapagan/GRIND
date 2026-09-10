@@ -73,11 +73,10 @@ public class WorkoutSessionRepositoryTests
     }
 
     [Fact]
-    public async Task Aralik_alt_siniri_dahil_ust_siniri_haric()
+    public async Task Alt_sinirdaki_oturumu_dondurur()
     {
-        // >= from && < to sınırlarını sabitler: from ile başlayan oturum bulunmalı,
-        // to ile başlayan oturum bulunmamalı. Aksi halde >=/< yerine >/<= ile
-        // değiştirilse bile testler yeşil kalırdı.
+        // >= from sınırını sabitler: from ile TAM AYNI anda başlayan oturum bulunmalı.
+        // Üst sınır (< to) ayrı testte (Ust_sinirdaki_oturumu_dondurmez).
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
         var repository = new WorkoutSessionRepository(context);
