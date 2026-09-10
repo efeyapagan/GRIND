@@ -274,12 +274,33 @@
 > 2. **Faz 8 için açık soru:** şablon okumaları arşivlenmiş egzersizleri gösteriyor.
 >    Arşivlenmiş bir egzersize `SetEntry` girilebilmeli mi? Faz 6'daki karşılığı "yazarken
 >    katı"ydı; Faz 8 bunu açıkça karara bağlamalı.
-> 3. **Dağıtım notu:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. Çok ince bir container
->    imajında saat dilimi veritabanı (tzdata/ICU) yoksa çalışma anında
->    `TimeZoneNotFoundException` verir. Dağıtım imajı seçilirken kontrol edilmeli.
+> 3. **Dağıtım notu:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
+>    `static readonly` bir initializer olduğu için, çok ince bir container imajında saat
+>    dilimi veritabanı (tzdata/ICU) yoksa çalışma anında düz bir `TimeZoneNotFoundException`
+>    ALINMAZ — bu, o tipi ilk kullanan istek anında fırlayan bir `TypeInitializationException`
+>    içine sarılır ve tip o andan sonra süreç ömrü boyunca kalıcı olarak bozuk kalır (her
+>    sonraki oturum isteği de 500 döner). Dağıtım imajı seçilirken kontrol edilmeli. **Önerilen
+>    şekil (Dockerfile yazılınca):** `Turkey` alanını (ya da eşdeğer bir `TimeZoneInfo.FindSystemTimeZoneById`
+>    çağrısını) uygulama başlangıcında bir kez çözüp doğrulamak — tıpkı var olan `Jwt:Key`
+>    kontrolü gibi — eksik tzdata'nın ilk isteği değil BOOT'u başarısız kılması için. Bugün
+>    henüz bir Dockerfile olmadığından bu kontrol UYGULANMADI, sadece not düşüldü.
 > 4. **Bilinçli davranış:** açık bir oturum varken `POST /api/sessions` gövdedeki
 >    `templateId`/`notes` değerlerini UYGULAMAZ, var olan oturumu olduğu gibi döndürür — açık
 >    bir oturumu sessizce değiştirmek fark edilmeyen bir veri kaybı olurdu.
+> 5. **Faz 8 için ZORUNLU (seam ihtiyacı):** Faz 8'in set-kaydetme akışının bugün "açık
+>    oturumu bul/yoksa aç" için iki seçeneği var ve İKİSİ DE YANLIŞ: (a) `StartAsync`'i
+>    çağırmak — kendi `SaveChangesAsync`'ini commit eder, set eklemesi ikinci bir
+>    `SaveChangesAsync` ile commit eder; bu hem CLAUDE.md'nin "bir iş operasyonu = tek
+>    `SaveChangesAsync`" kuralını ihlal eder hem de arada hiç seti olmayan boş bir oturumun
+>    var olduğu bir pencere bırakır (istemci tam o anda çökerse). (b) `FindOpenTodayAsync` +
+>    `TurkeyDay.RangeFor` mantığını `SetEntry` servisinin içinde tekrar yazmak — bu fazın
+>    tam olarak merkezileştirmek için var olduğu mantığı DRY ihlaliyle kopyalamak olur.
+>    **Önerilen çözüm:** `IWorkoutSessionRepository`/`WorkoutSessionService`'e, entity
+>    döndüren ve BİLEREK `SaveChangesAsync` ÇAĞIRMAYAN bir `GetOrOpenTodayAsync(...)` seam'i
+>    eklemek — set ekleme akışı bu seam'i çağırıp aynı unit of work içinde hem oturumu
+>    (gerekirse) hem de yeni `SetEntry`'yi TEK `SaveChangesAsync` altında commit edebilsin.
+>    Bu fix dalgasında BİLEREK EKLENMEDİ — çağıranı olmayan bir public API spekülatif
+>    olurdu (YAGNI); Faz 8 kendi planında bu seam'i sahiplenmeli.
 
 ## Faz 8 — Feature: SetEntry + PR motoru  ⭐ (projenin kalbi)
 - [ ] 8.1 `PersonalRecordCalculator`: ortak `Evaluate(...)` yardımcısı; `AddSet` akışı ve

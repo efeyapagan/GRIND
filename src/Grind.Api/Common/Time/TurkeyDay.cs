@@ -10,6 +10,15 @@ namespace Grind.Api.Common.Time;
 /// Sabit +03:00 yerine <see cref="TimeZoneInfo"/> kullanılıyor ki Türkiye yeniden yaz
 /// saatine geçerse uygulama kendiliğinden uysun. Bedeli: çalışma ortamında saat dilimi
 /// veritabanı (tzdata/ICU) bulunmalı.
+///
+/// DİKKAT (tzdata eksikliği): <see cref="Turkey"/> bir <c>static readonly</c> alan
+/// initializer'ı olduğu için, tzdata eksik bir imajda doğrudan bir
+/// <see cref="TimeZoneNotFoundException"/> ALINMAZ — çalışma zamanı bunu bir
+/// <see cref="System.TypeInitializationException"/> içine sarar ve bu, başlangıçta değil
+/// bu tipi kullanan İLK istek anında fırlar; o andan sonra tip süreç ömrü boyunca kalıcı
+/// olarak "başarısız" işaretlenir, yani sonraki HER oturum isteği de 500 döner (ve
+/// GlobalExceptionHandler bunun için özel bir eşleme taşımaz). Loglarda düz
+/// <c>TimeZoneNotFoundException</c> arayan biri bunu bulamaz.
 /// </summary>
 public static class TurkeyDay
 {
