@@ -14,7 +14,8 @@ public class WorkoutSessionService(
     ISetEntryRepository setEntryRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
-    TimeProvider timeProvider) : IWorkoutSessionService
+    TimeProvider timeProvider,
+    IPersonalRecordService recordService) : IWorkoutSessionService
 {
     private const string SessionNotFound = "Oturum bulunamadı.";
     private const string OpenSessionNotFound = "Bugüne ait açık bir oturum yok.";
@@ -142,12 +143,24 @@ public class WorkoutSessionService(
     {
         var session = await OwnedOrThrowAsync(id, cancellationToken);
 
-        // SetEntry satırları CASCADE ile gider (Faz 1'de konfigüre edildi).
-        // FAZ 8 NOTU: rekor taşıyan bir set silindiğinde ilgili egzersizler için
-        // RecalculateRecords çağrılmalı — ISetEntryRepository.GetDistinctExerciseIdsForSessionAsync
-        // tam bu iş için hazır bekliyor. Bugün SetEntry üreten endpoint olmadığı için
-        // yeniden hesaplanacak rekor yok.
+        // Etkilenen egzersizler SİLMEDEN ÖNCE toplanır — sonra öğrenmenin yolu kalmaz.
+        // Distinct liste: her egzersiz için BİR KEZ yeniden hesap (CLAUDE.md: her set için
+        // ayrı ayrı DEĞİL — performans ve DRY).
+        var affectedExerciseIds = await setEntryRepository.GetDistinctExerciseIdsForSessionAsync(
+            id, cancellationToken);
+
         sessionRepository.Remove(session);
+
+        foreach (var exerciseId in affectedExerciseIds)
+        {
+            // excludeSessionId ZORUNLU: CASCADE henüz veritabanına gitmedi, bu oturumun
+            // setleri sorguda hâlâ geri geliyor. Hariç tutulmazsa silinen setler hesaba
+            // katılır ve kalan setler rekora terfi etmez.
+            await recordService.RecalculateAsync(
+                exerciseId, excludeSessionId: id, cancellationToken: cancellationToken);
+        }
+
+        // TEK commit: oturumun silinmesi (SetEntry'ler CASCADE) + kalan setlerin rekorları.
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

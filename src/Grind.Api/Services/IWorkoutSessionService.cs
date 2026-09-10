@@ -48,10 +48,8 @@ public interface IWorkoutSessionService
         long id, UpdateSessionNotesRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Siler; bağlı SetEntry satırları CASCADE ile gider.
-    /// FAZ 8 NOTU: rekor taşıyan setler silinince ilgili egzersizler için
-    /// RecalculateRecords çağrılmalı. Bugün SetEntry üreten endpoint olmadığı için
-    /// silinen oturumda yeniden hesaplanacak rekor yok.
+    /// Siler; bağlı SetEntry satırları CASCADE ile gider. Silinen oturumun dokunduğu her
+    /// egzersiz için rekorlar BİR KEZ yeniden hesaplanır — aynı commit içinde.
     /// </summary>
     Task DeleteAsync(long id, CancellationToken cancellationToken = default);
 }

@@ -50,7 +50,7 @@ public class SetEntryServiceTests
         var recordService = new PersonalRecordService(setRepository, currentUser);
         var sessionService = new WorkoutSessionService(
             sessionRepository, new WorkoutTemplateRepository(context), setRepository,
-            unitOfWork, currentUser, saat);
+            unitOfWork, currentUser, saat, recordService);
 
         var service = new SetEntryService(
             setRepository, new ExerciseRepository(context), sessionRepository,

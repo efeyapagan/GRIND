@@ -9,6 +9,7 @@ public static class DependencyInjection
         services.AddScoped<IExerciseService, ExerciseService>();
         services.AddScoped<IWorkoutTemplateService, WorkoutTemplateService>();
         services.AddScoped<IWorkoutSessionService, WorkoutSessionService>();
+        services.AddScoped<IPersonalRecordService, PersonalRecordService>();
         return services;
     }
 }
