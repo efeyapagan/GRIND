@@ -16,6 +16,13 @@ builder.Services.AddCrossCutting(
     ?? throw new InvalidOperationException("Jwt bölümü tanımlı değil."),
     builder.Environment);
 
+// Saat bir bağımlılık olarak enjekte edilir ki gün sınırı (TR yerel günü) mantığı sahte
+// bir TimeProvider ile deterministik test edilebilsin. Bu SADECE WorkoutSessionService
+// için geçerli — AuthService, ExerciseService ve WorkoutTemplateService hâlâ CreatedAt'i
+// doğrudan DateTime.UtcNow'dan damgalıyor (o alan için gün sınırı gibi test edilmesi
+// gereken bir karar yok).
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddApplicationServices();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
