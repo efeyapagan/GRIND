@@ -36,13 +36,14 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         long sessionId, long userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Kullanıcının rekor taşıyan (<c>RecordType != None</c>) tüm setleri, <c>Exercise</c>
-    /// ile birlikte. Tüm zamanların rekorları özeti bunun üzerinden hesaplanır: bir set
-    /// <c>None</c> ise tanımı gereği kendisinden önce ağırlıkça ve (aynı ağırlıkta)
-    /// tekrarca en az onun kadar iyi bir set vardır — dolayısıyla hiçbir maksimum yalnızca
-    /// <c>None</c> satırlarda yaşayamaz ve bu filtre bilgi kaybetmez.
+    /// Kullanıcının TÜM setleri, <c>Exercise</c> ile birlikte. Tüm zamanların rekorları özeti
+    /// bunun üzerinden hesaplanır. Yalnızca <c>RecordType != None</c> satırlarıyla sınırlamak
+    /// YANLIŞTIR: bir set, o ağırlıkta hiç geçmişi olmadığı için <c>None</c> kalabilir (Soru
+    /// 1/A) ve yine de tüm zamanların en çok tekrarını taşıyabilir (örn. 100 kg × 8'den sonra
+    /// atılan 60 kg × 15'lik bir indirme seti — 60 kg'da hiç kıyas yok, set <c>None</c>, ama
+    /// 15 tekrar tüm zamanların rekoru). Bkz. spec düzeltme notu (2026-09-10, final inceleme).
     /// </summary>
-    Task<IReadOnlyList<SetEntry>> GetRecordCarryingSetsAsync(
+    Task<IReadOnlyList<SetEntry>> GetAllForUserAsync(
         long userId, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -210,6 +210,27 @@ public class SetEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApi
         Assert.Equal(60m, satir.BestRepsWeight);
     }
 
+    /// <summary>
+    /// KANIT (Finding 1, final inceleme): özet yalnızca rekor taşıyan setleri okursa, 100 kg
+    /// zaten varken atılan 60 kg × 15'lik indirme seti None kaldığı için (Soru 1/A) tüm
+    /// zamanların en çok tekrarını kaçırır. Özet TÜM setlerden hesaplanmalı.
+    /// </summary>
+    [Fact]
+    public async Task Rekor_ozeti_hafif_agirliktaki_ilk_setin_tekrarini_sayar()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        await PostSetAsync(client, exerciseId, 100m, 8);
+        await PostSetAsync(client, exerciseId, 60m, 15);
+
+        var rekorlar = await client.GetFromJsonAsync<List<ExerciseRecordResponse>>("/api/records", Json);
+        var satir = Assert.Single(rekorlar!, r => r.ExerciseId == exerciseId);
+
+        Assert.Equal(100m, satir.BestWeight);
+        Assert.Equal(15, satir.BestReps);
+        Assert.Equal(60m, satir.BestRepsWeight);
+    }
+
     [Fact]
     public async Task Arsivlenmis_egzersize_set_400_verir()
     {

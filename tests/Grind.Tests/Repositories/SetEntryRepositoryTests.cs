@@ -266,8 +266,13 @@ public class SetEntryRepositoryTests
         Assert.Equal([6, 8], sets.Select(s => s.Reps));
     }
 
+    /// <summary>
+    /// KANIT: None satırlar da dönmeli. "Hiçbir maksimum yalnızca None satırlarda yaşayamaz"
+    /// iddiası yanlış çıktı (bkz. spec düzeltme notu, 2026-09-10 final inceleme) — rekor özeti
+    /// artık kullanıcının TÜM setlerinden hesaplanıyor, yalnızca rekor taşıyanlardan değil.
+    /// </summary>
     [Fact]
-    public async Task Yalnizca_rekor_tasiyan_setler_doner()
+    public async Task Kullanicinin_tum_setleri_egzersiziyle_doner()
     {
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -286,15 +291,15 @@ public class SetEntryRepositoryTests
         context.ChangeTracker.Clear();
 
         var repository = new SetEntryRepository(context);
-        var rekorlar = await repository.GetRecordCarryingSetsAsync(user.Id);
+        var setler = await repository.GetAllForUserAsync(user.Id);
 
-        Assert.Equal(2, rekorlar.Count);
-        Assert.DoesNotContain(rekorlar, s => s.RecordType == RecordType.None);
-        Assert.All(rekorlar, s => Assert.NotNull(s.Exercise));
+        Assert.Equal(3, setler.Count);
+        Assert.Contains(setler, s => s.RecordType == RecordType.None);
+        Assert.All(setler, s => Assert.NotNull(s.Exercise));
     }
 
     [Fact]
-    public async Task Rekor_sorgusu_baskasinin_setlerini_getirmez()
+    public async Task Tum_setler_sorgusu_baskasinin_setlerini_getirmez()
     {
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -313,6 +318,6 @@ public class SetEntryRepositoryTests
 
         var repository = new SetEntryRepository(context);
 
-        Assert.Empty(await repository.GetRecordCarryingSetsAsync(davetsiz.Id));
+        Assert.Empty(await repository.GetAllForUserAsync(davetsiz.Id));
     }
 }

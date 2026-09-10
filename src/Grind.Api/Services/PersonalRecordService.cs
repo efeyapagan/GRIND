@@ -54,12 +54,13 @@ public class PersonalRecordService(
     public async Task<IReadOnlyList<ExerciseRecordResponse>> GetAllTimeAsync(
         CancellationToken cancellationToken = default)
     {
-        var records = await setEntryRepository.GetRecordCarryingSetsAsync(
+        var records = await setEntryRepository.GetAllForUserAsync(
             currentUser.UserId, cancellationToken);
 
-        // Filtre SQL'de, gruplama bellekte: rekor taşıyan satırlar bir egzersizde onlarca
-        // olur, binlerce değil. Karşılığında eşitlik kuralları (aynı ağırlıkta en çok tekrar,
-        // sonra en erken tarih) tek satırda okunabilir kalıyor.
+        // Gruplama bellekte yapılıyor: "yalnızca rekor taşıyan satırlar" filtresi bilgi
+        // kaybediyordu (bkz. spec düzeltme notu, 2026-09-10 final inceleme) — bu yüzden
+        // kullanıcının TÜM setleri okunuyor. Bir kullanıcının set sayısı binlere çıkarsa bu
+        // gruplama SQL tarafına (GROUP BY) taşınmalı.
         return records
             .GroupBy(s => s.ExerciseId)
             .Select(BuildSummary)

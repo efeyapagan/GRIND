@@ -1,6 +1,5 @@
 using Grind.Api.Data;
 using Grind.Api.Models.Entities;
-using Grind.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Grind.Api.Repositories;
@@ -35,13 +34,11 @@ public class SetEntryRepository(AppDbContext context)
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<SetEntry>> GetRecordCarryingSetsAsync(
+    public async Task<IReadOnlyList<SetEntry>> GetAllForUserAsync(
         long userId, CancellationToken cancellationToken = default)
         => await Set
             .Include(s => s.Exercise)
-            .Where(s => s.WorkoutSession.UserId == userId && s.RecordType != RecordType.None)
-            .OrderBy(s => s.CreatedAt)
-            .ThenBy(s => s.Id)
+            .Where(s => s.WorkoutSession.UserId == userId)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<long>> GetDistinctExerciseIdsForSessionAsync(

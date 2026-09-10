@@ -39,11 +39,18 @@ kayda geçirir. Çelişki olursa CLAUDE.md kazanır.
   `Equals` hem `GetHashCode` bakımından aynı (ölçülerek doğrulandı: hash 1079574528 = 1079574528).
   Aksi halde EF'ten (6,2) ölçeğiyle dönen değerler ile testte yazılan literaller ayrı kovalara
   düşer ve tekrar rekoru sessizce yanlış hesaplanırdı.
-- **"En iyi ağırlık ve en iyi tekrar her zaman rekor taşıyan bir sette bulunur"** — kanıt:
+- ~~**"En iyi ağırlık ve en iyi tekrar her zaman rekor taşıyan bir sette bulunur"** — kanıt:
   bir set `None` ise, tanımı gereği kendisinden önce ağırlıkça ≥ ve (aynı ağırlıkta) tekrarca ≥
   bir set vardır. Dolayısıyla hiçbir maksimum yalnızca `None` setlerde yaşayamaz. §8.4'ün
   özet ucu bu yüzden yalnızca `RecordType != None` satırlarını okuyabilir — ve bu invaryant
-  testle sabitlenecek (tüm setlerden hesaplanan maksimumlar = ucun döndürdüğü değerler).
+  testle sabitlenecek (tüm setlerden hesaplanan maksimumlar = ucun döndürdüğü değerler).~~
+
+  > **Düzeltme (2026-09-10, final inceleme):** yukarıdaki iddia YANLIŞ — geri çekildi. Kanıt
+  > yalnızca "aynı ağırlıkta önceki bir kayıt varsa" dalını kapsıyordu; Soru 1/A'nın "o
+  > ağırlıkta hiç önceki set yoksa" dalını atlıyordu. Karşı örnek: 100 kg × 8 (Weight), sonra
+  > 60 kg × 15 (None — 60 kg'da hiç geçmiş yok). 15 tekrar tüm zamanların en çok tekrarı ama
+  > satır `None`. §8.4'ün özeti artık kullanıcının TÜM setlerini okuyor, yalnızca rekor
+  > taşıyanları değil (bkz. aşağıdaki düzeltme notu).
 
 ---
 
@@ -224,9 +231,17 @@ diye eklenmiyor — geçmişe dönük veri girişi bir ihtiyaç olarak ortaya ç
 
 ### Rekor özeti (8.4) yalnızca rekor taşıyan satırları okur
 
-Yukarıda kanıtlanan invaryant sayesinde `GET /api/records`, kullanıcının `RecordType != None`
+~~Yukarıda kanıtlanan invaryant sayesinde `GET /api/records`, kullanıcının `RecordType != None`
 setlerini (bir egzersizde onlarca satır, binlerce değil) tek sorguyla çeker ve gruplamayı
-bellekte yapar. `BestWeight` = en büyük ağırlık (eşitlikte en çok tekrar, sonra en erken tarih);
+bellekte yapar.~~
+
+> **Düzeltme (2026-09-10, final inceleme):** yukarıdaki yaklaşım TERK EDİLDİ — bkz. "Deneyle /
+> kanıtla doğrulanmış" bölümündeki düzeltme notu. `GET /api/records` artık kullanıcının TÜM
+> setlerini (`GetAllForUserAsync`) tek sorguyla çeker ve gruplamayı bellekte yapar; filtre
+> kaldırıldı. Kullanıcı başına set sayısı binlere çıkarsa gruplama SQL tarafına taşınmalı
+> (PLAN.md'deki devreden not).
+
+`BestWeight` = en büyük ağırlık (eşitlikte en çok tekrar, sonra en erken tarih);
 `BestReps` = en çok tekrar (eşitlikte en büyük ağırlık, sonra en erken tarih). Hiç seti olmayan
 egzersiz listede yer almaz.
 

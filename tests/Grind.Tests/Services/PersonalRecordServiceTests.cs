@@ -232,10 +232,12 @@ public class PersonalRecordServiceTests
     }
 
     /// <summary>
-    /// İNVARYANT TESTİ: özet yalnızca RecordType != None satırlarını okuyor. Bu, ancak
-    /// "hiçbir maksimum yalnızca None satırlarda yaşayamaz" doğruysa bilgi kaybetmez.
-    /// Burada maksimumlar TÜM setlerden bağımsız olarak hesaplanıp özetle karşılaştırılıyor —
-    /// filtre bir gün bilgi kaybetmeye başlarsa test kırmızıya döner.
+    /// İNVARYANT TESTİ: özet TÜM setlerden hesaplanır (bkz. spec düzeltme notu, 2026-09-10
+    /// final inceleme) — "hiçbir maksimum yalnızca None satırlarda yaşayamaz" iddiası YANLIŞ
+    /// çıktı: daha hafif bir ağırlıktaki İLK set, o ağırlıkta kıyaslanacak bir geçmiş
+    /// olmadığı için None kalır ama yine de en çok tekrarı taşıyabilir (aşağıdaki 70 kg × 30
+    /// seti, 100 kg zaten varken eklenmiş ve None'dır). Maksimumlar TÜM setlerden bağımsız
+    /// olarak hesaplanıp özetle karşılaştırılıyor.
     /// </summary>
     [Fact]
     public async Task Rekor_ozeti_tum_setlerden_hesaplanan_maksimumlarla_ayni()
@@ -245,7 +247,10 @@ public class PersonalRecordServiceTests
         {
             var setler = await SeedAsync(context, session, exercise,
                 (60m, 12, RecordType.None), (80m, 10, RecordType.None), (80m, 10, RecordType.None),
-                (80m, 14, RecordType.None), (60m, 25, RecordType.None), (100m, 3, RecordType.None));
+                (80m, 14, RecordType.None), (60m, 25, RecordType.None), (100m, 3, RecordType.None),
+                // 100 kg zaten görülmüşken 70 kg'da İLK set: None kalır (Soru 1/A) ama
+                // tüm setler arasında en çok tekrara sahip olan tam olarak bu set.
+                (70m, 30, RecordType.None));
 
             await service.RecalculateAsync(exercise.Id);
             await context.SaveChangesAsync();
@@ -256,6 +261,42 @@ public class PersonalRecordServiceTests
 
             Assert.Equal(setler.Max(s => s.Weight), satir.BestWeight);
             Assert.Equal(setler.Max(s => s.Reps), satir.BestReps);
+
+            var enCokTekrarliSet = setler
+                .OrderByDescending(s => s.Reps).ThenByDescending(s => s.Weight)
+                .First();
+            Assert.Equal(enCokTekrarliSet.Weight, satir.BestRepsWeight);
+        }
+    }
+
+    /// <summary>
+    /// KANIT (Finding 1, final inceleme): "hiçbir maksimum yalnızca None satırlarda
+    /// yaşayamaz" iddiası bu senaryoda çöker. 100 kg × 8'den SONRA atılan 60 kg × 15'lik bir
+    /// indirme seti, 60 kg'da hiç geçmiş olmadığı için None kalır (Soru 1/A) — ama 15 tekrar,
+    /// tüm zamanların en çok tekrarıdır. Özet yalnızca rekor taşıyan satırları okursa bu
+    /// tekrarı kaçırır ve BestReps'i 8 olarak bildirir.
+    /// </summary>
+    [Fact]
+    public async Task Rekor_ozeti_hafif_agirlikta_ilk_setteki_en_cok_tekrari_kacirmaz()
+    {
+        var (context, _, session, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await SeedAsync(context, session, exercise,
+                (100m, 8, RecordType.None), (60m, 15, RecordType.None));
+
+            await service.RecalculateAsync(exercise.Id);
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var ozet = await service.GetAllTimeAsync();
+            var satir = Assert.Single(ozet, r => r.ExerciseId == exercise.Id);
+
+            Assert.Equal(100m, satir.BestWeight);
+            Assert.Equal(8, satir.BestWeightReps);
+            Assert.Equal(15, satir.BestReps);
+            Assert.Equal(60m, satir.BestRepsWeight);
+            Assert.Equal(exercise.Name, satir.ExerciseName);
         }
     }
 
