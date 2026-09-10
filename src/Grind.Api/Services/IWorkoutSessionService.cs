@@ -1,4 +1,5 @@
 using Grind.Api.Models.Dtos.Session;
+using Grind.Api.Models.Entities;
 
 namespace Grind.Api.Services;
 
@@ -19,6 +20,21 @@ public interface IWorkoutSessionService
     Task<SessionResponse> GetOpenAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// SERVİS-İÇİ SEAM — controller'dan ÇAĞRILMAZ (DTO değil entity döndürür).
+    ///
+    /// Bugüne (TR yerel günü) ait açık oturumu döndürür; yoksa yenisini oluşturup change
+    /// tracker'a ekler ama <c>SaveChangesAsync</c> ÇAĞIRMAZ. Çağıran, kendi yazımıyla
+    /// (ör. yeni bir <c>SetEntry</c>) birlikte TEK bir unit of work altında commit eder.
+    ///
+    /// Sebebi (Faz 7'den devreden zorunluluk): set ekleme akışının alternatifleri
+    /// (a) <c>StartAsync</c>'i çağırmak — iki ayrı commit, arada seti olmayan boş oturum
+    /// penceresi; (b) gün sınırı mantığını set servisinde tekrar yazmak — DRY ihlali.
+    /// </summary>
+    /// <returns><c>Created</c> true ise oturum YENİ oluşturuldu ve henüz Id'si yoktur.</returns>
+    Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
+        long? templateId, string? notes, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Bugüne ait açık oturum varsa onu döndürür (<c>Created = false</c>), yoksa yeni açar.
     /// İdempotent: iki kez tıklanan "Antrenmana Başla" hata üretmez.
     /// </summary>
@@ -32,10 +48,8 @@ public interface IWorkoutSessionService
         long id, UpdateSessionNotesRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Siler; bağlı SetEntry satırları CASCADE ile gider.
-    /// FAZ 8 NOTU: rekor taşıyan setler silinince ilgili egzersizler için
-    /// RecalculateRecords çağrılmalı. Bugün SetEntry üreten endpoint olmadığı için
-    /// silinen oturumda yeniden hesaplanacak rekor yok.
+    /// Siler; bağlı SetEntry satırları CASCADE ile gider. Silinen oturumun dokunduğu her
+    /// egzersiz için rekorlar BİR KEZ yeniden hesaplanır — aynı commit içinde.
     /// </summary>
     Task DeleteAsync(long id, CancellationToken cancellationToken = default);
 }

@@ -39,10 +39,13 @@ public class WorkoutSessionServiceTests
         await context.SaveChangesAsync();
 
         var saat = new SahteSaat(an ?? VarsayilanAn);
+        var currentUser = new StubCurrentUser(user.Id);
+        var setRepository = new SetEntryRepository(context);
+        var recordService = new PersonalRecordService(setRepository, currentUser);
         var service = new WorkoutSessionService(
             new WorkoutSessionRepository(context), new WorkoutTemplateRepository(context),
-            new SetEntryRepository(context), new UnitOfWork(context),
-            new StubCurrentUser(user.Id), saat);
+            setRepository, new UnitOfWork(context),
+            currentUser, saat, recordService);
 
         return (context, user, service, saat, transaction);
     }
@@ -425,6 +428,251 @@ public class WorkoutSessionServiceTests
 
             Assert.Single(liste);
             Assert.Equal(kendi.Session.Id, liste[0].Id);
+        }
+    }
+
+    // ---- Faz 8: set ekleme akışının kullandığı seam ----
+
+    /// <summary>
+    /// Seam'in VAROLUŞ SEBEBİ: kaydetmez. Set ekleme akışı oturumu ve yeni seti TEK
+    /// SaveChangesAsync altında commit edebilsin diye. Kaydetseydi, arada "hiç seti olmayan
+    /// boş oturum" penceresi kalırdı (istemci tam o anda çökerse kalıcı olarak).
+    /// </summary>
+    [Fact]
+    public async Task Seam_yeni_oturumu_kaydetmez()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.True(created);
+            Assert.Equal(0, session.Id);   // henüz DB'ye gitmedi, Id atanmadı
+            Assert.Equal(0, await context.Set<WorkoutSession>()
+                .CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Seam_bugunun_acik_oturumunu_dondurur()
+    {
+        var (_, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var acilan = await service.StartAsync(new StartSessionRequest());
+
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.False(created);
+            Assert.Equal(acilan.Session.Id, session.Id);
+        }
+    }
+
+    /// <summary>
+    /// Gün sınırı seam'de de geçerli: dün 23:00'te açılıp kapatılmayan oturum bugünün
+    /// setlerini YUTMAMALI. Bu tam olarak CLAUDE.md'nin "unutulan açık session" kararı.
+    /// </summary>
+    [Fact]
+    public async Task Seam_dunden_kalan_acik_oturumu_kullanmaz()
+    {
+        // TR 10 Mart 23:00 = UTC 10 Mart 20:00
+        var (_, _, service, saat, transaction) = await CreateAsync(
+            new DateTime(2026, 3, 10, 20, 0, 0, DateTimeKind.Utc));
+        await using (transaction)
+        {
+            var dunku = await service.StartAsync(new StartSessionRequest());
+
+            // TR 11 Mart 00:30 = UTC 10 Mart 21:30 — ertesi TR günü.
+            saat.UtcNow = new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc);
+
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.True(created);
+            Assert.NotEqual(dunku.Session.Id, session.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Seam_baskasinin_sablonuyla_oturum_acmaz()
+    {
+        var (context, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            await context.SaveChangesAsync();
+            var digerSablon = NewTemplate(digerKullanici);
+            context.Add(digerSablon);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.GetOrOpenTodayAsync(digerSablon.Id, null));
+        }
+    }
+
+    /// <summary>
+    /// Seam ile açılıp commit edilen oturum, StartAsync tarafından "var olan" sayılmalı —
+    /// yani iki akış AYNI "bugünün açık oturumu" tanımını paylaşıyor (DRY'ın gözlemlenebilir
+    /// sonucu). Ayrı ayrı yazılsalardı bu test iki oturum görürdü.
+    /// </summary>
+    [Fact]
+    public async Task Seam_ile_acilan_oturum_StartAsync_tarafindan_yeniden_acilmaz()
+    {
+        var (context, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var (session, _) = await service.GetOrOpenTodayAsync(null, null);
+            await context.SaveChangesAsync();
+
+            var sonuc = await service.StartAsync(new StartSessionRequest());
+
+            Assert.False(sonuc.Created);
+            Assert.Equal(session.Id, sonuc.Session.Id);
+        }
+    }
+
+    // ---- Faz 8: silme sonrası rekor yeniden hesabı ----
+
+    /// <summary>
+    /// Setleri elle kurar (SetEntryService'e bağımlı olmadan): iki oturum, aynı egzersiz.
+    /// Birinci oturumdaki 100'lük rekor silinince, ikinci oturumdaki 90'lık set rekora
+    /// terfi etmeli. Yeniden hesap hiç çağrılmazsa 90'lık set None kalır.
+    /// </summary>
+    [Fact]
+    public async Task Oturum_silinince_etkilenen_egzersizin_rekorlari_yeniden_hesaplanir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var silinecek = TestDatabase.NewSession(user);
+            var kalacak = TestDatabase.NewSession(user);
+            context.AddRange(exercise, silinecek, kalacak);
+            await context.SaveChangesAsync();
+
+            var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+            var agir = new SetEntry
+            {
+                WorkoutSession = silinecek, Exercise = exercise,
+                Weight = 100m, Reps = 8, RecordType = RecordType.Weight, CreatedAt = an
+            };
+            var hafif = new SetEntry
+            {
+                WorkoutSession = kalacak, Exercise = exercise,
+                Weight = 90m, Reps = 10, RecordType = RecordType.None, CreatedAt = an.AddHours(1)
+            };
+            context.AddRange(agir, hafif);
+            await context.SaveChangesAsync();
+
+            await service.DeleteAsync(silinecek.Id);
+
+            context.ChangeTracker.Clear();
+            var kalan = await context.Set<SetEntry>().SingleAsync(s => s.Id == hafif.Id);
+
+            Assert.Equal(RecordType.Weight, kalan.RecordType);
+            Assert.Equal(0, await context.Set<SetEntry>().CountAsync(s => s.Id == agir.Id));
+        }
+    }
+
+    /// <summary>
+    /// İki farklı egzersize dokunan bir oturum silinince İKİSİ de yeniden hesaplanmalı —
+    /// distinct liste üzerinden, her set için ayrı ayrı değil.
+    /// </summary>
+    [Fact]
+    public async Task Oturum_silinince_dokundugu_her_egzersiz_yeniden_hesaplanir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var birinciEgzersiz = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var ikinciEgzersiz = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var silinecek = TestDatabase.NewSession(user);
+            var kalacak = TestDatabase.NewSession(user);
+            context.AddRange(birinciEgzersiz, ikinciEgzersiz, silinecek, kalacak);
+            await context.SaveChangesAsync();
+
+            var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+            var kalanlar = new List<SetEntry>();
+
+            foreach (var exercise in new[] { birinciEgzersiz, ikinciEgzersiz })
+            {
+                context.Add(new SetEntry
+                {
+                    WorkoutSession = silinecek, Exercise = exercise,
+                    Weight = 100m, Reps = 8, RecordType = RecordType.Weight, CreatedAt = an
+                });
+                var kalan = new SetEntry
+                {
+                    WorkoutSession = kalacak, Exercise = exercise,
+                    Weight = 90m, Reps = 10, RecordType = RecordType.None, CreatedAt = an.AddHours(1)
+                };
+                context.Add(kalan);
+                kalanlar.Add(kalan);
+            }
+            await context.SaveChangesAsync();
+
+            await service.DeleteAsync(silinecek.Id);
+
+            context.ChangeTracker.Clear();
+            foreach (var kalan in kalanlar)
+            {
+                var guncel = await context.Set<SetEntry>().SingleAsync(s => s.Id == kalan.Id);
+                Assert.Equal(RecordType.Weight, guncel.RecordType);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Oturum_silinince_baskasinin_rekorlarina_dokunulmaz()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var silinecek = TestDatabase.NewSession(user);
+            var digerKullanici = TestDatabase.NewUser();
+            context.AddRange(exercise, silinecek, digerKullanici);
+            await context.SaveChangesAsync();
+
+            var digerOturum = TestDatabase.NewSession(digerKullanici);
+            context.Add(digerOturum);
+            await context.SaveChangesAsync();
+
+            var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+            context.Add(new SetEntry
+            {
+                WorkoutSession = silinecek, Exercise = exercise,
+                Weight = 100m, Reps = 8, RecordType = RecordType.Weight, CreatedAt = an
+            });
+            var digerSet = new SetEntry
+            {
+                WorkoutSession = digerOturum, Exercise = exercise,
+                Weight = 90m, Reps = 10, RecordType = RecordType.None, CreatedAt = an.AddHours(1)
+            };
+            context.Add(digerSet);
+            await context.SaveChangesAsync();
+
+            await service.DeleteAsync(silinecek.Id);
+
+            context.ChangeTracker.Clear();
+            var guncel = await context.Set<SetEntry>().SingleAsync(s => s.Id == digerSet.Id);
+
+            Assert.Equal(RecordType.None, guncel.RecordType);
+        }
+    }
+
+    /// <summary>REGRESYON: setsiz oturum silme Faz 7'de çalışıyordu, çalışmaya devam etmeli.</summary>
+    [Fact]
+    public async Task Setsiz_oturum_silinebilir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var acilan = await service.StartAsync(new StartSessionRequest());
+
+            await service.DeleteAsync(acilan.Session.Id);
+
+            Assert.Equal(0, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
         }
     }
 }

@@ -14,7 +14,8 @@ public class WorkoutSessionService(
     ISetEntryRepository setEntryRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
-    TimeProvider timeProvider) : IWorkoutSessionService
+    TimeProvider timeProvider,
+    IPersonalRecordService recordService) : IWorkoutSessionService
 {
     private const string SessionNotFound = "Oturum bulunamadı.";
     private const string OpenSessionNotFound = "Bugüne ait açık bir oturum yok.";
@@ -51,44 +52,59 @@ public class WorkoutSessionService(
         return ToResponse(session, await ProgressAsync(session, cancellationToken));
     }
 
-    public async Task<StartSessionResult> StartAsync(
-        StartSessionRequest request, CancellationToken cancellationToken = default)
+    public async Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
+        long? templateId, string? notes, CancellationToken cancellationToken = default)
     {
         var existing = await FindOpenTodayAsync(cancellationToken);
 
         if (existing is not null)
         {
-            // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
-            // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
-            // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
-            // FindOpenTodayAsync yalın olduğu için (yukarıdaki not) burada da tam
-            // grafik için sahiplik sorgusuyla yeniden okunuyor.
-            var reloaded = await OwnedOrThrowAsync(existing.Id, cancellationToken);
-            return new StartSessionResult(
-                ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
+            return (existing, false);
         }
 
         WorkoutTemplate? template = null;
-        if (request.TemplateId is { } templateId)
+        if (templateId is { } id)
         {
             // DİKKAT: miras alınan GetByIdAsync sahiplik kontrolü YAPMAZ; kullanmak IDOR olur.
-            template = await templateRepository.GetOwnedByIdAsync(templateId, currentUser.UserId, cancellationToken)
+            template = await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
                 ?? throw new NotFoundException(TemplateNotFound);
         }
 
         var session = new WorkoutSession
         {
             UserId = currentUser.UserId,
-            TemplateId = request.TemplateId,
+            TemplateId = templateId,
             // GetOwnedByIdAsync şablonu TemplateExercises+Exercise ile TAMAMEN Include'lu
             // döndürüyor; navigasyonu burada bağlamak, SaveChanges sonrası aynı grafiği
             // ikinci bir gidiş-dönüşle yeniden okumanın önüne geçer (bkz. Faz 7 fix notu).
             Template = template,
             StartedAt = timeProvider.GetUtcNow().UtcDateTime,
-            Notes = request.Notes
+            Notes = notes
         };
 
         sessionRepository.Add(session);
+        // SaveChangesAsync BİLEREK YOK — bkz. arayüzdeki seam notu.
+        return (session, true);
+    }
+
+    public async Task<StartSessionResult> StartAsync(
+        StartSessionRequest request, CancellationToken cancellationToken = default)
+    {
+        var (session, created) = await GetOrOpenTodayAsync(
+            request.TemplateId, request.Notes, cancellationToken);
+
+        if (!created)
+        {
+            // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
+            // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
+            // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
+            // FindOpenTodayAsync yalın (Template Include'suz) döndüğü için burada tam
+            // grafik için sahiplik sorgusuyla yeniden okunuyor.
+            var reloaded = await OwnedOrThrowAsync(session.Id, cancellationToken);
+            return new StartSessionResult(
+                ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StartSessionResult(
@@ -127,12 +143,24 @@ public class WorkoutSessionService(
     {
         var session = await OwnedOrThrowAsync(id, cancellationToken);
 
-        // SetEntry satırları CASCADE ile gider (Faz 1'de konfigüre edildi).
-        // FAZ 8 NOTU: rekor taşıyan bir set silindiğinde ilgili egzersizler için
-        // RecalculateRecords çağrılmalı — ISetEntryRepository.GetDistinctExerciseIdsForSessionAsync
-        // tam bu iş için hazır bekliyor. Bugün SetEntry üreten endpoint olmadığı için
-        // yeniden hesaplanacak rekor yok.
+        // Etkilenen egzersizler SİLMEDEN ÖNCE toplanır — sonra öğrenmenin yolu kalmaz.
+        // Distinct liste: her egzersiz için BİR KEZ yeniden hesap (CLAUDE.md: her set için
+        // ayrı ayrı DEĞİL — performans ve DRY).
+        var affectedExerciseIds = await setEntryRepository.GetDistinctExerciseIdsForSessionAsync(
+            id, cancellationToken);
+
         sessionRepository.Remove(session);
+
+        foreach (var exerciseId in affectedExerciseIds)
+        {
+            // excludeSessionId ZORUNLU: CASCADE henüz veritabanına gitmedi, bu oturumun
+            // setleri sorguda hâlâ geri geliyor. Hariç tutulmazsa silinen setler hesaba
+            // katılır ve kalan setler rekora terfi etmez.
+            await recordService.RecalculateAsync(
+                exerciseId, excludeSessionId: id, cancellationToken: cancellationToken);
+        }
+
+        // TEK commit: oturumun silinmesi (SetEntry'ler CASCADE) + kalan setlerin rekorları.
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

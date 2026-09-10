@@ -16,7 +16,7 @@
 | 5 | Feature: Exercise (+ ExerciseMedia) | ✅ |
 | 6 | Feature: WorkoutTemplate | ✅ |
 | 7 | Feature: WorkoutSession | ✅ |
-| 8 | Feature: SetEntry + PR motoru | ⏳ sırada |
+| 8 | Feature: SetEntry + PR motoru | ✅ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
 | 10 | Feature: BodyWeightLog | ☐ |
 | 11 | Feature: Export | ☐ |
@@ -258,7 +258,8 @@
       servis testleri (Görev 1-3) + `SessionsController` üzerinde 401, 201→200 idempotent
       başlatma, zero-byte gövdeyle 201 (bkz. devreden not), `open` 200/404, bitirme 200→409,
       IDOR (başkasının oturumu 404, başkasının şablonuyla başlatma 404), not güncelleme,
-      silme sonrası 404 (Görev 4). Toplam 309 test yeşil (300 → +9). Ayrıca gerçek sunucuya
+      silme sonrası 404 (Görev 4). Toplam 309 test yeşil (300 → +9); Faz 8 öncesi fix
+      dalgasıyla (`10c836f`, şablon Include eksikliği) 310'a çıktı (+1). Ayrıca gerçek sunucuya
       karşı 10 senaryolu uçtan uca duman testi (register → 401 → boş gövdeyle 201 → idempotent
       200 → open 200 → not PATCH 200 → açık oturumda şablon YOK SAYILIR (200) → finish 200 →
       tekrar finish 409 → finish sonrası şablonla başlatma 201 (`templateName` dolu,
@@ -266,15 +267,17 @@
       sonrasında GET 404).
 
 > **Faz 7'den devreden notlar (Faz 8'de dikkat edilecek):**
-> 1. **Faz 8 için ZORUNLU:** `WorkoutSessionService.DeleteAsync` bugün yalnızca siliyor.
->    Faz 8 rekor motorunu getirince, silmeden ÖNCE
+> 1. **KAPANDI (Faz 8, Görev 6):** `WorkoutSessionService.DeleteAsync` artık silmeden ÖNCE
 >    `ISetEntryRepository.GetDistinctExerciseIdsForSessionAsync(sessionId)` ile etkilenen
->    egzersizler alınıp her biri için BİR KEZ `RecalculateRecords` çağrılmalı. Bugün doğru
->    olmasının tek sebebi `SetEntry` üreten bir endpoint bulunmaması.
-> 2. **Faz 8 için açık soru:** şablon okumaları arşivlenmiş egzersizleri gösteriyor.
->    Arşivlenmiş bir egzersize `SetEntry` girilebilmeli mi? Faz 6'daki karşılığı "yazarken
->    katı"ydı; Faz 8 bunu açıkça karara bağlamalı.
-> 3. **Dağıtım notu:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
+>    egzersizleri alıp her biri için BİR KEZ `PersonalRecordService.RecalculateAsync`
+>    çağırıyor (`excludeSessionId` ile silinmek üzere olan oturumun setleri sorgudan
+>    hariç tutuluyor — CASCADE henüz veritabanına gitmediği için).
+> 2. **CEVAPLANDI (Faz 8):** Arşivlenmiş bir egzersize YENİ `SetEntry` girilemez —
+>    `SetEntryService.CreateAsync` bunu `ValidationException` (400) ile reddediyor
+>    (`SetEntryServiceTests.Arsivlenmis_egzersize_set_girilemez`,
+>    `SetEndpointsTests.Arsivlenmis_egzersize_set_400_verir`). Arşivlemeden önce girilen
+>    setler okunmaya devam eder (`Arsivlemeden_once_girilen_setler_okunmaya_devam_eder`).
+> 3. **Faz 9'a devredildi:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
 >    `static readonly` bir initializer olduğu için, çok ince bir container imajında saat
 >    dilimi veritabanı (tzdata/ICU) yoksa çalışma anında düz bir `TimeZoneNotFoundException`
 >    ALINMAZ — bu, o tipi ilk kullanan istek anında fırlayan bir `TypeInitializationException`
@@ -287,29 +290,65 @@
 > 4. **Bilinçli davranış:** açık bir oturum varken `POST /api/sessions` gövdedeki
 >    `templateId`/`notes` değerlerini UYGULAMAZ, var olan oturumu olduğu gibi döndürür — açık
 >    bir oturumu sessizce değiştirmek fark edilmeyen bir veri kaybı olurdu.
-> 5. **Faz 8 için ZORUNLU (seam ihtiyacı):** Faz 8'in set-kaydetme akışının bugün "açık
->    oturumu bul/yoksa aç" için iki seçeneği var ve İKİSİ DE YANLIŞ: (a) `StartAsync`'i
->    çağırmak — kendi `SaveChangesAsync`'ini commit eder, set eklemesi ikinci bir
->    `SaveChangesAsync` ile commit eder; bu hem CLAUDE.md'nin "bir iş operasyonu = tek
->    `SaveChangesAsync`" kuralını ihlal eder hem de arada hiç seti olmayan boş bir oturumun
->    var olduğu bir pencere bırakır (istemci tam o anda çökerse). (b) `FindOpenTodayAsync` +
->    `TurkeyDay.RangeFor` mantığını `SetEntry` servisinin içinde tekrar yazmak — bu fazın
->    tam olarak merkezileştirmek için var olduğu mantığı DRY ihlaliyle kopyalamak olur.
->    **Önerilen çözüm:** `IWorkoutSessionRepository`/`WorkoutSessionService`'e, entity
->    döndüren ve BİLEREK `SaveChangesAsync` ÇAĞIRMAYAN bir `GetOrOpenTodayAsync(...)` seam'i
->    eklemek — set ekleme akışı bu seam'i çağırıp aynı unit of work içinde hem oturumu
->    (gerekirse) hem de yeni `SetEntry`'yi TEK `SaveChangesAsync` altında commit edebilsin.
->    Bu fix dalgasında BİLEREK EKLENMEDİ — çağıranı olmayan bir public API spekülatif
->    olurdu (YAGNI); Faz 8 kendi planında bu seam'i sahiplenmeli.
+> 5. **KAPANDI (Faz 8, Görev 4, `aa9c9ce`):** önerilen seam aynen uygulandı —
+>    `IWorkoutSessionService`/`WorkoutSessionService`'e entity döndüren ve BİLEREK
+>    `SaveChangesAsync` ÇAĞIRMAYAN bir `GetOrOpenTodayAsync(...)` eklendi (repository
+>    değişmedi); `SetEntryService.CreateAsync` (Görev 5) bu seam'i çağırıp oturumu
+>    (gerekirse) ve yeni `SetEntry`'yi TEK `SaveChangesAsync` altında commit ediyor.
 
 ## Faz 8 — Feature: SetEntry + PR motoru  ⭐ (projenin kalbi)
-- [ ] 8.1 `PersonalRecordCalculator`: ortak `Evaluate(...)` yardımcısı; `AddSet` akışı ve
-      `RecalculateRecords(userId, exerciseId)` aynı fonksiyonu çağırır (DRY)
-- [ ] 8.2 Set ekleme: açık session bul/oluştur → PR değerlendir → tek `SaveChangesAsync`
-- [ ] 8.3 Set güncelleme/silme → gerekirse `RecalculateRecords`
-- [ ] 8.4 "Tüm zamanların rekorları" özet endpoint'i (mevcut SetEntry'den sorgu)
-- [ ] 8.5 Test (en kapsamlı): ilk set, ağırlık rekoru, aynı ağırlıkta tekrar rekoru,
-      eşitlik (rekor değil), rekor taşıyan setin silinmesi → yeniden hesap doğruluğu
+- [x] 8.1 `RecordTracker` (CLAUDE.md'deki `PersonalRecordCalculator`'ın bu kod tabanındaki
+      adı — bkz. Görev 1 isimlendirme notu): saf, veri erişimsiz çekirdek `Apply(...)`
+      yardımcısı; ağırlık kovaları ondalık ölçek farklarına duyarsız (`0`/`0.0`/`0.00` aynı
+      kova). `PersonalRecordService.EvaluateNewAsync` (ekleme akışı) ve `RecalculateAsync`
+      (yeniden hesaplama akışı) İKİSİ DE aynı `Apply` fonksiyonunu çağırır (DRY) —
+      `RecordTrackerTests` (10 test, saf fonksiyon, DB'siz).
+- [x] 8.2 Set ekleme: `SetEntryService.CreateAsync` → `WorkoutSessionService
+      .GetOrOpenTodayAsync` (Görev 4, yukarıdaki devreden not 5) ile bugüne ait açık oturumu
+      bulur/açar → `RecordTracker.Apply` ile PR değerlendirir → oturum + yeni `SetEntry`
+      TEK `SaveChangesAsync` altında commit edilir. Arşivlenmiş egzersize `ValidationException`
+      (400), var olmayan/başkasının egzersizine `NotFoundException` (404).
+- [x] 8.3 Set güncelleme/silme: `PatchAsync`/`DeleteAsync` düzeltme veya silmeden SONRA o
+      egzersiz için HER ZAMAN `PersonalRecordService.RecalculateAsync` çağırır (yalnızca
+      rekor taşıyan satır değişince değil — ortadaki bir setin düzeltilmesi sonraki setleri
+      de etkileyebilir). `excludeSetId`/`excludeSessionId` parametreleri, commit edilmemiş
+      silme sırasında EF identity map'in hâlâ döndürdüğü satırı/oturumu dışarıda tutar.
+      `WorkoutSessionService.DeleteAsync` de aynı deseni kullanır (yukarıdaki devreden not 1).
+- [x] 8.4 "Tüm zamanların rekorları" özet endpoint'i — `GET /api/records`
+      (`RecordsController` → `PersonalRecordService.GetAllTimeAsync`), kullanıcının TÜM
+      `SetEntry` satırları okunup bellekte egzersiz bazında gruplanır (yeni veri
+      gerektirmez); hiç seti olmayan egzersiz listede yer almaz.
+      > **Düzeltme (2026-09-10, final inceleme):** ilk uygulama yalnızca
+      > `RecordType != None` satırlarını okuyordu ("hiçbir maksimum yalnızca None
+      > satırlarda yaşayamaz" varsayımıyla) — bu YANLIŞ çıktı: 100 kg × 8'den sonra atılan
+      > 60 kg × 15'lik bir indirme seti, 60 kg'da hiç geçmiş olmadığı için None kalır
+      > (Soru 1/A) ama yine de tüm zamanların en çok tekrarını taşır. `GetAllForUserAsync`
+      > artık TÜM setleri okuyor; `BuildSummary`'nin gruplama/eşitlik mantığı değişmedi.
+- [x] 8.5 Test (en kapsamlı, 7 görev boyunca — final inceleme düzeltmesiyle güncel sayılar):
+      saf çekirdek (`RecordTrackerTests`, 10), repository (`SetEntryRepositoryTests`, 11
+      toplam / 7 Faz 8 eklemesi — kronoloji, sahiplik, `GetOwnedByIdAsync`, distinct egzersiz
+      idleri, kullanıcının TÜM setlerinin dönmesi), servis (`PersonalRecordServiceTests` 11 +
+      `SetEntryServiceTests` 17 — ilk set/ağırlık rekoru, aynı ağırlıkta tekrar rekoru,
+      eşitlik rekor DEĞİL, arşivlenmiş egzersize red, IDOR, ortadaki setin düzeltilmesinin
+      sonraki setleri yeniden hesaplaması, rekor taşıyan setin silinince sonrakinin terfi
+      etmesi, rekor özetinin hafif ağırlıktaki ilk setin tekrarını kaçırmaması) ve uçtan uca
+      (`SetEndpointsTests`, 20 — 401, 201 + ağırlık/tekrar rekoru, indirme seti rozet almaz,
+      oturum listeleme + IDOR 404, PATCH ile yeniden hesap, DELETE ile terfi,
+      `GET /api/records` özeti (+ hafif ağırlıktaki ilk setin tekrarını sayması), arşiv 400,
+      egzersiz bulunamadı 404, sıfır tekrar 400, egzersiz alanı atlanınca 400, set eklenince
+      Faz 7'nin ilerleme sayacının ilk kez gerçekten hareket etmesi). Ayrıca
+      `WorkoutSessionServiceTests`'e Faz 8'de +9 eklendi (5 seam testi — Görev 4 — + 4 oturum
+      silme/rekor yeniden hesabı testi — Görev 6). Toplam 384 test yeşil (310 → +74, Faz 8
+      boyunca). `PUT` YOK (spec Soru 3/A) — yalnızca `PATCH`.
+
+> **Faz 8'den devreden notlar (Faz 9'da dikkat edilecek):**
+> 1. `PATCH /api/sets/{id}` ile `Rir` temizlenemiyor (`null` = "dokunma", `PatchSetRequest`
+>    ile aynı sözleşme). Gerçek ihtiyaç çıkarsa ele alınacak.
+> 2. Geçmişe dönük set girişi yok: `POST /api/sets` her zaman BUGÜNÜN açık oturumuna yazar.
+> 3. `GET /api/records` gruplama işini bellekte yapıyor; final inceleme düzeltmesiyle artık
+>    kullanıcının TÜM setlerini okuyor (yalnızca rekor taşıyanları değil — bkz. 8.4'teki
+>    düzeltme notu). Kullanıcı başına set sayısı binlere çıkarsa gruplama SQL tarafına
+>    (GROUP BY) taşınmalı.
 
 ## Faz 9 — Feature: Sorgular
 - [ ] 9.1 Antrenman geçmişi: tarih aralığı + egzersiz filtresi, sayfalama
