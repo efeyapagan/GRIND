@@ -320,4 +320,182 @@ public class SetEntryRepositoryTests
 
         Assert.Empty(await repository.GetAllForUserAsync(davetsiz.Id));
     }
+
+    // ---- Faz 9 eklemeleri ----
+
+    /// <summary>
+    /// Hacim, egzersiz başına toplanır. Aralık filtresi setin CreatedAt'ine değil OTURUMUN
+    /// StartedAt'ine bakar (spec Karar 7) — gece yarısını aşan antrenmanda ikisi farklı güne düşer.
+    /// </summary>
+    [Fact]
+    public async Task Egzersiz_hacmi_gruplanarak_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var birinci = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var ikinci = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(user);
+        session.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.AddRange(user, birinci, ikinci, session);
+        await context.SaveChangesAsync();
+
+        var an = session.StartedAt;
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = birinci, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = an });
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = birinci, Weight = 100m, Reps = 5, RecordType = RecordType.None, CreatedAt = an });
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = ikinci, Weight = 60m, Reps = 10, RecordType = RecordType.None, CreatedAt = an });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var hacimler = await repository.GetVolumeByExerciseAsync(user.Id, null, null);
+
+        var birinciSatir = Assert.Single(hacimler, h => h.ExerciseId == birinci.Id);
+        Assert.Equal(100m * 8 + 100m * 5, birinciSatir.Volume);   // 1300
+        Assert.Equal(2, birinciSatir.SetCount);
+        Assert.Equal(birinci.Name, birinciSatir.ExerciseName);
+
+        var ikinciSatir = Assert.Single(hacimler, h => h.ExerciseId == ikinci.Id);
+        Assert.Equal(600m, ikinciSatir.Volume);
+    }
+
+    [Fact]
+    public async Task Egzersiz_hacmi_oturumun_baslangicina_gore_filtrelenir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var eski = TestDatabase.NewSession(user);
+        eski.StartedAt = new DateTime(2026, 3, 1, 17, 0, 0, DateTimeKind.Utc);
+        var yeni = TestDatabase.NewSession(user);
+        yeni.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.AddRange(user, exercise, eski, yeni);
+        await context.SaveChangesAsync();
+
+        context.Add(new SetEntry { WorkoutSession = eski, Exercise = exercise, Weight = 100m, Reps = 10, RecordType = RecordType.None, CreatedAt = eski.StartedAt });
+        context.Add(new SetEntry { WorkoutSession = yeni, Exercise = exercise, Weight = 50m, Reps = 10, RecordType = RecordType.None, CreatedAt = yeni.StartedAt });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var hacimler = await repository.GetVolumeByExerciseAsync(
+            user.Id, new DateTime(2026, 3, 5, 0, 0, 0, DateTimeKind.Utc), null);
+
+        Assert.Equal(500m, Assert.Single(hacimler).Volume);   // yalnızca yeni oturum
+    }
+
+    [Fact]
+    public async Task Egzersiz_hacmi_baskasinin_setlerini_saymaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(sahip, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(sahip);
+        context.AddRange(sahip, davetsiz, exercise, session);
+        await context.SaveChangesAsync();
+
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+
+        Assert.Empty(await repository.GetVolumeByExerciseAsync(davetsiz.Id, null, null));
+    }
+
+    [Fact]
+    public async Task Oturum_kumesinin_setleri_tek_sorguda_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var birinci = TestDatabase.NewSession(user);
+        var ikinci = TestDatabase.NewSession(user);
+        context.AddRange(user, exercise, birinci, ikinci);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.Add(new SetEntry { WorkoutSession = birinci, Exercise = exercise, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = an });
+        context.Add(new SetEntry { WorkoutSession = ikinci, Exercise = exercise, Weight = 100m, Reps = 9, RecordType = RecordType.None, CreatedAt = an.AddDays(1) });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var setler = await repository.GetForSessionsAsync([birinci.Id, ikinci.Id], user.Id, null);
+
+        Assert.Equal(2, setler.Count);
+        // Yanıt DTO'su egzersiz adını taşıyor; Include yoksa burada NullReferenceException olurdu.
+        Assert.All(setler, s => Assert.NotNull(s.Exercise));
+    }
+
+    [Fact]
+    public async Task Oturum_kumesinin_setleri_egzersize_gore_filtrelenebilir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var aranan = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var diger = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(user);
+        context.AddRange(user, aranan, diger, session);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = aranan, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = an });
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = diger, Weight = 60m, Reps = 10, RecordType = RecordType.None, CreatedAt = an });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var setler = await repository.GetForSessionsAsync([session.Id], user.Id, aranan.Id);
+
+        Assert.Equal(aranan.Id, Assert.Single(setler).ExerciseId);
+    }
+
+    [Fact]
+    public async Task Oturum_kumesinin_setleri_baskasina_acilmaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(sahip, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(sahip);
+        context.AddRange(sahip, davetsiz, exercise, session);
+        await context.SaveChangesAsync();
+
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+
+        // Oturum id'si bilinse bile başkasının setleri gelmez (sahiplik yüklemi her sorguda).
+        Assert.Empty(await repository.GetForSessionsAsync([session.Id], davetsiz.Id, null));
+    }
+
+    /// <summary>
+    /// Boş sayfa (sonuç yok) için sorgu hiç çalışmamalı: boş bir IN listesi anlamsız ve
+    /// bazı sağlayıcılarda hataya yol açar.
+    /// </summary>
+    [Fact]
+    public async Task Bos_oturum_kumesi_bos_liste_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var repository = new SetEntryRepository(context);
+
+        Assert.Empty(await repository.GetForSessionsAsync([], userId: 1, exerciseId: null));
+    }
 }

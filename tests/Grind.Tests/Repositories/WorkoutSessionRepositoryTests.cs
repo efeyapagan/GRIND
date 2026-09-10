@@ -1,3 +1,4 @@
+using Grind.Api.Data;
 using Grind.Api.Models.Entities;
 using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
@@ -271,5 +272,249 @@ public class WorkoutSessionRepositoryTests
         Assert.Empty(await setRepository.GetCompletedSetCountsAsync(oturum.Id));
 
         await transaction.RollbackAsync();
+    }
+
+    // ---- Faz 9 eklemeleri ----
+
+    /// <summary>Belirli bir UTC anında başlayan, verilen setleri taşıyan oturum kurar.</summary>
+    private static WorkoutSession SeedSession(
+        AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc,
+        params (decimal Weight, int Reps)[] sets)
+    {
+        var session = TestDatabase.NewSession(user);
+        session.StartedAt = startedAtUtc;
+        context.Add(session);
+
+        foreach (var (weight, reps) in sets)
+        {
+            context.Add(new SetEntry
+            {
+                WorkoutSession = session, Exercise = exercise,
+                Weight = weight, Reps = reps, RecordType = RecordType.None, CreatedAt = startedAtUtc
+            });
+        }
+
+        return session;
+    }
+
+    [Fact]
+    public async Task Gecmis_sayfasi_toplam_sayiyla_birlikte_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        SeedSession(context, user, exercise, an, (100m, 8));
+        SeedSession(context, user, exercise, an.AddDays(1), (100m, 8));
+        SeedSession(context, user, exercise, an.AddDays(2), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var (sessions, toplam) = await repository.GetHistoryPageAsync(
+            user.Id, null, null, null, skip: 0, take: 2);
+
+        // Sayfa 2 satır taşır ama toplam 3'tür — istemci "3 sonuçtan 1-2" diyebilsin.
+        Assert.Equal(2, sessions.Count);
+        Assert.Equal(3, toplam);
+    }
+
+    /// <summary>Yeniden eskiye; eşit `StartedAt`'te Id azalan (belirli sıra).</summary>
+    [Fact]
+    public async Task Gecmis_yeniden_eskiye_siralanir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        var eski = SeedSession(context, user, exercise, an, (100m, 8));
+        var yeni = SeedSession(context, user, exercise, an.AddDays(1), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var (sessions, _) = await repository.GetHistoryPageAsync(user.Id, null, null, null, 0, 20);
+
+        Assert.Equal([yeni.Id, eski.Id], sessions.Select(s => s.Id));
+    }
+
+    [Fact]
+    public async Task Gecmis_tarih_araligina_gore_filtrelenir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        SeedSession(context, user, exercise, an.AddDays(-5), (100m, 8));
+        var araliktaki = SeedSession(context, user, exercise, an, (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var (sessions, toplam) = await repository.GetHistoryPageAsync(
+            user.Id, an.AddDays(-1), an.AddDays(1), null, 0, 20);
+
+        Assert.Equal(araliktaki.Id, Assert.Single(sessions).Id);
+        Assert.Equal(1, toplam);
+    }
+
+    [Fact]
+    public async Task Gecmis_egzersize_gore_filtrelenir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var aranan = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var diger = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, aranan, diger);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        var arananOturum = SeedSession(context, user, aranan, an, (100m, 8));
+        SeedSession(context, user, diger, an.AddDays(1), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var (sessions, toplam) = await repository.GetHistoryPageAsync(
+            user.Id, null, null, aranan.Id, 0, 20);
+
+        Assert.Equal(arananOturum.Id, Assert.Single(sessions).Id);
+        // Toplam da filtreli olmalı: sayfa 1 satır gösterip "2 sonuç" demek tutarsız olurdu.
+        Assert.Equal(1, toplam);
+    }
+
+    [Fact]
+    public async Task Gecmis_baskasinin_oturumlarini_getirmez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(sahip, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(sahip, davetsiz, exercise);
+        await context.SaveChangesAsync();
+
+        SeedSession(context, sahip, exercise, new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var (sessions, toplam) = await repository.GetHistoryPageAsync(davetsiz.Id, null, null, null, 0, 20);
+
+        Assert.Empty(sessions);
+        Assert.Equal(0, toplam);
+    }
+
+    [Fact]
+    public async Task Oturum_toplamlari_hacmi_ve_set_sayisini_verir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        var oturum = SeedSession(context, user, exercise, an, (100m, 8), (60m, 10));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var toplamlar = await repository.GetSessionAggregatesAsync(user.Id, null, null);
+
+        var satir = Assert.Single(toplamlar);
+        Assert.Equal(oturum.Id, satir.SessionId);
+        Assert.Equal(2, satir.SetCount);
+        Assert.Equal(100m * 8 + 60m * 10, satir.Volume);   // 1400
+    }
+
+    /// <summary>
+    /// Seti olmayan oturum antrenman sayılmaz (spec Karar 3) — takvimi ve seriyi şişirmemeli.
+    /// </summary>
+    [Fact]
+    public async Task Seti_olmayan_oturum_toplamlara_girmez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        context.Add(user);
+        await context.SaveChangesAsync();
+
+        var bos = TestDatabase.NewSession(user);
+        bos.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.Add(bos);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        Assert.Empty(await repository.GetSessionAggregatesAsync(user.Id, null, null));
+        Assert.Empty(await repository.GetTrainedSessionStartsAsync(user.Id));
+    }
+
+    [Fact]
+    public async Task Antrenman_baslangiclari_tum_gecmisten_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        SeedSession(context, user, exercise, an, (100m, 8));
+        SeedSession(context, user, exercise, an.AddDays(-40), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var baslangiclar = await repository.GetTrainedSessionStartsAsync(user.Id);
+
+        // Seri tüm geçmişten hesaplanır; aralık filtresi YOKTUR (spec Karar 5).
+        Assert.Equal(2, baslangiclar.Count);
+    }
+
+    [Fact]
+    public async Task Antrenman_baslangiclari_baskasinin_oturumlarini_getirmez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(sahip, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(sahip, davetsiz, exercise);
+        await context.SaveChangesAsync();
+
+        SeedSession(context, sahip, exercise, new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc), (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        Assert.Empty(await repository.GetTrainedSessionStartsAsync(davetsiz.Id));
     }
 }

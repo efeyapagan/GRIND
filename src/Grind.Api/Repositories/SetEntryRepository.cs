@@ -1,5 +1,6 @@
 using Grind.Api.Data;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Projections;
 using Microsoft.EntityFrameworkCore;
 
 namespace Grind.Api.Repositories;
@@ -59,4 +60,66 @@ public class SetEntryRepository(AppDbContext context)
             .GroupBy(s => s.ExerciseId)
             .Select(g => new { ExerciseId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.ExerciseId, x => x.Count, cancellationToken);
+
+    public async Task<IReadOnlyList<ExerciseVolume>> GetVolumeByExerciseAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        var query = Set.Where(s => s.WorkoutSession.UserId == userId);
+
+        if (fromUtcInclusive is { } from)
+        {
+            query = query.Where(s => s.WorkoutSession.StartedAt >= from);
+        }
+
+        if (toUtcExclusive is { } to)
+        {
+            query = query.Where(s => s.WorkoutSession.StartedAt < to);
+        }
+
+        // Anonim tipe projekte edip sonra record'a çevirmek bilinçli (bkz. GetSessionAggregatesAsync).
+        var rows = await query
+            .GroupBy(s => new { s.ExerciseId, s.Exercise.Name })
+            .Select(g => new
+            {
+                g.Key.ExerciseId,
+                g.Key.Name,
+                Volume = g.Sum(s => s.Weight * s.Reps),
+                SetCount = g.Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new ExerciseVolume(r.ExerciseId, r.Name, r.Volume, r.SetCount))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<SetEntry>> GetForSessionsAsync(
+        IReadOnlyCollection<long> sessionIds,
+        long userId,
+        long? exerciseId,
+        CancellationToken cancellationToken = default)
+    {
+        if (sessionIds.Count == 0)
+        {
+            // Boş sayfa: sorguyu hiç çalıştırma (boş IN listesi anlamsız).
+            return [];
+        }
+
+        var query = Set
+            .Include(s => s.Exercise)
+            .Where(s => sessionIds.Contains(s.WorkoutSessionId) && s.WorkoutSession.UserId == userId);
+
+        if (exerciseId is { } id)
+        {
+            query = query.Where(s => s.ExerciseId == id);
+        }
+
+        return await query
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .ToListAsync(cancellationToken);
+    }
 }
