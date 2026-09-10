@@ -72,19 +72,39 @@ public class WorkoutSessionServiceTests
         }
     }
 
+    /// <summary>
+    /// FIX 1 REGRESYON TESTİ: eskiden `StartAsync`'in idempotent (var olan oturumu döndüren)
+    /// dalı, `FindOpenTodayAsync`'in Include'suz döndürdüğü session'ı doğrudan `ProgressAsync`'e
+    /// veriyordu; guard `Template is null` olduğu için bu şablonlu bir oturumda bile sessizce
+    /// `templateName: null, progress: []` üretiyordu. Şablonsuz başlatılan bir testte bu ayrım
+    /// hiç görünmezdi — bu yüzden burada BİLEREK şablonlu başlatılıyor.
+    /// </summary>
     [Fact]
     public async Task Ayni_gun_ikinci_baslatma_var_olan_oturumu_dondurur()
     {
-        var (_, _, service, saat, transaction) = await CreateAsync();
+        var (context, user, service, saat, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var ilk = await service.StartAsync(new StartSessionRequest());
+            var sablon = NewTemplate(user);
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+
+            var ilk = await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id });
             saat.UtcNow = saat.UtcNow.AddHours(1);
+
+            // ChangeTracker.Clear() ÖNEMLİ: temizlenmezse EF'in identity map'i ilk
+            // StartAsync'in zaten yüklediği Template navigasyonunu aynı context'te
+            // bedavaya taşır ve bu test, üretimde her isteğin kendi (temiz) DbContext'iyle
+            // geldiği gerçek hatayı YAKALAYAMAZ — bu satır olmadan aşağıdaki assertion'lar
+            // kırık kodla bile (yanlışlıkla) yeşil kalır.
+            context.ChangeTracker.Clear();
 
             var ikinci = await service.StartAsync(new StartSessionRequest());
 
             Assert.False(ikinci.Created);
             Assert.Equal(ilk.Session.Id, ikinci.Session.Id);
+            Assert.Equal(sablon.Name, ikinci.Session.TemplateName);
+            Assert.NotEmpty(ikinci.Session.Progress);
         }
     }
 
@@ -376,8 +396,12 @@ public class WorkoutSessionServiceTests
             });
             await context.SaveChangesAsync();
 
-            await service.DeleteAsync(sonuc.Session.Id);
+            // ChangeTracker.Clear() BURADA (silmeden ÖNCE): SetEntry hâlâ aynı context'te
+            // tracked kalsaydı, EF'in kendi client-side cascade'i devreye girip DELETE
+            // üretirdi ve test FK'de ON DELETE CASCADE olmasa bile yeşil kalırdı. Temizlik
+            // sonrası sonucu üretebilecek TEK mekanizma veritabanının kendi FK kuralı kalır.
             context.ChangeTracker.Clear();
+            await service.DeleteAsync(sonuc.Session.Id);
 
             Assert.Equal(0, await context.Set<SetEntry>()
                 .CountAsync(s => s.WorkoutSessionId == sonuc.Session.Id));

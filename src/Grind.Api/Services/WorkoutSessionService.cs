@@ -41,8 +41,12 @@ public class WorkoutSessionService(
 
     public async Task<SessionResponse> GetOpenAsync(CancellationToken cancellationToken = default)
     {
-        var session = await FindOpenTodayAsync(cancellationToken)
-                      ?? throw new NotFoundException(OpenSessionNotFound);
+        // FindOpenTodayAsync bilerek yalın (Template Include'suz) — Faz 8 bunu her set
+        // eklemede çağıracak ve şablon grafiğini sürüklememeli. Yanıt için burada tam
+        // grafiği taşıyan sahiplik sorgusuyla yeniden okunuyor.
+        var found = await FindOpenTodayAsync(cancellationToken)
+                    ?? throw new NotFoundException(OpenSessionNotFound);
+        var session = await OwnedOrThrowAsync(found.Id, cancellationToken);
 
         return ToResponse(session, await ProgressAsync(session, cancellationToken));
     }
@@ -57,14 +61,18 @@ public class WorkoutSessionService(
             // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
             // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
             // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
+            // FindOpenTodayAsync yalın olduğu için (yukarıdaki not) burada da tam
+            // grafik için sahiplik sorgusuyla yeniden okunuyor.
+            var reloaded = await OwnedOrThrowAsync(existing.Id, cancellationToken);
             return new StartSessionResult(
-                ToResponse(existing, await ProgressAsync(existing, cancellationToken)), Created: false);
+                ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
         }
 
+        WorkoutTemplate? template = null;
         if (request.TemplateId is { } templateId)
         {
             // DİKKAT: miras alınan GetByIdAsync sahiplik kontrolü YAPMAZ; kullanmak IDOR olur.
-            _ = await templateRepository.GetOwnedByIdAsync(templateId, currentUser.UserId, cancellationToken)
+            template = await templateRepository.GetOwnedByIdAsync(templateId, currentUser.UserId, cancellationToken)
                 ?? throw new NotFoundException(TemplateNotFound);
         }
 
@@ -72,6 +80,10 @@ public class WorkoutSessionService(
         {
             UserId = currentUser.UserId,
             TemplateId = request.TemplateId,
+            // GetOwnedByIdAsync şablonu TemplateExercises+Exercise ile TAMAMEN Include'lu
+            // döndürüyor; navigasyonu burada bağlamak, SaveChanges sonrası aynı grafiği
+            // ikinci bir gidiş-dönüşle yeniden okumanın önüne geçer (bkz. Faz 7 fix notu).
+            Template = template,
             StartedAt = timeProvider.GetUtcNow().UtcDateTime,
             Notes = request.Notes
         };
@@ -79,10 +91,8 @@ public class WorkoutSessionService(
         sessionRepository.Add(session);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var created = await OwnedOrThrowAsync(session.Id, cancellationToken);
-
         return new StartSessionResult(
-            ToResponse(created, await ProgressAsync(created, cancellationToken)), Created: true);
+            ToResponse(session, await ProgressAsync(session, cancellationToken)), Created: true);
     }
 
     public async Task<SessionResponse> FinishAsync(
@@ -145,14 +155,27 @@ public class WorkoutSessionService(
 
     /// <summary>
     /// Hedef vs gerçekleşen. Şablonsuz oturumda karşılaştıracak hedef olmadığı için boş döner
-    /// ve sayım sorgusu hiç çalışmaz.
+    /// ve sayım sorgusu hiç çalışmaz. DİKKAT: guard <c>TemplateId is null</c> üzerinden yapılır,
+    /// <c>Template is null</c> ÜZERİNDEN DEĞİL — ikincisi "şablonu yok" ile "şablon navigasyonu
+    /// Include edilmedi" durumlarını birbirine karıştırır ve çağıran, Include'suz bir sorgudan
+    /// (ör. eskiden <see cref="GetOpenAsync"/>) geldiğinde sessizce yanlış (boş) ilerleme üretirdi.
     /// </summary>
     private async Task<IReadOnlyList<SessionProgressResponse>> ProgressAsync(
         WorkoutSession session, CancellationToken cancellationToken)
     {
-        if (session.Template is null)
+        if (session.TemplateId is null)
         {
             return [];
+        }
+
+        if (session.Template is null)
+        {
+            // Çağıran bu session'ı Template Include'suz bir sorgudan getirmiş demektir —
+            // bu bir "şablon yok" durumu değil, bir programlama hatası. Sessizce [] dönmek
+            // tam da bu fix dalgasının kapattığı hatayı yeniden açardı.
+            throw new InvalidOperationException(
+                $"WorkoutSession {session.Id} bir TemplateId ({session.TemplateId}) taşıyor ama " +
+                "Template navigasyonu yüklenmemiş. Çağıran taraf oturumu Include(Template) ile getirmeli.");
         }
 
         var completed = await setEntryRepository.GetCompletedSetCountsAsync(session.Id, cancellationToken);

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.Session;
+using Grind.Api.Models.Dtos.Template;
 
 namespace Grind.Tests.Integration;
 
@@ -72,17 +73,61 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
         Assert.True(olusan!.IsOpen);
     }
 
+    private static async Task<TemplateResponse> CreateTemplateAsync(HttpClient client, int plannedSets = 4)
+    {
+        var response = await client.PostAsJsonAsync("/api/templates", new CreateTemplateRequest
+        {
+            Name = $"Sablon {Guid.NewGuid():N}",
+            Exercises = [new TemplateExerciseRequest { ExerciseId = 1, PlannedSets = plannedSets }]
+        }, Json);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<TemplateResponse>(Json))!;
+    }
+
+    /// <summary>
+    /// FIX 1 REGRESYON TESTİ: eskiden `GET /api/sessions/open`, `WorkoutSessionRepository
+    /// .GetOpenSessionStartedBetweenAsync`in Template'i Include etmemesi yüzünden
+    /// `templateName: null, progress: []` döndürüyordu — POST ile aynı oturum farklı bir
+    /// gövde taşıyordu. Şablonsuz bir oturumla bu ayrım hiç görünmezdi, bu yüzden şablonlu
+    /// başlatılıyor.
+    /// </summary>
     [Fact]
     public async Task Acik_oturum_ucu_baslatilan_oturumu_dondurur()
     {
         var client = await AuthenticatedClientAsync();
-        var baslatma = await client.PostAsJsonAsync("/api/sessions", new StartSessionRequest(), Json);
+        var sablon = await CreateTemplateAsync(client);
+
+        var baslatma = await client.PostAsJsonAsync("/api/sessions",
+            new StartSessionRequest { TemplateId = sablon.Id }, Json);
         var olusan = await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json);
 
         var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
 
         Assert.Equal(olusan!.Id, acik!.Id);
         Assert.True(acik.IsOpen);
+        Assert.Equal(sablon.Name, acik.TemplateName);
+        Assert.Single(acik.Progress);
+        Assert.Equal(4, acik.Progress[0].PlannedSets);
+    }
+
+    /// <summary>
+    /// FIX 1 REGRESYON TESTİ: liste ucu (`GET /api/sessions`) `templateName`'i taşımalı —
+    /// eskiden `WorkoutSessionRepository.GetAllAsync` Template'i Include etmediği için bu
+    /// hep null geliyordu. `progress` listede bilerek boş kalır (N+1'den kaçınmak için,
+    /// bkz. SessionResponse.Progress doc'u); bu test onu iddia ETMEZ.
+    /// </summary>
+    [Fact]
+    public async Task Liste_ucu_sablon_adini_tasir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var sablon = await CreateTemplateAsync(client);
+        await client.PostAsJsonAsync("/api/sessions", new StartSessionRequest { TemplateId = sablon.Id }, Json);
+
+        var liste = await client.GetFromJsonAsync<List<SessionResponse>>("/api/sessions", Json);
+
+        var oturum = Assert.Single(liste!);
+        Assert.Equal(sablon.Id, oturum.TemplateId);
+        Assert.Equal(sablon.Name, oturum.TemplateName);
     }
 
     [Fact]

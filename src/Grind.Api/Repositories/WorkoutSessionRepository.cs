@@ -22,7 +22,11 @@ public class WorkoutSessionRepository(AppDbContext context)
 
     public async Task<IReadOnlyList<WorkoutSession>> GetAllAsync(
         long userId, CancellationToken cancellationToken = default)
+        // Yalnızca şablon adı için Include(Template) — koleksiyon Include'u yok, tek bir
+        // LEFT JOIN'e mal olur, kartezyen patlama veya N+1 yaratmaz. `progress` listede
+        // bilerek boş kalır (bkz. WorkoutSessionService.GetAllAsync yorumu).
         => await Set
+            .Include(s => s.Template)
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
