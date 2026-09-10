@@ -21,4 +21,11 @@ public interface IStatsService
     /// </summary>
     Task<CalendarResponse> GetCalendarAsync(
         StatsRangeQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kilo (günlük ortalama) ve hacim, iki ayrı seri. Hacim serisi <see cref="GetDailyVolumeAsync"/>
+    /// ile aynı hesap yolundan gelir.
+    /// </summary>
+    Task<BodyWeightTrendResponse> GetBodyWeightTrendAsync(
+        StatsRangeQuery query, CancellationToken cancellationToken = default);
 }

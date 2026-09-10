@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ISetEntryService, SetEntryService>();
         services.AddScoped<IWorkoutHistoryService, WorkoutHistoryService>();
         services.AddScoped<IStatsService, StatsService>();
+        services.AddScoped<IBodyWeightLogService, BodyWeightLogService>();
         return services;
     }
 }

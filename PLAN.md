@@ -18,7 +18,7 @@
 | 7 | Feature: WorkoutSession | ✅ |
 | 8 | Feature: SetEntry + PR motoru | ✅ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ✅ |
-| 10 | Feature: BodyWeightLog | ☐ |
+| 10 | Feature: BodyWeightLog | ✅ |
 | 11 | Feature: Export | ☐ |
 | 12 | Feature: AiInsight altyapısı | ☐ |
 | 13 | Feature: Hesap silme | ☐ |
@@ -409,8 +409,10 @@
       uyarı, 0 hata.
 
 > **Faz 9'dan devreden notlar (Faz 10'da dikkat edilecek):**
-> 1. `GET /api/sessions` (Faz 7) hâlâ sayfalamasız — oturum sayısı büyürse `PagedResponse` ile
->    hizalanmalı.
+> 1. **Hâlâ AÇIK:** `GET /api/sessions` (Faz 7) hâlâ sayfalamasız — oturum sayısı büyürse
+>    `PagedResponse` ile hizalanmalı. Faz 10'un yeni liste ucu (`GET /api/body-weights`) doğrudan
+>    `PagedRangeQuery`/`PagedResponse`'u kullanıyor (Görev 1) — hizalama için hazır, denenmiş bir
+>    desen artık var; sadece uygulanması bekleniyor.
 > 2. Bellekte gruplamanın maliyet profili uçtan uca aynı değil: `GET /api/records`
 >    kullanıcının TÜM `SetEntry` satırlarını okur (bkz. Faz 8.4 düzeltme notu); `GET /api/history`
 >    yalnızca o SAYFANIN setlerini gruplar (sayfa boyutuyla sınırlı); takvim/günlük hacim uçları
@@ -424,8 +426,55 @@
 >    eklenir.
 
 ## Faz 10 — Feature: BodyWeightLog
-- [ ] 10.1 CRUD + tarih aralığı sorgusu
-- [ ] 10.2 Hacim/performansla aynı zaman ekseninde karşılaştırma endpoint'i
+- [x] 10.1 CRUD + tarih aralığı sorgusu — `WeightScale.EnsureAtMostTwoDecimals` (Görev 1, Faz 8'le
+      paylaşılan ortak sınıf) sadece en fazla iki ondalık kuralını doğrular; 0,01-999,99 aralığı
+      DTO'lardaki `[Range(0.01, 999.99)]` özniteliklerinde yaşar — `SetEntryService`'te 0 kg
+      geçerli olduğu için (barfiks, dips) bu ikisi kasıtlı olarak ayrı. `PagedRangeQuery`
+      (Görev 1, `Common`) `page`/`pageSize` üstüne `from`/`to` (TR günü, `DateOnly?`, `from > to`
+      → 400) ekleyen genel bir sayfalı-aralık sözleşmesi — `HistoryQuery` (Faz 9, Görev 1'den
+      sonra) zaten bundan türüyor, bu faz ikinci tüketicisi. `IBodyWeightLogRepository` (Görev 2): `GetOwnedByIdAsync` (sahiplik
+      doğrudan `UserId` üzerinde, izlemeli — düzeltme/silme bu nesneyi değiştirir),
+      `GetPageAsync` (sayfa + toplam sayı BİRLİKTE aynı filtreden, `RecordedAt` azalan/`Id` azalan
+      belirli sıra, izlemesiz) ve `GetInRangeAsync` (karşılaştırma ucu için, izlemesiz).
+      `BodyWeightLogService` (Görev 3): `CreateAsync` (`recordedAt` verilmezse `TimeProvider` ile
+      şimdi, verilmişse UTC'ye çevrilip 5 dakikadan fazla ileriyse `ValidationException`),
+      `PatchAsync` (en az bir alan zorunlu — boş gövde sessizce 200 dönmez), `DeleteAsync`.
+      Uçlar `BodyWeightsController` (Görev 5): `POST`/`GET`/`GET {id}`/`PATCH {id}`/`DELETE {id}`,
+      hepsi `api/body-weights` altında, ince (if/try yok).
+- [x] 10.2 Hacim/performansla aynı zaman ekseninde karşılaştırma endpoint'i —
+      `IStatsService.GetBodyWeightTrendAsync` (Görev 4) iki ayrı seri döner: hacim serisi
+      `GetDailyVolumeAsync`'in AYNI `DailyBucketsAsync` yardımcısından gelir (spec Karar 3 — iki uç
+      aynı günü asla farklı raporlamaz), kilo serisi `GetInRangeAsync`'in döndürdüğü tartıları
+      `TurkeyDay.LocalDateOf` ile TR gününe göre bellekte gruplayıp `decimal.Round(...,
+      MidpointRounding.AwayFromZero)` ile 2 ondalığa yuvarlar (spec Karar 1 — .NET'in varsayılan
+      banker's rounding'i kilo gösteriminde kullanıcıya tutarsız görünürdü). `GET
+      /api/stats/body-weight-trend` (`StatsController`, Görev 5) `BodyWeightTrendResponse` döner;
+      tartı olmayan günde hacmi, antrenman olmayan günde kiloyu null bırakan birleşik bir satır
+      YOK (Faz 9 Karar 4'te reddedilen desenin aynısı, burada da reddedildi).
+- [x] 10.3 Test: saf/ortak parçalar (`WeightScaleTests` 4, `PagedRangeQueryTests` 3 — Görev 1),
+      repository (`BodyWeightLogRepositoryTests` 9 — sahiplik/IDOR, sayfalama + toplam sayı
+      ayrışması, aralık filtresi, izlemeli/izlemesiz ayrımı — Görev 2), servis
+      (`BodyWeightLogServiceTests` 12 — ölçek doğrulaması, gelecek zaman reddi, `recordedAt`
+      verilmezse `TimeProvider`'dan şimdi, boş PATCH gövdesi 400, IDOR — Görev 3),
+      `StatsServiceTests`'e +7 (hacim serisinin `volume/daily` ile birebir aynı olması, günlük
+      ortalamanın `AwayFromZero` yuvarlaması, tartı/antrenman olmayan günün ilgili seriye hiç
+      girmemesi, boş aralık — Görev 4) ve uçtan uca (`BodyWeightEndpointsTests`, 15 — tokensiz
+      istek 401 (6 uç), 201 + Location, liste zarfı yeniden-eskiye, PATCH ile kilo düzeltme +
+      veritabanından okunan zamanın korunması, DELETE + 404, IDOR (başkasının kaydı her fiilde
+      404), sıfır kilo 400, üç ondalıklı kilo 400, gelecek zaman 400, kilo/hacim karşılaştırmasının
+      iki seride dönmesi — Görev 5). Toplam **507 test yeşil** (457 → +50, Faz 10 boyunca: Görev 1
+      +7, Görev 2 +9, Görev 3 +12, Görev 4 +7, Görev 5 +15). Release build: 0 uyarı, 0 hata.
+      Migration YOK (bu faz `BodyWeightLog` tablosunu Faz 1'in migration'ından zaten kullanıyor).
+
+> **Faz 10'dan devreden notlar (Faz 11'de dikkat edilecek):**
+> 1. Proje çapında `AsNoTracking` geçişi yapılmadı: bu fazın yeni okuma sorguları (`GetPageAsync`,
+>    `GetInRangeAsync`) izlemesiz, ama Faz 5-9 okuma yolları (ör. `GET /api/history`,
+>    `GET /api/records`) hâlâ izlemeli.
+> 2. Offset'siz gönderilen `recordedAt`, serileştirici tarafından sunucunun yerel saat dilimiyle
+>    yorumlanır (Docker'da genellikle UTC) — istemci offset göndermeli; ileride offset'siz
+>    değerler reddedilebilir veya TR saati kabul edilebilir.
+> 3. Haftalık/aylık kilo ortalaması yok (Faz 9'un haftalık hacim notuyla aynı gerekçe — üçüncü bir
+>    uç gerektirir, gerçek ihtiyaç çıkarsa eklenir).
 
 ## Faz 11 — Feature: Export
 - [ ] 11.1 Ham JSON export (tarih aralığı parametreli)

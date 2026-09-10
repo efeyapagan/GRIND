@@ -1,5 +1,6 @@
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
+using Grind.Api.Common.Validation;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Entities;
@@ -32,7 +33,7 @@ public class SetEntryService(
         var weight = request.Weight!.Value;
         var reps = request.Reps!.Value;
 
-        EnsureWeightScale(weight);
+        WeightScale.EnsureAtMostTwoDecimals(weight);
 
         var exercise = await exerciseRepository.GetVisibleByIdAsync(
                            exerciseId, currentUser.UserId, cancellationToken: cancellationToken)
@@ -99,7 +100,7 @@ public class SetEntryService(
 
         if (request.Weight is { } weight)
         {
-            EnsureWeightScale(weight);
+            WeightScale.EnsureAtMostTwoDecimals(weight);
             set.Weight = weight;
         }
 
@@ -144,19 +145,6 @@ public class SetEntryService(
     private async Task<SetEntry> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)
         => await setEntryRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(SetNotFound);
-
-    /// <summary>
-    /// Weight sütunu numeric(6,2): daha fazla ondalık PostgreSQL tarafından SESSİZCE
-    /// yuvarlanır. Rekor kararı yuvarlanmamış değer üzerinden verildiği için ağırlık kovası
-    /// ile saklanan değer ayrışırdı — bu yüzden yuvarlamak yerine reddediyoruz.
-    /// </summary>
-    private static void EnsureWeightScale(decimal weight)
-    {
-        if (decimal.Round(weight, 2) != weight)
-        {
-            throw new ValidationException("Ağırlık en fazla iki ondalık basamak taşıyabilir.");
-        }
-    }
 
     private static SetEntryResponse ToResponse(SetEntry set, string exerciseName) => new(
         set.Id,

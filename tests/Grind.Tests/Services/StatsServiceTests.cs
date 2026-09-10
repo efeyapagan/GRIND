@@ -41,7 +41,7 @@ public class StatsServiceTests
         var saat = new SahteSaat(Bugun);
         var service = new StatsService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
-            new StubCurrentUser(user.Id), saat);
+            new BodyWeightLogRepository(context), new StubCurrentUser(user.Id), saat);
 
         return (context, user, exercise, service, saat, transaction);
     }
@@ -332,6 +332,147 @@ public class StatsServiceTests
             var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
 
             Assert.Equal(2, takvim.CurrentStreak);
+        }
+    }
+
+    // ---- Faz 10: kilo / hacim karşılaştırması ----
+
+    private static void SeedWeight(AppDbContext context, User user, DateTime recordedAtUtc, decimal weight) =>
+        context.Add(new BodyWeightLog { User = user, Weight = weight, RecordedAt = recordedAtUtc });
+
+    /// <summary>Aynı günün iki tartısı tek noktaya ortalanır (spec Karar 1).</summary>
+    [Fact]
+    public async Task Kilo_serisi_gunluk_ortalamadir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedWeight(context, user, Bugun.AddHours(-10), 82.4m);   // TR sabah
+            SeedWeight(context, user, Bugun, 82.9m);                  // TR akşam
+            await context.SaveChangesAsync();
+
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery());
+
+            var nokta = Assert.Single(trend.BodyWeight);
+            Assert.Equal(82.65m, nokta.Weight);
+            Assert.Equal(2, nokta.ReadingCount);
+        }
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ: 82.40 ve 82.41'in ortalaması 82.405. Varsayılan banker's rounding bunu çift
+    /// basamağa (82.40) indirir; spec "yarım yukarı" (AwayFromZero) diyor: 82.41.
+    /// </summary>
+    [Fact]
+    public async Task Gunluk_ortalama_yarim_yukari_yuvarlanir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedWeight(context, user, Bugun.AddHours(-2), 82.40m);
+            SeedWeight(context, user, Bugun, 82.41m);
+            await context.SaveChangesAsync();
+
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery());
+
+            Assert.Equal(82.41m, Assert.Single(trend.BodyWeight).Weight);
+        }
+    }
+
+    /// <summary>UTC 21:30 = TR ertesi gün 00:30 — tartı ertesi TR gününe yazılmalı.</summary>
+    [Fact]
+    public async Task Tartinin_gunu_TR_gunudur()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedWeight(context, user, new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc), 82.4m);
+            await context.SaveChangesAsync();
+
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery());
+
+            Assert.Equal(new DateOnly(2026, 3, 11), Assert.Single(trend.BodyWeight).Date);
+        }
+    }
+
+    /// <summary>
+    /// LOAD-BEARING (spec Karar 3): karşılaştırma ucundaki hacim serisi, GET /api/stats/volume/daily
+    /// ile BİREBİR aynı olmalı. İki uç aynı günü farklı raporlarsa kullanıcı iki ekranda iki farklı
+    /// sayı görür — Faz 7 ve Faz 8'deki hatalar tam bu sınıftandı.
+    /// </summary>
+    [Fact]
+    public async Task Hacim_serisi_gunluk_hacim_ucuyla_birebir_aynidir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, Bugun, (100m, 8), (60m, 10));
+            Seed(context, user, exercise, Bugun.AddDays(-1), (80m, 5));
+            SeedWeight(context, user, Bugun, 82.4m);
+            await context.SaveChangesAsync();
+
+            var aralik = new StatsRangeQuery { From = new DateOnly(2026, 3, 11), To = new DateOnly(2026, 3, 12) };
+            var trend = await service.GetBodyWeightTrendAsync(aralik);
+            var gunluk = await service.GetDailyVolumeAsync(aralik);
+
+            Assert.Equal(gunluk.Items, trend.Volume);
+            Assert.Equal(2, trend.Volume.Count);
+            // Tartı sadece "Bugün" için girildi; hacmi olan ama tartısı olmayan (Bugun.AddDays(-1))
+            // gün, kilo serisine hiç girmemeli.
+            Assert.Single(trend.BodyWeight);
+        }
+    }
+
+    [Fact]
+    public async Task Aralik_iki_seriye_de_uygulanir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, Bugun, (100m, 8));
+            Seed(context, user, exercise, Bugun.AddDays(-10), (100m, 8));
+            SeedWeight(context, user, Bugun, 82.4m);
+            SeedWeight(context, user, Bugun.AddDays(-10), 84.0m);
+            await context.SaveChangesAsync();
+
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery
+            {
+                From = new DateOnly(2026, 3, 12), To = new DateOnly(2026, 3, 12)
+            });
+
+            Assert.Equal(82.4m, Assert.Single(trend.BodyWeight).Weight);
+            Assert.Single(trend.Volume);
+        }
+    }
+
+    [Fact]
+    public async Task Baskasinin_tartilari_seride_gorunmez()
+    {
+        var (context, _, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            SeedWeight(context, digerKullanici, Bugun, 90m);
+            await context.SaveChangesAsync();
+
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery());
+
+            Assert.Empty(trend.BodyWeight);
+        }
+    }
+
+    /// <summary>Veri yoksa iki seri de boş liste — null değil, 404 değil.</summary>
+    [Fact]
+    public async Task Veri_yoksa_iki_seri_de_bostur()
+    {
+        var (_, _, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var trend = await service.GetBodyWeightTrendAsync(new StatsRangeQuery());
+
+            Assert.Empty(trend.BodyWeight);
+            Assert.Empty(trend.Volume);
         }
     }
 }
