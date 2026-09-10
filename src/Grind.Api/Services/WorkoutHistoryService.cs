@@ -37,7 +37,15 @@ public class WorkoutHistoryService(
             fromUtc,
             toUtc,
             query.ExerciseId,
-            skip: (query.Page - 1) * query.PageSize,
+            // (Page - 1) * PageSize denetimsiz (unchecked) int çarpımıyla hesaplanıyordu —
+            // proje CheckForOverflowUnderflow açmıyor, yani taşma exception fırlatmak yerine
+            // sessizce sarıyor. `int.MaxValue` gibi geçerli (spec: [Range(1, int.MaxValue)])
+            // bir sayfa numarasında bu, negatif bir skip üretir; `.Skip()` bunu Postgres'e
+            // negatif bir OFFSET olarak iletir ve "OFFSET must not be negative" ile patlar
+            // (yakalanmamış exception → 500). `long`'a genişletip `int.MaxValue`'da
+            // sınırlamak taşmayı önler; sonuç zaten mevcut satır sayısını fazlasıyla aşıyor,
+            // bu yüzden pratikte "sayfanın sonunu geçmiş" boş sonuçla aynı davranışı üretir.
+            skip: (int)Math.Min((long)(query.Page - 1) * query.PageSize, int.MaxValue),
             take: query.PageSize,
             cancellationToken);
 

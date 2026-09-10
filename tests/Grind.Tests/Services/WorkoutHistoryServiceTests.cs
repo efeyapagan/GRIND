@@ -280,4 +280,28 @@ public class WorkoutHistoryServiceTests
             Assert.Equal(0, sayfa.TotalPages);
         }
     }
+
+    /// <summary>
+    /// REGRESYON: <c>(Page - 1) * PageSize</c> denetimsiz (unchecked) <c>int</c> çarpımıyla
+    /// hesaplanıyordu. <c>Page = int.MaxValue</c> — <c>[Range(1, int.MaxValue)]</c>'a göre
+    /// GEÇERLİ bir istek — bu çarpımı taşırıp negatif bir <c>skip</c> üretiyordu; bu da
+    /// Postgres'e negatif bir <c>OFFSET</c> olarak gidip "OFFSET must not be negative" ile
+    /// patlıyordu (yakalanmamış exception → 500). Sayfanın sonunu fazlasıyla aşan geçerli bir
+    /// sayfa numarası, her zaman olduğu gibi boş bir sayfa (200) döndürmeli.
+    /// </summary>
+    [Fact]
+    public async Task Cok_buyuk_sayfa_numarasi_bos_sayfa_doner()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An, (100m, 8));
+            await context.SaveChangesAsync();
+
+            var sayfa = await service.GetAsync(new HistoryQuery { Page = int.MaxValue });
+
+            Assert.Empty(sayfa.Items);
+            Assert.Equal(1, sayfa.TotalCount);
+        }
+    }
 }
