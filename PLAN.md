@@ -15,8 +15,8 @@
 | 4 | Feature: Auth | ✅ |
 | 5 | Feature: Exercise (+ ExerciseMedia) | ✅ |
 | 6 | Feature: WorkoutTemplate | ✅ |
-| 7 | Feature: WorkoutSession | ⏳ sırada |
-| 8 | Feature: SetEntry + PR motoru | ☐ |
+| 7 | Feature: WorkoutSession | ✅ |
+| 8 | Feature: SetEntry + PR motoru | ⏳ sırada |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ☐ |
 | 10 | Feature: BodyWeightLog | ☐ |
 | 11 | Feature: Export | ☐ |
@@ -241,13 +241,66 @@
       sunucuya karşı 10 senaryolu uçtan uca duman testi.
 
 ## Faz 7 — Feature: WorkoutSession
-- [ ] 7.1 Session başlat (template'li / template'siz), bitir (`EndedAt`), not ekle
-- [ ] 7.2 "Bugüne ait açık session" mantığı — `EndedAt IS NULL` **ve** `StartedAt`
-      TR yerel saatiyle bugün; yoksa yeni session (unutulan session'a set düşmesin)
-- [ ] 7.3 Session silme → CASCADE sonrası etkilenen distinct egzersizler için tek sefer
-      `RecalculateRecords`
-- [ ] 7.4 İlerleme hesabı: gerçek SetEntry sayısı vs `PlannedSets`
-- [ ] 7.5 Test: gün sınırı (gece 23:00 / ertesi gün), açık session bulma
+- [x] 7.1 Session başlat (template'li / template'siz), bitir (`EndedAt`), not ekle —
+      `SessionsController` (POST /api/sessions, POST /api/sessions/{id}/finish,
+      PATCH /api/sessions/{id}); başlatma idempotent: bugüne ait açık oturum varsa
+      onu **200** ile döndürür (gövdedeki `templateId`/`notes` UYGULANMAZ), yoksa yeni
+      açar ve **201** döner (`StartSessionResult.Created`)
+- [x] 7.2 "Bugüne ait açık session" mantığı — `EndedAt IS NULL` **ve** `StartedAt`
+      TR yerel saatiyle bugün; yoksa yeni session (unutulan session'a set düşmesin) —
+      `TurkeyDay` + repository metotları (Görev 1)
+- [x] 7.3 Session silme → CASCADE sonrası etkilenen distinct egzersizler için tek sefer
+      `RecalculateRecords` — **bugün yalnızca siliyor** (SetEntry üreten endpoint henüz
+      yok); gerçek çağrı Faz 8'e devredildi, bkz. aşağıdaki devreden not
+- [x] 7.4 İlerleme hesabı: gerçek SetEntry sayısı vs `PlannedSets` — `SessionProgressResponse`,
+      yalnızca şablonlu oturumlarda dolu gelir
+- [x] 7.5 Test: gün sınırı (gece 23:00 / ertesi gün), açık session bulma — repository ve
+      servis testleri (Görev 1-3) + `SessionsController` üzerinde 401, 201→200 idempotent
+      başlatma, zero-byte gövdeyle 201 (bkz. devreden not), `open` 200/404, bitirme 200→409,
+      IDOR (başkasının oturumu 404, başkasının şablonuyla başlatma 404), not güncelleme,
+      silme sonrası 404 (Görev 4). Toplam 309 test yeşil (300 → +9). Ayrıca gerçek sunucuya
+      karşı 10 senaryolu uçtan uca duman testi (register → 401 → boş gövdeyle 201 → idempotent
+      200 → open 200 → not PATCH 200 → açık oturumda şablon YOK SAYILIR (200) → finish 200 →
+      tekrar finish 409 → finish sonrası şablonla başlatma 201 (`templateName` dolu,
+      `progress` hedef seti gösteriyor) → başkasının şablonuyla başlatma 404 → silme 204 →
+      sonrasında GET 404).
+
+> **Faz 7'den devreden notlar (Faz 8'de dikkat edilecek):**
+> 1. **Faz 8 için ZORUNLU:** `WorkoutSessionService.DeleteAsync` bugün yalnızca siliyor.
+>    Faz 8 rekor motorunu getirince, silmeden ÖNCE
+>    `ISetEntryRepository.GetDistinctExerciseIdsForSessionAsync(sessionId)` ile etkilenen
+>    egzersizler alınıp her biri için BİR KEZ `RecalculateRecords` çağrılmalı. Bugün doğru
+>    olmasının tek sebebi `SetEntry` üreten bir endpoint bulunmaması.
+> 2. **Faz 8 için açık soru:** şablon okumaları arşivlenmiş egzersizleri gösteriyor.
+>    Arşivlenmiş bir egzersize `SetEntry` girilebilmeli mi? Faz 6'daki karşılığı "yazarken
+>    katı"ydı; Faz 8 bunu açıkça karara bağlamalı.
+> 3. **Dağıtım notu:** `TurkeyDay` `TimeZoneInfo`'ya dayanıyor. `Turkey` alanı
+>    `static readonly` bir initializer olduğu için, çok ince bir container imajında saat
+>    dilimi veritabanı (tzdata/ICU) yoksa çalışma anında düz bir `TimeZoneNotFoundException`
+>    ALINMAZ — bu, o tipi ilk kullanan istek anında fırlayan bir `TypeInitializationException`
+>    içine sarılır ve tip o andan sonra süreç ömrü boyunca kalıcı olarak bozuk kalır (her
+>    sonraki oturum isteği de 500 döner). Dağıtım imajı seçilirken kontrol edilmeli. **Önerilen
+>    şekil (Dockerfile yazılınca):** `Turkey` alanını (ya da eşdeğer bir `TimeZoneInfo.FindSystemTimeZoneById`
+>    çağrısını) uygulama başlangıcında bir kez çözüp doğrulamak — tıpkı var olan `Jwt:Key`
+>    kontrolü gibi — eksik tzdata'nın ilk isteği değil BOOT'u başarısız kılması için. Bugün
+>    henüz bir Dockerfile olmadığından bu kontrol UYGULANMADI, sadece not düşüldü.
+> 4. **Bilinçli davranış:** açık bir oturum varken `POST /api/sessions` gövdedeki
+>    `templateId`/`notes` değerlerini UYGULAMAZ, var olan oturumu olduğu gibi döndürür — açık
+>    bir oturumu sessizce değiştirmek fark edilmeyen bir veri kaybı olurdu.
+> 5. **Faz 8 için ZORUNLU (seam ihtiyacı):** Faz 8'in set-kaydetme akışının bugün "açık
+>    oturumu bul/yoksa aç" için iki seçeneği var ve İKİSİ DE YANLIŞ: (a) `StartAsync`'i
+>    çağırmak — kendi `SaveChangesAsync`'ini commit eder, set eklemesi ikinci bir
+>    `SaveChangesAsync` ile commit eder; bu hem CLAUDE.md'nin "bir iş operasyonu = tek
+>    `SaveChangesAsync`" kuralını ihlal eder hem de arada hiç seti olmayan boş bir oturumun
+>    var olduğu bir pencere bırakır (istemci tam o anda çökerse). (b) `FindOpenTodayAsync` +
+>    `TurkeyDay.RangeFor` mantığını `SetEntry` servisinin içinde tekrar yazmak — bu fazın
+>    tam olarak merkezileştirmek için var olduğu mantığı DRY ihlaliyle kopyalamak olur.
+>    **Önerilen çözüm:** `IWorkoutSessionRepository`/`WorkoutSessionService`'e, entity
+>    döndüren ve BİLEREK `SaveChangesAsync` ÇAĞIRMAYAN bir `GetOrOpenTodayAsync(...)` seam'i
+>    eklemek — set ekleme akışı bu seam'i çağırıp aynı unit of work içinde hem oturumu
+>    (gerekirse) hem de yeni `SetEntry`'yi TEK `SaveChangesAsync` altında commit edebilsin.
+>    Bu fix dalgasında BİLEREK EKLENMEDİ — çağıranı olmayan bir public API spekülatif
+>    olurdu (YAGNI); Faz 8 kendi planında bu seam'i sahiplenmeli.
 
 ## Faz 8 — Feature: SetEntry + PR motoru  ⭐ (projenin kalbi)
 - [ ] 8.1 `PersonalRecordCalculator`: ortak `Evaluate(...)` yardımcısı; `AddSet` akışı ve

@@ -17,4 +17,12 @@ public interface ISetEntryRepository : IRepository<SetEntry>
     /// </summary>
     Task<IReadOnlyList<long>> GetDistinctExerciseIdsForSessionAsync(
         long sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bu oturumda egzersiz başına kaç set girilmiş. İlerleme hesabı bunu şablonun
+    /// <c>PlannedSets</c> değeriyle karşılaştırır — önceden boş SetEntry satırı
+    /// oluşturulmaz (CLAUDE.md).
+    /// </summary>
+    Task<IReadOnlyDictionary<long, int>> GetCompletedSetCountsAsync(
+        long sessionId, CancellationToken cancellationToken = default);
 }
