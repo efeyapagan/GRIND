@@ -8,6 +8,7 @@ namespace Grind.Api.Services;
 public class StatsService(
     IWorkoutSessionRepository sessionRepository,
     ISetEntryRepository setEntryRepository,
+    IBodyWeightLogRepository bodyWeightRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IStatsService
 {
@@ -17,7 +18,7 @@ public class StatsService(
         var days = await DailyBucketsAsync(query, cancellationToken);
 
         var items = days
-            .Select(d => new DailyVolumeResponse(d.Date, d.Volume, d.SetCount, d.SessionCount))
+            .Select(ToDailyVolume)
             .ToList();
 
         return new VolumeSummaryResponse<DailyVolumeResponse>(
@@ -67,6 +68,35 @@ public class StatsService(
             longest);
     }
 
+    public async Task<BodyWeightTrendResponse> GetBodyWeightTrendAsync(
+        StatsRangeQuery query, CancellationToken cancellationToken = default)
+    {
+        // Hacim serisi GetDailyVolumeAsync ile AYNI yoldan (DailyBucketsAsync + ToDailyVolume):
+        // iki uç aynı günü asla farklı raporlamaz (spec Karar 3).
+        var volume = (await DailyBucketsAsync(query, cancellationToken))
+            .Select(ToDailyVolume)
+            .ToList();
+
+        var (fromUtc, toUtc) = LocalDayRange.Resolve(query.From, query.To);
+        var logs = await bodyWeightRepository.GetInRangeAsync(
+            currentUser.UserId, fromUtc, toUtc, cancellationToken);
+
+        // Gruplama bellekte, TurkeyDay üzerinden — gün sınırı kuralının SQL'de ikinci bir kopyası
+        // yok (Faz 9 Karar 6). Satır sayısı tartı sayısıyla sınırlı.
+        var bodyWeight = logs
+            .GroupBy(l => TurkeyDay.LocalDateOf(l.RecordedAt))
+            .Select(g => new DailyBodyWeightResponse(
+                g.Key,
+                // "Yarım yukarı": .NET'in varsayılanı banker's rounding'dir ve 82.405'i 82.40'a
+                // indirir — kilo gösteriminde kullanıcıya tutarsız görünür (spec Karar 1).
+                decimal.Round(g.Average(l => l.Weight), 2, MidpointRounding.AwayFromZero),
+                g.Count()))
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        return new BodyWeightTrendResponse(query.From, query.To, bodyWeight, volume);
+    }
+
     /// <summary>
     /// Oturum toplamlarını TR günlerine yerleştirir. Gruplama BELLEKTE: gün sınırı politikası
     /// <see cref="TurkeyDay"/>'de yaşıyor ve SQL'de <c>AT TIME ZONE</c> ile ikinci bir kopyası
@@ -88,6 +118,9 @@ public class StatsService(
             .OrderBy(d => d.Date)
             .ToList();
     }
+
+    private static DailyVolumeResponse ToDailyVolume(DayBucket day) =>
+        new(day.Date, day.Volume, day.SetCount, day.SessionCount);
 
     private record DayBucket(DateOnly Date, decimal Volume, int SetCount, int SessionCount);
 }

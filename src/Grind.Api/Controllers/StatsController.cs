@@ -39,4 +39,15 @@ public class StatsController(IStatsService statsService) : ControllerBase
     public async Task<ActionResult<CalendarResponse>> GetCalendar(
         [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
         => Ok(await statsService.GetCalendarAsync(query, cancellationToken));
+
+    /// <summary>
+    /// Kilo (günlük ortalama) ve hacim, aynı zaman ekseninde iki ayrı seri. Hacim serisi
+    /// <c>volume/daily</c> ile birebir aynıdır (spec Karar 3).
+    /// </summary>
+    [HttpGet("body-weight-trend")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BodyWeightTrendResponse>> GetBodyWeightTrend(
+        [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
+        => Ok(await statsService.GetBodyWeightTrendAsync(query, cancellationToken));
 }
