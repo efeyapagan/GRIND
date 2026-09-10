@@ -49,4 +49,28 @@ public class LocalDayRangeTests
         Assert.Throws<ValidationException>(
             () => LocalDayRange.Resolve(new DateOnly(2026, 3, 10), new DateOnly(2026, 3, 1)));
     }
+
+    /// <summary>
+    /// Üst sınırda DateOnly.MaxValue "sınır yok" anlamına gelir (bkz. LocalDayRange.Resolve
+    /// yorumu): TurkeyDay bu değer için AddDays(1) ile taşar, bu yüzden özel olarak sınırsız
+    /// kabul edilir; ArgumentOutOfRangeException asla dışarı sızmamalı.
+    /// </summary>
+    [Fact]
+    public void Ust_sinir_maksimum_tarihse_sinirsiz_kabul_edilir()
+    {
+        var (_, to) = LocalDayRange.Resolve(null, DateOnly.MaxValue);
+
+        Assert.Null(to);
+    }
+
+    /// <summary>
+    /// Alt sınırda DateOnly.MaxValue anlamsız bir istektir ("9999-12-31'den itibaren") ve
+    /// üst sınırdaki gibi sınırsız yorumlanamaz; 500 yerine 400 ile reddedilmeli.
+    /// </summary>
+    [Fact]
+    public void Alt_sinir_maksimum_tarihse_reddedilir()
+    {
+        Assert.Throws<ValidationException>(
+            () => LocalDayRange.Resolve(DateOnly.MaxValue, null));
+    }
 }
