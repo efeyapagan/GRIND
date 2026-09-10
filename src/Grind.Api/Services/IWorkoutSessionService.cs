@@ -1,4 +1,5 @@
 using Grind.Api.Models.Dtos.Session;
+using Grind.Api.Models.Entities;
 
 namespace Grind.Api.Services;
 
@@ -17,6 +18,21 @@ public interface IWorkoutSessionService
     /// Dünden kalan açık bir oturum BULUNMAZ — zorla da kapatılmaz, öylece kalır.
     /// </summary>
     Task<SessionResponse> GetOpenAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// SERVİS-İÇİ SEAM — controller'dan ÇAĞRILMAZ (DTO değil entity döndürür).
+    ///
+    /// Bugüne (TR yerel günü) ait açık oturumu döndürür; yoksa yenisini oluşturup change
+    /// tracker'a ekler ama <c>SaveChangesAsync</c> ÇAĞIRMAZ. Çağıran, kendi yazımıyla
+    /// (ör. yeni bir <c>SetEntry</c>) birlikte TEK bir unit of work altında commit eder.
+    ///
+    /// Sebebi (Faz 7'den devreden zorunluluk): set ekleme akışının alternatifleri
+    /// (a) <c>StartAsync</c>'i çağırmak — iki ayrı commit, arada seti olmayan boş oturum
+    /// penceresi; (b) gün sınırı mantığını set servisinde tekrar yazmak — DRY ihlali.
+    /// </summary>
+    /// <returns><c>Created</c> true ise oturum YENİ oluşturuldu ve henüz Id'si yoktur.</returns>
+    Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
+        long? templateId, string? notes, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Bugüne ait açık oturum varsa onu döndürür (<c>Created = false</c>), yoksa yeni açar.

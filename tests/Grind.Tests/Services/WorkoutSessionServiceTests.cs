@@ -427,4 +427,104 @@ public class WorkoutSessionServiceTests
             Assert.Equal(kendi.Session.Id, liste[0].Id);
         }
     }
+
+    // ---- Faz 8: set ekleme akışının kullandığı seam ----
+
+    /// <summary>
+    /// Seam'in VAROLUŞ SEBEBİ: kaydetmez. Set ekleme akışı oturumu ve yeni seti TEK
+    /// SaveChangesAsync altında commit edebilsin diye. Kaydetseydi, arada "hiç seti olmayan
+    /// boş oturum" penceresi kalırdı (istemci tam o anda çökerse kalıcı olarak).
+    /// </summary>
+    [Fact]
+    public async Task Seam_yeni_oturumu_kaydetmez()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.True(created);
+            Assert.Equal(0, session.Id);   // henüz DB'ye gitmedi, Id atanmadı
+            Assert.Equal(0, await context.Set<WorkoutSession>()
+                .CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Seam_bugunun_acik_oturumunu_dondurur()
+    {
+        var (_, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var acilan = await service.StartAsync(new StartSessionRequest());
+
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.False(created);
+            Assert.Equal(acilan.Session.Id, session.Id);
+        }
+    }
+
+    /// <summary>
+    /// Gün sınırı seam'de de geçerli: dün 23:00'te açılıp kapatılmayan oturum bugünün
+    /// setlerini YUTMAMALI. Bu tam olarak CLAUDE.md'nin "unutulan açık session" kararı.
+    /// </summary>
+    [Fact]
+    public async Task Seam_dunden_kalan_acik_oturumu_kullanmaz()
+    {
+        // TR 10 Mart 23:00 = UTC 10 Mart 20:00
+        var (_, _, service, saat, transaction) = await CreateAsync(
+            new DateTime(2026, 3, 10, 20, 0, 0, DateTimeKind.Utc));
+        await using (transaction)
+        {
+            var dunku = await service.StartAsync(new StartSessionRequest());
+
+            // TR 11 Mart 00:30 = UTC 10 Mart 21:30 — ertesi TR günü.
+            saat.UtcNow = new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc);
+
+            var (session, created) = await service.GetOrOpenTodayAsync(null, null);
+
+            Assert.True(created);
+            Assert.NotEqual(dunku.Session.Id, session.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Seam_baskasinin_sablonuyla_oturum_acmaz()
+    {
+        var (context, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            await context.SaveChangesAsync();
+            var digerSablon = NewTemplate(digerKullanici);
+            context.Add(digerSablon);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.GetOrOpenTodayAsync(digerSablon.Id, null));
+        }
+    }
+
+    /// <summary>
+    /// Seam ile açılıp commit edilen oturum, StartAsync tarafından "var olan" sayılmalı —
+    /// yani iki akış AYNI "bugünün açık oturumu" tanımını paylaşıyor (DRY'ın gözlemlenebilir
+    /// sonucu). Ayrı ayrı yazılsalardı bu test iki oturum görürdü.
+    /// </summary>
+    [Fact]
+    public async Task Seam_ile_acilan_oturum_StartAsync_tarafindan_yeniden_acilmaz()
+    {
+        var (context, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var (session, _) = await service.GetOrOpenTodayAsync(null, null);
+            await context.SaveChangesAsync();
+
+            var sonuc = await service.StartAsync(new StartSessionRequest());
+
+            Assert.False(sonuc.Created);
+            Assert.Equal(session.Id, sonuc.Session.Id);
+        }
+    }
 }

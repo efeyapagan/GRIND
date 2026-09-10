@@ -51,44 +51,59 @@ public class WorkoutSessionService(
         return ToResponse(session, await ProgressAsync(session, cancellationToken));
     }
 
-    public async Task<StartSessionResult> StartAsync(
-        StartSessionRequest request, CancellationToken cancellationToken = default)
+    public async Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
+        long? templateId, string? notes, CancellationToken cancellationToken = default)
     {
         var existing = await FindOpenTodayAsync(cancellationToken);
 
         if (existing is not null)
         {
-            // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
-            // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
-            // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
-            // FindOpenTodayAsync yalın olduğu için (yukarıdaki not) burada da tam
-            // grafik için sahiplik sorgusuyla yeniden okunuyor.
-            var reloaded = await OwnedOrThrowAsync(existing.Id, cancellationToken);
-            return new StartSessionResult(
-                ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
+            return (existing, false);
         }
 
         WorkoutTemplate? template = null;
-        if (request.TemplateId is { } templateId)
+        if (templateId is { } id)
         {
             // DİKKAT: miras alınan GetByIdAsync sahiplik kontrolü YAPMAZ; kullanmak IDOR olur.
-            template = await templateRepository.GetOwnedByIdAsync(templateId, currentUser.UserId, cancellationToken)
+            template = await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
                 ?? throw new NotFoundException(TemplateNotFound);
         }
 
         var session = new WorkoutSession
         {
             UserId = currentUser.UserId,
-            TemplateId = request.TemplateId,
+            TemplateId = templateId,
             // GetOwnedByIdAsync şablonu TemplateExercises+Exercise ile TAMAMEN Include'lu
             // döndürüyor; navigasyonu burada bağlamak, SaveChanges sonrası aynı grafiği
             // ikinci bir gidiş-dönüşle yeniden okumanın önüne geçer (bkz. Faz 7 fix notu).
             Template = template,
             StartedAt = timeProvider.GetUtcNow().UtcDateTime,
-            Notes = request.Notes
+            Notes = notes
         };
 
         sessionRepository.Add(session);
+        // SaveChangesAsync BİLEREK YOK — bkz. arayüzdeki seam notu.
+        return (session, true);
+    }
+
+    public async Task<StartSessionResult> StartAsync(
+        StartSessionRequest request, CancellationToken cancellationToken = default)
+    {
+        var (session, created) = await GetOrOpenTodayAsync(
+            request.TemplateId, request.Notes, cancellationToken);
+
+        if (!created)
+        {
+            // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
+            // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
+            // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
+            // FindOpenTodayAsync yalın (Template Include'suz) döndüğü için burada tam
+            // grafik için sahiplik sorgusuyla yeniden okunuyor.
+            var reloaded = await OwnedOrThrowAsync(session.Id, cancellationToken);
+            return new StartSessionResult(
+                ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StartSessionResult(
