@@ -76,4 +76,74 @@ public class TurkeyDayTests
 
         Assert.Equal(TurkeyDay.RangeFor(utc), TurkeyDay.RangeFor(belirtilmemis));
     }
+
+    // ---- Faz 9 eklemeleri ----
+
+    /// <summary>
+    /// TR gece yarısı UTC 21:00'dir. Bir TR gününün UTC aralığı bu yüzden önceki günün 21:00'inde
+    /// başlar — aralığı yanlış kurmak, gece geç saatteki antrenmanı komşu güne düşürür.
+    /// </summary>
+    [Fact]
+    public void RangeForLocalDate_gunun_UTC_araligini_verir()
+    {
+        var (from, to) = TurkeyDay.RangeForLocalDate(new DateOnly(2026, 3, 10));
+
+        Assert.Equal(new DateTime(2026, 3, 9, 21, 0, 0, DateTimeKind.Utc), from);
+        Assert.Equal(new DateTime(2026, 3, 10, 21, 0, 0, DateTimeKind.Utc), to);
+    }
+
+    [Fact]
+    public void RangeForLocalDate_UTC_Kind_dondurur()
+    {
+        var (from, to) = TurkeyDay.RangeForLocalDate(new DateOnly(2026, 3, 10));
+
+        // Kind yanlışsa karşılaştırmalar sessizce kayar: Npgsql UTC bekliyor.
+        Assert.Equal(DateTimeKind.Utc, from.Kind);
+        Assert.Equal(DateTimeKind.Utc, to.Kind);
+    }
+
+    [Fact]
+    public void LocalDateOf_gun_sinirinin_altinda_ayni_gunu_verir()
+    {
+        // TR 23:59:59 = UTC 20:59:59 — hâlâ aynı TR günü.
+        Assert.Equal(
+            new DateOnly(2026, 3, 10),
+            TurkeyDay.LocalDateOf(new DateTime(2026, 3, 10, 20, 59, 59, DateTimeKind.Utc)));
+    }
+
+    /// <summary>
+    /// UTC 21:00 TR'de ertesi gün 00:00'dır. Bu testin kırmızıya dönmesi, takvimin ve günlük
+    /// hacmin geç saatteki antrenmanları yanlış güne yazmaya başladığı anlamına gelir.
+    /// </summary>
+    [Fact]
+    public void LocalDateOf_gun_sinirinda_ertesi_gune_gecer()
+    {
+        Assert.Equal(
+            new DateOnly(2026, 3, 11),
+            TurkeyDay.LocalDateOf(new DateTime(2026, 3, 10, 21, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public void LocalDateOf_yerel_Kind_reddeder()
+    {
+        var yerel = DateTime.SpecifyKind(new DateTime(2026, 3, 10, 20, 0, 0), DateTimeKind.Local);
+
+        Assert.Throws<ArgumentException>(() => TurkeyDay.LocalDateOf(yerel));
+    }
+
+    /// <summary>
+    /// İki metot birbirinin tersi olmalı: bir günün aralığının başlangıcı, yine o güne düşer.
+    /// Biri değişip diğeri değişmezse takvim ile hacim farklı günler raporlamaya başlar.
+    /// </summary>
+    [Fact]
+    public void RangeForLocalDate_ile_LocalDateOf_birbirini_tersler()
+    {
+        var gun = new DateOnly(2026, 7, 15);
+
+        var (from, to) = TurkeyDay.RangeForLocalDate(gun);
+
+        Assert.Equal(gun, TurkeyDay.LocalDateOf(from));
+        Assert.Equal(gun, TurkeyDay.LocalDateOf(to.AddTicks(-1)));
+        Assert.Equal(gun.AddDays(1), TurkeyDay.LocalDateOf(to));
+    }
 }

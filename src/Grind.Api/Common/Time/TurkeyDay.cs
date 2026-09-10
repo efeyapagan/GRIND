@@ -46,4 +46,36 @@ public static class TurkeyDay
             TimeZoneInfo.ConvertTimeToUtc(localDayStart, Turkey),
             TimeZoneInfo.ConvertTimeToUtc(localDayStart.AddDays(1), Turkey));
     }
+
+    /// <summary>
+    /// Verilen TR yerel gününün UTC aralığı: gün başlangıcı (dahil) ve ertesi gün başlangıcı
+    /// (hariç). Sorgu parametreleri (<c>from</c>/<c>to</c>) bu metotla UTC'ye çevrilir.
+    /// </summary>
+    public static (DateTime FromUtcInclusive, DateTime ToUtcExclusive) RangeForLocalDate(
+        DateOnly localDate)
+    {
+        var localDayStart = DateTime.SpecifyKind(
+            localDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+
+        return (
+            TimeZoneInfo.ConvertTimeToUtc(localDayStart, Turkey),
+            TimeZoneInfo.ConvertTimeToUtc(localDayStart.AddDays(1), Turkey));
+    }
+
+    /// <summary>
+    /// <paramref name="utcInstant"/> anının düştüğü TR günü. Takvim ve günlük hacim gruplaması
+    /// bunu kullanır — gruplamayı SQL'de <c>AT TIME ZONE</c> ile tekrar yazmak, gün sınırı
+    /// kuralının ikinci bir kopyasını üretirdi (spec Karar 6).
+    /// </summary>
+    public static DateOnly LocalDateOf(DateTime utcInstant)
+    {
+        if (utcInstant.Kind == DateTimeKind.Local)
+        {
+            throw new ArgumentException(
+                "TurkeyDay yalnızca UTC an kabul eder; yerel bir DateTime gün sınırını sessizce kaydırır.",
+                nameof(utcInstant));
+        }
+
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utcInstant, Turkey));
+    }
 }
