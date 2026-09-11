@@ -12,6 +12,8 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddAiInsightProvider(this IServiceCollection services, AiSettings settings)
     {
+        services.AddSingleton(settings);
+
         switch (settings.Provider)
         {
             case AiProviderKind.None:
@@ -20,11 +22,14 @@ public static class DependencyInjection
 
             case AiProviderKind.Anthropic:
                 EnsureValid(settings);
-                services.AddSingleton(settings);
                 services.AddSingleton(new AnthropicClient
                 {
                     ApiKey = settings.ApiKey,
-                    Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds)
+                    // Timeout DENEME BAŞINA uygulanır, yeniden denemeleri kapsamaz — bu yüzden MaxRetries
+                    // burada açıkça 1'e sabitlenir (SDK varsayılanı 2). Gerçek, iptal edilemez üst sınır
+                    // (MaxRetries + 1) × TimeoutSeconds'tır.
+                    Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds),
+                    MaxRetries = 1
                 });
                 services.AddSingleton<IAiInsightProvider, AnthropicAiInsightProvider>();
                 break;

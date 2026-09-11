@@ -46,7 +46,8 @@ public class AiInsightService(
         }
 
         // Buradan sonrası ÜCRETLİ: isteğin belirteci değil None (spec Karar 7). İstemci koparsa parası
-        // ödenmiş yanıt yine saklanır; iş sağlayıcının zaman aşımıyla sınırlıdır.
+        // ödenmiş yanıt yine saklanır; iş, (MaxRetries + 1) × TimeoutSeconds ile sınırlıdır — dağıtılan
+        // varsayılanlarla yaklaşık 6 dakika (bkz. Services/Ai/DependencyInjection.cs).
         var completion = await provider.CompleteAsync(
             AiInsightPrompt.Instructions, ExportTextFormatter.Format(export), CancellationToken.None);
 

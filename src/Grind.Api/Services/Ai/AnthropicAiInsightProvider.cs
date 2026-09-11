@@ -13,10 +13,7 @@ namespace Grind.Api.Services.Ai;
 ///
 /// Sağlayıcının hata metni istemciye ASLA ulaşmaz: loglanır, istemci sabit bir 503 mesajı alır.
 /// </summary>
-public sealed class AnthropicAiInsightProvider(
-    AnthropicClient client,
-    AiSettings settings,
-    ILogger<AnthropicAiInsightProvider> logger) : IAiInsightProvider
+public sealed class AnthropicAiInsightProvider : IAiInsightProvider
 {
     /// <summary>
     /// Model isteği politika gerekçesiyle reddederse API aynı çağrı içinde Anthropic'in önerdiği fallback
@@ -28,6 +25,26 @@ public sealed class AnthropicAiInsightProvider(
         "AI sağlayıcısına şu an ulaşılamıyor. Lütfen daha sonra tekrar deneyin.";
 
     public const string NoAnswerMessage = "Model bu isteğe yanıt vermedi.";
+
+    private readonly AnthropicClient client;
+    private readonly AiSettings settings;
+    private readonly ILogger<AnthropicAiInsightProvider> logger;
+
+    public AnthropicAiInsightProvider(
+        AnthropicClient client, AiSettings settings, ILogger<AnthropicAiInsightProvider> logger)
+    {
+        this.client = client;
+        this.settings = settings;
+        this.logger = logger;
+
+        // AiSettings fiyatları bilerek C# varsayılanı taşımıyor (bkz. AiSettings.cs); dağıtılan
+        // varsayılan appsettings.json'da tanımlı. Fiyat yapılandırması eksik/silinmişse sağlayıcı yine
+        // çalışır ama EstimatedCostUsd sessizce hep null kalır — bu durum başlangıçta bir kez loglanır.
+        if (settings.InputUsdPerMillionTokens is null || settings.OutputUsdPerMillionTokens is null)
+        {
+            logger.LogWarning("Ai fiyatları tanımlı değil, maliyet tahmini kaydedilmeyecek.");
+        }
+    }
 
     public async Task<AiCompletion> CompleteAsync(
         string instructions, string trainingData, CancellationToken cancellationToken = default)

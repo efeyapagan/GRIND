@@ -79,6 +79,20 @@ public class AiInsightEndpointsTests(GrindApiFactory kapali, SahteAiApiFactory s
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    /// MALİYET GÜVENCESİ: test host'u, geliştiricinin user-secrets'ında Ai:Provider = Anthropic olsa bile
+    /// ÜCRETLİ sağlayıcıyı çözmemeli. GrindApiFactory bunu ortam değişkeniyle sabitler (ortam değişkenleri
+    /// yapılandırma zincirinde user-secrets'tan SONRA gelir, bu yüzden kazanır).
+    /// </summary>
+    [Fact]
+    public void Test_host_AI_saglayicisini_kapali_sabitler()
+    {
+        _ = kapali.CreateClient();
+
+        Assert.Equal("None", Environment.GetEnvironmentVariable("Ai__Provider"));
+        Assert.Empty(Environment.GetEnvironmentVariable("Ai__ApiKey")!);
+    }
+
     /// <summary>GERÇEK varsayılan (spec Karar 5): sağlayıcı kapalı → 503, detay korunur, satır yazılmaz.</summary>
     [Fact]
     public async Task Kapali_saglayicida_uretim_503_ve_detay_doner()
