@@ -20,7 +20,7 @@
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ✅ |
 | 10 | Feature: BodyWeightLog | ✅ |
 | 11 | Feature: Export | ✅ |
-| 12 | Feature: AiInsight altyapısı | ☐ |
+| 12 | Feature: AiInsight altyapısı | ✅ |
 | 13 | Feature: Hesap silme | ☐ |
 
 ---
@@ -551,10 +551,89 @@
 >    - Haftalık/aylık ortalama yok.
 
 ## Faz 12 — Feature: AiInsight altyapısı
-- [ ] 12.1 `AiInsight` CRUD/okuma; `Kind`, `WorkoutSessionId`, `SetEntryId` kapsamları
-- [ ] 12.2 `IAiInsightProvider` soyutlaması + `NullProvider` (varsayılan kapalı)
-- [ ] 12.3 Gerçek LLM çağrısı transaction DIŞINDA (CLAUDE.md uyarısı) — aktivasyon
-      maliyet netleşince
+
+> Tasarım kararları: [docs/superpowers/specs/2026-09-11-ai-insight-design.md](docs/superpowers/specs/2026-09-11-ai-insight-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-11-faz-12-ai-insight.md](docs/superpowers/plans/2026-09-11-faz-12-ai-insight.md)
+
+- [x] 12.1 `AiInsight` okuma/yönetimi; `Kind`, `WorkoutSessionId`, `SetEntryId` kapsamları —
+      `POST /api/insights` (üret), `GET /api/insights` (süzgeçli, sayfalı), `GET /api/insights/{id}`,
+      `DELETE /api/insights/{id}`; `InsightsController` ince (Görev 5). **Düzenleme ucu YOK** (spec
+      Karar 2): yorum, modelin ne dediğinin kaydıdır; `Content`'i düzenlemek onu
+      `Model`/`TokensUsed`/`EstimatedCostUsd`'den koparırdı. Elle ekleme de yok. Liste `kind`,
+      `workoutSessionId` ve `setEntryId` ile süzülür — üretim bugün yalnızca `Insight` yazsa da
+      okuma yolu Suggestion satırları için hazır (spec Karar 1). Sıra `CreatedAt`/`Id` azalan;
+      sayfalama `PagedRangeQuery`'den çıkarılan ortak `PagedQuery` tabanıyla (Görev 1).
+      Yorumun kapsadığı aralık satırda saklanır: `AiInsight.RangeFrom`/`RangeTo` (`date`, nullable,
+      Görev 2 + migration `AiInsightAralikAlanlari`) — `CreatedAt` yetmez, bugün üretilen bir yorum
+      geçen yılı kapsayabilir ve istemci aynı aralık için tekrar ücret ödemeden önce buna bakar.
+- [x] 12.2 `IAiInsightProvider` soyutlaması + `NullAiInsightProvider` (varsayılan kapalı) —
+      `Services/Ai/` altında (Görev 3). Varsayılan sağlayıcı `ServiceUnavailableException`
+      (**503**, yeni eşleme Görev 1) fırlatır: "açıkça kullanılamıyor" der, sahte başarı ÜRETMEZ —
+      sahte içerik kullanıcının ödemediği satırlar yazardı. Ne sorulacağı (`AiInsightPrompt`)
+      servis katmanında, nasıl sorulacağı sağlayıcıda; fiyatı da sağlayıcı bilir
+      (`AiCostCalculator`, 6 ondalık `AwayFromZero`), servis bilmez.
+- [x] 12.3 Gerçek LLM çağrısı transaction DIŞINDA — `AnthropicAiInsightProvider` resmi Anthropic
+      C# SDK'sı (`Anthropic` 12.47.0) ile yazıldı; sunucu tarafı fallback açık
+      (`server-side-fallback-2026-07-01` + `fallbacks: "default"`), `Model` yanıtı fiilen üreten
+      modelden alınır. **Aktivasyon yalnızca yapılandırmayla**, kod değişikliği istemez:
+      `dotnet user-secrets set "Ai:Provider" "Anthropic"` + `Ai:ApiKey`. Eksik/geçersiz ayar
+      açılışta (boot) reddedilir; tanınmayan sağlayıcı adı enum bağlamasında patlar.
+      `AiInsightService.GenerateAsync` (Görev 4) sırası: aralığı çöz → Faz 11 export'unu oku →
+      verisiz aralıkta 400 (LLM'e hiç gidilmez) → **sağlayıcı** → `Add` + TEK `SaveChangesAsync`.
+      `BeginTransaction` yok; sağlayıcı çağrılırken bekleyen izlenmiş değişiklik de yok (test bunu
+      davranışsal olarak sabitler). Ücretli adım ve onu izleyen kayıt `CancellationToken.None`
+      kullanır (spec Karar 7): istemci koparsa parası ödenmiş yanıt çöpe gitmez.
+      Aralık verilmezse son 30 gün, en fazla 366 gün (maliyet sınırı).
+- [x] 12.4 Test:
+      - **Saf çekirdek:** `AiInsightRangeTests` 7, `AiCostCalculatorTests` 3,
+        `GlobalExceptionHandlerTests` +2 (503 eşlemesi ve mesajın Production'da görünmesi),
+        `ColumnMappingTests` +2 (`date` + nullable).
+      - **Sağlayıcı (ağa çıkmadan, sahte `HttpMessageHandler` ile gerçek SDK yolu):**
+        `AnthropicAiInsightProviderTests` 11 — tel üzerindeki istek şekli (`/v1/messages`,
+        `x-api-key`, fallback beta başlığı, `"fallbacks": "default"`), metin bloklarının
+        birleşmesi ve düşünme/fallback bloklarının atlanması, ret, boş metin, kesik yanıtın
+        saklanması, 4xx/5xx/ağ hatası ve **bozuk gövde** (200 ama eksik alan) → 503.
+        `AiProviderRegistrationTests` 7 — varsayılan kapalı, açılışta fail-fast, enum bağlaması.
+      - **Repository:** `AiInsightRepositoryTests` 7 (+1 `PersistenceRegistrationTests`) —
+        sahiplik/IDOR, sıra ve toplam sayı, üç süzgeç, izlemeli/izlemesiz ayrımı, aralık
+        alanlarının gidip gelmesi.
+      - **Servis:** `AiInsightServiceTests` 11 — varsayılan 30 günlük aralık, aralık dışındaki
+        verinin sayılmaması, yalnızca tartısı olan aralık, verisiz aralıkta sağlayıcının hiç
+        çağrılmaması, sağlayıcı hatasında satır yazılmaması, çağrı anında bekleyen değişiklik
+        olmaması, IDOR.
+      - **Uçtan uca:** `AiInsightEndpointsTests` 14 — dört uçta 401, kapalı sağlayıcıda 503 +
+        `detail`, 201 + `Location` + gövde, liste/getir/sil, sıfır baytlık gövde, verisiz aralık,
+        çok uzun aralık, geçersiz `kind`, IDOR ve **maliyet güvencesi**: test host'u geliştiricinin
+        user-secrets'ındaki ücretli sağlayıcıyı çözemez (`Ai__Provider` ortam değişkeniyle
+        sabitlenir — final incelemenin tek bloklayıcı bulgusu buydu).
+
+      Toplam **619 test yeşil** (554 → +65). Release build: 0 uyarı, 0 hata. Migration: bir tane
+      (`AiInsightAralikAlanlari`, iki nullable `date` sütunu).
+
+> **Faz 12'den devreden notlar (Faz 13'te dikkat edilecek):**
+> 1. **Faz 13 için doğrudan:** `User → AiInsight` FK'si RESTRICT. Hesap silme sırası (13.1)
+>    `AiInsight` satırlarını da silmek zorunda, yoksa `User` silinemez.
+> 2. **Bilinçli olarak kapsam dışı:** set arası koçluk (Suggestion) motoru ve oturum/set kapsamlı
+>    üretim; POST'ta kullanıcının kendi sorusu (saklanması için yeni sütun gerekirdi); akışlı
+>    (streaming) yanıt ve prompt caching; günlük/aylık harcama sınırı ve rate limiting ("bu ay ne
+>    harcadım" `EstimatedCostUsd` üzerinde bir SUM sorgusudur, yeni tablo gerektirmez); aynı aralık
+>    için otomatik tekrar-üretim engeli (istemci listeye bakar); başka sağlayıcılar.
+> 3. **Bilinen sınırlar (final incelemede kabul edildi):**
+>    - Maliyet tahmini yapılandırılan modelin fiyatını kullanır; fallback farklı fiyatlı bir modelle
+>      yanıtlarsa sapar (bugün Opus ailesi aynı fiyatta). Cache token'ları da yok sayılır — caching
+>      kapsam dışı olduğu için bugün etkisiz.
+>    - İptal edilemeyen pencere `(MaxRetries + 1) × TimeoutSeconds` ≈ 6 dakikadır (SDK'nın `Timeout`'u
+>      deneme BAŞINA). Ücretli adım bilerek iptal edilmediği için bu süre boyunca istek ve scope'u
+>      canlı kalır.
+>    - SDK dışı bir hata (ör. `JsonException`, token toplamındaki `checked` taşması) 503 değil 500
+>      döner. Geniş bir `catch` bunu düzeltirdi ama kendi kodumuzdaki gerçek hataları da 503'e çevirip
+>      gizlerdi; Production'da 500'ün mesajı zaten maskeleniyor.
+>    - Kapalı özelliğe gelen her istek `GlobalExceptionHandler` tarafından Error seviyesinde loglanır
+>      (spec Karar 12 bunu kabul etti). Gürültü olursa `ServiceUnavailableException` için Warning
+>      istisnası ucuz çözüm.
+> 4. **Faz 10/11'den devreden notlar hâlâ AÇIK:** proje çapında `AsNoTracking` geçişi yapılmadı
+>    (`GetAllTimeAsync` hâlâ izlemeli), offset'siz `recordedAt` sorunu duruyor, haftalık/aylık
+>    ortalama yok.
 
 ## Faz 13 — Feature: Hesap silme
 > Buraya konumlandırıldı çünkü kullanıcıya ait TÜM tablolar var olmadan doğru yazılamaz.

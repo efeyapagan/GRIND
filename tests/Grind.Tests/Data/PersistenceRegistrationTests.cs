@@ -23,6 +23,7 @@ public class PersistenceRegistrationTests
     [InlineData(typeof(IExerciseRepository))]
     [InlineData(typeof(IWorkoutSessionRepository))]
     [InlineData(typeof(ISetEntryRepository))]
+    [InlineData(typeof(IAiInsightRepository))]
     public void Kayitli_tipler_cozulebilir(Type serviceType)
     {
         using var provider = BuildProvider();

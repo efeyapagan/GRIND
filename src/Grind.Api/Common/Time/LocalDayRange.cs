@@ -21,11 +21,7 @@ public static class LocalDayRange
     public static (DateTime? FromUtcInclusive, DateTime? ToUtcExclusive) Resolve(
         DateOnly? from, DateOnly? to)
     {
-        if (from is { } start && to is { } end && start > end)
-        {
-            // Sessizce boş liste dönmek, kullanıcının parametreleri ters yazdığını gizlerdi.
-            throw new ValidationException("Başlangıç tarihi bitiş tarihinden sonra olamaz.");
-        }
+        EnsureOrdered(from, to);
 
         // DateOnly.MaxValue (9999-12-31) TEK sorunlu değer: TurkeyDay bir sonraki günün
         // başlangıcını hesaplamak için AddDays(1) çağırır ve DateTime.MaxValue'yu aşar
@@ -50,5 +46,20 @@ public static class LocalDayRange
             to is { } toDay && toDay != DateOnly.MaxValue
                 ? TurkeyDay.RangeForLocalDate(toDay).ToUtcExclusive
                 : null);
+    }
+
+    /// <summary>
+    /// <paramref name="from"/> &gt; <paramref name="to"/> ise reddeder. Sıralama kuralının TEK kopyası:
+    /// <see cref="Resolve"/> ve AI yorum aralığı (Faz 12, <c>AiInsightRange</c>) bunu kullanır. Null
+    /// uçlar sınırsızdır, karşılaştırılmaz.
+    /// </summary>
+    /// <exception cref="ValidationException"><paramref name="from"/> &gt; <paramref name="to"/>.</exception>
+    public static void EnsureOrdered(DateOnly? from, DateOnly? to)
+    {
+        if (from is { } start && to is { } end && start > end)
+        {
+            // Sessizce boş liste dönmek, kullanıcının parametreleri ters yazdığını gizlerdi.
+            throw new ValidationException("Başlangıç tarihi bitiş tarihinden sonra olamaz.");
+        }
     }
 }

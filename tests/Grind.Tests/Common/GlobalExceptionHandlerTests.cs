@@ -53,6 +53,7 @@ public class GlobalExceptionHandlerTests
     [InlineData(typeof(UnauthorizedException), 401)]
     [InlineData(typeof(ForbiddenException), 403)]
     [InlineData(typeof(ConflictException), 409)]
+    [InlineData(typeof(ServiceUnavailableException), 503)]
     public async Task Domain_exceptionlari_dogru_duruma_eslenir(Type exceptionType, int expected)
     {
         var exception = (Exception)Activator.CreateInstance(exceptionType, "mesaj")!;
@@ -98,6 +99,20 @@ public class GlobalExceptionHandlerTests
         var (_, body) = await HandleAsync(new NotFoundException("Egzersiz bulunamadi"), "Production");
 
         Assert.Contains("Egzersiz bulunamadi", body.GetProperty("detail").GetString());
+    }
+
+    /// <summary>
+    /// 503 bir 5xx'tir ama mesajı bizim yazdığımız sabit bir metindir (sağlayıcının metni asla değil):
+    /// yalnızca tam 500'ün mesajı gizlenir, 503'ünki Production'da da görünmeli (Faz 12 spec Karar 12).
+    /// </summary>
+    [Fact]
+    public async Task Hizmet_kullanilamiyor_mesaji_production_da_da_gorunur()
+    {
+        var (statusCode, body) = await HandleAsync(
+            new ServiceUnavailableException("AI yorumlama şu an kapalı."), "Production");
+
+        Assert.Equal(503, statusCode);
+        Assert.Equal("AI yorumlama şu an kapalı.", body.GetProperty("detail").GetString());
     }
 
     [Fact]
