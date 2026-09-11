@@ -3,7 +3,6 @@ using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.BodyWeight;
 using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.Stats;
-using Grind.Api.Models.Entities;
 using Grind.Api.Repositories;
 
 namespace Grind.Api.Services;
@@ -37,9 +36,6 @@ public class ExportService(
         // Setler oturum başına değil aralığın tamamı için TEK sorguda gelir. Filtre oturumun
         // StartedAt'ine baktığı için her setin oturumu yukarıdaki listede yer alır.
         var sets = await setEntryRepository.GetInRangeAsync(userId, fromUtc, toUtc, cancellationToken);
-        var setsBySession = sets
-            .GroupBy(s => s.WorkoutSessionId)
-            .ToDictionary(g => g.Key, IReadOnlyList<SetEntry> (g) => g.ToList());
 
         var calendar = await statsService.GetCalendarAsync(query, cancellationToken);
         var volumeByExercise = await statsService.GetVolumeByExerciseAsync(query, cancellationToken);
@@ -62,9 +58,7 @@ public class ExportService(
             query.From,
             query.To,
             summary,
-            sessions
-                .Select(s => HistoryMapping.ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, [])))
-                .ToList(),
+            HistoryMapping.ToSessionResponses(sessions, sets),
             bodyWeights.Select(b => new BodyWeightLogResponse(b.Id, b.Weight, b.RecordedAt)).ToList(),
             records);
     }

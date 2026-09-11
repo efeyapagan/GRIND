@@ -3,7 +3,6 @@ using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Common;
 using Grind.Api.Models.Dtos.History;
-using Grind.Api.Models.Entities;
 using Grind.Api.Repositories;
 
 namespace Grind.Api.Services;
@@ -44,13 +43,7 @@ public class WorkoutHistoryService(
         var sets = await setEntryRepository.GetForSessionsAsync(
             sessions.Select(s => s.Id).ToList(), currentUser.UserId, query.ExerciseId, cancellationToken);
 
-        var setsBySession = sets
-            .GroupBy(s => s.WorkoutSessionId)
-            .ToDictionary(g => g.Key, IReadOnlyList<SetEntry> (g) => g.ToList());
-
-        var items = sessions
-            .Select(s => HistoryMapping.ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, [])))
-            .ToList();
+        var items = HistoryMapping.ToSessionResponses(sessions, sets);
 
         return new PagedResponse<HistorySessionResponse>(
             items, query.Page, query.PageSize, totalCount);

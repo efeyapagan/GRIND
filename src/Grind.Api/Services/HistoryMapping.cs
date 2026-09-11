@@ -11,6 +11,23 @@ namespace Grind.Api.Services;
 /// </summary>
 internal static class HistoryMapping
 {
+    /// <summary>
+    /// Oturumları, verilen setleri oturumlarına dağıtarak DTO'ya çevirir; sırası
+    /// <paramref name="sessions"/>'ın sırasıdır. Seti olmayan oturum boş listeyle döner. Setler
+    /// verilen sırayla (kronolojik) kalır. Geçmiş ucu ve export aynı birleştirmeyi kullanır (DRY).
+    /// </summary>
+    public static IReadOnlyList<HistorySessionResponse> ToSessionResponses(
+        IReadOnlyList<WorkoutSession> sessions, IReadOnlyList<SetEntry> sets)
+    {
+        var setsBySession = sets
+            .GroupBy(s => s.WorkoutSessionId)
+            .ToDictionary(g => g.Key, IReadOnlyList<SetEntry> (g) => g.ToList());
+
+        return sessions
+            .Select(s => ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, [])))
+            .ToList();
+    }
+
     public static HistorySessionResponse ToSessionResponse(
         WorkoutSession session, IReadOnlyList<SetEntry> sets) => new(
         session.Id,
