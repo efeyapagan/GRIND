@@ -130,6 +130,27 @@ public class ExportEndpointsTests(GrindApiFactory factory) : IClassFixture<Grind
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    /// <summary>
+    /// AYIRT EDİCİ: <c>DefaultProblemDetailsWriter</c>, Accept başlığında JSON türü yoksa yazmayı
+    /// reddeder; endpoint bu noktada temizlenmiş olduğundan MVC'nin yazıcısı devreye giremez.
+    /// GlobalExceptionHandler bu durumda KENDİSİ yazmalı, yoksa detay jenerik bir gövdede kaybolur.
+    /// </summary>
+    [Fact]
+    public async Task Metin_ucunda_text_plain_kabul_eden_hatali_istek_ProblemDetails_detayini_korur()
+    {
+        var client = await AuthenticatedClientAsync();
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+
+        var response = await client.GetAsync("/api/export/text?from=2026-03-10&to=2026-03-01");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(
+            "Başlangıç tarihi bitiş tarihinden sonra olamaz.", body.GetProperty("detail").GetString());
+    }
+
     [Fact]
     public async Task Export_baskasinin_verisini_icermez()
     {
