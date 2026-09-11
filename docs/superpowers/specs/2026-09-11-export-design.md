@@ -132,10 +132,13 @@ Hedef okuyucu bir LLM ve kullanıcı. Kurallar:
 Aralık: 2026-03-01 – 2026-03-31 (TR yerel günü, iki uç dahil)
 Oluşturulma: 2026-03-31 21:15 (TR)
 
-Açıklamalar: Saatler Türkiye yerel saatidir. Setler ağırlık×tekrar biçimindedir; ağırlıklar kg,
-0 = ek yük yok (yalnızca vücut ağırlığı). Hacim = ağırlık × tekrar. RIR = yedekte kalan tekrar.
-[PR: ağırlık] = o egzersizde o ana kadarki en ağır set. [PR: tekrar] = aynı ağırlıkta o ana kadarki
-en çok tekrar.
+Açıklamalar:
+- Saatler Türkiye yerel saatidir.
+- Setler ağırlık×tekrar biçimindedir; ağırlıklar kg, 0 = ek yük yok (yalnızca vücut ağırlığı).
+- Hacim = ağırlık × tekrar.
+- RIR = yedekte kalan tekrar.
+- [PR: ağırlık] = o egzersizde o ana kadarki en ağır set.
+- [PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.
 
 ## Özet
 - Antrenman günü: 12
