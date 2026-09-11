@@ -170,6 +170,22 @@ public class AnthropicAiInsightProviderTests
         Assert.DoesNotContain("iç ayrıntı", hata.Message);
     }
 
+    /// <summary>
+    /// 200 döner ama gövde zorunlu alanları taşımıyor: SDK yanıtı <c>BetaMessage</c>'a
+    /// materyalize ederken (alan okunurken) patlar. Bu da bir SDK hatasıdır, istemciye
+    /// asla çıplak sızmamalı (spec Karar 8/12).
+    /// </summary>
+    [Fact]
+    public async Task Bozuk_yanit_govdesi_503_verir()
+    {
+        var (provider, _) = Kur(() => Json(HttpStatusCode.OK, """{ "type": "message" }"""));
+
+        var hata = await Assert.ThrowsAsync<ServiceUnavailableException>(
+            () => provider.CompleteAsync("talimat", "veri"));
+
+        Assert.Equal(AnthropicAiInsightProvider.UnreachableMessage, hata.Message);
+    }
+
     [Fact]
     public async Task Ag_hatasi_503_verir()
     {

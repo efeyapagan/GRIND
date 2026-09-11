@@ -32,13 +32,11 @@ public sealed class AnthropicAiInsightProvider(
     public async Task<AiCompletion> CompleteAsync(
         string instructions, string trainingData, CancellationToken cancellationToken = default)
     {
-        BetaMessage response;
-
         try
         {
             // Thinking ve Effort bilerek verilmez: Opus 5 varsayılan olarak uyarlanabilir düşünmeyle,
             // high effort'la çalışır.
-            response = await client.Beta.Messages.Create(new MessageCreateParams
+            var response = await client.Beta.Messages.Create(new MessageCreateParams
             {
                 Model = settings.Model,
                 MaxTokens = settings.MaxTokens,
@@ -47,15 +45,22 @@ public sealed class AnthropicAiInsightProvider(
                 Fallbacks = new Default(),
                 Messages = [new() { Role = Role.User, Content = trainingData }],
             }, cancellationToken);
+
+            // Alan okumaları bilerek try içinde: SDK bazı alanları erişim anında (lazy) materyalize
+            // eder, bu yüzden bozuk/uyumsuz bir 200 gövdesi de burada çıplak bir SDK hatası fırlatabilir.
+            return ToCompletion(response);
         }
-        catch (Exception e) when (e is AnthropicApiException or AnthropicIOException or HttpRequestException
+        catch (Exception e) when (e is AnthropicException or HttpRequestException
                                   || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             // Çağıran iptal etmediyse OperationCanceledException'ın tek kaynağı zaman aşımıdır.
             logger.LogError(e, "AI sağlayıcısına yapılan çağrı başarısız oldu.");
             throw new ServiceUnavailableException(UnreachableMessage);
         }
+    }
 
+    private AiCompletion ToCompletion(BetaMessage response)
+    {
         if (response.StopReason == "refusal")
         {
             // Fallback zinciri de reddetti.

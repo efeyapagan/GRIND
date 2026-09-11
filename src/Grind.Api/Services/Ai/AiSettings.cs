@@ -2,8 +2,10 @@ namespace Grind.Api.Services.Ai;
 
 /// <summary>
 /// "Ai" yapılandırma bölümü (Faz 12 spec Karar 9). <see cref="ApiKey"/> user-secrets / ortam
-/// değişkeninde tutulur, appsettings.json'a YAZILMAZ. Fiyatlar varsayılan modelinkidir; model
-/// değiştirilirse fiyatlar da değiştirilmeli. Fiyat verilmezse maliyet null kalır.
+/// değişkeninde tutulur, appsettings.json'a YAZILMAZ. <see cref="InputUsdPerMillionTokens"/> ve
+/// <see cref="OutputUsdPerMillionTokens"/> burada bir C# varsayılanı TAŞIMAZ — dağıtılan varsayılan
+/// fiyatlar appsettings.json'da, varsayılan <see cref="Model"/>'in yanında tanımlıdır; model
+/// değiştirilirse fiyatlar da orada güncellenmeli. Fiyat yapılandırılmazsa maliyet null kalır.
 /// </summary>
 public class AiSettings
 {
