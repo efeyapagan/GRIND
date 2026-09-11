@@ -61,4 +61,15 @@ public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
     /// </summary>
     Task<IReadOnlyList<DateTime>> GetTrainedSessionStartsAsync(
         long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Aralıkta başlamış TÜM oturumlar (sayfasız), şablonu ile birlikte, eskiden yeniye (StartedAt,
+    /// eşitlikte Id). Seti OLMAYAN oturumlar DAHİL: export'un oturum listesi bir günlüktür (Faz 11
+    /// spec Karar 8). İzlemesiz. Null tarih uçları sınırsızdır.
+    /// </summary>
+    Task<IReadOnlyList<WorkoutSession>> GetInRangeAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default);
 }
