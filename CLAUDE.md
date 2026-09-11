@@ -98,8 +98,10 @@ Object Reference) açığıdır.
   `Exercise` sahiplik/yetkilendirme kuralını miras alır (egzersizi görebiliyorsan medyasını da
   görebilirsin)
 - **AiInsight**: `Id`, `UserId` (FK), `Kind` (Insight / Suggestion), `WorkoutSessionId` (FK,
-  nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `Content`, `Model`,
-  `TokensUsed` (nullable), `EstimatedCostUsd` (nullable), `CreatedAt`
+  nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `RangeFrom` / `RangeTo`
+  (nullable `date`, TR yerel günü, iki ucu dahil — yorumun kapsadığı aralık; `Insight`'ta dolu,
+  oturum kapsamlı `Suggestion`'da null), `Content`, `Model`, `TokensUsed` (nullable),
+  `EstimatedCostUsd` (nullable), `CreatedAt`
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).
@@ -155,6 +157,22 @@ Object Reference) açığıdır.
 > tablosunda saklar (tekrar tekrar API'ye sorup ücret ödenmesin, geçmiş yorumlar görüntülenebilsin)
 > ve `TokensUsed`/`EstimatedCostUsd` ile kullanım/maliyet takip edilebilsin. Hangi yolun ne zaman
 > aktif edileceğine maliyet netleşince karar verilecek — ikisi de aynı anda var olabilir.
+
+> Karar (AI sağlayıcısı ve aktivasyon — Faz 12): Yorum üretimi `IAiInsightProvider` arkasında durur
+> ve **varsayılan olarak KAPALIDIR** (`Ai:Provider = None` → `NullAiInsightProvider` → 503). Gerçek
+> sağlayıcı (Anthropic, resmi C# SDK) yazılıdır ama yalnızca yapılandırmayla açılır:
+> `dotnet user-secrets set "Ai:Provider" "Anthropic"` + `Ai:ApiKey`. Anahtar `appsettings.json`'a
+> YAZILMAZ, orada boş kalır; eksik ya da geçersiz ayar ilk isteği değil BOOT'u durdurur (`Jwt:Key`
+> ile aynı desen). Üretim bugün yalnızca `Kind = Insight` yazar — set arası öneri motoru hâlâ
+> kapsam dışı. Aralık verilmezse son 30 gün, en fazla 366 gün; aralıkta hiç oturum ve tartı yoksa
+> LLM'e hiç gidilmez (400), çünkü bir modele "veri yok" dedirtmek için para ödenmez. LLM'e giden
+> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. Ücretli adım (LLM
+> çağrısı ve onu izleyen tek `SaveChangesAsync`) isteğin iptal belirtecini DEĞİL
+> `CancellationToken.None` kullanır: istek LLM'e ulaştığı anda ücret doğduğu için, istemci koparsa
+> bile yanıt saklanır. Fiyatlar yapılandırmada (`Ai:InputUsdPerMillionTokens` /
+> `Ai:OutputUsdPerMillionTokens`) durur ve varsayılan modelinkidir — model değişirse fiyatlar da
+> değişmeli; fiyat verilmezse `EstimatedCostUsd` null kalır (bilinmeyen maliyet, yanlış bir sayıdan
+> iyidir).
 
 > Karar (silme davranışları):
 > - `Exercise` hard-delete edilmez; bunun yerine `IsArchived = true` yapılır (soft delete).

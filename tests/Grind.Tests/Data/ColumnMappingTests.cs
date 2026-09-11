@@ -73,4 +73,20 @@ public class ColumnMappingTests
         Assert.Null(property.GetMaxLength());
         Assert.Equal("text", property.GetColumnType());
     }
+
+    /// <summary>
+    /// Yorumun kapsadığı TR günleri (Faz 12 spec Karar 3). Gün bir TARİHTİR, an değil: timestamptz
+    /// olsaydı saat dilimi dönüşümü günü kaydırabilirdi. Suggestion satırlarında boş kalır.
+    /// </summary>
+    [Theory]
+    [InlineData("RangeFrom")]
+    [InlineData("RangeTo")]
+    public void Yorum_araligi_nullable_date_sutunudur(string propertyName)
+    {
+        var property = TestModel.Entity<AiInsight>().FindProperty(propertyName)!;
+
+        Assert.NotNull(property);
+        Assert.Equal("date", property.GetColumnType());
+        Assert.True(property.IsNullable);
+    }
 }

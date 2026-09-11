@@ -23,6 +23,15 @@ namespace Grind.Tests.Integration;
 /// tarafından EN BAŞTA, Program.cs'in ilk satırı çalışmadan ÖNCE okunur — bu yüzden burada
 /// gerçek işlemi process ortam değişkeni set etmek yapıyor, tıpkı CI'nin
 /// <c>ConnectionStrings__Postgres</c>'i verdiği gibi.
+///
+/// MALİYET GÜVENCESİ: aynı sebeple <c>Ai:Provider</c> ve <c>Ai:ApiKey</c> de burada ortam
+/// değişkeniyle sabitlenir. Test host'u Development ortamında ayağa kalkar ve
+/// <c>Program.cs</c>, geliştiricinin kendi makinesindeki user-secrets'ını okur — geliştirici
+/// spec'in etkinleştirme adımını (<c>dotnet user-secrets set "Ai:Provider" "Anthropic"</c>)
+/// bir kez çalıştırırsa, bu sabitleme olmadan test host'u GERÇEK, ÜCRETLİ Anthropic
+/// sağlayıcısını çözer ve testler ağa gerçek istek atar. Bu bir kolaylık değil, bir
+/// güvenlik ağıdır: ortam değişkenleri konfigürasyon zincirinde user-secrets'tan SONRA
+/// geldiği için burada verilen "None" her zaman kazanır.
 /// </summary>
 public class GrindApiFactory : WebApplicationFactory<Program>
 {
@@ -31,5 +40,7 @@ public class GrindApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", TestDatabase.ConnectionString);
         Environment.SetEnvironmentVariable(
             "Jwt__Key", "test-ortaminin-kendi-jwt-anahtari-en-az-otuz-iki-bayt-uzunlugunda");
+        Environment.SetEnvironmentVariable("Ai__Provider", "None");
+        Environment.SetEnvironmentVariable("Ai__ApiKey", string.Empty);
     }
 }
