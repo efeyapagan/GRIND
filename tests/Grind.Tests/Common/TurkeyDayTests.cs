@@ -146,4 +146,26 @@ public class TurkeyDayTests
         Assert.Equal(gun, TurkeyDay.LocalDateOf(to.AddTicks(-1)));
         Assert.Equal(gun.AddDays(1), TurkeyDay.LocalDateOf(to));
     }
+
+    // ---- Faz 11 eklemeleri ----
+
+    /// <summary>UTC 21:30 TR'de ertesi gün 00:30'dur; export metnindeki saatler bununla yazılır.</summary>
+    [Fact]
+    public void ToLocal_UTC_ani_TR_saatine_cevirir()
+    {
+        var yerel = TurkeyDay.ToLocal(new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc));
+
+        Assert.Equal(new DateTime(2026, 3, 11, 0, 30, 0), yerel);
+        // DateTime eşitliği Kind'a bakmaz; ayrıca doğrulanır. Utc Kind'lı bir "yerel" saat, onu
+        // yeniden TurkeyDay'e veren kodda sessizce ikinci kez çevrilirdi.
+        Assert.Equal(DateTimeKind.Unspecified, yerel.Kind);
+    }
+
+    [Fact]
+    public void ToLocal_yerel_Kind_reddeder()
+    {
+        var yerel = DateTime.SpecifyKind(new DateTime(2026, 3, 10, 20, 0, 0), DateTimeKind.Local);
+
+        Assert.Throws<ArgumentException>(() => TurkeyDay.ToLocal(yerel));
+    }
 }

@@ -517,4 +517,73 @@ public class WorkoutSessionRepositoryTests
 
         Assert.Empty(await repository.GetTrainedSessionStartsAsync(davetsiz.Id));
     }
+
+    // ---- Faz 11: export aralık sorgusu ----
+
+    [Fact]
+    public async Task Aralik_oturumlari_eskiden_yeniye_doner_aralik_disini_almaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var eski = TestDatabase.NewSession(user);
+        eski.StartedAt = new DateTime(2026, 3, 1, 17, 0, 0, DateTimeKind.Utc);
+        var ikinci = TestDatabase.NewSession(user);
+        ikinci.StartedAt = new DateTime(2026, 3, 11, 17, 0, 0, DateTimeKind.Utc);
+        var birinci = TestDatabase.NewSession(user);
+        birinci.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        // Bilerek ters sırada eklenir: sıra eklemeden değil sorgudan gelmeli.
+        context.AddRange(user, eski, ikinci, birinci);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+        var oturumlar = await repository.GetInRangeAsync(
+            user.Id, new DateTime(2026, 3, 5, 0, 0, 0, DateTimeKind.Utc), null);
+
+        Assert.Equal(new[] { birinci.Id, ikinci.Id }, oturumlar.Select(o => o.Id));
+        // Salt okuma: izlemesiz. Tüm geçmiş export'u binlerce oturumu identity map'e doldurmamalı.
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task Aralik_oturumlari_sablon_adini_yukler_ve_setsiz_oturumu_icerir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var template = new WorkoutTemplate
+        {
+            User = user, Name = $"Şablon {Guid.NewGuid():N}", CreatedAt = DateTime.UtcNow
+        };
+        var session = TestDatabase.NewSession(user);
+        session.Template = template;
+        context.AddRange(user, template, session);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        // Hiç seti yok ama döner: export'un oturum listesi bir günlüktür (spec Karar 8).
+        var oturum = Assert.Single(await repository.GetInRangeAsync(user.Id, null, null));
+        Assert.Equal(template.Name, oturum.Template?.Name);
+    }
+
+    [Fact]
+    public async Task Aralik_oturumlari_baskasinin_oturumunu_icermez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        context.AddRange(sahip, davetsiz, TestDatabase.NewSession(sahip));
+        await context.SaveChangesAsync();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        Assert.Empty(await repository.GetInRangeAsync(davetsiz.Id, null, null));
+    }
 }

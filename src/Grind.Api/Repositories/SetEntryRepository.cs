@@ -67,20 +67,8 @@ public class SetEntryRepository(AppDbContext context)
         DateTime? toUtcExclusive,
         CancellationToken cancellationToken = default)
     {
-        var query = Set.Where(s => s.WorkoutSession.UserId == userId);
-
-        if (fromUtcInclusive is { } from)
-        {
-            query = query.Where(s => s.WorkoutSession.StartedAt >= from);
-        }
-
-        if (toUtcExclusive is { } to)
-        {
-            query = query.Where(s => s.WorkoutSession.StartedAt < to);
-        }
-
         // Anonim tipe projekte edip sonra record'a çevirmek bilinçli (bkz. GetSessionAggregatesAsync).
-        var rows = await query
+        var rows = await FilterBySessionRange(userId, fromUtcInclusive, toUtcExclusive)
             .GroupBy(s => new { s.ExerciseId, s.Exercise.Name })
             .Select(g => new
             {
@@ -121,5 +109,39 @@ public class SetEntryRepository(AppDbContext context)
             .OrderBy(s => s.CreatedAt)
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SetEntry>> GetInRangeAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default)
+        => await FilterBySessionRange(userId, fromUtcInclusive, toUtcExclusive)
+            .AsNoTracking()
+            .Include(s => s.Exercise)
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// Kullanıcının, oturumu verilen UTC aralığında BAŞLAMIŞ setleri. Egzersiz hacmi (Faz 9) ve
+    /// export (Faz 11) aynı filtreyi paylaşır: iki kopya bir gün sessizce ayrışırdı.
+    /// </summary>
+    private IQueryable<SetEntry> FilterBySessionRange(
+        long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive)
+    {
+        var query = Set.Where(s => s.WorkoutSession.UserId == userId);
+
+        if (fromUtcInclusive is { } from)
+        {
+            query = query.Where(s => s.WorkoutSession.StartedAt >= from);
+        }
+
+        if (toUtcExclusive is { } to)
+        {
+            query = query.Where(s => s.WorkoutSession.StartedAt < to);
+        }
+
+        return query;
     }
 }

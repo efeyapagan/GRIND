@@ -78,4 +78,18 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         long userId,
         long? exerciseId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Oturumu aralıkta BAŞLAMIŞ tüm setler, <c>Exercise</c> ile birlikte, kronolojik (CreatedAt,
+    /// eşitlikte Id), izlemesiz. Filtre setin <c>CreatedAt</c>'ine değil oturumun <c>StartedAt</c>'ine
+    /// bakar (Faz 9 Karar 7). Böylece <see cref="IWorkoutSessionRepository.GetInRangeAsync"/> ile aynı
+    /// sınırları kullanır: TUTARLI BİR ANLIK GÖRÜNTÜDE (snapshot) dönen her setin oturumu o listede
+    /// yer alır. Bu iki sorgu ayrı ayrı çalışır (bkz. <c>ExportService</c>) — aralarında yeni bir
+    /// oturumda yazılan bir set teorik olarak dışarıda kalabilir; kişisel ölçekte kabul edilebilir.
+    /// </summary>
+    Task<IReadOnlyList<SetEntry>> GetInRangeAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default);
 }

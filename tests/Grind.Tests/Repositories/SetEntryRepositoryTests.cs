@@ -498,4 +498,88 @@ public class SetEntryRepositoryTests
 
         Assert.Empty(await repository.GetForSessionsAsync([], userId: 1, exerciseId: null));
     }
+
+    // ---- Faz 11: export aralık sorgusu ----
+
+    /// <summary>
+    /// AYIRT EDİCİ: eski oturumun seti aralığın İÇİNDE bir CreatedAt taşıyor, ama oturumu aralık
+    /// dışında başlamış. Filtre setin kendi zamanına baksaydı bu set sızardı (Faz 9 Karar 7) ve
+    /// export'un set listesi oturum listesiyle ayrışırdı.
+    /// </summary>
+    [Fact]
+    public async Task Aralik_setleri_oturumun_baslangicina_gore_filtrelenir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var eski = TestDatabase.NewSession(user);
+        eski.StartedAt = new DateTime(2026, 3, 1, 17, 0, 0, DateTimeKind.Utc);
+        var yeni = TestDatabase.NewSession(user);
+        yeni.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.AddRange(user, exercise, eski, yeni);
+        await context.SaveChangesAsync();
+
+        context.Add(new SetEntry { WorkoutSession = eski, Exercise = exercise, Weight = 100m, Reps = 10, RecordType = RecordType.None, CreatedAt = new DateTime(2026, 3, 6, 17, 0, 0, DateTimeKind.Utc) });
+        context.Add(new SetEntry { WorkoutSession = yeni, Exercise = exercise, Weight = 50m, Reps = 10, RecordType = RecordType.None, CreatedAt = yeni.StartedAt });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var setler = await repository.GetInRangeAsync(
+            user.Id, new DateTime(2026, 3, 5, 0, 0, 0, DateTimeKind.Utc), null);
+
+        Assert.Equal(yeni.Id, Assert.Single(setler).WorkoutSessionId);
+    }
+
+    [Fact]
+    public async Task Aralik_setleri_kronolojik_egzersiziyle_ve_izlemesiz_doner()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(user);
+        context.AddRange(user, exercise, session);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        // Bilerek ters sırada eklenir.
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 100m, Reps = 6, RecordType = RecordType.None, CreatedAt = an.AddMinutes(5) });
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = an });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+        var setler = await repository.GetInRangeAsync(user.Id, null, null);
+
+        Assert.Equal(new[] { 8, 6 }, setler.Select(s => s.Reps));
+        // Metin ve JSON egzersiz adını taşıyor; Include yoksa burada NullReferenceException olurdu.
+        Assert.All(setler, s => Assert.Equal(exercise.Name, s.Exercise.Name));
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task Aralik_setleri_baskasinin_setlerini_icermez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var davetsiz = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(sahip, $"Egzersiz {Guid.NewGuid():N}");
+        var session = TestDatabase.NewSession(sahip);
+        context.AddRange(sahip, davetsiz, exercise, session);
+        await context.SaveChangesAsync();
+
+        context.Add(new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = DateTime.UtcNow });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new SetEntryRepository(context);
+
+        Assert.Empty(await repository.GetInRangeAsync(davetsiz.Id, null, null));
+    }
 }
