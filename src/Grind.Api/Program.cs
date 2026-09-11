@@ -2,6 +2,7 @@ using Grind.Api.Common;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Services;
+using Grind.Api.Services.Ai;
 using Microsoft.OpenApi;
 using System.Text.Json.Serialization;
 
@@ -19,13 +20,21 @@ builder.Services.AddCrossCutting(
 // Saat bir bağımlılık olarak enjekte edilir ki gün sınırı (TR yerel günü) mantığı sahte
 // bir TimeProvider ile deterministik test edilebilsin. Bunu kullananlar: WorkoutSessionService,
 // SetEntryService (Faz 8), StatsService (Faz 9, streak/takvim "bugün"ü için),
-// BodyWeightLogService (Faz 10, gelecek zaman reddi için) ve ExportService (Faz 11, export'un
+// BodyWeightLogService (Faz 10, gelecek zaman reddi için), ExportService (Faz 11, export'un
+// oluşturulma anı için) ve AiInsightService (Faz 12, varsayılan aralığın "bugün"ü ve yorumun
 // oluşturulma anı için) — AuthService, ExerciseService ve
 // WorkoutTemplateService hâlâ CreatedAt'i doğrudan DateTime.UtcNow'dan damgalıyor (o alan için
 // gün sınırı gibi test edilmesi gereken bir karar yok).
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddApplicationServices();
+
+// AI sağlayıcısı (Faz 12): varsayılan KAPALI (None → 503). Aktivasyon yalnızca yapılandırmayla:
+// Ai:Provider = Anthropic + Ai:ApiKey (user-secrets). Anthropic seçiliyse eksik ayar BOOT'u durdurur;
+// tanınmayan bir sağlayıcı adı zaten Get<AiSettings>() bağlamasında patlar.
+builder.Services.AddAiInsightProvider(
+    builder.Configuration.GetSection("Ai").Get<AiSettings>() ?? new AiSettings());
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
