@@ -264,4 +264,36 @@ public class ExportTextFormatterTests
 
         Assert.Contains("\nNot: omuz sıkıştı yine\n", metin);
     }
+
+    /// <summary>
+    /// AYIRT EDİCİ: egzersiz/şablon adı gibi kullanıcı metinleri de not gibi tek satıra
+    /// indirilmeli — aksi halde bir egzersiz adı "\n## Sahte" ile belgeye sahte bir başlık
+    /// enjekte edebilir.
+    /// </summary>
+    [Fact]
+    public void Kullanici_metinleri_tek_satira_indirilir()
+    {
+        const string zararli = "Bench\n## Sahte";
+
+        var export = Bos() with
+        {
+            Summary = new ExportSummaryResponse(1, 1, 1, 80m, 0, 0,
+                [new ExerciseVolumeResponse(1, zararli, 80m, 1)]),
+            Sessions =
+            [
+                new HistorySessionResponse(1, An, null, zararli, null, 80m, 1,
+                    [Set(1, zararli, 80m, 8)])
+            ],
+            AllTimeRecords =
+            [
+                new ExerciseRecordResponse(1, zararli, ExerciseCategory.Push,
+                    80m, 8, An, 8, 80m, An)
+            ]
+        };
+
+        var metin = ExportTextFormatter.Format(export);
+
+        Assert.DoesNotContain("\n## Sahte", metin);
+        Assert.Contains("- Bench ## Sahte: 80×8\n", metin);
+    }
 }

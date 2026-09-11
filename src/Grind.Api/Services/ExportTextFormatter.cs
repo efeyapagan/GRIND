@@ -90,7 +90,8 @@ public static class ExportTextFormatter
 
         foreach (var volume in volumes)
         {
-            Line(text, Inv($"- {volume.ExerciseName}: {volume.Volume:0.##} kg ({volume.SetCount} set)"));
+            Line(text,
+                Inv($"- {SingleLine(volume.ExerciseName)}: {volume.Volume:0.##} kg ({volume.SetCount} set)"));
         }
     }
 
@@ -108,7 +109,7 @@ public static class ExportTextFormatter
         foreach (var record in records)
         {
             Line(text,
-                $"- {record.ExerciseName} ({record.Category}): " +
+                $"- {SingleLine(record.ExerciseName)} ({record.Category}): " +
                 $"en ağır {SetText(record.BestWeight, record.BestWeightReps)} ({LocalDateText(record.BestWeightAt)}) · " +
                 $"en çok tekrar {SetText(record.BestRepsWeight, record.BestReps)} ({LocalDateText(record.BestRepsAt)})");
         }
@@ -138,13 +139,11 @@ public static class ExportTextFormatter
     private static void AppendSession(StringBuilder text, HistorySessionResponse session)
     {
         var header = $"### {SessionTimeText(session.StartedAt, session.EndedAt)}";
-        Line(text, session.TemplateName is { } template ? $"{header} · {template}" : header);
+        Line(text, session.TemplateName is { } template ? $"{header} · {SingleLine(template)}" : header);
 
         if (!string.IsNullOrWhiteSpace(session.Notes))
         {
-            // Kullanıcı metni tek satıra iner: aksi halde "## ..." ile başlayan bir satır belgenin
-            // başlık yapısını bozabilirdi.
-            Line(text, $"Not: {session.Notes.ReplaceLineEndings(" ").Trim()}");
+            Line(text, $"Not: {SingleLine(session.Notes)}");
         }
 
         if (session.Sets.Count == 0)
@@ -157,7 +156,9 @@ public static class ExportTextFormatter
         // oturumdaki ilk setlerinin sırasıyla, setler kronolojik yazılır.
         foreach (var exercise in session.Sets.GroupBy(s => s.ExerciseId))
         {
-            Line(text, $"- {exercise.First().ExerciseName}: {string.Join(", ", exercise.Select(SetWithMarks))}");
+            Line(text,
+                $"- {SingleLine(exercise.First().ExerciseName)}: " +
+                $"{string.Join(", ", exercise.Select(SetWithMarks))}");
         }
 
         Line(text, Inv($"Toplam: {session.SetCount} set, {session.TotalVolume:0.##} kg"));
@@ -246,15 +247,21 @@ public static class ExportTextFormatter
     private static string LocalDateText(DateTime utcInstant) => DateText(TurkeyDay.LocalDateOf(utcInstant));
 
     private static string DayText(DateTime local) =>
-        $"{local.ToString("yyyy-MM-dd", Invariant)} {DayNames[(int)local.DayOfWeek]}";
+        $"{DateText(DateOnly.FromDateTime(local))} {DayNames[(int)local.DayOfWeek]}";
 
     private static string TimeText(DateTime local) => local.ToString("HH:mm", Invariant);
 
     private static string LocalDateTimeText(DateTime utcInstant)
     {
         var local = TurkeyDay.ToLocal(utcInstant);
-        return $"{local.ToString("yyyy-MM-dd", Invariant)} {TimeText(local)}";
+        return $"{DateText(DateOnly.FromDateTime(local))} {TimeText(local)}";
     }
+
+    /// <summary>
+    /// Kullanıcının kendi girdiği HER metin (not, egzersiz adı, şablon adı, ...) buradan geçer:
+    /// aksi halde içinde "\n## ..." taşıyan bir ad, belgeye sahte bir başlık enjekte edebilirdi.
+    /// </summary>
+    private static string SingleLine(string text) => text.ReplaceLineEndings(" ").Trim();
 
     private static void Section(StringBuilder text, string title)
     {

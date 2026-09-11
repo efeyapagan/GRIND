@@ -34,7 +34,11 @@ public class ExportService(
         var sessions = await sessionRepository.GetInRangeAsync(userId, fromUtc, toUtc, cancellationToken);
 
         // Setler oturum başına değil aralığın tamamı için TEK sorguda gelir. Filtre oturumun
-        // StartedAt'ine baktığı için her setin oturumu yukarıdaki listede yer alır.
+        // StartedAt'ine baktığı için her setin oturumu yukarıdaki listede yer alır — AMA bu garanti
+        // yalnızca tutarlı bir anlık görüntü (snapshot) için geçerlidir. İki sorgu ayrı ayrı, bir
+        // transaction OLMADAN çalışır (bilerek — KISS, kişisel ölçekte gerek yok); iki sorgu arasında
+        // yepyeni bir oturumda yazılan bir set, HistoryMapping'in GetValueOrDefault'u tarafından
+        // sessizce elenip export'tan eksik kalabilir. Kabul edilebilir bir ihtimal.
         var sets = await setEntryRepository.GetInRangeAsync(userId, fromUtc, toUtc, cancellationToken);
 
         var calendar = await statsService.GetCalendarAsync(query, cancellationToken);
