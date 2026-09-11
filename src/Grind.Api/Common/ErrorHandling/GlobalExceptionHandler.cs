@@ -73,6 +73,7 @@ public class GlobalExceptionHandler(
         UnauthorizedException => (StatusCodes.Status401Unauthorized, "Kimlik doğrulanamadı"),
         ForbiddenException => (StatusCodes.Status403Forbidden, "İzin yok"),
         ConflictException => (StatusCodes.Status409Conflict, "Çakışma"),
+        ServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Hizmet kullanılamıyor"),
         _ => (StatusCodes.Status500InternalServerError, "Beklenmeyen bir hata oluştu")
     };
 
