@@ -19,7 +19,7 @@
 | 8 | Feature: SetEntry + PR motoru | ✅ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ✅ |
 | 10 | Feature: BodyWeightLog | ✅ |
-| 11 | Feature: Export | ☐ |
+| 11 | Feature: Export | ✅ |
 | 12 | Feature: AiInsight altyapısı | ☐ |
 | 13 | Feature: Hesap silme | ☐ |
 
@@ -477,9 +477,78 @@
 >    uç gerektirir, gerçek ihtiyaç çıkarsa eklenir).
 
 ## Faz 11 — Feature: Export
-- [ ] 11.1 Ham JSON export (tarih aralığı parametreli)
-- [ ] 11.2 AI-özet formatı: okunabilir düz metin (yapıştırılabilir)
-- [ ] 11.3 Formatlama mantığı servis katmanında, controller sadece dönüş yapar
+
+> Tasarım kararları: [docs/superpowers/specs/2026-09-11-export-design.md](docs/superpowers/specs/2026-09-11-export-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-11-faz-11-export.md](docs/superpowers/plans/2026-09-11-faz-11-export.md)
+
+- [x] 11.1 Ham JSON export (tarih aralığı parametreli) — `GET /api/export/json?from&to`
+      (`ExportController`, Görev 4) `ExportResponse` döner. İçeriği: aralıktaki oturumlar ve setleri
+      (setsiz oturumlar dahil, çünkü liste bir günlüktür; spec Karar 8), tartılar, aralık özeti ve tüm
+      zamanların rekorları. `from`/`to` opsiyonel (Soru 2/A): verilmezse tüm geçmiş döner. Parametre
+      tipi Faz 9'un `StatsRangeQuery`'si. Rekorlar ve seriler aralıktan BAĞIMSIZ (spec Karar 2). Veri
+      erişimi iki yeni izlemesiz aralık sorgusuyla yapılır (Görev 1):
+      `IWorkoutSessionRepository.GetInRangeAsync` ve `ISetEntryRepository.GetInRangeAsync`. Setler
+      oturumlarının `StartedAt`'ine göre filtrelenir. Bu filtre `GetVolumeByExerciseAsync` ile ortak
+      `FilterBySessionRange` yardımcısında tek kopya halinde durur.
+- [x] 11.2 AI-özet formatı: okunabilir düz metin (yapıştırılabilir) — `GET /api/export/text`,
+      `text/plain; charset=utf-8` döner. `ExportTextFormatter.Format` (Görev 2) AYNI `ExportResponse`
+      modelini formatlayan saf bir fonksiyondur. Bu yüzden JSON ile metin yapısal olarak ayrışamaz
+      (spec Karar 3). Biçim kuralları:
+      - Türkçe, Markdown başlıklı.
+      - Sayılar `InvariantCulture` + `0.##`. Sebep: tr-TR biçimindeki "152.340"ı bir LLM 152,34
+        okuyabilirdi.
+      - Tarih ISO, saat TR; gün adları sabit bir diziden gelir.
+      - Satır sonu her zaman `\n`.
+      - Kullanıcı metinleri (not, egzersiz ve şablon adı) tek satıra iner.
+
+      `TurkeyDay.ToLocal` saat dilimi dönüşümünün tek kopyası oldu; `RangeFor` ve `LocalDateOf`
+      artık onu kullanıyor.
+- [x] 11.3 Formatlama mantığı servis katmanında, controller sadece dönüş yapar — `ExportService`
+      (Görev 3) export'u mevcut okuma yollarından BİRLEŞTİRİR ve yeni hesap içermez (spec Karar 4):
+      - Özet `IStatsService.GetCalendarAsync` ve `GetVolumeByExerciseAsync`'ten gelir.
+      - Rekorlar `IPersonalRecordService.GetAllTimeAsync`'ten gelir.
+      - Oturum/set birleştirmesi, geçmiş ucuyla paylaşılan `HistoryMapping`'de yapılır
+        (`WorkoutHistoryService`'ten taşındı).
+
+      Controller ince, if/try içermez. Metin ucunda bilerek `[Produces]` yok (spec Karar 10), çünkü
+      otomatik 400'ü 406'ya çevirirdi.
+- [x] 11.4 Test:
+      - **Saf çekirdek:** `TurkeyDayTests` +2 ve `ExportTextFormatterTests` 18. Kapsam: altın metin,
+        tr-TR kültürü, ondalık kırpma, egzersiz bazında gruplama, RIR ve PR ekleri, ertesi TR gününe
+        taşan bitiş, boş bölümler, aralık başlıkları, satır sonu düzleştirme.
+      - **Repository:** `WorkoutSessionRepositoryTests` +3 ve `SetEntryRepositoryTests` +3. Kapsam:
+        oturumun başlangıcına göre filtre, izlemesizlik, IDOR.
+      - **Servis:** `ExportServiceTests` 10. Kapsam: özetin takvim ve egzersiz hacmi uçlarıyla birebir
+        aynı olması, setsiz oturumun listede olup özette olmaması, rekorların aralıktan bağımsızlığı,
+        IDOR, metnin formatlanmış model olması.
+      - **Uçtan uca:** `ExportEndpointsTests` 9. Kapsam: 401, JSON şekli, text/plain ve UTF-8, ters
+        aralıkta 400, bozuk tarihte 406 değil 400, `Accept: text/plain` ile gelen hatalı istekte
+        `detail`'in korunması, IDOR.
+
+      Toplam **554 test yeşil**. Başlangıç 509'du, çünkü Faz 10 sonrası `2fcb8a7` düzeltmesi 507'ye
+      +2 ekledi. Faz 11 boyunca +45: Görev 1 +6, Görev 2 +19, Görev 3 +10, Görev 4 +8, final
+      inceleme düzeltmesi +2. Release build: 0 uyarı, 0 hata. Migration YOK.
+
+      **Final inceleme düzeltmesi (tüm uçları etkiler):** `GlobalExceptionHandler` Faz 3'ten beri bir
+      boşluk taşıyordu. `Accept` başlığı JSON içermediğinde varsayılan ProblemDetails yazıcısı
+      reddediyor ve servisin fırlattığı 4xx, `detail`'i olmayan genel bir gövdeye düşüyordu. Artık
+      handler aynı ProblemDetails'i `application/problem+json` olarak kendisi yazıyor.
+
+> **Faz 11'den devreden notlar (Faz 12'de dikkat edilecek):**
+> 1. Tüm geçmiş export'u kullanıcının setlerini iki kez okur: bir kez oturum setleri için, bir kez
+>    `GetAllTimeAsync`'in rekor özeti için. `GetAllTimeAsync` hâlâ izlemeli. Kişisel ölçekte önemsiz;
+>    rekor özeti SQL'e taşındığında (Faz 8 devreden notu 3) kendiliğinden düzelir.
+> 2. Export'un sorguları ayrı ifadeler olarak çalışır ve bilerek transaction içinde değildir (KISS).
+>    İki sorgu arasında yepyeni bir oturuma girilen bir set export'ta görünmeyebilir.
+> 3. Faz 12 (AiInsight) için, backend'in LLM'e göndereceği bağlamın hazır kaynağı
+>    `IExportService.GetTextAsync`. Ayrı bir "LLM'e özet" formatı yazmak yerine bu kullanılmalı (DRY).
+>    LLM çağrısı transaction DIŞINDA kalmalı (CLAUDE.md). Export zaten salt okuma, `SaveChangesAsync`
+>    çağırmaz.
+> 4. Faz 10'dan devreden notlar hâlâ AÇIK:
+>    - Proje çapında `AsNoTracking` geçişi yapılmadı. Faz 11'in yeni sorguları izlemesiz, eski okuma
+>      yolları hâlâ izlemeli.
+>    - Offset'siz gönderilen `recordedAt` sorunu çözülmedi.
+>    - Haftalık/aylık ortalama yok.
 
 ## Faz 12 — Feature: AiInsight altyapısı
 - [ ] 12.1 `AiInsight` CRUD/okuma; `Kind`, `WorkoutSessionId`, `SetEntryId` kapsamları

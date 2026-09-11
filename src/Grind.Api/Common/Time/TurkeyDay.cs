@@ -31,14 +31,7 @@ public static class TurkeyDay
     /// bitişi (hariç), UTC olarak. TR gece yarısı bugün UTC 21:00'e denk gelir.
     /// </summary>
     public static (DateTime FromUtcInclusive, DateTime ToUtcExclusive) RangeFor(DateTime utcInstant)
-    {
-        EnsureNotLocal(utcInstant, nameof(utcInstant));
-
-        var localInstant = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, Turkey);
-        var localDayStart = DateTime.SpecifyKind(localInstant.Date, DateTimeKind.Unspecified);
-
-        return RangeFromLocalDayStart(localDayStart);
-    }
+        => RangeFromLocalDayStart(ToLocal(utcInstant).Date);
 
     /// <summary>
     /// Verilen TR yerel gününün UTC aralığı: gün başlangıcı (dahil) ve ertesi gün başlangıcı
@@ -59,10 +52,21 @@ public static class TurkeyDay
     /// ile tekrar yazmak, gün sınırı kuralının ikinci bir kopyasını üretirdi (spec Karar 6).
     /// </summary>
     public static DateOnly LocalDateOf(DateTime utcInstant)
+        => DateOnly.FromDateTime(ToLocal(utcInstant));
+
+    /// <summary>
+    /// <paramref name="utcInstant"/> anının TR yerel saati, <see cref="DateTimeKind.Unspecified"/>
+    /// Kind ile. Saat dilimi dönüşümünün TEK kopyası burada: <see cref="RangeFor"/>,
+    /// <see cref="LocalDateOf"/> ve export metninin saat gösterimi (Faz 11) bunu kullanır.
+    /// Sorgu sınırları için bunu değil <see cref="RangeFor"/> / <see cref="RangeForLocalDate"/>'i
+    /// kullanın: yerel saat bir gösterim değeridir, veritabanına geri verilmez.
+    /// </summary>
+    public static DateTime ToLocal(DateTime utcInstant)
     {
         EnsureNotLocal(utcInstant, nameof(utcInstant));
 
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utcInstant, Turkey));
+        return DateTime.SpecifyKind(
+            TimeZoneInfo.ConvertTimeFromUtc(utcInstant, Turkey), DateTimeKind.Unspecified);
     }
 
     /// <summary>

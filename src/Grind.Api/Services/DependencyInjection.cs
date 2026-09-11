@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkoutHistoryService, WorkoutHistoryService>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<IBodyWeightLogService, BodyWeightLogService>();
+        services.AddScoped<IExportService, ExportService>();
         return services;
     }
 }
