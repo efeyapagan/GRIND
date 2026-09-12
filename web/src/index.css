@@ -1,0 +1,8 @@
+/* Gorsel tasarim ayri bir adim (spec). Burada yalnizca yerlesim, dokunma hedefi ve guvenli alan
+   var; renk, tipografi ve suslemeler bilerek yok. */
+* { box-sizing: border-box; }
+body { margin: 0; padding: 0 1rem env(safe-area-inset-bottom) 1rem; }
+button, input, select { min-height: 44px; font: inherit; }
+button { min-width: 44px; }
+form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 32rem; }
+ul { padding-left: 1.25rem; }

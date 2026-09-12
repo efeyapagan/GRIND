@@ -3,10 +3,17 @@ name: CI
 on:
   pull_request:
     branches: [master, dev]
+    # Yalnizca frontend'i degistiren bir commit icin Postgres kaldirip tum .NET testlerini
+    # kosmanin anlami yok. Backend'i etkileyen her sey (docs dahil) tetiklemeye devam eder.
+    paths-ignore: ['web/**']
   push:
     branches: [master, dev]
+    paths-ignore: ['web/**']
 
 # Ayni branch'e arka arkaya push yapilinca devam eden eski run iptal edilir.
+# DIKKAT: ileride eklenecek frontend workflow'u FARKLI bir grup adi kullanmali (or. web-...).
+# Ayni grubu paylasirlarsa ayni branch'te birbirlerini iptal ederler ve .NET testleri sessizce
+# kosmamaya baslar.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

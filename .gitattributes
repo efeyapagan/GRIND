@@ -1,0 +1,26 @@
+# Depoda her metin dosyasi LF ile durur ve calisma kopyasinda da LF olarak acilir.
+#
+# Neden: bu dosya yokken Windows'ta core.autocrlf=true dosyalari CRLF'e ceviriyor. .NET tarafi
+# bundan etkilenmiyor ama frontend araclari etkileniyor: Prettier ve ESLint varsayilan olarak
+# endOfLine: "lf" bekler ve CRLF ile gelen HER SATIRI hatali isaretler. Kurali burada tek yerde
+# sabitlemek, her gelistirici makinesinde ayri ayri ayar yapmaktan iyi.
+* text=auto eol=lf
+
+# Windows batch dosyalari CRLF olmak zorunda.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Ikili dosyalar hicbir donusume ugramaz.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary
