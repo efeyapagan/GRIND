@@ -483,3 +483,11 @@ $RECYCLE.BIN/
 
 # Superpowers SDD calisma alani (ledger, brief, review paketleri)
 .superpowers/
+
+# Frontend (web/) — Vite ciktilari, arac onbellekleri ve yerel ortam dosyalari.
+# node_modules/ ve .env yukarida zaten var; .env.local varyantlarini o kural YAKALAMIYOR.
+web/dist/
+web/coverage/
+web/.vite/
+.env.local
+.env.*.local
