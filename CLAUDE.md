@@ -7,10 +7,13 @@ tekrar rekoru). Antrenman verileri (hacim, geçmiş, rekorlar) dışa aktarılab
 veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 
 ## Kapsam ve Sıra — ÖNEMLİ
-- **Şu an sadece backend üzerinde çalışılıyor.** Frontend/arayüz konusuna henüz girilmeyecek;
-  hangi teknolojiyle (React, React Native, PWA vb.) ilerleneceğine backend bittikten sonra karar
-  verilecek.
-- Backend tamamlanmadan frontend'le ilgili dosya, klasör veya bağımlılık oluşturma.
+- **Backend tamamlandı (Faz 0-13, 2026-09-12).** Frontend kararı verildi: **React + Vite +
+  TypeScript, kurulabilir PWA** — repo kökünde `web/` klasöründe. Mimari plan:
+  [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
+- **Görsel tasarım (palet, tipografi, yerleşim) HENÜZ yapılmadı** ve bilerek ertelendi; ilk iş
+  mimari plan ve çalışan bir çekirdek. Tasarıma girmeden önce kullanıcıya sor.
+- İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
+  geçmiş. Şablon, istatistik, tartı, export ve AI ekranları sonraki dilimlere bırakıldı.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -21,7 +24,7 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | ORM | Entity Framework Core — Code-First, Migrations |
 | Veritabanı | PostgreSQL (Npgsql provider) |
 | Mimari | Katmanlı: Controller → Service → Repository / Unit of Work |
-| Frontend | Karar verilmedi — henüz başlanmayacak |
+| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router |
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.
@@ -268,10 +271,13 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
 5. Service katmanı (PR mantığı dahil) — burada birim testleri özellikle önemli
 6. Controller'lar ve endpoint'ler
 7. Export endpoint'leri
-8. *(Frontend kararı burada verilecek — bu adıma kadar başlanmayacak)*
+8. ✅ Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.
 
 ## Kısıtlar / Yapılmaması Gerekenler
-- Frontend'e başlama.
+- Görsel tasarıma (renk, tipografi, yerleşim) kullanıcı açıkça istemeden girme — frontend planı
+  hazır, tasarım adımı bilerek bekletiliyor.
+- Frontend'de sunucudaki hesabı istemcide yeniden hesaplama (hacim, PR, seri): bunların hepsi
+  API'den gelir, ikinci bir doğruluk kaynağı üretme.
 - Kişisel/tek kullanıcı ölçeğinde gereksiz karmaşıklık ekleme (mikroservis, mesaj kuyruğu, vb. — KISS).
 - Migration'ları elle düzenleme; her zaman `dotnet ef migrations add` ile üret.
 

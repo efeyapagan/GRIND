@@ -728,8 +728,20 @@
 
 ## Backend planı tamamlandı
 
-Faz 0-13 bitti. Sıradaki adım plandaki 8. madde: **frontend teknolojisi kararı** (React / React Native
-/ PWA vb.). Ayrıca aşağıdaki "Gerçek Kullanımdan Gelen İstekler" hâlâ karara bağlanmayı bekliyor.
+Faz 0-13 bitti.
+
+**Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.** İlk dilim
+antrenman çekirdeği (giriş, bugünün oturumu, set ekleme, PR rozetleri, basit geçmiş). Mimari plan:
+[docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
+Görsel tasarım bilerek ertelendi.
+
+Plandan çıkan, frontend başlamadan önce bilinmesi gereken backend işleri:
+- **CORS**: `Program.cs`'te CORS yapılandırması yok. Geliştirmede Vite proxy'si bunu gereksiz kılıyor,
+  ama frontend ayrı bir origin'den dağıtılacaksa bir CORS politikası eklenmeli (dağıtım kararına bağlı).
+- **Çevrimdışı set girişi** istenirse geçmişe dönük set girişi gerekir (`POST /api/sets` bugünün
+  oturumuna yazıyor) — Faz 8'de bilerek kapsam dışıydı.
+
+Ayrıca aşağıdaki "Gerçek Kullanımdan Gelen İstekler" hâlâ karara bağlanmayı bekliyor.
 
 ---
 
