@@ -3,8 +3,10 @@ using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Auth;
+using Grind.Api.Models.Entities;
 using Grind.Api.Repositories;
 using Grind.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace Grind.Tests.Services;
 
@@ -21,13 +23,28 @@ public class AuthServiceTests
         ExpiryMinutes = 60
     };
 
+    /// <summary>TR 20:00 (UTC 17:00), 10 Mart — pasifleştirme damgası testte deterministik olsun.</summary>
+    private static readonly DateTime An = new(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+
+    private sealed class SahteSaat(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utcNow, TimeSpan.Zero);
+    }
+
+    private sealed class StubCurrentUser(long userId) : Grind.Api.Common.Security.ICurrentUserService
+    {
+        public long UserId { get; } = userId;
+        public string Username { get; } = $"kullanici{userId}";
+    }
+
     /// <summary>Her test kendi transaction'ında çalışır; sonunda geri alınır.</summary>
     private static async Task<(AuthService Service, AppDbContext Context, IAsyncDisposable Transaction)> CreateAsync()
     {
         var context = TestDatabase.CreateContext();
         var transaction = await context.Database.BeginTransactionAsync();
         var service = new AuthService(
-            new UserRepository(context), new UnitOfWork(context), new TokenService(Settings));
+            new UserRepository(context), new UnitOfWork(context), new TokenService(Settings),
+            new StubCurrentUser(0), new SahteSaat(An));
         return (service, context, transaction);
     }
 
@@ -182,6 +199,211 @@ public class AuthServiceTests
 
             Assert.True(stopwatch.ElapsedMilliseconds > 100,
                 $"Doğrulama atlanmış görünüyor ({stopwatch.ElapsedMilliseconds}ms) — zamanlama sızıntısı.");
+        }
+    }
+
+    // ---- Faz 13: hesap pasifleştirme ----
+
+    /// <summary>
+    /// Pasifleştirmenin sözü: damga düşer ama VERİ DURUR. Sayımlar veritabanından okunuyor —
+    /// izleyicideki nesneye bakmak, silinmiş bir satırı fark etmezdi.
+    /// </summary>
+    [Fact]
+    public async Task Pasiflestirme_damgayi_yazar_ve_veriyi_silmez()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var username = UniqueUsername();
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+
+            var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var session = TestDatabase.NewSession(user);
+            context.AddRange(exercise, session);
+            await context.SaveChangesAsync();
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            await service.DeactivateAsync(new DeleteAccountRequest { Password = Password });
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Equal(An, satir.DeletedAt);
+            Assert.Equal(1, await context.Set<Exercise>().CountAsync(e => e.UserId == user.Id));
+            Assert.Equal(1, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Yanlis_sifreyle_pasiflestirme_reddedilir()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var username = UniqueUsername();
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            await Assert.ThrowsAsync<UnauthorizedException>(
+                () => service.DeactivateAsync(new DeleteAccountRequest { Password = "bambaska-bir-sifre" }));
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Null(satir.DeletedAt);
+        }
+    }
+
+    /// <summary>Geri açma (spec Karar 2): doğru şifreyle giriş pasif hesabı yeniden aktifleştirir.</summary>
+    [Fact]
+    public async Task Pasif_hesap_dogru_sifreyle_giriste_geri_acilir()
+    {
+        var (service, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var username = UniqueUsername();
+            await service.RegisterAsync(Register(username));
+            var repository = new UserRepository(context);
+            var user = (await repository.GetByUsernameAsync(username))!;
+            user.DeletedAt = An;
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var response = await service.LoginAsync(new LoginRequest { Username = username, Password = Password });
+
+            Assert.False(string.IsNullOrWhiteSpace(response.Token));
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Null(satir.DeletedAt);
+        }
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ (spec Karar 2): pasiflik kontrolü şifreden SONRA gelmeli. Önce gelseydi yanlış
+    /// şifreyle de farklı bir davranış görülür ve hesabın pasifliği sızardı; burada hem mesaj nötr
+    /// kalmalı hem de hesap pasif kalmalı.
+    /// </summary>
+    [Fact]
+    public async Task Pasif_hesap_yanlis_sifreyle_giriste_acilmaz()
+    {
+        var (service, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var username = UniqueUsername();
+            await service.RegisterAsync(Register(username));
+            var repository = new UserRepository(context);
+            var user = (await repository.GetByUsernameAsync(username))!;
+            user.DeletedAt = An;
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var hata = await Assert.ThrowsAsync<UnauthorizedException>(
+                () => service.LoginAsync(new LoginRequest { Username = username, Password = "bambaska-bir-sifre" }));
+
+            Assert.Equal("Kullanıcı adı veya şifre hatalı.", hata.Message);
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Equal(An, satir.DeletedAt);
+        }
+    }
+
+    /// <summary>
+    /// Spec Karar 4: pasif hesabın adı REZERVE. Kayıt 409 vermeliydi; vermeseydi aynı adla kayıt olan
+    /// biri pasif hesabın şifresini ezip hesabı devralabilirdi — bu yüzden hash'in değişmediği de
+    /// ayrıca doğrulanıyor.
+    /// </summary>
+    [Fact]
+    public async Task Pasif_hesabin_adiyla_kayit_reddedilir_ve_sifre_ezilmez()
+    {
+        var (service, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var username = UniqueUsername();
+            await service.RegisterAsync(Register(username));
+            var repository = new UserRepository(context);
+            var user = (await repository.GetByUsernameAsync(username))!;
+            var eskiHash = user.PasswordHash;
+            user.DeletedAt = An;
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            await Assert.ThrowsAsync<ConflictException>(() => service.RegisterAsync(
+                new RegisterRequest { Username = username, Password = "yepyeni-bir-sifre" }));
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Equal(eskiHash, satir.PasswordHash);
+            Assert.Equal(An, satir.DeletedAt);
+        }
+    }
+
+    /// <summary>Başka kullanıcının hesabı ve verisi etkilenmez (PLAN 13.3).</summary>
+    [Fact]
+    public async Task Pasiflestirme_baska_kullaniciyi_etkilemez()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+
+            var silinecek = UniqueUsername();
+            var kalan = UniqueUsername();
+            await kayit.RegisterAsync(Register(silinecek));
+            await kayit.RegisterAsync(Register(kalan));
+            var silinecekUser = (await repository.GetByUsernameAsync(silinecek))!;
+            var kalanUser = (await repository.GetByUsernameAsync(kalan))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(silinecekUser.Id), new SahteSaat(An));
+            await service.DeactivateAsync(new DeleteAccountRequest { Password = Password });
+
+            context.ChangeTracker.Clear();
+            var digeri = await context.Set<User>().SingleAsync(u => u.Id == kalanUser.Id);
+            Assert.Null(digeri.DeletedAt);
+        }
+    }
+
+    /// <summary>Global egzersizler (UserId = null) hiçbir zaman etkilenmez (PLAN 13.2).</summary>
+    [Fact]
+    public async Task Pasiflestirme_global_egzersizlere_dokunmaz()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var username = UniqueUsername();
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+            var globalSayisi = await context.Set<Exercise>().CountAsync(e => e.UserId == null);
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+            await service.DeactivateAsync(new DeleteAccountRequest { Password = Password });
+
+            context.ChangeTracker.Clear();
+            Assert.Equal(globalSayisi, await context.Set<Exercise>().CountAsync(e => e.UserId == null));
         }
     }
 }

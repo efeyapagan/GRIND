@@ -31,4 +31,22 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<AuthResponse>> Login(
         LoginRequest request, CancellationToken cancellationToken)
         => Ok(await authService.LoginAsync(request, cancellationToken));
+
+    /// <summary>
+    /// Hesabı pasifleştirir: HİÇBİR veri silinmez, kullanıcı giriş yapamaz hâle gelir ve elindeki
+    /// token anında geçersizleşir. Doğru şifreyle tekrar giriş yapmak hesabı geri açar; kullanıcı adı
+    /// bu süre boyunca rezerve kalır (spec Karar 4). Şifre teyidi gövdededir.
+    /// </summary>
+    [HttpDelete("me")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteMe(
+        DeleteAccountRequest request, CancellationToken cancellationToken)
+    {
+        await authService.DeactivateAsync(request, cancellationToken);
+
+        return NoContent();
+    }
 }

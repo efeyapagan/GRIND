@@ -21,7 +21,7 @@
 | 10 | Feature: BodyWeightLog | ✅ |
 | 11 | Feature: Export | ✅ |
 | 12 | Feature: AiInsight altyapısı | ✅ |
-| 13 | Feature: Hesap silme | ☐ |
+| 13 | Feature: Hesap silme (soft delete) | ✅ |
 
 ---
 
@@ -639,14 +639,97 @@
 > Buraya konumlandırıldı çünkü kullanıcıya ait TÜM tablolar var olmadan doğru yazılamaz.
 > Tüm FK'ler `User`'a RESTRICT olduğu için silme, DB cascade'ine bırakılmaz — Service
 > katmanında bilinçli ve sıralı yapılır (bkz. persistence spec §3).
-- [ ] 13.0 Soru: soft delete mi (hesap pasifleşir, veri durur) yoksa hard delete mi
-      (veri tamamen silinir)? Faz başında sorulacak, varsayım yapılmayacak
-- [ ] 13.1 Silme sırası tek transaction'da: SetEntry → WorkoutSession → TemplateExercise →
-      WorkoutTemplate → ExerciseMedia → Exercise (yalnızca UserId = kullanıcı olanlar) →
-      BodyWeightLog → AiInsight → User
-- [ ] 13.2 Global egzersizlere (`UserId = null`) dokunulmadığının testi
-- [ ] 13.3 Başka kullanıcının verisinin etkilenmediğinin testi
-- [ ] 13.4 Endpoint: DELETE /api/auth/me (şifre teyidi ile)
+> Tasarım kararları: [docs/superpowers/specs/2026-09-12-hesap-pasiflestirme-design.md](docs/superpowers/specs/2026-09-12-hesap-pasiflestirme-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-12-faz-13-hesap-pasiflestirme.md](docs/superpowers/plans/2026-09-12-faz-13-hesap-pasiflestirme.md)
+
+- [x] 13.0 **CEVAP: soft delete.** Kullanıcı 2026-09-12'de kararı verdi: "verilerin kaybolmasını
+      istemiyoruz". Hesap pasifleşir, veri durur. Bunun sonucu olarak aşağıdaki 13.1 (sıralı hard
+      delete) UYGULANMADI — hiçbir satır silinmediği için `User`'a RESTRICT veren FK'ler bir sorun
+      teşkil etmiyor. İkinci karar: **pasif hesabı doğru şifreyle giriş yapmak geri açar** (ayrı bir
+      "reactivate" ucu yok — doğru şifreyle giriş zaten niyetin kendisi).
+- [x] 13.1 Pasiflik damgası: `User.DeletedAt` (`DateOnly` değil, nullable `timestamptz`;
+      `null` = aktif) + migration `HesapPasiflestirme` (Görev 1). Bool yerine damga, çünkü "ne
+      zamandan beri pasif" bilgisini bedelsiz veriyor ve ileride bir purge gerekirse hazır veri.
+      Yanına kimlikli her istekte kullanılacak ucuz sorgu: `IUserRepository.ExistsActiveAsync`
+      (birincil anahtar üzerinde tek `EXISTS`, entity materyalize etmez).
+      > **Eski 13.1 (sıralı hard delete) NOTA DÖNÜŞTÜ:** gerçek silme gerekirse (bkz. devreden
+      > notlar) sıra şudur: SetEntry → WorkoutSession → TemplateExercise → WorkoutTemplate →
+      > ExerciseMedia → Exercise (yalnızca `UserId` = kullanıcı olanlar) → BodyWeightLog →
+      > AiInsight → User.
+- [x] 13.2 Global egzersizlere (`UserId = null`) dokunulmadığının testi — `AuthServiceTests`
+      içinde pasifleştirme öncesi/sonrası global egzersiz sayısı karşılaştırılıyor. Ayrıca
+      kullanıcının kendi verisinin de durduğu hem servis testinde (egzersiz/oturum sayıları) hem
+      uçtan uca sınanıyor.
+- [x] 13.3 Başka kullanıcının verisinin etkilenmediğinin testi — iki kullanıcı kaydedilip biri
+      pasifleştiriliyor, diğerinin `DeletedAt`'i null kalıyor.
+- [x] 13.4 Endpoint: `DELETE /api/auth/me` (şifre teyidi ile) — `[Authorize]`, gövdede
+      `DeleteAccountRequest`, başarı **204**; yanlış şifre 401, boş şifre 400 (Görev 4). Kimlik
+      token'dan gelir, gövdeden id ALINMAZ. Servis (Görev 2) sırayı şöyle işletir: kullanıcıyı
+      yükle → BCrypt doğrula → `DeletedAt = Now` (enjekte edilen `TimeProvider`) → tek
+      `SaveChangesAsync`.
+- [x] 13.5 **Pasif hesabın elindeki token anında geçersizleşir** (Görev 3) — `AddJwtBearer`'ın
+      `OnTokenValidated` olayında, kimlikli her istekte `ExistsActiveAsync` okunur ve hesap pasifse
+      `context.Fail(...)` çağrılır. Token ömrü 7 gün olduğu için bu kontrol olmasaydı
+      pasifleştirme bir hafta boyunca etkisiz kalırdı. CLAUDE.md'nin kuralı burada birebir
+      uygulanıyor: zamanla değişen bir öznitelik token'a gömülmez, güncel durum her istekte
+      veritabanından okunur. `[AllowAnonymous]` uçları (register/login) token taşımadığı için bu
+      yoldan geçmez — geri açma yolu kapanmaz. Yan fayda: `UserId` claim'i bozuk/eksik bir token
+      artık `CurrentUserService` içinde 500 üretmek yerine temiz bir 401 alıyor.
+- [x] 13.6 Login'in nötrlüğü korundu: kullanıcı yok, şifre yanlış ve hesap pasif — üçü de aynı
+      401 mesajını alır ve BCrypt doğrulaması her dalda çalışır (Faz 4'ün zamanlama savunması).
+      Pasiflik kontrolü şifre doğrulamasından SONRA gelir; önce gelseydi yanlış şifreyle bile
+      hesabın pasif olduğu sızardı. Pasif hesabın kullanıcı adı REZERVE kalır: aynı adla kayıt 409
+      alır ve mevcut şifre hash'i EZİLMEZ (hesap devralma yok) — test hash'in değişmediğini de
+      doğruluyor.
+- [x] 13.7 Test:
+      - **Repository:** `UserRepositoryTests` +3 — aktif bulunur, pasif (satır DURUYOR) bulunmaz,
+        olmayan id bulunmaz.
+      - **Servis:** `AuthServiceTests` +7 — damga saatten yazılır ve veri silinmez, yanlış şifre
+        reddedilir, pasif hesap doğru şifreyle geri açılır, yanlış şifreyle açılmaz (nötr mesaj +
+        pasif kalır), pasif adla kayıt 409 ve hash korunur, başka kullanıcı etkilenmez, global
+        egzersizler etkilenmez.
+      - **DTO:** `AuthDtoValidationTests` +2 — 72 baytlık şifre kabul, 144 baytlık şifre reddedilir
+        (BCrypt'in sessiz kesme davranışına karşı olan kural).
+      - **Uçtan uca:** `AccountDeactivationTests` 7 — pasifleştirilen hesabın eski token'ı 401
+        alır, pasif hesap giriş yapıp yeni token'la çalışabilir, **ölü token'ı hâlâ taşıyan istemci
+        giriş yapabilir**, tokensiz silme 401, şifresiz gövde 400, yanlış şifre 401 (+ hesap açık
+        kalır) ve tam tur: veri gir → 204 → token ölür → giriş geri açar → veri hâlâ orada.
+
+      Toplam **638 test yeşil** (619 → +19). Release build: 0 uyarı, 0 hata. Migration: bir tane
+      (`HesapPasiflestirme`, tek nullable `timestamptz` sütunu; mevcut satırlar `NULL` = aktif
+      olarak geriye dönük uyumlu).
+
+> **Faz 13'ten devreden notlar:**
+> 1. **Gerçek silme (purge) YOK.** Uygulama kendi dışında gerçek kullanıcılara açılırsa KVKK/GDPR'ın
+>    silinme hakkı devreye girer; o noktada yukarıdaki (eski 13.1) FK sırasına göre bir purge
+>    yazılır. `DeletedAt` "ne zamandan beri pasif" filtresini şimdiden sağlıyor. DİKKAT: purge
+>    yazılırsa `UsernameExistsAsync`, satır GERÇEKTEN silinene kadar `DeletedAt`'i yok saymaya devam
+>    etmeli — yoksa purge ile ad rezervasyonu birbiriyle çelişir.
+> 2. **Şifre sıfırlama yok** (projede e-posta yok). Pasif hesabın geri dönüşünün tek yolu doğru
+>    şifreyle giriş; şifresini unutan kullanıcı için kendi kendine bir yol yok. Bu yeni bir
+>    eksiklik değil, mevcut durumun pasif hesaba yansıması.
+> 3. **Geri açma, süresi dolmamış ESKİ token'ları da diriltir** (durum bilgisi tutmayan JWT'nin
+>    doğası; iptal listesi tutulmuyor). Hesabı geri açan zaten şifreyi bilen kişidir.
+> 4. **`DELETE /api/auth/me` uygulamanın ilk token'la kimliklenmiş şifre oracle'ıdır.** Çalınmış bir
+>    token artık şifre tahmini denemeye de yarar (BCrypt work factor 12 → ~220 ms/deneme).
+>    Uygulamada hiçbir yerde rate limiting yok (`/api/auth/login` dahil), yani bu mevcut bir boşluğun
+>    genişlemesi. Uygulama yazarı dışına açılırsa iki şifre doğrulayan uç birlikte rate-limit
+>    edilmeli.
+> 5. **Kimlik doğrulamanın artık veritabanına sert bağımlılığı var:** önceden token, Postgres
+>    kapalıyken de doğrulanabiliyordu (istek sonra patlardı), şimdi 401 daha önce geliyor. Pratikte
+>    fark etmez (her uç zaten DB'ye gidiyor) ama bir izleme probu farklı hata görür.
+> 6. **Park edilen küçük bulgu:** `Common/DependencyInjection.cs`'teki yorum "repository ve logger
+>    scoped" diyor; `ILoggerFactory` aslında singleton'dır (paylaşılan şey, istek anında
+>    `RequestServices`'ten çözme deseni). Yorum yanlış, davranış doğru.
+> 7. Faz 10-12'den devreden notlar hâlâ AÇIK: proje çapında `AsNoTracking` geçişi, offset'siz
+>    `recordedAt`, haftalık/aylık ortalama, `GetAllTimeAsync`'in izlemeli olması.
+
+---
+
+## Backend planı tamamlandı
+
+Faz 0-13 bitti. Sıradaki adım plandaki 8. madde: **frontend teknolojisi kararı** (React / React Native
+/ PWA vb.). Ayrıca aşağıdaki "Gerçek Kullanımdan Gelen İstekler" hâlâ karara bağlanmayı bekliyor.
 
 ---
 

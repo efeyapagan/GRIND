@@ -10,7 +10,9 @@ namespace Grind.Api.Services;
 public class AuthService(
     IUserRepository userRepository,
     IUnitOfWork unitOfWork,
-    ITokenService tokenService) : IAuthService
+    ITokenService tokenService,
+    ICurrentUserService currentUser,
+    TimeProvider timeProvider) : IAuthService
 {
     /// <summary>~220 ms/hash. Donanım hızlandıkça yükseltilecek yer burasıdır.</summary>
     private const int WorkFactor = 12;
@@ -42,7 +44,7 @@ public class AuthService(
         {
             Username = username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, WorkFactor),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = Now()
         };
 
         userRepository.Add(user);
@@ -67,7 +69,32 @@ public class AuthService(
             throw new UnauthorizedException(InvalidCredentials);
         }
 
+        if (user.DeletedAt is not null)
+        {
+            // Şifre DOĞRULANDIKTAN sonra: pasiflik bilgisi yanlış şifreyle sızmamalı (spec Karar 2).
+            // Ayrı bir "geri aç" ucu yok — doğru şifreyle giriş yapmak niyetin kendisidir.
+            user.DeletedAt = null;
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         return Respond(user);
+    }
+
+    public async Task DeactivateAsync(
+        DeleteAccountRequest request, CancellationToken cancellationToken = default)
+    {
+        // Kimlik token'dan gelir, gövdeden değil: pasifleştirilecek hesap her zaman çağıranın kendisi.
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+                   ?? throw new UnauthorizedException(InvalidCredentials);
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        {
+            throw new UnauthorizedException(InvalidCredentials);
+        }
+
+        // Yalnızca damga: oturumlar, setler, rekorlar, tartılar ve yorumlar olduğu gibi kalır.
+        user.DeletedAt = Now();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -75,6 +102,8 @@ public class AuthService(
     /// kısıtladığı için ToLowerInvariant burada güvenli (Türkçe İ sorunu oluşamaz).
     /// </summary>
     private static string Normalize(string username) => username.Trim().ToLowerInvariant();
+
+    private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;
 
     private AuthResponse Respond(User user)
     {

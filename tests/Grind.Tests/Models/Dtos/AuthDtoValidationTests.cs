@@ -63,4 +63,19 @@ public class AuthDtoValidationTests
         Assert.Empty(Validate(new LoginRequest { Username = "EFEYAPAĞAN", Password = "x" }));
         Assert.NotEmpty(Validate(new LoginRequest { Username = "", Password = "x" }));
     }
+
+    [Fact]
+    public void Tam_72_bytelik_sifreyle_hesap_silme_istegi_kabul_edilir()
+    {
+        Assert.Empty(Validate(new DeleteAccountRequest { Password = new string('a', 72) }));
+    }
+
+    /// <summary>
+    /// LoginRequest ile aynı gerekçe: BCrypt 72 BYTE'ta sessizce kesiyor. 72 adet 'ğ' = 144 byte.
+    /// </summary>
+    [Fact]
+    public void Yetmis_iki_karakterlik_ama_144_bytelik_sifreyle_hesap_silme_istegi_reddedilir()
+    {
+        Assert.NotEmpty(Validate(new DeleteAccountRequest { Password = new string('ğ', 72) }));
+    }
 }
