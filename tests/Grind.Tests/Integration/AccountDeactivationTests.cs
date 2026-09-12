@@ -80,4 +80,74 @@ public class AccountDeactivationTests(GrindApiFactory factory) : IClassFixture<G
 
         Assert.Equal(HttpStatusCode.OK, (await yeni.GetAsync("/api/exercises")).StatusCode);
     }
+
+    private static HttpRequestMessage DeleteMe(string? password) => new(HttpMethod.Delete, "/api/auth/me")
+    {
+        Content = JsonContent.Create(new DeleteAccountRequest { Password = password ?? string.Empty })
+    };
+
+    [Fact]
+    public async Task Tokensiz_hesap_silme_401_verir()
+    {
+        var response = await factory.CreateClient().SendAsync(DeleteMe(Password));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sifresiz_govde_400_verir()
+    {
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.SendAsync(DeleteMe(null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Yanlış şifre hesabı kapatmamalı: istemci sonrasında hâlâ çalışabilmeli.</summary>
+    [Fact]
+    public async Task Yanlis_sifreyle_hesap_silme_401_verir_ve_hesap_acik_kalir()
+    {
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.SendAsync(DeleteMe("bambaska-bir-sifre"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/exercises")).StatusCode);
+    }
+
+    /// <summary>
+    /// Fazın tam turu: veri gir → hesabı kapat → token ölür → doğru şifreyle giriş hesabı geri açar →
+    /// KAPATMADAN ÖNCE girilen veri hâlâ orada.
+    /// </summary>
+    [Fact]
+    public async Task Hesap_silinir_token_oluru_ve_giris_veriyle_birlikte_geri_getirir()
+    {
+        var (client, username) = await RegisteredClientAsync();
+        var egzersizAdi = $"Gogus {Guid.NewGuid():N}";
+        var olusturma = await client.PostAsJsonAsync("/api/exercises", new
+        {
+            name = egzersizAdi,
+            category = "Push"
+        });
+        olusturma.EnsureSuccessStatusCode();
+
+        var silme = await client.SendAsync(DeleteMe(Password));
+
+        Assert.Equal(HttpStatusCode.NoContent, silme.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/exercises")).StatusCode);
+
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest
+        {
+            Username = username,
+            Password = Password
+        });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var auth = await login.Content.ReadFromJsonAsync<AuthResponse>();
+        var yeni = factory.CreateClient();
+        yeni.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+
+        var liste = await yeni.GetStringAsync("/api/exercises");
+        Assert.Contains(egzersizAdi, liste);
+    }
 }
