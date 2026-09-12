@@ -22,7 +22,7 @@ builder.Services.AddCrossCutting(
 // SetEntryService (Faz 8), StatsService (Faz 9, streak/takvim "bugün"ü için),
 // BodyWeightLogService (Faz 10, gelecek zaman reddi için), ExportService (Faz 11, export'un
 // oluşturulma anı için) ve AiInsightService (Faz 12, varsayılan aralığın "bugün"ü ve yorumun
-// oluşturulma anı için) — AuthService, ExerciseService ve
+// oluşturulma anı için) — ExerciseService ve
 // WorkoutTemplateService hâlâ CreatedAt'i doğrudan DateTime.UtcNow'dan damgalıyor (o alan için
 // gün sınırı gibi test edilmesi gereken bir karar yok).
 builder.Services.AddSingleton(TimeProvider.System);
