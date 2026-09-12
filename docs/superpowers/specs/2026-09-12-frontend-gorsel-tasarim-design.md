@@ -327,8 +327,10 @@ kararları (R14 dahil: API yanıtları önbelleklenmez).
 
 - **jsdom Popover API'yi uygulamaz** → menü testleri görünürlüğü değil davranışı sınar (düğme var,
   tıklayınca oturum kapanır).
-- **Görsel regresyon testlerle yakalanmaz** (`css: false`) → ekran görüntüsü karşılaştırması her ekran
-  görevinin tamamlanma koşuludur.
+- **Görsel regresyon testlerle yakalanmaz** (`css: false`) → ekran görevleri bittikten sonra, final
+  incelemeden ÖNCE, her ekranın ekran görüntüsü Stitch'le karşılaştırılır (kontrolcü görevi); sapmalar
+  final düzeltme dalgasına girer. Her ekran görevinin kendi incelemesi ise kodu bu spec'e (tokenlar,
+  sınıflar, yapı) göre denetler.
 - **`@fontsource-variable/inter` alt küme yolu** sürüme göre değişebilir; hedef yalnızca latin +
   latin-ext'tir ve derleme çıktısında doğrulanır.
 - **Stitch dosyalarındaki örnek veri sahtedir**; uygulama gerçek API verisini gösterir.
