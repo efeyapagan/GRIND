@@ -28,6 +28,11 @@ public class AuthControllerTests
             SeenLogin = request;
             return Task.FromResult(Response(request.Username));
         }
+
+        // Faz 13: bu controller testleri henüz DeactivateAsync'i egzersiz etmiyor (bkz. Task 3),
+        // ama arabirim üyesi olduğu için sahte sınıf derlenebilmesi adına burada yer almalı.
+        public Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     [Fact]

@@ -7,6 +7,13 @@ public class User
     public string PasswordHash { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Hesabın pasifleştirildiği an (UTC); <c>null</c> ise hesap aktiftir (Faz 13 spec Karar 1).
+    /// Pasifleştirme HİÇBİR satırı silmez — kullanıcının oturumları, setleri, rekorları, tartıları ve
+    /// yorumları olduğu gibi kalır; doğru şifreyle giriş yapmak hesabı geri açar.
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
+
     public ICollection<Exercise> Exercises { get; set; } = [];
     public ICollection<WorkoutTemplate> WorkoutTemplates { get; set; } = [];
     public ICollection<WorkoutSession> WorkoutSessions { get; set; } = [];

@@ -77,7 +77,8 @@ Object Reference) açığıdır.
 > süre açık kalır.
 
 ## Domain Modeli
-- **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`
+- **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`, `DeletedAt` (nullable — `null` ise hesap
+  aktif; dolu ise hesap pasifleştirilmiş demektir, verisi durur)
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
   `Category` (Push / Pull / Legs / Other), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
@@ -105,6 +106,18 @@ Object Reference) açığıdır.
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).
+
+> Karar (hesap silme = SOFT DELETE — Faz 13): Hesap silme hiçbir satırı silmez, yalnızca
+> `User.DeletedAt`'i damgalar ("verilerin kaybolmasını istemiyoruz"). `DELETE /api/auth/me` şifre
+> teyidi ister ve 204 döner; kimlik token'dan gelir, gövdeden id alınmaz. Pasif hesabın elindeki
+> token ANINDA geçersizleşir: `OnTokenValidated`'da kimlikli her istekte hesabın güncel durumu
+> veritabanından okunur — token 7 gün yaşadığı için bu olmasaydı pasifleştirme bir hafta etkisiz
+> kalırdı (yukarıdaki JWT kararının aynı mantığı). Doğru şifreyle giriş hesabı GERİ AÇAR; ayrı bir
+> "reactivate" ucu yoktur. Pasiflik kontrolü şifre doğrulamasından SONRA gelir ve login'in nötr 401'i
+> korunur — yoksa yanlış şifreyle bile hesabın pasif olduğu sızardı. Pasif hesabın kullanıcı adı
+> REZERVE kalır: aynı adla kayıt 409 alır ve mevcut şifre hash'i ezilmez (hesap devralma yok).
+> Gerçek silme (purge) bilinçli olarak yapılmadı; uygulama başkalarına açılırsa KVKK/GDPR için
+> ayrıca yazılır.
 
 > Karar: Bir günde birden fazla antrenman oturumu olabilir (örn. sabah/akşam). Bu yüzden
 > `WorkoutSession` gün bazlı bir `Date` yerine gerçek bir zaman aralığı (`StartedAt`/`EndedAt`)
