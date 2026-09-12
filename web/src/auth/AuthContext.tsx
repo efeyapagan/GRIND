@@ -68,6 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 401 gelen HER istek oturumu düşürür -- token süresi doldu ya da hesap pasifleştirildi
     // (Faz 13), istemci ikisini ayırt etmez, ikisinin de cevabı aynı: login'e dön.
     setUnauthorizedHandler(logout);
+
+    // client.ts'teki isleyici modul-seviyesinde TEK bir singleton -- bu Provider unmount
+    // olursa (orn. test ortaminda yeni bir render agaci kurulurken) eski/olu closure'i kayitli
+    // birakmamak icin no-op'a resetliyoruz. Aksi halde unmount sonrasi gelen gecikmis bir 401,
+    // artik var olmayan bir bilesenin state'ini guncellemeye calisirdi.
+    return () => setUnauthorizedHandler(() => {});
   }, [logout]);
 
   const login = useCallback(async (kullaniciAdi: string, sifre: string) => {

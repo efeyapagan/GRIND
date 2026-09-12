@@ -64,7 +64,7 @@ test('72 bayti asan sifre istemcide reddedilir: istek gitmez', async () => {
   const kullanici = userEvent.setup();
   kayitSayfasiniOlustur();
 
-  // 72 adet 'g' (2 baytlik UTF-8 karakteri) = 144 bayt -- 8+ karakter oldugu icin min-karakter
+  // 72 adet 'ğ' (2 baytlik UTF-8 karakteri) = 144 bayt -- 8+ karakter oldugu icin min-karakter
   // kuralini gecer, sadece bayt siniri ihlal edilir.
   const cokBaytliSifre = 'ğ'.repeat(72);
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'gecerli_kullanici');
