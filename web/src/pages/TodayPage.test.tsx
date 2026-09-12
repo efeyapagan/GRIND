@@ -250,6 +250,125 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
   expect(istekYapildiMi).toBe(false);
 });
 
+test('sunucu 400 alan hatasini PascalCase Weight ile donerse agirlik alaninin altinda gosterilir', async () => {
+  // Anahtar karsilastirmasi case-insensitive olmali: backend ValidationProblemDetails.Errors
+  // CLR property adini ("Weight") tasir, form kucuk harfli "weight" id'si kullanir (I3).
+  sahteSunucuyuKur();
+  server.use(
+    http.post('/api/sets', () =>
+      HttpResponse.json(
+        {
+          title: 'Geçersiz istek',
+          status: 400,
+          errors: { Weight: ['Ağırlık 0 ile 500 arasında olmalı.'] },
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '600', '8');
+
+  const agirlikAlani = screen.getByLabelText('Ağırlık (kg)');
+  expect(agirlikAlani.closest('div')).toHaveTextContent('Ağırlık 0 ile 500 arasında olmalı.');
+});
+
+test('sunucu 400 alan hatasi hicbir render edilen alanla eslesmezse genel uyari gosterilir', async () => {
+  // ASP.NET deserializasyon hatasi $.reps gibi anahtarlar donebilir -- bunlar formun render
+  // ettigi hicbir alanla eslesmez, sessiz kalinmamali (I3).
+  sahteSunucuyuKur();
+  server.use(
+    http.post('/api/sets', () =>
+      HttpResponse.json(
+        {
+          title: 'Geçersiz istek gövdesi',
+          detail: 'İstek gövdesi ayrıştırılamadı.',
+          status: 400,
+          errors: { '$.reps': ['The JSON value could not be converted.'] },
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '60', '8');
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('İstek gövdesi ayrıştırılamadı.');
+});
+
+test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez', async () => {
+  let istekYapildiMi = false;
+  sahteSunucuyuKur();
+  server.use(
+    http.post('/api/sets', () => {
+      istekYapildiMi = true;
+      return HttpResponse.json({
+        id: 1,
+        sessionId: 1,
+        exerciseId: 1,
+        exerciseName: 'Bench Press',
+        weight: 60,
+        reps: 8,
+        recordType: 'None',
+        rir: null,
+        createdAt: new Date().toISOString(),
+      });
+    }),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '60', '8.5');
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Tekrar sayısı tam sayı olmalı.');
+  expect(istekYapildiMi).toBe(false);
+});
+
+test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek gonderilmez', async () => {
+  let istekYapildiMi = false;
+  sahteSunucuyuKur();
+  server.use(
+    http.post('/api/sets', () => {
+      istekYapildiMi = true;
+      return HttpResponse.json({
+        id: 1,
+        sessionId: 1,
+        exerciseId: 1,
+        exerciseName: 'Bench Press',
+        weight: 60,
+        reps: 8,
+        recordType: 'None',
+        rir: null,
+        createdAt: new Date().toISOString(),
+      });
+    }),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
+  await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
+  await kullanici.clear(screen.getByLabelText('Tekrar'));
+  await kullanici.type(screen.getByLabelText('Tekrar'), '8');
+  await kullanici.type(screen.getByLabelText('RIR (opsiyonel)'), 'abc');
+  await kullanici.click(screen.getByRole('button', { name: 'Set Ekle' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('RIR tam sayı olmalı.');
+  expect(istekYapildiMi).toBe(false);
+});
+
 test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ', async () => {
   sahteSunucuyuKur();
   server.use(
@@ -267,6 +386,35 @@ test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ'
   // aksi halde kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye
   // kalkisir (review bulgusu).
   expect(screen.queryByText('Bugün henüz antrenman yok.')).not.toBeInTheDocument();
+});
+
+test('setler sorgusu 500 donerse hata gosterilir, "henuz set eklenmedi" bos durum metni GORUNMEZ', async () => {
+  // I4: setler var olabilir ama cekilemiyor olabilir -- bunu "henuz set eklenmedi" ile
+  // karistirmak, kullaniciyi gercekte var olan setleri goremeden yeniden girmeye ya da yanlis
+  // bir bos durumu gercek sanmaya iter (Task 4'teki acik oturum hatasiyla AYNI desen).
+  const acikOturum: SessionResponse = {
+    id: 5,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  server.use(
+    http.get('/api/sessions/:id/sets', () =>
+      HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
+    ),
+  );
+
+  bugunSayfasiniOlustur();
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Setler alınamadı. Lütfen sayfayı yenileyin.',
+  );
+  expect(screen.queryByText('Bugün henüz set eklenmedi.')).not.toBeInTheDocument();
 });
 
 test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', async () => {
@@ -315,7 +463,10 @@ test('sunucu 400 donerse detay gosterilir ve form icerigi kaybolmaz', async () =
   expect(screen.getByLabelText('Tekrar')).toHaveValue('8');
 });
 
-test('ag hatasi: baglanti yok mesaji gosterilir ve form icerigi kaybolmaz', async () => {
+test('ag hatasi: set kaydedilmemis OLABILECEGINI soyleyen mesaj gosterilir ve form icerigi kaybolmaz', async () => {
+  // R15: mesaj artik "kaydedilmedi" diye KESIN bir iddiada bulunmuyor -- istemci fetch
+  // reddettiginde istegin sunucuya ulasip ulasmadigini bilemez; yanlis "kaydedilmedi" iddiasi
+  // kullaniciyi tekrar denemeye ve YINELENEN bir set olusturmaya iter.
   sahteSunucuyuKur();
   server.use(http.post('/api/sets', () => HttpResponse.error()));
 
@@ -326,8 +477,43 @@ test('ag hatasi: baglanti yok mesaji gosterilir ve form icerigi kaybolmaz', asyn
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Bağlantı yok. Set kaydedilmedi, tekrar deneyin.',
+    'Sunucuya ulaşılamadı. Set kaydedilmemiş olabilir; tekrar denemeden önce listeyi kontrol edin.',
   );
+  // Form icerigi KORUNUR -- kullanici hatayi degerlendirip tekrar deneyebilsin (spec Karar 8).
   expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
   expect(screen.getByLabelText('Tekrar')).toHaveValue('8');
+});
+
+test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri gelince gercek durum gorunsun)', async () => {
+  const acikOturum: SessionResponse = {
+    id: 9,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  let acikOturumIstekSayisi = 0;
+  server.use(
+    http.get('/api/sessions/open', () => {
+      acikOturumIstekSayisi += 1;
+      return HttpResponse.json(acikOturum);
+    }),
+    http.post('/api/sets', () => HttpResponse.error()),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  const ilkIstekSayisi = acikOturumIstekSayisi;
+  await setEkle(kullanici, '60', '8');
+
+  await screen.findByRole('alert');
+  // Ag hatasi sonrasi acik oturum sorgusu invalidate edilip YENIDEN cekilir -- baglanti geri
+  // gelince ekran bayat kalmaz (review bulgusu R15).
+  await waitFor(() => expect(acikOturumIstekSayisi).toBeGreaterThan(ilkIstekSayisi));
 });

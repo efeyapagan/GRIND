@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { useAddSet, useExercises } from '../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { ApiError } from '../api/problem';
 
@@ -8,8 +9,19 @@ import { ApiError } from '../api/problem';
  * ApiError DISINDA bir istisna firlatir -- bunu burada ayirt edip acik bir Turkce mesaj
  * gosteriyoruz. Gece yarisindan sonra gonderilen kuyruklu bir set yanlis gune duserdi, o yuzden
  * kuyruklama bilerek yapilmiyor; kullanici tekrar denemeli.
+ *
+ * DIKKAT (review bulgusu R15): `fetch` reddettiginde istemci istegin sunucuya ULASIP
+ * ULASMADIGINI BILEMEZ -- zayif bir baglantida yanit kaybolmus ama set sunucuda kaydedilmis
+ * olabilir. Bu yuzden mesaj "kaydedilmedi" diye KESIN bir iddiada BULUNMAZ (bu, kullaniciyi
+ * tekrar denemeye ve sunucu tarafinda YINELENEN bir set olusturmaya -- ve o yinelenen setin
+ * PR tespitini de etkilemeye -- iter); yerine kullaniciyi listeyi kontrol etmeye yonlendirir.
  */
-const BAGLANTI_HATASI_MESAJI = 'Bağlantı yok. Set kaydedilmedi, tekrar deneyin.';
+const BAGLANTI_HATASI_MESAJI =
+  'Sunucuya ulaşılamadı. Set kaydedilmemiş olabilir; tekrar denemeden önce listeyi kontrol edin.';
+
+// `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
+// kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
+const BILINEN_ALANLAR = ['weight', 'reps', 'rir'];
 
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
@@ -17,7 +29,9 @@ const BAGLANTI_HATASI_MESAJI = 'Bağlantı yok. Set kaydedilmedi, tekrar deneyin
  * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir.
  */
 export default function AddSetForm() {
+  const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
+  const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
   const siraliEgzersizler = useMemo(
@@ -46,15 +60,38 @@ export default function AddSetForm() {
    * gonderilen bos bir form gercek bir set olarak kaydedilir ve sunucu onun uzerinde PR tespiti
    * calistirir (review bulgusu). Agirlik icin "0" (barfiks/dips) GECERLI bir deger oldugundan
    * burada deger degil, SADECE bosluk kontrolu yapilir.
+   *
+   * DIKKAT (review bulgusu I3): bosluk kontrolunun USTUNE sayisal bicim kontrolu de eklendi.
+   * "Tekrar" sunucuda `int` -- "8.5" gibi ondalikli bir deger JSON'da sayi olarak GECERLI oldugu
+   * icin sessizce gonderilir ve sunucu deserializasyonda 400 doner, ama o 400'un alan anahtarlari
+   * (`$.reps` gibi) bu formun render ettigi hicbir alanla eslesmez -- kullanici hicbir hata
+   * gormeden "Set Ekle"ye basar ve hicbir sey olmaz. Ayni sekilde RIR "abc" yazilirsa
+   * `Number('abc')` NaN'a, NaN da JSON.stringify'da `null`'a donusur ve kullanicinin ne yazdigi
+   * SESSIZCE kaybolur. Bu yuzden ust sinir/ondalik hane sayisi sunucuya birakilsa da, "sayisal
+   * bicimde gecerli mi" istemcide kontrol edilip GECERSIZSE istek hic GONDERILMEZ.
    */
   function alanlariDogrula(): Record<string, string> {
     const hatalar: Record<string, string> = {};
-    if (agirlik.trim() === '') {
+
+    const agirlikMetni = agirlik.trim();
+    if (agirlikMetni === '') {
       hatalar.weight = 'Ağırlık girilmeli.';
+    } else if (!Number.isFinite(Number(agirlikMetni.replace(',', '.')))) {
+      hatalar.weight = 'Ağırlık geçerli bir sayı olmalı.';
     }
-    if (tekrar.trim() === '') {
+
+    const tekrarMetni = tekrar.trim();
+    if (tekrarMetni === '') {
       hatalar.reps = 'Tekrar sayısı girilmeli.';
+    } else if (!Number.isInteger(Number(tekrarMetni))) {
+      hatalar.reps = 'Tekrar sayısı tam sayı olmalı.';
     }
+
+    const rirMetni = rir.trim();
+    if (rirMetni !== '' && !Number.isInteger(Number(rirMetni))) {
+      hatalar.rir = 'RIR tam sayı olmalı.';
+    }
+
     return hatalar;
   }
 
@@ -88,12 +125,20 @@ export default function AddSetForm() {
       if (hata instanceof ApiError) {
         // Sunucu CreateSetRequest icin alan bazli DataAnnotations hatalari (orn. Weight/Reps
         // araligi) donebilir -- `apiHatasiniAyir` bunlari LoginPage/RegisterPage ile AYNI
-        // desende ilgili alanin altina koyar, tek bir genel mesaja duzlestirmez.
-        const sonuc = apiHatasiniAyir(hata);
+        // desende ilgili alanin altina koyar; hicbir anahtar render edilen bir alanla
+        // eslesmezse (orn. deserializasyon hatasi) genel bir hataya duser (I3), sessiz KALMAZ.
+        const sonuc = apiHatasiniAyir(hata, BILINEN_ALANLAR);
         setGenelHata(sonuc.genelHata);
         setAlanHatalari(sonuc.alanHatalari);
       } else {
         setGenelHata(BAGLANTI_HATASI_MESAJI);
+        // Istek sunucuya ulasip ulasmadigini BILEMEDIGIMIZ icin (R15), baglanti geri gelince
+        // ekranin GERCEGI gostermesi icin acik oturumu ve o oturumun setlerini invalidate
+        // ediyoruz -- set gercekte kaydedilmis olabilir, kullanici listeyi kontrol edebilsin.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+        if (acikOturum) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(acikOturum.id) });
+        }
       }
       // Form icerigi BILEREK temizlenmiyor -- kullanici hatayi duzeltip tekrar denemeli.
     }
@@ -145,6 +190,7 @@ export default function AddSetForm() {
           value={rir}
           onChange={(e) => setRir(e.target.value)}
         />
+        {alanHatalari.rir && <p role="alert">{alanHatalari.rir}</p>}
       </div>
       <button type="submit" disabled={eklemeMutasyonu.isPending}>
         Set Ekle

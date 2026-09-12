@@ -9,6 +9,10 @@ const KULLANICI_ADI_DESENI = /^[a-zA-Z0-9_-]{3,50}$/;
 const MIN_SIFRE_KARAKTER = 8;
 const MAKS_SIFRE_BAYT = 72;
 
+// `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
+// kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
+const BILINEN_ALANLAR = ['username', 'password'];
+
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -56,7 +60,7 @@ export default function RegisterPage() {
       await register(kullaniciAdi, sifre);
       navigate('/', { replace: true });
     } catch (hata) {
-      const sonuc = apiHatasiniAyir(hata);
+      const sonuc = apiHatasiniAyir(hata, BILINEN_ALANLAR);
       setGenelHata(sonuc.genelHata);
       setAlanHatalari(sonuc.alanHatalari);
     } finally {

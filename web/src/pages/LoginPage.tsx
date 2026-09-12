@@ -10,6 +10,10 @@ import { apiHatasiniAyir } from '../lib/apiErrors';
  */
 const NOTR_GIRIS_HATASI = 'Kullanıcı adı veya şifre hatalı.';
 
+// `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
+// kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
+const BILINEN_ALANLAR = ['username', 'password'];
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -48,7 +52,7 @@ export default function LoginPage() {
       navigate('/', { replace: true });
     } catch (hata) {
       // 401'de: alanlar BİLEREK temizlenmiyor -- kullanıcı sadece şifresini düzeltebilsin.
-      const sonuc = apiHatasiniAyir(hata, (apiHatasi) =>
+      const sonuc = apiHatasiniAyir(hata, BILINEN_ALANLAR, (apiHatasi) =>
         apiHatasi.status === 401 ? NOTR_GIRIS_HATASI : null,
       );
       setGenelHata(sonuc.genelHata);

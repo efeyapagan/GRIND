@@ -18,7 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-const VARSAYILAN_MESAJ = 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.';
+export const VARSAYILAN_MESAJ = 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.';
 
 export function parseProblem(status: number, body: unknown): ApiError {
   if (body && typeof body === 'object') {

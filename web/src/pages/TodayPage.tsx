@@ -17,10 +17,19 @@ import AddSetForm from '../components/AddSetForm';
  * kesintisini "bugun henuz antrenman yok" bos durumuyla ayni gostermek anlamina gelirdi --
  * kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye kalkisirdi.
  * Bu yuzden hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
+ *
+ * DIKKAT (review bulgusu I4): `useSessionSets` icin de AYNI ayrim gerekli -- bir 500, setler
+ * gercekte var olsa da SetList'in "Bugün henüz set eklenmedi." bos durumuyla ayni gorunurdu
+ * (ve bu metin her yuklemede de kisaca yanip soner). Hata ve yukleme durumlari burada ayrica
+ * ele alinir; bos durum metni SADECE gercekten yuklenmis ve bos oldugunda gorunur.
  */
 export default function TodayPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
-  const { data: setler } = useSessionSets(oturum?.id ?? null);
+  const {
+    data: setler,
+    isLoading: setlerYukleniyor,
+    isError: setlerHataliMi,
+  } = useSessionSets(oturum?.id ?? null);
   const bitirMutasyonu = useFinishSession();
 
   return (
@@ -34,7 +43,11 @@ export default function TodayPage() {
       {!oturumYukleniyor && !oturumHataliMi && oturum && (
         <section>
           <p>Başlangıç: {formatTrTime(oturum.startedAt)}</p>
-          <SetList sets={setler ?? []} />
+
+          {setlerYukleniyor && <p>Yükleniyor...</p>}
+          {setlerHataliMi && <p role="alert">Setler alınamadı. Lütfen sayfayı yenileyin.</p>}
+          {!setlerYukleniyor && !setlerHataliMi && <SetList sets={setler ?? []} />}
+
           {oturum.isOpen && (
             <button
               type="button"
