@@ -11,4 +11,7 @@ public class UserRepository(AppDbContext context) : Repository<User>(context), I
 
     public Task<bool> UsernameExistsAsync(string username, CancellationToken cancellationToken = default)
         => Set.AnyAsync(u => u.Username == username, cancellationToken);
+
+    public Task<bool> ExistsActiveAsync(long id, CancellationToken cancellationToken = default)
+        => Set.AnyAsync(u => u.Id == id && u.DeletedAt == null, cancellationToken);
 }

@@ -72,4 +72,49 @@ public class UserRepositoryTests
         Assert.Null(await repository.GetByUsernameAsync(user.Username.ToUpperInvariant()));
         await transaction.RollbackAsync();
     }
+
+    // ---- Faz 13: hesap pasifleştirme ----
+
+    /// <summary>Kimlikli her istekte çağrılan kontrol: aktif kullanıcı için true.</summary>
+    [Fact]
+    public async Task Aktif_kullanici_ExistsActiveAsync_ile_bulunur()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        context.Add(user);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        Assert.True(await new UserRepository(context).ExistsActiveAsync(user.Id));
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ: satır DURUYOR ama pasif. Sorgu yalnızca varlığa baksaydı bu test geçmezdi ve
+    /// pasifleştirilen bir hesap elindeki token'la 7 gün daha çalışmaya devam ederdi.
+    /// </summary>
+    [Fact]
+    public async Task Pasif_kullanici_ExistsActiveAsync_ile_bulunmaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        user.DeletedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        context.Add(user);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        Assert.False(await new UserRepository(context).ExistsActiveAsync(user.Id));
+    }
+
+    [Fact]
+    public async Task Olmayan_kullanici_ExistsActiveAsync_ile_bulunmaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        Assert.False(await new UserRepository(context).ExistsActiveAsync(-1));
+    }
 }
