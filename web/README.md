@@ -1,32 +1,35 @@
-# React + TypeScript + Vite
+# GRIND — Web (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite + TypeScript, kurulabilir PWA. Antrenman takip uygulamasının ilk frontend dilimi.
 
-Currently, two official plugins are available:
+## Kurulum ve geliştirme
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Backend'in **`http` profiliyle** (varsayılan, `https` değil) çalışıyor olması gerekir:
+
+```
+dotnet run --project src/Grind.Api
+```
+
+Uygulama `http://localhost:5098` adresinde dinler. `https` profili dev proxy'yi (`vite.config.ts`)
+kırar: proxy 307 yönlendirmesini takip etmez.
+
+## API tipleri
+
+`src/api/schema.d.ts`, çalışan backend'in Swagger şemasından üretilir ve commit edilir:
+
+```
+npm run api:types
+```
+
+## Test, tip kontrolü, derleme
+
+```
+npm run test
+npm run typecheck
+npm run build
+```
