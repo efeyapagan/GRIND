@@ -81,13 +81,15 @@ public class UserRepositoryTests
     {
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new UserRepository(context);
 
         var user = TestDatabase.NewUser();
-        context.Add(user);
+        repository.Add(user);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        Assert.True(await new UserRepository(context).ExistsActiveAsync(user.Id));
+        Assert.True(await repository.ExistsActiveAsync(user.Id));
+        await transaction.RollbackAsync();
     }
 
     /// <summary>
@@ -99,22 +101,24 @@ public class UserRepositoryTests
     {
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new UserRepository(context);
 
         var user = TestDatabase.NewUser();
         user.DeletedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
-        context.Add(user);
+        repository.Add(user);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        Assert.False(await new UserRepository(context).ExistsActiveAsync(user.Id));
+        Assert.False(await repository.ExistsActiveAsync(user.Id));
+        await transaction.RollbackAsync();
     }
 
     [Fact]
     public async Task Olmayan_kullanici_ExistsActiveAsync_ile_bulunmaz()
     {
         await using var context = TestDatabase.CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new UserRepository(context);
 
-        Assert.False(await new UserRepository(context).ExistsActiveAsync(-1));
+        Assert.False(await repository.ExistsActiveAsync(-1));
     }
 }
