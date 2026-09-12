@@ -22,3 +22,13 @@ test('formatWeight tam sayida virgul eklemez', () => {
 test('formatWeight sifiri bos degil gecerli deger olarak gosterir', () => {
   expect(formatWeight(0)).toBe('0');
 });
+
+test('formatWeight iki ondalikli agirligi YUVARLAMADAN gosterir', () => {
+  // Backend numeric(6,2) sakliyor, 2 ondalik kabul ediyor -- 1 ondalige yuvarlamak
+  // sunucu degerini istemcide degistirmek olurdu (review bulgusu I2).
+  expect(formatWeight(61.25)).toBe('61,25');
+});
+
+test('formatWeight hacim gibi iki ondalikli buyuk degerleri de yuvarlamaz', () => {
+  expect(formatWeight(306.25)).toBe('306,25');
+});

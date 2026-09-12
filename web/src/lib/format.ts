@@ -34,9 +34,12 @@ export function formatTrTime(iso: string): string {
 
 export function formatWeight(kg: number): string {
   // TR ondalik ayraci virgul; gereksiz ",0" eklenmez (80 -> "80"), ama 0 gecerli bir
-  // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil).
+  // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil). Backend Weight'i
+  // numeric(6,2) olarak saklar ve 2 ondalik kabul eder -- maximumFractionDigits burada 1
+  // olsaydi 61.25 kg "61,3" olarak gosterilir, sunucudaki degeri istemcide SESSIZCE
+  // degistirirdi (review bulgusu I2). Ust sinir ve ondalik hane sayisi sunucuya birakilir.
   return kg.toLocaleString('tr-TR', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
+    maximumFractionDigits: 2,
   });
 }
