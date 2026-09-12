@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text;
 using Grind.Api.Common.ErrorHandling;
 using Grind.Api.Common.Security;
+using Grind.Api.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Hosting;
@@ -56,6 +58,36 @@ public static class DependencyInjection
                     // Varsayılan ClaimTypes.Name eşlemesi token'da yok; ayarlamazsak
                     // User.Identity.Name sessizce null döner.
                     NameClaimType = AppClaims.Username
+                };
+
+                // Token imzayı ve ömrü geçse bile hesap pasifleştirilmişse istek kimliksiz sayılır
+                // (Faz 13 spec Karar 3). CLAUDE.md'nin kuralı: zamanla değişebilen bir öznitelik
+                // token'a gömülmez, her istekte GÜNCEL durum veritabanından okunur. Token 7 gün
+                // geçerli olduğu için bu kontrol olmasaydı pasifleştirme bir hafta boyunca etkisiz
+                // kalırdı. [AllowAnonymous] uçları (register/login) token taşımadığı için buradan
+                // geçmez — pasif kullanıcının giriş yapıp hesabını geri açması engellenmez.
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var raw = context.Principal?.FindFirst(AppClaims.UserId)?.Value;
+
+                        if (!long.TryParse(
+                                raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var userId))
+                        {
+                            context.Fail("Token geçerli bir kullanıcı kimliği taşımıyor.");
+                            return;
+                        }
+
+                        // İstek scope'undan: repository scoped, bu olay ise singleton seçenekler
+                        // içinde yaşıyor.
+                        var users = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+
+                        if (!await users.ExistsActiveAsync(userId, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail("Hesap pasif.");
+                        }
+                    }
                 };
             });
 
