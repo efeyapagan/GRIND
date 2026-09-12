@@ -22,6 +22,7 @@
 | 11 | Feature: Export | ✅ |
 | 12 | Feature: AiInsight altyapısı | ✅ |
 | 13 | Feature: Hesap silme (soft delete) | ✅ |
+| F1 | Frontend dilim 1: antrenman çekirdeği (`web/`) | ✅ |
 
 ---
 
@@ -742,6 +743,53 @@ Plandan çıkan, frontend başlamadan önce bilinmesi gereken backend işleri:
   oturumuna yazıyor) — Faz 8'de bilerek kapsam dışıydı.
 
 Ayrıca aşağıdaki "Gerçek Kullanımdan Gelen İstekler" hâlâ karara bağlanmayı bekliyor.
+
+---
+
+## Frontend Dilim 1 — Antrenman çekirdeği ✅ (2026-09-12)
+
+Spec: [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md)
+· Plan: [docs/superpowers/plans/2026-09-12-frontend-dilim-1-antrenman-cekirdegi.md](docs/superpowers/plans/2026-09-12-frontend-dilim-1-antrenman-cekirdegi.md)
+
+`web/` altında React + Vite + TypeScript, kurulabilir PWA. Backend'e tek satır dokunulmadı.
+
+- **İskelet:** Vite, `vite-plugin-pwa` (yalnızca uygulama kabuğu önbelleklenir), Vitest + Testing
+  Library + MSW, ayrı `Web CI` workflow'u (`.github/workflows/web.yml` — .NET CI'dan ayrı
+  concurrency grubu, tamamlayıcı path filtresi).
+- **API katmanı:** tipler Swagger'dan `openapi-typescript` ile üretilir (`npm run api:types`,
+  commit edilir). Tek bir `request()` sarmalayıcısı token'ı ekler, iki ProblemDetails şeklini tek
+  tipe indirger ve 401'de oturumu düşürür.
+- **Ekranlar:** giriş/kayıt (istemci doğrulaması sunucu kurallarını yansıtır, login 401'i nötr);
+  Bugün (açık oturum, egzersize göre gruplu setler, set ekleme, PR rozetleri, antrenmanı bitir);
+  Geçmiş (sayfalı, oturum `<details>` ile açılıp setleri gösterilir); Rekorlar (egzersiz başına en
+  ağır set ve en çok tekrar); ortak gezinme ve "Çıkış yap".
+- **Test:** backend **638** / frontend **65** (12 dosya) — ayrı sayılar, ikisi de komutla sayıldı.
+  `tsc -b` temiz, üretim derlemesi yeşil.
+
+Uygulama ve inceleme sırasında bulunup düzeltilenler:
+- `npm run typecheck` (`tsc --noEmit`) Vite şablonunun proje referanslı kök tsconfig'inde HİÇBİR
+  dosyayı kontrol etmiyordu; `tsc -b` yapıldı.
+- Çıkışta TanStack Query önbelleği temizlenmiyordu — aynı cihazda sonraki hesap öncekinin verisini
+  bir an görüyordu. `logout` artık önbelleği temizler (401 yolu dahil).
+- Ağırlık tek ondalığa yuvarlanıyordu (61,25 → 61,3); backend iki ondalık saklıyor.
+- Açık oturum ve set listesi sorgusunun hatası "henüz antrenman/set yok" boş durumu gibi
+  görünüyordu; hata artık ayrı gösteriliyor.
+
+Devreden notlar (bilerek yapılmadı):
+- **Görsel tasarım** hâlâ ertelendi. PWA manifest'inde ikon YOK: Chrome/Android ikon olmadan
+  "uygulama olarak yükle" sunmaz, yani spec Karar 1'deki tam ekran kurulum ikonlar (tasarım turu)
+  gelene kadar eksik.
+- **Çevrimdışı okuma — spec Karar 10'dan bilinçli sapma:** `GET /api/*` yanıtları önbelleklenmiyor;
+  gerekçe spec'te Karar 10'un altındaki notta. **Çevrimdışı yazma** hâlâ geçmişe dönük set girişi
+  isteyen bir backend işine bağlı.
+- **Dağıtım / CORS:** frontend'in nereden sunulacağı henüz karara bağlanmadı; ayrı bir origin ise
+  backend'e CORS politikası gerekir.
+- **Küçük işler:** "Antrenmanı bitir" hatası ekranda gösterilmiyor; `VITE_API_PROXY_TARGET`
+  `.env` dosyasından okunmuyor (`vite.config` `process.env` okuyor, `loadEnv` gerekir); testlerdeki
+  sorgu istemcisi yardımcısı beş dosyada kopya; oturum açıkken `/login`'de yanlış şifre global
+  `logout`'u da tetikliyor.
+- **Sonraki dilimler:** şablonlar, istatistik/grafikler, vücut ağırlığı, export, AI yorumları,
+  egzersiz yönetimi.
 
 ---
 

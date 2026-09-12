@@ -144,6 +144,17 @@ seçim için).
   gerektirir — ki bu Faz 8'de bilinçli olarak kapsam dışı bırakıldı. Bu yüzden çevrimdışı yazma
   ayrı bir dilim ve muhtemelen küçük bir backend işi.
 
+> **Dilim 1 sapması (2026-09-12):** Yukarıdaki ilk madde bu dilimde BİLEREK uygulanmadı — service
+> worker yalnızca uygulama kabuğunu önbelleğe alır, `GET /api/*` yanıtlarını almaz
+> (`vite.config.ts`: `navigateFallbackDenylist: [/^\/api\//]`, runtime caching yok). İki sebep:
+> (1) önbellek URL'e göre anahtarlanır, kullanıcıya göre değil — uygulama çok kullanıcılı olduğu
+> için paylaşılan bir telefonda çıkış/giriş sonrası çevrimdışı kalan kullanıcıya BAŞKA bir hesabın
+> antrenman verisi gösterilebilirdi; (2) bir bayatlık göstergesi olmadan bayat antrenman verisi
+> göstermek hiç göstermemekten kötü, gösterge ise görsel tasarım işi. Bedeli: sinyalsiz salonda
+> kabuk açılır ama veri gelmez. Aynı sebeple `logout` bellekteki TanStack Query önbelleğini de
+> temizler. İleride çevrimdışı okuma istenirse önerilen yol: kullanıcıya özel adlı bir NetworkFirst
+> önbelleği, `logout`'ta `caches.delete` ile silinir, ekranda bir "son güncelleme" işareti.
+
 ## Karar 11 — Geliştirmede CORS yok: Vite proxy
 
 Backend'de CORS yapılandırması **yok** (`Program.cs`'te `AddCors`/`UseCors` geçmiyor). Geliştirmede

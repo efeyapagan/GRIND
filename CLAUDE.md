@@ -14,6 +14,11 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   mimari plan ve çalışan bir çekirdek. Tasarıma girmeden önce kullanıcıya sor.
 - İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
   geçmiş. Şablon, istatistik, tartı, export ve AI ekranları sonraki dilimlere bırakıldı.
+- **Frontend dilim 1 tamamlandı (2026-09-12)** — ayrıntı ve devreden notlar PLAN.md'de. Kapsam
+  dışı kalanlar: görsel tasarım (PWA manifest ikonları dahil), çevrimdışı okuma/yazma, dağıtım/CORS
+  ve yukarıdaki sonraki dilimler. `web/`'de tip kontrolü `npm run typecheck` = `tsc -b`'dir:
+  `tsc --noEmit` kök tsconfig'te (`files: []` + proje referansları) HİÇBİR dosyayı kontrol etmez,
+  geri çevirme.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
