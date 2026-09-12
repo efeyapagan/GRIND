@@ -10,7 +10,6 @@ import { ApiError } from '../api/problem';
  * kuyruklama bilerek yapilmiyor; kullanici tekrar denemeli.
  */
 const BAGLANTI_HATASI_MESAJI = 'Bağlantı yok. Set kaydedilmedi, tekrar deneyin.';
-const VARSAYILAN_HATA_MESAJI = 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.';
 
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
@@ -37,12 +36,38 @@ export default function AddSetForm() {
   const [tekrar, setTekrar] = useState('');
   const [rir, setRir] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
+  const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
 
   const agirlikRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Bos (ya da sadece bosluk) birakilmis bir agirlik/tekrar alani "girilmedi" demektir,
+   * "0" degil -- `Number('')` sessizce 0'a donustugu icin bunu erkenden yakalamazsak, yanlislikla
+   * gonderilen bos bir form gercek bir set olarak kaydedilir ve sunucu onun uzerinde PR tespiti
+   * calistirir (review bulgusu). Agirlik icin "0" (barfiks/dips) GECERLI bir deger oldugundan
+   * burada deger degil, SADECE bosluk kontrolu yapilir.
+   */
+  function alanlariDogrula(): Record<string, string> {
+    const hatalar: Record<string, string> = {};
+    if (agirlik.trim() === '') {
+      hatalar.weight = 'Ağırlık girilmeli.';
+    }
+    if (tekrar.trim() === '') {
+      hatalar.reps = 'Tekrar sayısı girilmeli.';
+    }
+    return hatalar;
+  }
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
     setGenelHata(null);
+    setAlanHatalari({});
+
+    const dogrulamaHatalari = alanlariDogrula();
+    if (Object.keys(dogrulamaHatalari).length > 0) {
+      setAlanHatalari(dogrulamaHatalari);
+      return;
+    }
 
     // Agirlik hem "," hem "." kabul eder (spec) ama sunucuya her zaman nokta ile gider.
     const ayristirilmisAgirlik = Number(agirlik.replace(',', '.'));
@@ -61,8 +86,12 @@ export default function AddSetForm() {
       agirlikRef.current?.focus();
     } catch (hata) {
       if (hata instanceof ApiError) {
+        // Sunucu CreateSetRequest icin alan bazli DataAnnotations hatalari (orn. Weight/Reps
+        // araligi) donebilir -- `apiHatasiniAyir` bunlari LoginPage/RegisterPage ile AYNI
+        // desende ilgili alanin altina koyar, tek bir genel mesaja duzlestirmez.
         const sonuc = apiHatasiniAyir(hata);
-        setGenelHata(sonuc.genelHata ?? Object.values(sonuc.alanHatalari)[0] ?? VARSAYILAN_HATA_MESAJI);
+        setGenelHata(sonuc.genelHata);
+        setAlanHatalari(sonuc.alanHatalari);
       } else {
         setGenelHata(BAGLANTI_HATASI_MESAJI);
       }
@@ -96,6 +125,7 @@ export default function AddSetForm() {
           value={agirlik}
           onChange={(e) => setAgirlik(e.target.value)}
         />
+        {alanHatalari.weight && <p role="alert">{alanHatalari.weight}</p>}
       </div>
       <div>
         <label htmlFor="set-tekrar">Tekrar</label>
@@ -105,6 +135,7 @@ export default function AddSetForm() {
           value={tekrar}
           onChange={(e) => setTekrar(e.target.value)}
         />
+        {alanHatalari.reps && <p role="alert">{alanHatalari.reps}</p>}
       </div>
       <div>
         <label htmlFor="set-rir">RIR (opsiyonel)</label>

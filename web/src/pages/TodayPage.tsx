@@ -11,9 +11,15 @@ import AddSetForm from '../components/AddSetForm';
  *
  * DOM sirasi bilerek setler -> form: spec, birincil eylemin (set ekleme) bas parmakla erisilebilir
  * alt bolgede olmasini istiyor; bu CSS'siz, sadece DOM sirasiyla saglaniyor (gorsel tasarim yok).
+ *
+ * DIKKAT (review bulgusu): `useOpenSession` sadece 404'u `null`'a cevirir, baska bir hata
+ * (orn. 500) normal sekilde firlar ve `isError` true olur. Bu durumu ayirt ETMEMEK, bir sunucu
+ * kesintisini "bugun henuz antrenman yok" bos durumuyla ayni gostermek anlamina gelirdi --
+ * kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye kalkisirdi.
+ * Bu yuzden hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
  */
 export default function TodayPage() {
-  const { data: oturum, isLoading: oturumYukleniyor } = useOpenSession();
+  const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const { data: setler } = useSessionSets(oturum?.id ?? null);
   const bitirMutasyonu = useFinishSession();
 
@@ -23,7 +29,9 @@ export default function TodayPage() {
 
       {oturumYukleniyor && <p>Yükleniyor...</p>}
 
-      {!oturumYukleniyor && oturum && (
+      {oturumHataliMi && <p role="alert">Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.</p>}
+
+      {!oturumYukleniyor && !oturumHataliMi && oturum && (
         <section>
           <p>Başlangıç: {formatTrTime(oturum.startedAt)}</p>
           <SetList sets={setler ?? []} />
@@ -39,7 +47,7 @@ export default function TodayPage() {
         </section>
       )}
 
-      {!oturumYukleniyor && !oturum && <p>Bugün henüz antrenman yok.</p>}
+      {!oturumYukleniyor && !oturumHataliMi && !oturum && <p>Bugün henüz antrenman yok.</p>}
 
       <AddSetForm />
     </div>

@@ -160,6 +160,9 @@ test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tas
 
   expect(await screen.findByText('60 × 8')).toBeInTheDocument();
   expect(ortam.sonGonderilenGovde()).toMatchObject({ exerciseId: 1, weight: 60, reps: 8 });
+  // Basarili gonderimden sonra odak agirlik alanina doner (spec Karar 6) -- ust uste ayni seti
+  // girmek en sik akis, kullanici her seferinde alana tekrar tiklamak zorunda kalmamali.
+  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveFocus();
 });
 
 test('recordType Weight donen set icin rekor rozeti gorunur', async () => {
@@ -172,6 +175,18 @@ test('recordType Weight donen set icin rekor rozeti gorunur', async () => {
   await setEkle(kullanici, '70', '5');
 
   expect(await screen.findByText(/ağırlık rekoru/)).toBeInTheDocument();
+});
+
+test('recordType Reps donen set icin rekor rozeti gorunur', async () => {
+  sahteSunucuyuKur({ recordTypeUret: () => 'Reps' });
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '70', '5');
+
+  expect(await screen.findByText(/tekrar rekoru/)).toBeInTheDocument();
 });
 
 test('recordType None donen set icin rekor rozeti gorunmez', async () => {
@@ -197,6 +212,61 @@ test('agirlik 0 ile set eklenebilir', async () => {
   await setEkle(kullanici, '0', '12');
 
   expect(await screen.findByText('0 × 12')).toBeInTheDocument();
+});
+
+test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir', async () => {
+  let istekYapildiMi = false;
+  sahteSunucuyuKur();
+  server.use(
+    http.post('/api/sets', () => {
+      istekYapildiMi = true;
+      return HttpResponse.json({
+        id: 1,
+        sessionId: 1,
+        exerciseId: 1,
+        exerciseName: 'Bench Press',
+        weight: 0,
+        reps: 8,
+        recordType: 'None',
+        rir: null,
+        createdAt: new Date().toISOString(),
+      });
+    }),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  // Agirlik alani BILEREK bos birakiliyor -- "0" (barfiks/dips) gecerli bir deger olsa da,
+  // hic girilmemis bir alan "0" degil "girilmedi" demektir (review bulgusu).
+  await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
+  await kullanici.clear(screen.getByLabelText('Tekrar'));
+  await kullanici.type(screen.getByLabelText('Tekrar'), '8');
+  await kullanici.click(screen.getByRole('button', { name: 'Set Ekle' }));
+
+  const hatalar = await screen.findAllByRole('alert');
+  expect(hatalar.length).toBeGreaterThan(0);
+  expect(istekYapildiMi).toBe(false);
+});
+
+test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ', async () => {
+  sahteSunucuyuKur();
+  server.use(
+    http.get('/api/sessions/open', () =>
+      HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
+    ),
+  );
+
+  bugunSayfasiniOlustur();
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.',
+  );
+  // KRITIK: bir sunucu hatasi, "bugun henuz antrenman yok" bos durumuyla KARISTIRILMAMALI --
+  // aksi halde kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye
+  // kalkisir (review bulgusu).
+  expect(screen.queryByText('Bugün henüz antrenman yok.')).not.toBeInTheDocument();
 });
 
 test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', async () => {
