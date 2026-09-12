@@ -1,0 +1,99 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { request, setUnauthorizedHandler } from '../api/client';
+import { session } from './session';
+import type { components } from '../api/schema';
+
+type AuthResponse = components['schemas']['AuthResponse'];
+
+interface AuthContextValue {
+  username: string | null;
+  isAuthenticated: boolean;
+  login: (kullaniciAdi: string, sifre: string) => Promise<void>;
+  register: (kullaniciAdi: string, sifre: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+/**
+ * schema.d.ts'te AuthResponse'un her alanı optional (Swashbuckle bunları required
+ * işaretlemedi), ama sunucu ikisini de her zaman doldurur. Doğrulamayı burada TEK bir yerde
+ * yapıp temiz bir hata fırlatıyoruz -- her çağrı yerinde "!" ile susturmak yerine, sunucudan
+ * gerçekten eksik bir yanıt gelirse bunu sessizce yutmadan haber veriyoruz.
+ */
+function dogrulanmisKimlikYaniti(yanit: AuthResponse): {
+  token: string;
+  expiresAtUtc: string;
+  username: string;
+} {
+  if (!yanit.token || !yanit.expiresAtUtc || !yanit.username) {
+    throw new Error('Sunucudan eksik kimlik yanıtı alındı.');
+  }
+  return { token: yanit.token, expiresAtUtc: yanit.expiresAtUtc, username: yanit.username };
+}
+
+async function kimlikIstegiGonder(
+  yol: '/auth/login' | '/auth/register',
+  kullaniciAdi: string,
+  sifre: string,
+): Promise<{ token: string; expiresAtUtc: string; username: string }> {
+  const yanit = await request<AuthResponse>(yol, {
+    method: 'POST',
+    body: JSON.stringify({ username: kullaniciAdi, password: sifre }),
+    auth: false,
+  });
+  return dogrulanmisKimlikYaniti(yanit);
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [username, setUsername] = useState<string | null>(() => {
+    const oturum = session.read();
+    return session.isValid() && oturum ? oturum.username : null;
+  });
+
+  const logout = useCallback(() => {
+    session.clear();
+    setUsername(null);
+  }, []);
+
+  useEffect(() => {
+    // 401 gelen HER istek oturumu düşürür -- token süresi doldu ya da hesap pasifleştirildi
+    // (Faz 13), istemci ikisini ayırt etmez, ikisinin de cevabı aynı: login'e dön.
+    setUnauthorizedHandler(logout);
+  }, [logout]);
+
+  const login = useCallback(async (kullaniciAdi: string, sifre: string) => {
+    const dogrulanmis = await kimlikIstegiGonder('/auth/login', kullaniciAdi, sifre);
+    session.write(dogrulanmis.token, dogrulanmis.expiresAtUtc, dogrulanmis.username);
+    setUsername(dogrulanmis.username);
+  }, []);
+
+  const register = useCallback(async (kullaniciAdi: string, sifre: string) => {
+    const dogrulanmis = await kimlikIstegiGonder('/auth/register', kullaniciAdi, sifre);
+    session.write(dogrulanmis.token, dogrulanmis.expiresAtUtc, dogrulanmis.username);
+    setUsername(dogrulanmis.username);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ username, isAuthenticated: username !== null, login, register, logout }),
+    [username, login, register, logout],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth, AuthProvider içinde kullanılmalıdır.');
+  }
+  return context;
+}

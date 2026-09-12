@@ -1,8 +1,17 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import App from './App';
 
-test('uygulama basligi gorunur', () => {
-  render(<App />);
+test('App, ic route icerigini Outlet ile gosterir', () => {
+  render(
+    <MemoryRouter initialEntries={['/ic-sayfa']}>
+      <Routes>
+        <Route path="/" element={<App />}>
+          <Route path="ic-sayfa" element={<p>Ic sayfa icerigi</p>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
 
-  expect(screen.getByRole('heading', { name: 'GRIND' })).toBeInTheDocument();
+  expect(screen.getByText('Ic sayfa icerigi')).toBeInTheDocument();
 });
