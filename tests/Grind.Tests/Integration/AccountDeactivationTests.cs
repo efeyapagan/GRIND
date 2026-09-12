@@ -81,6 +81,33 @@ public class AccountDeactivationTests(GrindApiFactory factory) : IClassFixture<G
         Assert.Equal(HttpStatusCode.OK, (await yeni.GetAsync("/api/exercises")).StatusCode);
     }
 
+    /// <summary>
+    /// Gerçek bir istemci yeni token gelene kadar eski Authorization başlığını taşımaya devam eder.
+    /// Ölü token + login [AllowAnonymous] => kimlik doğrulama başarısız olur ama istek kimliksiz
+    /// olarak devam eder, login yine çalışmalı (reviewer'ın izlediği boru hattı: aksi hâlde geri
+    /// açma vaadi elinde eski token olan gerçek bir istemci için sessizce ölürdü).
+    /// </summary>
+    [Fact]
+    public async Task Olu_tokeni_tasiyan_istemci_giris_yapabilir()
+    {
+        var (client, username) = await RegisteredClientAsync();
+        await DeactivateInDatabaseAsync(username);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/exercises")).StatusCode);
+
+        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+        {
+            Username = username,
+            Password = Password
+        });
+
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var auth = await login.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.False(string.IsNullOrWhiteSpace(auth?.Token));
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/exercises")).StatusCode);
+    }
+
     private static HttpRequestMessage DeleteMe(string? password) => new(HttpMethod.Delete, "/api/auth/me")
     {
         Content = JsonContent.Create(new DeleteAccountRequest { Password = password ?? string.Empty })

@@ -70,21 +70,31 @@ public static class DependencyInjection
                 {
                     OnTokenValidated = async context =>
                     {
+                        // İstek scope'undan: repository ve logger scoped, bu olay ise singleton
+                        // seçenekler içinde yaşıyor.
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("Grind.Api.Common.DependencyInjection");
+
                         var raw = context.Principal?.FindFirst(AppClaims.UserId)?.Value;
 
                         if (!long.TryParse(
                                 raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var userId))
                         {
+                            logger.LogWarning(
+                                "Token reddedildi: kullanıcı kimliği ayrıştırılamadı. Yol: {Path}",
+                                context.HttpContext.Request.Path);
                             context.Fail("Token geçerli bir kullanıcı kimliği taşımıyor.");
                             return;
                         }
 
-                        // İstek scope'undan: repository scoped, bu olay ise singleton seçenekler
-                        // içinde yaşıyor.
                         var users = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
 
                         if (!await users.ExistsActiveAsync(userId, context.HttpContext.RequestAborted))
                         {
+                            logger.LogWarning(
+                                "Token reddedildi: hesap pasif. Yol: {Path}, Kullanıcı: {UserId}",
+                                context.HttpContext.Request.Path, userId);
                             context.Fail("Hesap pasif.");
                         }
                     }
