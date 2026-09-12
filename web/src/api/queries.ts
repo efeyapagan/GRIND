@@ -15,13 +15,20 @@ type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
  * `records` anahtarini kullanacak, set eklendikten sonra burasi invalidate edilir ki
  * "tum zamanlarin rekorlari" ekrani bayat kalmasin.
+ *
+ * `historyAll`, `history(page)`nin ONEKI (prefix) olarak tutulur -- yeni bir set gecmisteki
+ * set sayisini/hacmini ve (sayfa 1'e yeni bir oturum ekleyerek) sayfalamayi da etkiler (review
+ * bulgusu M1). Tek bir sayfayi invalidate etmek digerlerini bayat birakirdi; `historyAll` ile
+ * invalidate etmek TUM sayfalari (query key prefix eslesmesiyle) kapsar. Ham bir string literal
+ * ('history') yerine bu nesne uzerinden gidilir ki anahtar TEK bir yerde tanimli kalsin (DRY).
  */
 export const queryKeys = {
   openSession: ['openSession'] as const,
   sessionSets: (sessionId: number | null) => ['sessionSets', sessionId] as const,
   exercises: ['exercises'] as const,
   records: ['records'] as const,
-  history: (page: number) => ['history', page] as const,
+  historyAll: ['history'] as const,
+  history: (page: number) => [...queryKeys.historyAll, page] as const,
 };
 
 export interface AcikOturum {
@@ -304,6 +311,9 @@ export function useAddSet() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(set.sessionId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.records });
+      // Yeni set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
+      // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
     },
   });
 }
