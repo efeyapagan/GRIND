@@ -41,7 +41,7 @@ export default function HistoryPage() {
                     {formatTrDate(oturum.startedAt)} — {oturum.setCount} set —{' '}
                     {formatWeight(oturum.totalVolume)} kg
                   </summary>
-                  <SetList sets={oturum.sets} />
+                  <SetList sets={oturum.sets} bosDurumMetni="Bu oturumda set yok." />
                 </details>
               </li>
             ))}

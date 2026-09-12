@@ -4,6 +4,10 @@ import { formatWeight } from '../lib/format';
 
 interface Props {
   sets: SetKaydi[];
+  // Bos durumda gosterilecek metin cagiran tarafa birakilir (T5): TodayPage "bugun" baglaminda
+  // (varsayilan), HistoryPage ise gecmis bir gunu gosterirken "Bugün..." metnini KULLANAMAZ --
+  // gecmiste genisletilmis, seti olmayan bir oturum icin bu metin YANLIS olurdu.
+  bosDurumMetni?: string;
 }
 
 interface EgzersizGrubu {
@@ -31,7 +35,7 @@ function rekorRozetiMetni(kayit: SetKaydi): string | null {
  * zaten kronolojik sirayla dondurur, burada sadece egzersize gore yeniden gruplaniyoruz. Bir
  * egzersizin ilk gorundugu sira grubun sirasini belirler.
  */
-export default function SetList({ sets }: Props) {
+export default function SetList({ sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' }: Props) {
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
     for (const kayit of sets) {
@@ -50,7 +54,7 @@ export default function SetList({ sets }: Props) {
   }, [sets]);
 
   if (gruplar.length === 0) {
-    return <p>Bugün henüz set eklenmedi.</p>;
+    return <p>{bosDurumMetni}</p>;
   }
 
   return (

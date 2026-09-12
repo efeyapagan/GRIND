@@ -159,6 +159,26 @@ test('oturum detayi acilinca setleri SetList ile gosterir (ayri istek atmadan)',
   expect(await screen.findByText('60 × 8')).toBeInTheDocument();
 });
 
+test('genisletilmis, seti olmayan bir gecmis oturumu "Bugün" metni DEGIL notr bir metin gosterir', async () => {
+  // T5: SetList "Bugün henüz set eklenmedi." metnini sabit kullaniyordu -- bu, gecmis bir
+  // gunun genisletilmis, seti olmayan bir oturumunda da gorunurdu, ki YANLIS: o gun "bugun"
+  // degil.
+  server.use(
+    http.get('/api/history', () =>
+      HttpResponse.json(sayfaYaniti([ornekOturum({ setCount: 0, sets: [] })])),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  const ozet = await screen.findByText(/10\.09\.2026/);
+  await kullanici.click(ozet);
+
+  expect(await screen.findByText('Bu oturumda set yok.')).toBeInTheDocument();
+  expect(screen.queryByText('Bugün henüz set eklenmedi.')).not.toBeInTheDocument();
+});
+
 test('gecmis istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ', async () => {
   server.use(
     http.get('/api/history', () =>
