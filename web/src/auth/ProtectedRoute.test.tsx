@@ -1,8 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { session } from './session';
+
+/**
+ * `AuthProvider` artik (I1 fix) `useQueryClient()` kullaniyor (cikista onbellegi temizlemek
+ * icin) -- bu yuzden gercek uygulamadaki gibi (main.tsx) HER ZAMAN bir `QueryClientProvider`
+ * icinde render edilmeli, aksi halde context bulunamaz hatasi firlar.
+ */
+function testeOzelSorguIstemcisi(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
 
 /**
  * Gercek uygulamadaki route agacini taklit eden minimal bir test router'i: '/' korumali,
@@ -34,9 +44,11 @@ beforeEach(() => {
 test('oturum yoksa korumali sayfa yerine giris ekrani gosterilir', async () => {
   const router = korumaliRouterOlustur(['/'], 0);
   render(
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>,
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>,
   );
 
   expect(await screen.findByText('GIRIS SAYFASI')).toBeInTheDocument();
@@ -47,9 +59,11 @@ test('oturum varsa korumali sayfa gosterilir', async () => {
   session.write('gecerli-token', new Date(Date.now() + 3_600_000).toISOString(), 'efe');
   const router = korumaliRouterOlustur(['/'], 0);
   render(
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>,
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>,
   );
 
   expect(await screen.findByText('KORUMALI SAYFA')).toBeInTheDocument();
@@ -64,9 +78,11 @@ test('yonlendirme replace ile yapilir: bir adim geri gidince giris dongude kalin
   // SAYFA'ya ulasamaz. Bu test tam olarak bu farki gozlemliyor: replace kaldirilirsa kirilir.
   const router = korumaliRouterOlustur(['/onceki', '/'], 1);
   render(
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>,
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>,
   );
 
   await screen.findByText('GIRIS SAYFASI');

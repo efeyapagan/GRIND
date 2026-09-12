@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { request, setUnauthorizedHandler } from '../api/client';
 import { session } from './session';
 import type { components } from '../api/schema';
@@ -54,6 +55,7 @@ async function kimlikIstegiGonder(
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [username, setUsername] = useState<string | null>(() => {
     const oturum = session.read();
     return session.isValid() && oturum ? oturum.username : null;
@@ -62,7 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     session.clear();
     setUsername(null);
-  }, []);
+    // Bir sonraki hesap ayni QueryClient'i paylasir (main.tsx'te modul-seviyesinde TEK bir
+    // instance) -- temizlenmezse B girisinde, ayni sorgu anahtarlariyla (orn. `records`,
+    // `sessionSets`) A'nin onbellekteki verisi B'nin ekraninda ANINDA (arka plandaki yeniden
+    // getirme donene kadar) gorunur (review bulgusu I1). Bu ayni zamanda 401 yolunu da kapsar --
+    // asagidaki `setUnauthorizedHandler` de bu `logout`u cagirir.
+    queryClient.clear();
+  }, [queryClient]);
 
   useEffect(() => {
     // 401 gelen HER istek oturumu düşürür -- token süresi doldu ya da hesap pasifleştirildi
