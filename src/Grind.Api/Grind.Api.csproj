@@ -8,13 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- AuthServiceTests, AuthService.InvalidCredentials'a (internal) erişir: pasif hesap
-         mesajının yanlış-şifre mesajıyla BİREBİR aynı sabite karşı doğrulanması gerekiyor
-         (Faz 13 spec Karar 2) — ayrı bir string kopyası DRY'ı ihlal ederdi. -->
-    <InternalsVisibleTo Include="Grind.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Anthropic" Version="12.47.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />

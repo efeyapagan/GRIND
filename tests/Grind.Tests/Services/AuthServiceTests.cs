@@ -314,7 +314,7 @@ public class AuthServiceTests
             var hata = await Assert.ThrowsAsync<UnauthorizedException>(
                 () => service.LoginAsync(new LoginRequest { Username = username, Password = "bambaska-bir-sifre" }));
 
-            Assert.Equal(AuthService.InvalidCredentials, hata.Message);
+            Assert.Equal("Kullanıcı adı veya şifre hatalı.", hata.Message);
             context.ChangeTracker.Clear();
             var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
             Assert.Equal(An, satir.DeletedAt);

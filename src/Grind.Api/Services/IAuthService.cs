@@ -15,7 +15,8 @@ public interface IAuthService
 
     /// <summary>
     /// Giriş yapmış kullanıcının hesabını pasifleştirir: yalnızca <c>DeletedAt</c> damgalanır, HİÇBİR
-    /// satır silinmez. Şifre yanlışsa UnauthorizedException.
+    /// satır silinmez. Şifre yanlışsa UnauthorizedException; token'daki UserId veritabanında hiçbir
+    /// satıra karşılık gelmiyorsa (örn. hesap bir şekilde silinmişse) da AYNI UnauthorizedException.
     /// </summary>
     Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default);
 }
