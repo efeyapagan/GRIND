@@ -5,13 +5,16 @@
  * ele alinmasin — ikinci sekli unutmak, kullaniciya bos bir hata gostermenin en kisa yolu.
  */
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly detail: string,
-    readonly fieldErrors: Record<string, string[]> = {},
-  ) {
+  readonly status: number;
+  readonly detail: string;
+  readonly fieldErrors: Record<string, string[]>;
+
+  constructor(status: number, detail: string, fieldErrors: Record<string, string[]> = {}) {
     super(detail);
     this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+    this.fieldErrors = fieldErrors;
   }
 }
 
