@@ -91,7 +91,7 @@ export default function SetList({
                         <span className="w-5 text-label text-muted">{setSirasi + 1}</span>
                         <span className="text-body-lg tabular-nums">
                           {formatWeight(kayit.weight)} kg{' '}
-                          <span className="text-muted">×</span> {kayit.reps}
+                          <span className="font-light text-muted">×</span> {kayit.reps}
                         </span>
                       </div>
                       {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
@@ -143,7 +143,7 @@ export default function SetList({
                       <span className="text-metric tabular-nums">
                         {formatWeight(kayit.weight)}{' '}
                         <span className="text-body text-muted">kg</span>{' '}
-                        <span className="text-muted">×</span> {kayit.reps}
+                        <span className="font-light text-muted">×</span> {kayit.reps}
                       </span>
                       {rozet && <Rozet>{rozet}</Rozet>}
                     </div>
