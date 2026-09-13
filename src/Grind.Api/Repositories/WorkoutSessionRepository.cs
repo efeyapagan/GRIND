@@ -98,6 +98,19 @@ public class WorkoutSessionRepository(AppDbContext context)
             .Select(s => s.StartedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<WorkoutSession>> GetInRangeAsync(
+        long userId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default)
+        => await FilterByRange(userId, fromUtcInclusive, toUtcExclusive)
+            .AsNoTracking()
+            // Yalnızca şablon adı için tek LEFT JOIN; setler ayrı sorguda toplu çekilir.
+            .Include(s => s.Template)
+            .OrderBy(s => s.StartedAt)
+            .ThenBy(s => s.Id)
+            .ToListAsync(cancellationToken);
+
     private IQueryable<WorkoutSession> FilterHistory(
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive, long? exerciseId)
     {

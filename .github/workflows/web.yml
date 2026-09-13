@@ -1,0 +1,46 @@
+name: Web CI
+
+on:
+  pull_request:
+    branches: [master, dev]
+    paths: ['web/**', '.github/workflows/web.yml']
+  push:
+    branches: [master, dev]
+    paths: ['web/**', '.github/workflows/web.yml']
+
+# DIKKAT: grup adi .NET CI'inkinden (ci-...) FARKLI olmali; ayni grup ayni branch'te
+# birbirlerini iptal eder.
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Derle ve test et
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Bagimliliklari kur
+        run: npm ci
+
+      - name: Tip kontrolu
+        run: npm run typecheck
+
+      - name: Testler
+        run: npm run test
+
+      - name: Derle
+        run: npm run build

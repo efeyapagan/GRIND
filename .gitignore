@@ -489,3 +489,11 @@ $RECYCLE.BIN/
 # paylasilabilir ayarlari (app/appearance/core-plugins/graph) commit edilir.
 docs/notes/.obsidian/workspace.json
 docs/notes/.obsidian/workspace-mobile.json
+
+# Frontend (web/) — Vite ciktilari, arac onbellekleri ve yerel ortam dosyalari.
+# node_modules/ ve .env yukarida zaten var; .env.local varyantlarini o kural YAKALAMIYOR.
+web/dist/
+web/coverage/
+web/.vite/
+.env.local
+.env.*.local

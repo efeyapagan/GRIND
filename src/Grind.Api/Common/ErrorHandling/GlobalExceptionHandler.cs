@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Microsoft.AspNetCore.Diagnostics;
@@ -35,18 +36,34 @@ public class GlobalExceptionHandler(
 
         httpContext.Response.StatusCode = statusCode;
 
-        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        var problemDetails = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = Detail(exception, statusCode),
+            Instance = httpContext.Request.Path
+        };
+
+        var written = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = statusCode,
-                Title = title,
-                Detail = Detail(exception, statusCode),
-                Instance = httpContext.Request.Path
-            }
+            ProblemDetails = problemDetails
         });
+
+        if (written)
+        {
+            return true;
+        }
+
+        // TryWriteAsync, içindeki DefaultProblemDetailsWriter Accept başlığında JSON türü görmezse
+        // (örn. "Accept: text/plain") false döner — endpoint bu noktada middleware tarafından
+        // temizlendiği için MVC'nin kendi yazıcısı devreye giremez. Bu durumda gövdeyi KENDİMİZ
+        // yazarız; aksi halde çağıran generic bir gövdeyle (detail'siz) baş başa kalır.
+        await httpContext.Response.WriteAsJsonAsync(
+            problemDetails, (JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
+
+        return true;
     }
 
     private static (int StatusCode, string Title) Map(Exception exception) => exception switch
@@ -56,6 +73,7 @@ public class GlobalExceptionHandler(
         UnauthorizedException => (StatusCodes.Status401Unauthorized, "Kimlik doğrulanamadı"),
         ForbiddenException => (StatusCodes.Status403Forbidden, "İzin yok"),
         ConflictException => (StatusCodes.Status409Conflict, "Çakışma"),
+        ServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Hizmet kullanılamıyor"),
         _ => (StatusCodes.Status500InternalServerError, "Beklenmeyen bir hata oluştu")
     };
 

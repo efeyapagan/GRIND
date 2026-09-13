@@ -19,9 +19,11 @@
 | 8 | Feature: SetEntry + PR motoru | ✅ |
 | 9 | Feature: Sorgular (geçmiş, takvim/streak, hacim) | ✅ |
 | 10 | Feature: BodyWeightLog | ✅ |
-| 11 | Feature: Export | ☐ |
-| 12 | Feature: AiInsight altyapısı | ☐ |
-| 13 | Feature: Hesap silme | ☐ |
+| 11 | Feature: Export | ✅ |
+| 12 | Feature: AiInsight altyapısı | ✅ |
+| 13 | Feature: Hesap silme (soft delete) | ✅ |
+| F1 | Frontend dilim 1: antrenman çekirdeği (`web/`) | ✅ |
+| F2 | Frontend görsel tasarım (Tailwind, 6 ekran, PWA ikonları) | ✅ |
 
 ---
 
@@ -477,28 +479,360 @@
 >    uç gerektirir, gerçek ihtiyaç çıkarsa eklenir).
 
 ## Faz 11 — Feature: Export
-- [ ] 11.1 Ham JSON export (tarih aralığı parametreli)
-- [ ] 11.2 AI-özet formatı: okunabilir düz metin (yapıştırılabilir)
-- [ ] 11.3 Formatlama mantığı servis katmanında, controller sadece dönüş yapar
+
+> Tasarım kararları: [docs/superpowers/specs/2026-09-11-export-design.md](docs/superpowers/specs/2026-09-11-export-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-11-faz-11-export.md](docs/superpowers/plans/2026-09-11-faz-11-export.md)
+
+- [x] 11.1 Ham JSON export (tarih aralığı parametreli) — `GET /api/export/json?from&to`
+      (`ExportController`, Görev 4) `ExportResponse` döner. İçeriği: aralıktaki oturumlar ve setleri
+      (setsiz oturumlar dahil, çünkü liste bir günlüktür; spec Karar 8), tartılar, aralık özeti ve tüm
+      zamanların rekorları. `from`/`to` opsiyonel (Soru 2/A): verilmezse tüm geçmiş döner. Parametre
+      tipi Faz 9'un `StatsRangeQuery`'si. Rekorlar ve seriler aralıktan BAĞIMSIZ (spec Karar 2). Veri
+      erişimi iki yeni izlemesiz aralık sorgusuyla yapılır (Görev 1):
+      `IWorkoutSessionRepository.GetInRangeAsync` ve `ISetEntryRepository.GetInRangeAsync`. Setler
+      oturumlarının `StartedAt`'ine göre filtrelenir. Bu filtre `GetVolumeByExerciseAsync` ile ortak
+      `FilterBySessionRange` yardımcısında tek kopya halinde durur.
+- [x] 11.2 AI-özet formatı: okunabilir düz metin (yapıştırılabilir) — `GET /api/export/text`,
+      `text/plain; charset=utf-8` döner. `ExportTextFormatter.Format` (Görev 2) AYNI `ExportResponse`
+      modelini formatlayan saf bir fonksiyondur. Bu yüzden JSON ile metin yapısal olarak ayrışamaz
+      (spec Karar 3). Biçim kuralları:
+      - Türkçe, Markdown başlıklı.
+      - Sayılar `InvariantCulture` + `0.##`. Sebep: tr-TR biçimindeki "152.340"ı bir LLM 152,34
+        okuyabilirdi.
+      - Tarih ISO, saat TR; gün adları sabit bir diziden gelir.
+      - Satır sonu her zaman `\n`.
+      - Kullanıcı metinleri (not, egzersiz ve şablon adı) tek satıra iner.
+
+      `TurkeyDay.ToLocal` saat dilimi dönüşümünün tek kopyası oldu; `RangeFor` ve `LocalDateOf`
+      artık onu kullanıyor.
+- [x] 11.3 Formatlama mantığı servis katmanında, controller sadece dönüş yapar — `ExportService`
+      (Görev 3) export'u mevcut okuma yollarından BİRLEŞTİRİR ve yeni hesap içermez (spec Karar 4):
+      - Özet `IStatsService.GetCalendarAsync` ve `GetVolumeByExerciseAsync`'ten gelir.
+      - Rekorlar `IPersonalRecordService.GetAllTimeAsync`'ten gelir.
+      - Oturum/set birleştirmesi, geçmiş ucuyla paylaşılan `HistoryMapping`'de yapılır
+        (`WorkoutHistoryService`'ten taşındı).
+
+      Controller ince, if/try içermez. Metin ucunda bilerek `[Produces]` yok (spec Karar 10), çünkü
+      otomatik 400'ü 406'ya çevirirdi.
+- [x] 11.4 Test:
+      - **Saf çekirdek:** `TurkeyDayTests` +2 ve `ExportTextFormatterTests` 18. Kapsam: altın metin,
+        tr-TR kültürü, ondalık kırpma, egzersiz bazında gruplama, RIR ve PR ekleri, ertesi TR gününe
+        taşan bitiş, boş bölümler, aralık başlıkları, satır sonu düzleştirme.
+      - **Repository:** `WorkoutSessionRepositoryTests` +3 ve `SetEntryRepositoryTests` +3. Kapsam:
+        oturumun başlangıcına göre filtre, izlemesizlik, IDOR.
+      - **Servis:** `ExportServiceTests` 10. Kapsam: özetin takvim ve egzersiz hacmi uçlarıyla birebir
+        aynı olması, setsiz oturumun listede olup özette olmaması, rekorların aralıktan bağımsızlığı,
+        IDOR, metnin formatlanmış model olması.
+      - **Uçtan uca:** `ExportEndpointsTests` 9. Kapsam: 401, JSON şekli, text/plain ve UTF-8, ters
+        aralıkta 400, bozuk tarihte 406 değil 400, `Accept: text/plain` ile gelen hatalı istekte
+        `detail`'in korunması, IDOR.
+
+      Toplam **554 test yeşil**. Başlangıç 509'du, çünkü Faz 10 sonrası `2fcb8a7` düzeltmesi 507'ye
+      +2 ekledi. Faz 11 boyunca +45: Görev 1 +6, Görev 2 +19, Görev 3 +10, Görev 4 +8, final
+      inceleme düzeltmesi +2. Release build: 0 uyarı, 0 hata. Migration YOK.
+
+      **Final inceleme düzeltmesi (tüm uçları etkiler):** `GlobalExceptionHandler` Faz 3'ten beri bir
+      boşluk taşıyordu. `Accept` başlığı JSON içermediğinde varsayılan ProblemDetails yazıcısı
+      reddediyor ve servisin fırlattığı 4xx, `detail`'i olmayan genel bir gövdeye düşüyordu. Artık
+      handler aynı ProblemDetails'i `application/problem+json` olarak kendisi yazıyor.
+
+> **Faz 11'den devreden notlar (Faz 12'de dikkat edilecek):**
+> 1. Tüm geçmiş export'u kullanıcının setlerini iki kez okur: bir kez oturum setleri için, bir kez
+>    `GetAllTimeAsync`'in rekor özeti için. `GetAllTimeAsync` hâlâ izlemeli. Kişisel ölçekte önemsiz;
+>    rekor özeti SQL'e taşındığında (Faz 8 devreden notu 3) kendiliğinden düzelir.
+> 2. Export'un sorguları ayrı ifadeler olarak çalışır ve bilerek transaction içinde değildir (KISS).
+>    İki sorgu arasında yepyeni bir oturuma girilen bir set export'ta görünmeyebilir.
+> 3. Faz 12 (AiInsight) için, backend'in LLM'e göndereceği bağlamın hazır kaynağı
+>    `IExportService.GetTextAsync`. Ayrı bir "LLM'e özet" formatı yazmak yerine bu kullanılmalı (DRY).
+>    LLM çağrısı transaction DIŞINDA kalmalı (CLAUDE.md). Export zaten salt okuma, `SaveChangesAsync`
+>    çağırmaz.
+> 4. Faz 10'dan devreden notlar hâlâ AÇIK:
+>    - Proje çapında `AsNoTracking` geçişi yapılmadı. Faz 11'in yeni sorguları izlemesiz, eski okuma
+>      yolları hâlâ izlemeli.
+>    - Offset'siz gönderilen `recordedAt` sorunu çözülmedi.
+>    - Haftalık/aylık ortalama yok.
 
 ## Faz 12 — Feature: AiInsight altyapısı
-- [ ] 12.1 `AiInsight` CRUD/okuma; `Kind`, `WorkoutSessionId`, `SetEntryId` kapsamları
-- [ ] 12.2 `IAiInsightProvider` soyutlaması + `NullProvider` (varsayılan kapalı)
-- [ ] 12.3 Gerçek LLM çağrısı transaction DIŞINDA (CLAUDE.md uyarısı) — aktivasyon
-      maliyet netleşince
+
+> Tasarım kararları: [docs/superpowers/specs/2026-09-11-ai-insight-design.md](docs/superpowers/specs/2026-09-11-ai-insight-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-11-faz-12-ai-insight.md](docs/superpowers/plans/2026-09-11-faz-12-ai-insight.md)
+
+- [x] 12.1 `AiInsight` okuma/yönetimi; `Kind`, `WorkoutSessionId`, `SetEntryId` kapsamları —
+      `POST /api/insights` (üret), `GET /api/insights` (süzgeçli, sayfalı), `GET /api/insights/{id}`,
+      `DELETE /api/insights/{id}`; `InsightsController` ince (Görev 5). **Düzenleme ucu YOK** (spec
+      Karar 2): yorum, modelin ne dediğinin kaydıdır; `Content`'i düzenlemek onu
+      `Model`/`TokensUsed`/`EstimatedCostUsd`'den koparırdı. Elle ekleme de yok. Liste `kind`,
+      `workoutSessionId` ve `setEntryId` ile süzülür — üretim bugün yalnızca `Insight` yazsa da
+      okuma yolu Suggestion satırları için hazır (spec Karar 1). Sıra `CreatedAt`/`Id` azalan;
+      sayfalama `PagedRangeQuery`'den çıkarılan ortak `PagedQuery` tabanıyla (Görev 1).
+      Yorumun kapsadığı aralık satırda saklanır: `AiInsight.RangeFrom`/`RangeTo` (`date`, nullable,
+      Görev 2 + migration `AiInsightAralikAlanlari`) — `CreatedAt` yetmez, bugün üretilen bir yorum
+      geçen yılı kapsayabilir ve istemci aynı aralık için tekrar ücret ödemeden önce buna bakar.
+- [x] 12.2 `IAiInsightProvider` soyutlaması + `NullAiInsightProvider` (varsayılan kapalı) —
+      `Services/Ai/` altında (Görev 3). Varsayılan sağlayıcı `ServiceUnavailableException`
+      (**503**, yeni eşleme Görev 1) fırlatır: "açıkça kullanılamıyor" der, sahte başarı ÜRETMEZ —
+      sahte içerik kullanıcının ödemediği satırlar yazardı. Ne sorulacağı (`AiInsightPrompt`)
+      servis katmanında, nasıl sorulacağı sağlayıcıda; fiyatı da sağlayıcı bilir
+      (`AiCostCalculator`, 6 ondalık `AwayFromZero`), servis bilmez.
+- [x] 12.3 Gerçek LLM çağrısı transaction DIŞINDA — `AnthropicAiInsightProvider` resmi Anthropic
+      C# SDK'sı (`Anthropic` 12.47.0) ile yazıldı; sunucu tarafı fallback açık
+      (`server-side-fallback-2026-07-01` + `fallbacks: "default"`), `Model` yanıtı fiilen üreten
+      modelden alınır. **Aktivasyon yalnızca yapılandırmayla**, kod değişikliği istemez:
+      `dotnet user-secrets set "Ai:Provider" "Anthropic"` + `Ai:ApiKey`. Eksik/geçersiz ayar
+      açılışta (boot) reddedilir; tanınmayan sağlayıcı adı enum bağlamasında patlar.
+      `AiInsightService.GenerateAsync` (Görev 4) sırası: aralığı çöz → Faz 11 export'unu oku →
+      verisiz aralıkta 400 (LLM'e hiç gidilmez) → **sağlayıcı** → `Add` + TEK `SaveChangesAsync`.
+      `BeginTransaction` yok; sağlayıcı çağrılırken bekleyen izlenmiş değişiklik de yok (test bunu
+      davranışsal olarak sabitler). Ücretli adım ve onu izleyen kayıt `CancellationToken.None`
+      kullanır (spec Karar 7): istemci koparsa parası ödenmiş yanıt çöpe gitmez.
+      Aralık verilmezse son 30 gün, en fazla 366 gün (maliyet sınırı).
+- [x] 12.4 Test:
+      - **Saf çekirdek:** `AiInsightRangeTests` 7, `AiCostCalculatorTests` 3,
+        `GlobalExceptionHandlerTests` +2 (503 eşlemesi ve mesajın Production'da görünmesi),
+        `ColumnMappingTests` +2 (`date` + nullable).
+      - **Sağlayıcı (ağa çıkmadan, sahte `HttpMessageHandler` ile gerçek SDK yolu):**
+        `AnthropicAiInsightProviderTests` 11 — tel üzerindeki istek şekli (`/v1/messages`,
+        `x-api-key`, fallback beta başlığı, `"fallbacks": "default"`), metin bloklarının
+        birleşmesi ve düşünme/fallback bloklarının atlanması, ret, boş metin, kesik yanıtın
+        saklanması, 4xx/5xx/ağ hatası ve **bozuk gövde** (200 ama eksik alan) → 503.
+        `AiProviderRegistrationTests` 7 — varsayılan kapalı, açılışta fail-fast, enum bağlaması.
+      - **Repository:** `AiInsightRepositoryTests` 7 (+1 `PersistenceRegistrationTests`) —
+        sahiplik/IDOR, sıra ve toplam sayı, üç süzgeç, izlemeli/izlemesiz ayrımı, aralık
+        alanlarının gidip gelmesi.
+      - **Servis:** `AiInsightServiceTests` 11 — varsayılan 30 günlük aralık, aralık dışındaki
+        verinin sayılmaması, yalnızca tartısı olan aralık, verisiz aralıkta sağlayıcının hiç
+        çağrılmaması, sağlayıcı hatasında satır yazılmaması, çağrı anında bekleyen değişiklik
+        olmaması, IDOR.
+      - **Uçtan uca:** `AiInsightEndpointsTests` 14 — dört uçta 401, kapalı sağlayıcıda 503 +
+        `detail`, 201 + `Location` + gövde, liste/getir/sil, sıfır baytlık gövde, verisiz aralık,
+        çok uzun aralık, geçersiz `kind`, IDOR ve **maliyet güvencesi**: test host'u geliştiricinin
+        user-secrets'ındaki ücretli sağlayıcıyı çözemez (`Ai__Provider` ortam değişkeniyle
+        sabitlenir — final incelemenin tek bloklayıcı bulgusu buydu).
+
+      Toplam **619 test yeşil** (554 → +65). Release build: 0 uyarı, 0 hata. Migration: bir tane
+      (`AiInsightAralikAlanlari`, iki nullable `date` sütunu).
+
+> **Faz 12'den devreden notlar (Faz 13'te dikkat edilecek):**
+> 1. **Faz 13 için doğrudan:** `User → AiInsight` FK'si RESTRICT. Hesap silme sırası (13.1)
+>    `AiInsight` satırlarını da silmek zorunda, yoksa `User` silinemez.
+> 2. **Bilinçli olarak kapsam dışı:** set arası koçluk (Suggestion) motoru ve oturum/set kapsamlı
+>    üretim; POST'ta kullanıcının kendi sorusu (saklanması için yeni sütun gerekirdi); akışlı
+>    (streaming) yanıt ve prompt caching; günlük/aylık harcama sınırı ve rate limiting ("bu ay ne
+>    harcadım" `EstimatedCostUsd` üzerinde bir SUM sorgusudur, yeni tablo gerektirmez); aynı aralık
+>    için otomatik tekrar-üretim engeli (istemci listeye bakar); başka sağlayıcılar.
+> 3. **Bilinen sınırlar (final incelemede kabul edildi):**
+>    - Maliyet tahmini yapılandırılan modelin fiyatını kullanır; fallback farklı fiyatlı bir modelle
+>      yanıtlarsa sapar (bugün Opus ailesi aynı fiyatta). Cache token'ları da yok sayılır — caching
+>      kapsam dışı olduğu için bugün etkisiz.
+>    - İptal edilemeyen pencere `(MaxRetries + 1) × TimeoutSeconds` ≈ 6 dakikadır (SDK'nın `Timeout`'u
+>      deneme BAŞINA). Ücretli adım bilerek iptal edilmediği için bu süre boyunca istek ve scope'u
+>      canlı kalır.
+>    - SDK dışı bir hata (ör. `JsonException`, token toplamındaki `checked` taşması) 503 değil 500
+>      döner. Geniş bir `catch` bunu düzeltirdi ama kendi kodumuzdaki gerçek hataları da 503'e çevirip
+>      gizlerdi; Production'da 500'ün mesajı zaten maskeleniyor.
+>    - Kapalı özelliğe gelen her istek `GlobalExceptionHandler` tarafından Error seviyesinde loglanır
+>      (spec Karar 12 bunu kabul etti). Gürültü olursa `ServiceUnavailableException` için Warning
+>      istisnası ucuz çözüm.
+> 4. **Faz 10/11'den devreden notlar hâlâ AÇIK:** proje çapında `AsNoTracking` geçişi yapılmadı
+>    (`GetAllTimeAsync` hâlâ izlemeli), offset'siz `recordedAt` sorunu duruyor, haftalık/aylık
+>    ortalama yok.
 
 ## Faz 13 — Feature: Hesap silme
 > Buraya konumlandırıldı çünkü kullanıcıya ait TÜM tablolar var olmadan doğru yazılamaz.
 > Tüm FK'ler `User`'a RESTRICT olduğu için silme, DB cascade'ine bırakılmaz — Service
 > katmanında bilinçli ve sıralı yapılır (bkz. persistence spec §3).
-- [ ] 13.0 Soru: soft delete mi (hesap pasifleşir, veri durur) yoksa hard delete mi
-      (veri tamamen silinir)? Faz başında sorulacak, varsayım yapılmayacak
-- [ ] 13.1 Silme sırası tek transaction'da: SetEntry → WorkoutSession → TemplateExercise →
-      WorkoutTemplate → ExerciseMedia → Exercise (yalnızca UserId = kullanıcı olanlar) →
-      BodyWeightLog → AiInsight → User
-- [ ] 13.2 Global egzersizlere (`UserId = null`) dokunulmadığının testi
-- [ ] 13.3 Başka kullanıcının verisinin etkilenmediğinin testi
-- [ ] 13.4 Endpoint: DELETE /api/auth/me (şifre teyidi ile)
+> Tasarım kararları: [docs/superpowers/specs/2026-09-12-hesap-pasiflestirme-design.md](docs/superpowers/specs/2026-09-12-hesap-pasiflestirme-design.md)
+> Uygulama planı: [docs/superpowers/plans/2026-09-12-faz-13-hesap-pasiflestirme.md](docs/superpowers/plans/2026-09-12-faz-13-hesap-pasiflestirme.md)
+
+- [x] 13.0 **CEVAP: soft delete.** Kullanıcı 2026-09-12'de kararı verdi: "verilerin kaybolmasını
+      istemiyoruz". Hesap pasifleşir, veri durur. Bunun sonucu olarak aşağıdaki 13.1 (sıralı hard
+      delete) UYGULANMADI — hiçbir satır silinmediği için `User`'a RESTRICT veren FK'ler bir sorun
+      teşkil etmiyor. İkinci karar: **pasif hesabı doğru şifreyle giriş yapmak geri açar** (ayrı bir
+      "reactivate" ucu yok — doğru şifreyle giriş zaten niyetin kendisi).
+- [x] 13.1 Pasiflik damgası: `User.DeletedAt` (`DateOnly` değil, nullable `timestamptz`;
+      `null` = aktif) + migration `HesapPasiflestirme` (Görev 1). Bool yerine damga, çünkü "ne
+      zamandan beri pasif" bilgisini bedelsiz veriyor ve ileride bir purge gerekirse hazır veri.
+      Yanına kimlikli her istekte kullanılacak ucuz sorgu: `IUserRepository.ExistsActiveAsync`
+      (birincil anahtar üzerinde tek `EXISTS`, entity materyalize etmez).
+      > **Eski 13.1 (sıralı hard delete) NOTA DÖNÜŞTÜ:** gerçek silme gerekirse (bkz. devreden
+      > notlar) sıra şudur: SetEntry → WorkoutSession → TemplateExercise → WorkoutTemplate →
+      > ExerciseMedia → Exercise (yalnızca `UserId` = kullanıcı olanlar) → BodyWeightLog →
+      > AiInsight → User.
+- [x] 13.2 Global egzersizlere (`UserId = null`) dokunulmadığının testi — `AuthServiceTests`
+      içinde pasifleştirme öncesi/sonrası global egzersiz sayısı karşılaştırılıyor. Ayrıca
+      kullanıcının kendi verisinin de durduğu hem servis testinde (egzersiz/oturum sayıları) hem
+      uçtan uca sınanıyor.
+- [x] 13.3 Başka kullanıcının verisinin etkilenmediğinin testi — iki kullanıcı kaydedilip biri
+      pasifleştiriliyor, diğerinin `DeletedAt`'i null kalıyor.
+- [x] 13.4 Endpoint: `DELETE /api/auth/me` (şifre teyidi ile) — `[Authorize]`, gövdede
+      `DeleteAccountRequest`, başarı **204**; yanlış şifre 401, boş şifre 400 (Görev 4). Kimlik
+      token'dan gelir, gövdeden id ALINMAZ. Servis (Görev 2) sırayı şöyle işletir: kullanıcıyı
+      yükle → BCrypt doğrula → `DeletedAt = Now` (enjekte edilen `TimeProvider`) → tek
+      `SaveChangesAsync`.
+- [x] 13.5 **Pasif hesabın elindeki token anında geçersizleşir** (Görev 3) — `AddJwtBearer`'ın
+      `OnTokenValidated` olayında, kimlikli her istekte `ExistsActiveAsync` okunur ve hesap pasifse
+      `context.Fail(...)` çağrılır. Token ömrü 7 gün olduğu için bu kontrol olmasaydı
+      pasifleştirme bir hafta boyunca etkisiz kalırdı. CLAUDE.md'nin kuralı burada birebir
+      uygulanıyor: zamanla değişen bir öznitelik token'a gömülmez, güncel durum her istekte
+      veritabanından okunur. `[AllowAnonymous]` uçları (register/login) token taşımadığı için bu
+      yoldan geçmez — geri açma yolu kapanmaz. Yan fayda: `UserId` claim'i bozuk/eksik bir token
+      artık `CurrentUserService` içinde 500 üretmek yerine temiz bir 401 alıyor.
+- [x] 13.6 Login'in nötrlüğü korundu: kullanıcı yok, şifre yanlış ve hesap pasif — üçü de aynı
+      401 mesajını alır ve BCrypt doğrulaması her dalda çalışır (Faz 4'ün zamanlama savunması).
+      Pasiflik kontrolü şifre doğrulamasından SONRA gelir; önce gelseydi yanlış şifreyle bile
+      hesabın pasif olduğu sızardı. Pasif hesabın kullanıcı adı REZERVE kalır: aynı adla kayıt 409
+      alır ve mevcut şifre hash'i EZİLMEZ (hesap devralma yok) — test hash'in değişmediğini de
+      doğruluyor.
+- [x] 13.7 Test:
+      - **Repository:** `UserRepositoryTests` +3 — aktif bulunur, pasif (satır DURUYOR) bulunmaz,
+        olmayan id bulunmaz.
+      - **Servis:** `AuthServiceTests` +7 — damga saatten yazılır ve veri silinmez, yanlış şifre
+        reddedilir, pasif hesap doğru şifreyle geri açılır, yanlış şifreyle açılmaz (nötr mesaj +
+        pasif kalır), pasif adla kayıt 409 ve hash korunur, başka kullanıcı etkilenmez, global
+        egzersizler etkilenmez.
+      - **DTO:** `AuthDtoValidationTests` +2 — 72 baytlık şifre kabul, 144 baytlık şifre reddedilir
+        (BCrypt'in sessiz kesme davranışına karşı olan kural).
+      - **Uçtan uca:** `AccountDeactivationTests` 7 — pasifleştirilen hesabın eski token'ı 401
+        alır, pasif hesap giriş yapıp yeni token'la çalışabilir, **ölü token'ı hâlâ taşıyan istemci
+        giriş yapabilir**, tokensiz silme 401, şifresiz gövde 400, yanlış şifre 401 (+ hesap açık
+        kalır) ve tam tur: veri gir → 204 → token ölür → giriş geri açar → veri hâlâ orada.
+
+      Toplam **638 test yeşil** (619 → +19). Release build: 0 uyarı, 0 hata. Migration: bir tane
+      (`HesapPasiflestirme`, tek nullable `timestamptz` sütunu; mevcut satırlar `NULL` = aktif
+      olarak geriye dönük uyumlu).
+
+> **Faz 13'ten devreden notlar:**
+> 1. **Gerçek silme (purge) YOK.** Uygulama kendi dışında gerçek kullanıcılara açılırsa KVKK/GDPR'ın
+>    silinme hakkı devreye girer; o noktada yukarıdaki (eski 13.1) FK sırasına göre bir purge
+>    yazılır. `DeletedAt` "ne zamandan beri pasif" filtresini şimdiden sağlıyor. DİKKAT: purge
+>    yazılırsa `UsernameExistsAsync`, satır GERÇEKTEN silinene kadar `DeletedAt`'i yok saymaya devam
+>    etmeli — yoksa purge ile ad rezervasyonu birbiriyle çelişir.
+> 2. **Şifre sıfırlama yok** (projede e-posta yok). Pasif hesabın geri dönüşünün tek yolu doğru
+>    şifreyle giriş; şifresini unutan kullanıcı için kendi kendine bir yol yok. Bu yeni bir
+>    eksiklik değil, mevcut durumun pasif hesaba yansıması.
+> 3. **Geri açma, süresi dolmamış ESKİ token'ları da diriltir** (durum bilgisi tutmayan JWT'nin
+>    doğası; iptal listesi tutulmuyor). Hesabı geri açan zaten şifreyi bilen kişidir.
+> 4. **`DELETE /api/auth/me` uygulamanın ilk token'la kimliklenmiş şifre oracle'ıdır.** Çalınmış bir
+>    token artık şifre tahmini denemeye de yarar (BCrypt work factor 12 → ~220 ms/deneme).
+>    Uygulamada hiçbir yerde rate limiting yok (`/api/auth/login` dahil), yani bu mevcut bir boşluğun
+>    genişlemesi. Uygulama yazarı dışına açılırsa iki şifre doğrulayan uç birlikte rate-limit
+>    edilmeli.
+> 5. **Kimlik doğrulamanın artık veritabanına sert bağımlılığı var:** önceden token, Postgres
+>    kapalıyken de doğrulanabiliyordu (istek sonra patlardı), şimdi 401 daha önce geliyor. Pratikte
+>    fark etmez (her uç zaten DB'ye gidiyor) ama bir izleme probu farklı hata görür.
+> 6. **Park edilen küçük bulgu:** `Common/DependencyInjection.cs`'teki yorum "repository ve logger
+>    scoped" diyor; `ILoggerFactory` aslında singleton'dır (paylaşılan şey, istek anında
+>    `RequestServices`'ten çözme deseni). Yorum yanlış, davranış doğru.
+> 7. Faz 10-12'den devreden notlar hâlâ AÇIK: proje çapında `AsNoTracking` geçişi, offset'siz
+>    `recordedAt`, haftalık/aylık ortalama, `GetAllTimeAsync`'in izlemeli olması.
+
+---
+
+## Backend planı tamamlandı
+
+Faz 0-13 bitti.
+
+**Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.** İlk dilim
+antrenman çekirdeği (giriş, bugünün oturumu, set ekleme, PR rozetleri, basit geçmiş). Mimari plan:
+[docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
+Görsel tasarım da tamamlandı (bkz. "Frontend Görsel Tasarım" bölümü).
+
+Plandan çıkan, frontend başlamadan önce bilinmesi gereken backend işleri:
+- **CORS**: `Program.cs`'te CORS yapılandırması yok. Geliştirmede Vite proxy'si bunu gereksiz kılıyor,
+  ama frontend ayrı bir origin'den dağıtılacaksa bir CORS politikası eklenmeli (dağıtım kararına bağlı).
+- **Çevrimdışı set girişi** istenirse geçmişe dönük set girişi gerekir (`POST /api/sets` bugünün
+  oturumuna yazıyor) — Faz 8'de bilerek kapsam dışıydı.
+
+Ayrıca aşağıdaki "Gerçek Kullanımdan Gelen İstekler" hâlâ karara bağlanmayı bekliyor.
+
+---
+
+## Frontend Dilim 1 — Antrenman çekirdeği ✅ (2026-09-12)
+
+Spec: [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md)
+· Plan: [docs/superpowers/plans/2026-09-12-frontend-dilim-1-antrenman-cekirdegi.md](docs/superpowers/plans/2026-09-12-frontend-dilim-1-antrenman-cekirdegi.md)
+
+`web/` altında React + Vite + TypeScript, kurulabilir PWA. Backend'e tek satır dokunulmadı.
+
+- **İskelet:** Vite, `vite-plugin-pwa` (yalnızca uygulama kabuğu önbelleklenir), Vitest + Testing
+  Library + MSW, ayrı `Web CI` workflow'u (`.github/workflows/web.yml` — .NET CI'dan ayrı
+  concurrency grubu, tamamlayıcı path filtresi).
+- **API katmanı:** tipler Swagger'dan `openapi-typescript` ile üretilir (`npm run api:types`,
+  commit edilir). Tek bir `request()` sarmalayıcısı token'ı ekler, iki ProblemDetails şeklini tek
+  tipe indirger ve 401'de oturumu düşürür.
+- **Ekranlar:** giriş/kayıt (istemci doğrulaması sunucu kurallarını yansıtır, login 401'i nötr);
+  Bugün (açık oturum, egzersize göre gruplu setler, set ekleme, PR rozetleri, antrenmanı bitir);
+  Geçmiş (sayfalı, oturum `<details>` ile açılıp setleri gösterilir); Rekorlar (egzersiz başına en
+  ağır set ve en çok tekrar); ortak gezinme ve "Çıkış yap".
+- **Test:** backend **638** / frontend **65** (12 dosya) — ayrı sayılar, ikisi de komutla sayıldı.
+  `tsc -b` temiz, üretim derlemesi yeşil.
+
+Uygulama ve inceleme sırasında bulunup düzeltilenler:
+- `npm run typecheck` (`tsc --noEmit`) Vite şablonunun proje referanslı kök tsconfig'inde HİÇBİR
+  dosyayı kontrol etmiyordu; `tsc -b` yapıldı.
+- Çıkışta TanStack Query önbelleği temizlenmiyordu — aynı cihazda sonraki hesap öncekinin verisini
+  bir an görüyordu. `logout` artık önbelleği temizler (401 yolu dahil).
+- Ağırlık tek ondalığa yuvarlanıyordu (61,25 → 61,3); backend iki ondalık saklıyor.
+- Açık oturum ve set listesi sorgusunun hatası "henüz antrenman/set yok" boş durumu gibi
+  görünüyordu; hata artık ayrı gösteriliyor.
+
+Devreden notlar (bilerek yapılmadı):
+- ~~**Görsel tasarım** hâlâ ertelendi; PWA manifest'inde ikon yok.~~ → Kapandı: "Frontend Görsel
+  Tasarım" bölümü (Tailwind tasarımı ve PWA ikonları; Android'de "uygulama olarak yükle" açıldı).
+- **Çevrimdışı okuma — spec Karar 10'dan bilinçli sapma:** `GET /api/*` yanıtları önbelleklenmiyor;
+  gerekçe spec'te Karar 10'un altındaki notta. **Çevrimdışı yazma** hâlâ geçmişe dönük set girişi
+  isteyen bir backend işine bağlı.
+- **Dağıtım / CORS:** frontend'in nereden sunulacağı henüz karara bağlanmadı; ayrı bir origin ise
+  backend'e CORS politikası gerekir.
+- **Küçük işler:** ~~"Antrenmanı bitir" hatası ekranda gösterilmiyor~~ (görsel tasarım turunda
+  kapandı); `VITE_API_PROXY_TARGET` `.env` dosyasından okunmuyor (`vite.config` `process.env` okuyor,
+  `loadEnv` gerekir); testlerdeki sorgu istemcisi yardımcısı beş dosyada kopya; oturum açıkken
+  `/login`'de yanlış şifre global `logout`'u da tetikliyor.
+- **Sonraki dilimler:** şablonlar, istatistik/grafikler, vücut ağırlığı, export, AI yorumları,
+  egzersiz yönetimi.
+
+---
+
+## Frontend Görsel Tasarım ✅ (2026-09-13)
+
+Spec: [docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md)
+· Plan: [docs/superpowers/plans/2026-09-12-frontend-gorsel-tasarim.md](docs/superpowers/plans/2026-09-12-frontend-gorsel-tasarim.md)
+· Stitch referansları: `docs/design/stitch/`
+
+Google Stitch'te tasarlanıp onaylanan altı ekran (Bugün, Bugün boş durum, Geçmiş, Rekorlar, Giriş,
+Kayıt) `web/`'e uygulandı. Backend'e dokunulmadı.
+
+- **Temel:** Tailwind CSS v4 (`@tailwindcss/vite`, CSS-first `@theme`); tokenlar Stitch'in render
+  ettiği değerlerden, okunur adlarla (`bg`, `surface-1..4`, `accent`, `accent-soft`…); Inter uygulamaya
+  gömülü (yalnızca latin + latin-ext, precache'te); ikonlar `lucide-react`; yalnızca koyu tema.
+- **Kabuk:** üst başlık + Popover API ile hesap menüsü ("Çıkış yap" artık burada) + alt sekme çubuğu.
+- **Ekranlar:** sabit "Set ekle" paneli ve durum satırı; Geçmiş'te yerinde açılan kartlar; Rekorlar'da
+  iki ayrı rozetli satır; Giriş ve Kayıt için tek ortak düzen, şifreyi göster, şifre tekrarı;
+  "Antrenmanı bitir" hatası artık gösteriliyor.
+- **PWA:** tek SVG kaynaktan üretilen ikonlar (maskable dahil) → Android'de kurulabilir.
+- **Test:** backend **638** / frontend **71** (13 dosya) — ayrı sayılar, ikisi de komutla sayıldı.
+  `tsc -b` temiz, üretim derlemesi yeşil. Görsel doğruluk 390×844 Playwright ekran görüntüleriyle
+  Stitch'e karşı kontrol edildi (açık Geçmiş kartı, alan hatası ve açık menü dahil).
+
+Uygulama ve incelemede verilen kararlar:
+- Şifre göster düğmesinin adı sabit, durum `aria-pressed` ile (değişen ad + `aria-pressed` durumu iki
+  kez duyururdu).
+- `@vite-pwa/assets-generator` 1.0.4 (spec 2.0 diyordu; `vite-plugin-pwa` 1.3'ün peer aralığı
+  `^1.0.0`); maskable/apple ikonları `padding: 0` + `#121316` ile üretiliyor (varsayılan beyaz dolgu).
+- jsdom kapalı popover'ı gizlediği için çıkış testleri `{ hidden: true }` kullanıyor.
+- Rekorlar testi tarihleri kendi satırına bağlayacak şekilde güçlendirildi.
+- Geçmiş kartında klavye odak halkası kartın içine çizildi (kırpılıyordu).
+
+Devreden notlar (bilerek yapılmadı):
+- Hesap menüsünün konumu çentiği (üst güvenli alan) ve tablet genişliğini hesaba katmıyor.
+- Hata satırları sabit paneli uzatınca son set kısmen örtülebiliyor; yatay ekranda panel neredeyse
+  tüm alanı kaplıyor (manifest `orientation: portrait` ya da panel yüksekliğini ölçmek).
+- Yazılım klavyesi açıkken sabit panel gerçek bir cihazda denenmedi.
+- Alan hataları girdiye `aria-invalid` / `aria-describedby` ile bağlı değil (önceden gelen desen).
+- `on-accent`/`accent` kontrastı 4.54:1 — rozetlere opaklık uygulanmamalı.
+- Tekrarlanan sınıf kümeleri (auth bağlantıları, yükleniyor/hata metinleri) ve "spec Karar N"
+  yorumlarının hangi spec'i kastettiği küçük temizlik işleri.
+- Açık tema yok; Stitch'in "Grind System" dokümanı repoya alınmadı (metni koddaki değerlerle çelişiyor).
 
 ---
 

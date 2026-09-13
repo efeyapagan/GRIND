@@ -72,4 +72,53 @@ public class UserRepositoryTests
         Assert.Null(await repository.GetByUsernameAsync(user.Username.ToUpperInvariant()));
         await transaction.RollbackAsync();
     }
+
+    // ---- Faz 13: hesap pasifleştirme ----
+
+    /// <summary>Kimlikli her istekte çağrılan kontrol: aktif kullanıcı için true.</summary>
+    [Fact]
+    public async Task Aktif_kullanici_ExistsActiveAsync_ile_bulunur()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new UserRepository(context);
+
+        var user = TestDatabase.NewUser();
+        repository.Add(user);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        Assert.True(await repository.ExistsActiveAsync(user.Id));
+        await transaction.RollbackAsync();
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ: satır DURUYOR ama pasif. Sorgu yalnızca varlığa baksaydı bu test geçmezdi ve
+    /// pasifleştirilen bir hesap elindeki token'la 7 gün daha çalışmaya devam ederdi.
+    /// </summary>
+    [Fact]
+    public async Task Pasif_kullanici_ExistsActiveAsync_ile_bulunmaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var repository = new UserRepository(context);
+
+        var user = TestDatabase.NewUser();
+        user.DeletedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        repository.Add(user);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        Assert.False(await repository.ExistsActiveAsync(user.Id));
+        await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task Olmayan_kullanici_ExistsActiveAsync_ile_bulunmaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        var repository = new UserRepository(context);
+
+        Assert.False(await repository.ExistsActiveAsync(-1));
+    }
 }

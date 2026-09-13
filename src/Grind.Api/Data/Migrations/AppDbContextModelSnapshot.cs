@@ -51,6 +51,12 @@ namespace Grind.Api.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateOnly?>("RangeFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("RangeTo")
+                        .HasColumnType("date");
+
                     b.Property<long?>("SetEntryId")
                         .HasColumnType("bigint");
 
@@ -364,6 +370,9 @@ namespace Grind.Api.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")

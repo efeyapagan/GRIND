@@ -7,10 +7,21 @@ tekrar rekoru). Antrenman verileri (hacim, geçmiş, rekorlar) dışa aktarılab
 veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 
 ## Kapsam ve Sıra — ÖNEMLİ
-- **Şu an sadece backend üzerinde çalışılıyor.** Frontend/arayüz konusuna henüz girilmeyecek;
-  hangi teknolojiyle (React, React Native, PWA vb.) ilerleneceğine backend bittikten sonra karar
-  verilecek.
-- Backend tamamlanmadan frontend'le ilgili dosya, klasör veya bağımlılık oluşturma.
+- **Backend tamamlandı (Faz 0-13, 2026-09-12).** Frontend kararı verildi: **React + Vite +
+  TypeScript, kurulabilir PWA** — repo kökünde `web/` klasöründe. Mimari plan:
+  [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
+- **Görsel tasarım tamamlandı (2026-09-13).** Bağlayıcı kaynak
+  [docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md):
+  yeni ekranlar yalnızca oradaki token setini (Karar 2) kullanır; yeni bir Stitch çıktısının renkleri
+  Karar 2'nin eşleme tablosuyla çevrilir, kodu olduğu gibi kopyalanmaz (Karar 7); `accent` kullanım
+  kuralı bağlayıcıdır. Yeni bir görsel yön (açık tema, yeni bileşen dili) için kullanıcıya sor.
+- İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
+  geçmiş. Şablon, istatistik, tartı, export ve AI ekranları sonraki dilimlere bırakıldı.
+- **Frontend dilim 1 tamamlandı (2026-09-12)** — ayrıntı ve devreden notlar PLAN.md'de. Kapsam
+  dışı kalanlar: çevrimdışı okuma/yazma, dağıtım/CORS
+  ve yukarıdaki sonraki dilimler. `web/`'de tip kontrolü `npm run typecheck` = `tsc -b`'dir:
+  `tsc --noEmit` kök tsconfig'te (`files: []` + proje referansları) HİÇBİR dosyayı kontrol etmez,
+  geri çevirme.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -21,7 +32,7 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | ORM | Entity Framework Core — Code-First, Migrations |
 | Veritabanı | PostgreSQL (Npgsql provider) |
 | Mimari | Katmanlı: Controller → Service → Repository / Unit of Work |
-| Frontend | Karar verilmedi — henüz başlanmayacak |
+| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu |
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.
@@ -77,7 +88,8 @@ Object Reference) açığıdır.
 > süre açık kalır.
 
 ## Domain Modeli
-- **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`
+- **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`, `DeletedAt` (nullable — `null` ise hesap
+  aktif; dolu ise hesap pasifleştirilmiş demektir, verisi durur)
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
   `Category` (Push / Pull / Legs / Other), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
@@ -98,11 +110,25 @@ Object Reference) açığıdır.
   `Exercise` sahiplik/yetkilendirme kuralını miras alır (egzersizi görebiliyorsan medyasını da
   görebilirsin)
 - **AiInsight**: `Id`, `UserId` (FK), `Kind` (Insight / Suggestion), `WorkoutSessionId` (FK,
-  nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `Content`, `Model`,
-  `TokensUsed` (nullable), `EstimatedCostUsd` (nullable), `CreatedAt`
+  nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `RangeFrom` / `RangeTo`
+  (nullable `date`, TR yerel günü, iki ucu dahil — yorumun kapsadığı aralık; `Insight`'ta dolu,
+  oturum kapsamlı `Suggestion`'da null), `Content`, `Model`, `TokensUsed` (nullable),
+  `EstimatedCostUsd` (nullable), `CreatedAt`
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).
+
+> Karar (hesap silme = SOFT DELETE — Faz 13): Hesap silme hiçbir satırı silmez, yalnızca
+> `User.DeletedAt`'i damgalar ("verilerin kaybolmasını istemiyoruz"). `DELETE /api/auth/me` şifre
+> teyidi ister ve 204 döner; kimlik token'dan gelir, gövdeden id alınmaz. Pasif hesabın elindeki
+> token ANINDA geçersizleşir: `OnTokenValidated`'da kimlikli her istekte hesabın güncel durumu
+> veritabanından okunur — token 7 gün yaşadığı için bu olmasaydı pasifleştirme bir hafta etkisiz
+> kalırdı (yukarıdaki JWT kararının aynı mantığı). Doğru şifreyle giriş hesabı GERİ AÇAR; ayrı bir
+> "reactivate" ucu yoktur. Pasiflik kontrolü şifre doğrulamasından SONRA gelir ve login'in nötr 401'i
+> korunur — yoksa yanlış şifreyle bile hesabın pasif olduğu sızardı. Pasif hesabın kullanıcı adı
+> REZERVE kalır: aynı adla kayıt 409 alır ve mevcut şifre hash'i ezilmez (hesap devralma yok).
+> Gerçek silme (purge) bilinçli olarak yapılmadı; uygulama başkalarına açılırsa KVKK/GDPR için
+> ayrıca yazılır.
 
 > Karar: Bir günde birden fazla antrenman oturumu olabilir (örn. sabah/akşam). Bu yüzden
 > `WorkoutSession` gün bazlı bir `Date` yerine gerçek bir zaman aralığı (`StartedAt`/`EndedAt`)
@@ -155,6 +181,22 @@ Object Reference) açığıdır.
 > tablosunda saklar (tekrar tekrar API'ye sorup ücret ödenmesin, geçmiş yorumlar görüntülenebilsin)
 > ve `TokensUsed`/`EstimatedCostUsd` ile kullanım/maliyet takip edilebilsin. Hangi yolun ne zaman
 > aktif edileceğine maliyet netleşince karar verilecek — ikisi de aynı anda var olabilir.
+
+> Karar (AI sağlayıcısı ve aktivasyon — Faz 12): Yorum üretimi `IAiInsightProvider` arkasında durur
+> ve **varsayılan olarak KAPALIDIR** (`Ai:Provider = None` → `NullAiInsightProvider` → 503). Gerçek
+> sağlayıcı (Anthropic, resmi C# SDK) yazılıdır ama yalnızca yapılandırmayla açılır:
+> `dotnet user-secrets set "Ai:Provider" "Anthropic"` + `Ai:ApiKey`. Anahtar `appsettings.json`'a
+> YAZILMAZ, orada boş kalır; eksik ya da geçersiz ayar ilk isteği değil BOOT'u durdurur (`Jwt:Key`
+> ile aynı desen). Üretim bugün yalnızca `Kind = Insight` yazar — set arası öneri motoru hâlâ
+> kapsam dışı. Aralık verilmezse son 30 gün, en fazla 366 gün; aralıkta hiç oturum ve tartı yoksa
+> LLM'e hiç gidilmez (400), çünkü bir modele "veri yok" dedirtmek için para ödenmez. LLM'e giden
+> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. Ücretli adım (LLM
+> çağrısı ve onu izleyen tek `SaveChangesAsync`) isteğin iptal belirtecini DEĞİL
+> `CancellationToken.None` kullanır: istek LLM'e ulaştığı anda ücret doğduğu için, istemci koparsa
+> bile yanıt saklanır. Fiyatlar yapılandırmada (`Ai:InputUsdPerMillionTokens` /
+> `Ai:OutputUsdPerMillionTokens`) durur ve varsayılan modelinkidir — model değişirse fiyatlar da
+> değişmeli; fiyat verilmezse `EstimatedCostUsd` null kalır (bilinmeyen maliyet, yanlış bir sayıdan
+> iyidir).
 
 > Karar (silme davranışları):
 > - `Exercise` hard-delete edilmez; bunun yerine `IsArchived = true` yapılır (soft delete).
@@ -237,10 +279,13 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
 5. Service katmanı (PR mantığı dahil) — burada birim testleri özellikle önemli
 6. Controller'lar ve endpoint'ler
 7. Export endpoint'leri
-8. *(Frontend kararı burada verilecek — bu adıma kadar başlanmayacak)*
+8. ✅ Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.
 
 ## Kısıtlar / Yapılmaması Gerekenler
-- Frontend'e başlama.
+- Görsel tasarım spec'inin dışına çıkma: Tailwind'in hazır renk paleti, satır içi `style=`, `@apply`,
+  UI kütüphanesi ve `focus:outline-none` kullanılmaz; tekrarlanan sınıf kümesi bir bileşene çıkar.
+- Frontend'de sunucudaki hesabı istemcide yeniden hesaplama (hacim, PR, seri): bunların hepsi
+  API'den gelir, ikinci bir doğruluk kaynağı üretme.
 - Kişisel/tek kullanıcı ölçeğinde gereksiz karmaşıklık ekleme (mikroservis, mesaj kuyruğu, vb. — KISS).
 - Migration'ları elle düzenleme; her zaman `dotnet ef migrations add` ile üret.
 
