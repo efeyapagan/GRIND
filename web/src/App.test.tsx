@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -114,7 +114,34 @@ test('cikis yap tiklaninca oturum kapanir ve giris ekrani gosterilir', async () 
 
   await screen.findByText('Ic sayfa icerigi');
 
-  await kullanici.click(screen.getByRole('button', { name: 'Çıkış yap' }));
+  // hidden:true sarttir: jsdom [popover]:not(:popover-open) icin display:none uyguluyor
+  // (gercek tarayicidaki Popover API davranisi jsdom'da yok) -- userEvent.click bunu
+  // sorunsuz tetikler (jsdom gercek hit-testing yapmaz), sadece erisilebilirlik sorgusu
+  // varsayilanda gizli elemanlari eliyor.
+  await kullanici.click(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
 
   expect(await screen.findByRole('heading', { name: 'Giriş Yap' })).toBeInTheDocument();
+});
+
+test('cikis yap sekme cubugunda degil, hesap menusunun icinde', async () => {
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+
+  const gezinme = screen.getByRole('navigation', { name: 'Ana gezinme' });
+  expect(within(gezinme).queryByRole('button', { name: 'Çıkış yap' })).not.toBeInTheDocument();
+
+  // Tetikleyici menuyu popovertarget ile acar; "Cikis yap" o menunun ICINDE (spec Karar 8).
+  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
+  expect(tetikleyici).toHaveAttribute('popovertarget', 'hesap-menusu');
+  const menu = document.getElementById('hesap-menusu');
+  expect(menu).toHaveAttribute('popover', 'auto');
+  // hidden:true: yukaridaki jsdom popover notuna bakin.
+  expect(menu).toContainElement(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
 });
