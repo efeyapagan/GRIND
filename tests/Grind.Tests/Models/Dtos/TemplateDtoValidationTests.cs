@@ -73,6 +73,20 @@ public class TemplateDtoValidationTests
         Assert.NotEmpty(Validate(new TemplateExerciseRequest { ExerciseId = 0, PlannedSets = 4 }));
     }
 
+    /// <summary>null "gönderilmedi" demek ve geçerli (servis 90 yazar); 0 "sayaç yok" ve geçerli.</summary>
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, true)]
+    [InlineData(900, true)]
+    [InlineData(-1, false)]
+    [InlineData(901, false)]
+    public void Alt_DTO_tek_basina_RestSeconds_araligini_uygular(int? restSeconds, bool gecerliOlmali)
+    {
+        var errors = Validate(new TemplateExerciseRequest { ExerciseId = 1, PlannedSets = 4, RestSeconds = restSeconds });
+
+        Assert.Equal(gecerliOlmali, errors.Count == 0);
+    }
+
     /// <summary>
     /// PATCH'te ikisi de null DTO katmanını GEÇER (nullable alanlarda kural yok) — "en az bir
     /// alan" kontrolü servis katmanının işi. Bu test o sınırı kayda geçiriyor.

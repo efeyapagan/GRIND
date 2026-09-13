@@ -214,7 +214,8 @@ public class WorkoutSessionService(
                 te.ExerciseId,
                 te.Exercise.Name,
                 te.PlannedSets,
-                completed.GetValueOrDefault(te.ExerciseId)))
+                completed.GetValueOrDefault(te.ExerciseId),
+                te.RestSeconds))
             .ToList();
     }
 

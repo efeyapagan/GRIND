@@ -84,6 +84,41 @@ public class WorkoutTemplateServiceTests
         }
     }
 
+    // ---- Dinlenme süresi ----
+
+    [Fact]
+    public async Task Dinlenme_gonderilmezse_varsayilan_yazilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+
+            Assert.Equal(TemplateExercise.DefaultRestSeconds, olusan.Exercises[0].RestSeconds);
+        }
+    }
+
+    /// <summary>
+    /// 0 "sayaç yok" demek; EF'in sentinel davranışı onu kolon varsayılanına (90) çevirmemeli.
+    /// ChangeTracker.Clear: izlenen nesne bellekteki değeri gösterirdi, değer veritabanından okunmalı.
+    /// </summary>
+    [Fact]
+    public async Task Sifir_dinlenme_veritabaninda_sifir_kalir()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(),
+                new TemplateExerciseRequest { ExerciseId = 1, PlannedSets = 4, RestSeconds = 0 },
+                new TemplateExerciseRequest { ExerciseId = 11, PlannedSets = 3, RestSeconds = 180 }));
+            context.ChangeTracker.Clear();
+
+            var okunan = await service.GetByIdAsync(olusan.Id);
+
+            Assert.Equal([0, 180], okunan.Exercises.Select(e => e.RestSeconds));
+        }
+    }
+
     // ---- Sahiplik / IDOR ----
 
     [Fact]

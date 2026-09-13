@@ -14,4 +14,5 @@ public record TemplateExerciseResponse(
     ExerciseCategory Category,
     bool IsArchived,
     int OrderIndex,
-    int PlannedSets);
+    int PlannedSets,
+    int RestSeconds);

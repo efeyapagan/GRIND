@@ -110,6 +110,27 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
         Assert.Equal(4, acik.Progress[0].PlannedSets);
     }
 
+    /// <summary>Bugün ekranı süreyi şablonu ayrıca istemeden, açık oturumun ilerlemesinden okur.</summary>
+    [Fact]
+    public async Task Acik_oturum_ilerlemesi_dinlenme_suresini_tasir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var olusturma = await client.PostAsJsonAsync("/api/templates", new CreateTemplateRequest
+        {
+            Name = $"Sablon {Guid.NewGuid():N}",
+            Exercises = [new TemplateExerciseRequest { ExerciseId = 1, PlannedSets = 4, RestSeconds = 150 }]
+        }, Json);
+        olusturma.EnsureSuccessStatusCode();
+        var sablon = (await olusturma.Content.ReadFromJsonAsync<TemplateResponse>(Json))!;
+
+        var baslatma = await client.PostAsJsonAsync("/api/sessions",
+            new StartSessionRequest { TemplateId = sablon.Id }, Json);
+        baslatma.EnsureSuccessStatusCode();
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+
+        Assert.Equal(150, acik!.Progress[0].RestSeconds);
+    }
+
     /// <summary>
     /// FIX 1 REGRESYON TESTİ: liste ucu (`GET /api/sessions`) `templateName`'i taşımalı —
     /// eskiden `WorkoutSessionRepository.GetAllAsync` Template'i Include etmediği için bu
