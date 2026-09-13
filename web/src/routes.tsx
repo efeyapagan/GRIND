@@ -6,9 +6,11 @@ import RegisterPage from './pages/RegisterPage';
 import TodayPage from './pages/TodayPage';
 import HistoryPage from './pages/HistoryPage';
 import RecordsPage from './pages/RecordsPage';
+import SablonlarPage from './pages/SablonlarPage';
+import SablonDuzenlePage from './pages/SablonDuzenlePage';
 
 /**
- * `/`, `/history` ve `/records` TEK bir `ProtectedRoute` altında toplanır (DRY) -- üçünü ayrı
+ * `/`, `/history`, `/records` ve şablon rotaları TEK bir `ProtectedRoute` altında (DRY) -- ayrı
  * ayrı sarmak yerine ortak kök route'u bir kere korumalı kılmak, aynı kontrolü tekrarlamaz.
  */
 export const router = createBrowserRouter([
@@ -23,6 +25,9 @@ export const router = createBrowserRouter([
       { index: true, element: <TodayPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'records', element: <RecordsPage /> },
+      { path: 'templates', element: <SablonlarPage /> },
+      { path: 'templates/new', element: <SablonDuzenlePage /> },
+      { path: 'templates/:id', element: <SablonDuzenlePage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

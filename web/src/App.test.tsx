@@ -36,6 +36,7 @@ function testRouterOlustur() {
           { index: true, element: <p>Ic sayfa icerigi</p> },
           { path: 'history', element: <p>Gecmis sayfasi</p> },
           { path: 'records', element: <p>Rekorlar sayfasi</p> },
+          { path: 'templates', element: <p>Sablonlar sayfasi</p> },
         ],
       },
       { path: '/login', element: <h1>Giriş Yap</h1> },
@@ -144,4 +145,21 @@ test('cikis yap sekme cubugunda degil, hesap menusunun icinde', async () => {
   expect(menu).toHaveAttribute('popover', 'auto');
   // hidden:true: yukaridaki jsdom popover notuna bakin.
   expect(menu).toContainElement(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
+});
+
+test('hesap menusundeki Sablonlar baglantisi sablon listesine gider', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  // jsdom kapali popover'i gizler (bkz. cikis testleri) -- { hidden: true }.
+  await kullanici.click(screen.getByRole('link', { name: 'Şablonlar', hidden: true }));
+
+  expect(await screen.findByText('Sablonlar sayfasi')).toBeInTheDocument();
 });

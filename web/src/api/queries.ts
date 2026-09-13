@@ -10,6 +10,9 @@ type CreateSetRequest = components['schemas']['CreateSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type TemplateResponse = components['schemas']['TemplateResponse'];
+type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
+type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -29,6 +32,10 @@ export const queryKeys = {
   records: ['records'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
+  templates: ['templates'] as const,
+  // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
+  // cekilmesin (silmeden hemen sonra 404'e dusmesin).
+  template: (id: number) => ['template', id] as const,
 };
 
 export interface AcikOturum {
@@ -326,6 +333,127 @@ export function useFinishSession() {
       await request<SessionResponse>(`/sessions/${sessionId}/finish`, { method: 'POST' });
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+export interface SablonHareketi {
+  exerciseId: number;
+  exerciseName: string;
+  isArchived: boolean;
+  plannedSets: number;
+  restSeconds: number;
+}
+
+export interface Sablon {
+  id: number;
+  name: string;
+  exercises: SablonHareketi[];
+}
+
+function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHareketi {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.isArchived === undefined ||
+    yanit.plannedSets === undefined ||
+    yanit.restSeconds === undefined
+  ) {
+    throw new Error('Sunucudan eksik sablon hareketi yaniti alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    isArchived: yanit.isArchived,
+    plannedSets: yanit.plannedSets,
+    restSeconds: yanit.restSeconds,
+  };
+}
+
+/** Hareketler sunucunun `orderIndex` sirasiyla gelir; istemci yeniden SIRALAMAZ. */
+function dogrulanmisSablon(yanit: TemplateResponse): Sablon {
+  if (yanit.id === undefined || !yanit.name) {
+    throw new Error('Sunucudan eksik sablon yaniti alindi.');
+  }
+  return {
+    id: yanit.id,
+    name: yanit.name,
+    exercises: (yanit.exercises ?? []).map(dogrulanmisSablonHareketi),
+  };
+}
+
+export interface SablonGirdisi {
+  name: string;
+  // Sira dizideki konumdur; sunucu `OrderIndex`i buradan turetir (istemci gondermez).
+  exercises: { exerciseId: number; plannedSets: number; restSeconds: number }[];
+}
+
+export function useTemplates() {
+  return useQuery({
+    queryKey: queryKeys.templates,
+    queryFn: async (): Promise<Sablon[]> => {
+      const yanit = await request<TemplateResponse[]>('/templates');
+      return yanit.map(dogrulanmisSablon);
+    },
+  });
+}
+
+export function useTemplate(id: number | null) {
+  return useQuery({
+    queryKey: queryKeys.template(id ?? 0),
+    queryFn: async (): Promise<Sablon> =>
+      dogrulanmisSablon(await request<TemplateResponse>(`/templates/${id}`)),
+    enabled: id !== null,
+  });
+}
+
+function sablonGovdesi(girdi: SablonGirdisi): string {
+  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises };
+  return JSON.stringify(govde);
+}
+
+export function useCreateTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (girdi: SablonGirdisi): Promise<Sablon> =>
+      dogrulanmisSablon(
+        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi) }),
+      ),
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+    },
+  });
+}
+
+/**
+ * PUT ad ve hareket listesini BIRLIKTE degistirir (PATCH yalnizca ad). Acik oturum da tazelenir:
+ * ilerleme ve dinlenme sureleri sunucuda sablondan canli okunur (spec Karar 8).
+ */
+export function useUpdateTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, girdi }: { id: number; girdi: SablonGirdisi }): Promise<Sablon> =>
+      dogrulanmisSablon(
+        await request<TemplateResponse>(`/templates/${id}`, { method: 'PUT', body: sablonGovdesi(girdi) }),
+      ),
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await request<void>(`/templates/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
     },
   });

@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState, type FormEvent, type Ref } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
+import { adaGoreSirala } from '../lib/egzersizler';
 import { ApiError } from '../api/problem';
 import { formatWeight } from '../lib/format';
 import BirincilDugme from '../ui/BirincilDugme';
+import SecimKutusu from '../ui/SecimKutusu';
 
 /**
  * Spec Karar 8 (cevrimdisi kuyruk YOK): fetch'in kendisi reddederse (ag yok) `request()`
@@ -99,10 +101,7 @@ export default function AddSetForm() {
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
-  const siraliEgzersizler = useMemo(
-    () => [...(egzersizler ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'tr')),
-    [egzersizler],
-  );
+  const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
 
   // Kullanici henuz elle bir secim yapmadiysa (`manuelSecim === null`), etkin deger render
   // aninda ilk (isme gore siralanmis) egzersize turetilir -- egzersiz listesi async geldigi icin
@@ -223,27 +222,17 @@ export default function AddSetForm() {
     >
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-4 shadow-2xl">
         {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
-        <div className="relative">
+        <div>
           <label htmlFor="set-egzersiz" className="sr-only">
             Egzersiz
           </label>
-          <select
-            id="set-egzersiz"
-            value={egzersizId}
-            onChange={(e) => setManuelSecim(e.target.value)}
-            className="h-12 w-full appearance-none rounded-lg bg-inset pr-10 pl-4 text-body-lg text-fg"
-          >
+          <SecimKutusu id="set-egzersiz" value={egzersizId} onChange={(e) => setManuelSecim(e.target.value)}>
             {siraliEgzersizler.map((eg) => (
               <option key={eg.id} value={eg.id}>
                 {eg.name}
               </option>
             ))}
-          </select>
-          <ChevronsUpDown
-            aria-hidden
-            size={20}
-            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted"
-          />
+          </SecimKutusu>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <SayiAlani
