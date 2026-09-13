@@ -9,8 +9,9 @@
 ## Bu Doküman Ne Değildir
 
 Görsel tasarım değildir. Telefonda kullanılabilirlik burada yalnızca **gereksinim** olarak geçer
-(dokunma hedefi, tek elle erişim, klavye tipi, çevrimdışı davranış); nasıl görüneceği sonra
-kararlaştırılacak.
+(dokunma hedefi, tek elle erişim, klavye tipi, çevrimdışı davranış); görsel tasarım ayrı bir spec'te
+kararlaştırıldı ve uygulandı:
+[2026-09-12-frontend-gorsel-tasarim-design.md](2026-09-12-frontend-gorsel-tasarim-design.md).
 
 Backend'in kendisi de burada yeniden tanımlanmaz. Uç listesi ve DTO'lar `src/Grind.Api` içindedir;
 aşağıda yalnızca frontend'i doğrudan etkileyen **davranışlar** kayda geçirilir.
@@ -199,8 +200,8 @@ Bunlar frontend yazılırken bilinmezse hata üretir; hepsi backend kodundan oku
 
 ## Açık sorular (sonra karara bağlanacak)
 
-- **Görsel tasarım** (palet, tipografi, yerleşim, boş/hata durumlarının dili) — kullanıcı bu adımı
-  bilerek erteledi.
+- ~~**Görsel tasarım** (palet, tipografi, yerleşim, boş/hata durumlarının dili)~~ → karara bağlandı ve
+  uygulandı: [2026-09-12-frontend-gorsel-tasarim-design.md](2026-09-12-frontend-gorsel-tasarim-design.md).
 - **Dağıtım:** frontend nereden sunulacak (API'nin `wwwroot`'u / ayrı statik host / CDN)? CORS
   ihtiyacı buna bağlı.
 - **Çevrimdışı yazma** ve onun gerektirdiği "geçmişe dönük set girişi" backend işi.

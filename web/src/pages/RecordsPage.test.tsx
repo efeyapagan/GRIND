@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
@@ -37,11 +37,20 @@ test('rekorlar listesi egzersiz basina en agir seti ve en cok tekrari AYRI AYRI 
 
   rekorlarSayfasiniOlustur();
 
-  expect(await screen.findByText('Bench Press')).toBeInTheDocument();
+  const kart = (await screen.findByRole('heading', { name: 'Bench Press' })).closest('li');
+  expect(kart).not.toBeNull();
+  const kartIci = within(kart as HTMLElement);
   // Bu iki gercek FARKLI setler olabilir (spec) -- istemci hicbirini HESAPLAMAZ, sunucunun
   // verdigi degerleri oldugu gibi gosterir.
-  expect(screen.getByText('En ağır set: 100 × 3 (01.08.2026)')).toBeInTheDocument();
-  expect(screen.getByText('En çok tekrar: 12 × 60 (15.07.2026)')).toBeInTheDocument();
+  const agirSatiri = within(kartIci.getByText('En ağır set').closest('div') as HTMLElement);
+  expect(agirSatiri.getByText('· 01.08.2026')).toBeInTheDocument();
+  expect(agirSatiri.getByText('100 kg')).toBeInTheDocument();
+  expect(agirSatiri.getByText('× 3')).toBeInTheDocument();
+
+  const tekrarSatiri = within(kartIci.getByText('En çok tekrar').closest('div') as HTMLElement);
+  expect(tekrarSatiri.getByText('· 15.07.2026')).toBeInTheDocument();
+  expect(tekrarSatiri.getByText('12 tekrar')).toBeInTheDocument();
+  expect(tekrarSatiri.getByText('@ 60 kg')).toBeInTheDocument();
 });
 
 test('birden fazla egzersizin rekoru ayri ayri listelenir', async () => {
@@ -82,7 +91,7 @@ test('hic rekor yoksa bos durum metni gorunur', async () => {
 
   rekorlarSayfasiniOlustur();
 
-  expect(await screen.findByText('Henüz rekor yok.')).toBeInTheDocument();
+  expect(await screen.findByText('Henüz rekor yok')).toBeInTheDocument();
 });
 
 test('rekorlar istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ', async () => {
@@ -97,5 +106,5 @@ test('rekorlar istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Rekorlar alınamadı. Lütfen sayfayı yenileyin.',
   );
-  expect(screen.queryByText('Henüz rekor yok.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Henüz rekor yok')).not.toBeInTheDocument();
 });

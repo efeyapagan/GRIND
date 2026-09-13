@@ -48,7 +48,7 @@ test('basarili giris: token saklanir ve ana sayfaya yonlendirilir', async () => 
 
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'efe');
   await kullanici.type(screen.getByLabelText('Şifre'), 'sifre1234');
-  await kullanici.click(screen.getByRole('button', { name: 'Giriş Yap' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Giriş yap' }));
 
   await waitFor(() => expect(screen.getByText('ANA SAYFA')).toBeInTheDocument());
   expect(session.read()).toMatchObject({ token: 'jwt-token', username: 'efe' });
@@ -66,7 +66,7 @@ test('401: notr hata mesaji gosterilir ve alanlar temizlenmez', async () => {
 
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'efe');
   await kullanici.type(screen.getByLabelText('Şifre'), 'yanlissifre');
-  await kullanici.click(screen.getByRole('button', { name: 'Giriş Yap' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Giriş yap' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Kullanıcı adı veya şifre hatalı.');
   expect(screen.getByLabelText('Kullanıcı adı')).toHaveValue('efe');
@@ -86,7 +86,7 @@ test('bos alanlarla gonderim: sunucuya istek gitmez, alan hatasi gosterilir', as
   const kullanici = userEvent.setup();
   girisSayfasiniOlustur();
 
-  await kullanici.click(screen.getByRole('button', { name: 'Giriş Yap' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Giriş yap' }));
 
   const hatalar = await screen.findAllByRole('alert');
   expect(hatalar.length).toBeGreaterThan(0);
