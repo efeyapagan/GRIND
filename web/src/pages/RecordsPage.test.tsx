@@ -42,14 +42,15 @@ test('rekorlar listesi egzersiz basina en agir seti ve en cok tekrari AYRI AYRI 
   const kartIci = within(kart as HTMLElement);
   // Bu iki gercek FARKLI setler olabilir (spec) -- istemci hicbirini HESAPLAMAZ, sunucunun
   // verdigi degerleri oldugu gibi gosterir.
-  expect(kartIci.getByText('En ağır set')).toBeInTheDocument();
-  expect(kartIci.getByText('· 01.08.2026')).toBeInTheDocument();
-  expect(kartIci.getByText('100 kg')).toBeInTheDocument();
-  expect(kartIci.getByText('× 3')).toBeInTheDocument();
-  expect(kartIci.getByText('En çok tekrar')).toBeInTheDocument();
-  expect(kartIci.getByText('· 15.07.2026')).toBeInTheDocument();
-  expect(kartIci.getByText('12 tekrar')).toBeInTheDocument();
-  expect(kartIci.getByText('@ 60 kg')).toBeInTheDocument();
+  const agirSatiri = within(kartIci.getByText('En ağır set').closest('div') as HTMLElement);
+  expect(agirSatiri.getByText('· 01.08.2026')).toBeInTheDocument();
+  expect(agirSatiri.getByText('100 kg')).toBeInTheDocument();
+  expect(agirSatiri.getByText('× 3')).toBeInTheDocument();
+
+  const tekrarSatiri = within(kartIci.getByText('En çok tekrar').closest('div') as HTMLElement);
+  expect(tekrarSatiri.getByText('· 15.07.2026')).toBeInTheDocument();
+  expect(tekrarSatiri.getByText('12 tekrar')).toBeInTheDocument();
+  expect(tekrarSatiri.getByText('@ 60 kg')).toBeInTheDocument();
 });
 
 test('birden fazla egzersizin rekoru ayri ayri listelenir', async () => {
