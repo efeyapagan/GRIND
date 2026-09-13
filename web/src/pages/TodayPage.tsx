@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CircleCheck, Dumbbell } from 'lucide-react';
 import { useExercises, useFinishSession, useOpenSession, useSessionSets, useStartSession } from '../api/queries';
 import { formatTrTime } from '../lib/format';
@@ -44,19 +44,34 @@ export default function TodayPage() {
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
 
   const ilerleme = gorunenOturum?.progress ?? [];
-  const sablonVarsayilani = varsayilanHareket(ilerleme);
+  // F1 (review bulgusu): `progress` arsivlenmis bir hareketi icerebilir ama GET /api/exercises
+  // onu DONDURMEZ -- varsayilan (ya da bir kart dokunusu) boyle bir id'ye SAPLANIRSA, AddSetForm'daki
+  // kontrollu <select>de karsilik gelen bir <option> olmaz ve secim gecersiz kalir. Bu yuzden
+  // secilebilirlik SADECE yuklenmis egzersiz listesine gore belirlenir.
+  const secilebilirIdler = useMemo(() => new Set((egzersizler ?? []).map((eg) => eg.id)), [egzersizler]);
+  // Egzersiz listesi henuz yuklenmediyse dogrulanamayan bir varsayilan SAPLANMAZ (asagidaki pinleme
+  // effekti egzersizler gelene kadar bekler).
+  const sablonVarsayilani = egzersizler ? varsayilanHareket(ilerleme, secilebilirIdler) : null;
   const [secim, setSecim] = useState<number | null>(null);
   // Sablonlu oturumun kimligi degisince (yeni bir sablonla baslatilinca) secim o oturumun
   // varsayilanina sifirlanir; sablonsuz bir oturum (id null gibi degil, ilerleme BOS) bu
   // sifirlamayi TETIKLEMEZ -- kullanicinin bos durumdan yaptigi panel secimi korunur (I1).
   const sablonluOturumId = gorunenOturum && ilerleme.length > 0 ? gorunenOturum.id : null;
   const [varsayilanUygulananOturum, setVarsayilanUygulananOturum] = useState<number | null>(null);
-  if (sablonluOturumId !== null && sablonluOturumId !== varsayilanUygulananOturum) {
+  if (egzersizler && sablonluOturumId !== null && sablonluOturumId !== varsayilanUygulananOturum) {
     setVarsayilanUygulananOturum(sablonluOturumId);
     setSecim(sablonVarsayilani);
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
   const seciliEgzersizAdi = egzersizler?.find((eg) => eg.id === etkinSecim)?.name ?? null;
+
+  // Bir kart (ya da panel <select>'i) arsivlenmis/listede olmayan bir hareketi secmeye calisirsa
+  // yoksayilir (F1) -- gecerli tek secim kaynagi yuklenmis egzersiz listesidir.
+  function secimYap(exerciseId: number) {
+    if (secilebilirIdler.has(exerciseId)) {
+      setSecim(exerciseId);
+    }
+  }
 
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
@@ -110,11 +125,12 @@ export default function TodayPage() {
             Antrenman başlatılamadı. Lütfen tekrar deneyin.
           </p>
         )}
-        {baslatmaBilgisi && (
-          <p role="status" className="text-label text-muted">
-            {baslatmaBilgisi}
-          </p>
-        )}
+        {/* F2 (review bulgusu): canli bolge HER ZAMAN monte edilir -- metniyle BIRLIKTE eklenirse
+            bazi ekran okuyucular sonradan gelen bir canli bolgeyi atlar. Bos oldugunda gorsel olarak
+            bos kalir. */}
+        <p role="status" className="text-label text-muted">
+          {baslatmaBilgisi}
+        </p>
       </header>
 
       {oturumYukleniyor && <p className="text-body text-muted">Yükleniyor...</p>}
@@ -140,7 +156,7 @@ export default function TodayPage() {
                 ilerleme={ilerleme}
                 setler={setler ?? []}
                 secilenId={etkinSecim}
-                onSec={setSecim}
+                onSec={secimYap}
                 bugunkuOturumId={gorunenOturum.id}
               />
             ) : (
@@ -170,7 +186,7 @@ export default function TodayPage() {
         </>
       )}
 
-      <AddSetForm egzersizId={etkinSecim} onEgzersizSec={setSecim} />
+      <AddSetForm egzersizId={etkinSecim} onEgzersizSec={secimYap} />
     </div>
   );
 }

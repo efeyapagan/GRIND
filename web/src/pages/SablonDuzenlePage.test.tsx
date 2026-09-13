@@ -131,11 +131,17 @@ test('silme iki adimli onay ister; DELETE yalnizca Evet sil ile gider', async ()
   await kullanici.click(await screen.findByRole('button', { name: 'Şablonu sil' }));
   expect(screen.getByText(/Silmek istediğine emin misin\?/)).toBeInTheDocument();
   expect(silmeSayisi).toBe(0);
+  // F3 (review bulgusu): "Şablonu sil" unmount olunca odak body'ye DUSMEMELI -- acilan onayin
+  // "Vazgeç" dugmesine tasinmali.
+  expect(screen.getByRole('button', { name: 'Vazgeç' })).toHaveFocus();
 
   await kullanici.click(screen.getByRole('button', { name: 'Vazgeç' }));
   expect(screen.queryByText(/Silmek istediğine emin misin\?/)).not.toBeInTheDocument();
+  // Vazgec de kendisi unmount olur -- odak "Şablonu sil"e GERI donmeli.
+  expect(screen.getByRole('button', { name: 'Şablonu sil' })).toHaveFocus();
 
   await kullanici.click(screen.getByRole('button', { name: 'Şablonu sil' }));
+  expect(screen.getByRole('button', { name: 'Vazgeç' })).toHaveFocus();
   await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
 
   expect(await screen.findByText('Sablon listesi')).toBeInTheDocument();

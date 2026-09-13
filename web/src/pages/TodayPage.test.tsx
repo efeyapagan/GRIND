@@ -722,6 +722,26 @@ test('sablonlu oturumda kartlar sunucunun sirasiyla gorunur; varsayilan secim ta
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
 });
 
+test('sablonun ilk tamamlanmamis hareketi arsivlenmisse (GET /api/exercises listede yok) varsayilan secim bir sonraki gecerli harekettir', async () => {
+  // F1 (review bulgusu): progress arsivlenmis bir hareketi (id 3) icerebilir ama GET /api/exercises
+  // onu dondurmez -- varsayilan secim boyle bir id'ye SAPLANIRSA, AddSetForm'daki kontrollu
+  // <select>de karsilik gelen bir <option> olmaz ve secim gecersiz kalir.
+  sahteSunucuyuKur({
+    baslangicOturumu: sablonluOturum([
+      ilerleme(3, 'Eski Hareket', 2, 0),
+      ilerleme(1, 'Bench Press', 4, 1),
+    ]),
+  });
+  bugunSayfasiniOlustur();
+
+  await waitFor(() => expect(screen.getAllByRole('button', { name: HAREKET_KARTI_ADI })).toHaveLength(2));
+  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
+  expect(screen.getByRole('button', { name: 'Bench Press, 1 / 4 set' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
 test('karta dokunmak paneldeki egzersizi degistirir; hareket tamamlaninca secim sonrakine atlamaz', async () => {
   sahteSunucuyuKur({
     baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 1, 0), ilerleme(2, 'Squat', 3, 0)]),

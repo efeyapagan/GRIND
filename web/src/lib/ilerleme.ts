@@ -3,10 +3,23 @@ import type { HareketIlerlemesi } from '../api/queries';
 /**
  * Spec Karar 5: varsayilan secim `completedSets < plannedSets` olan ilk hareket, hepsi tamamsa ilk
  * hareket; sablonsuz oturumda secim yok (null). Karsilastirilan sayilar sunucunundur.
+ *
+ * `secilebilirIdler`: `GET /api/exercises` arsivlenmis egzersizleri DONDURMEZ, ama `progress` (sablon)
+ * arsivlenmis bir hareketi HALA icerebilir (review bulgusu F1) -- boyle bir hareket varsayilan
+ * secim olursa, AddSetForm'daki kontrollu `<select>`de karsilik gelen bir `<option>` olmaz ve
+ * secim gecersiz kalir. Bu yuzden varsayilan yalnizca `secilebilirIdler` icindeki hareketler
+ * arasindan secilir; hicbiri uygun degilse null donulur (cagiran taraf alfabetik ilk egzersize
+ * duser, bkz. TodayPage).
  */
-export function varsayilanHareket(ilerleme: readonly HareketIlerlemesi[]): number | null {
-  if (ilerleme.length === 0) {
+export function varsayilanHareket(
+  ilerleme: readonly HareketIlerlemesi[],
+  secilebilirIdler: ReadonlySet<number>,
+): number | null {
+  const secilebilirIlerleme = ilerleme.filter((hareket) => secilebilirIdler.has(hareket.exerciseId));
+  if (secilebilirIlerleme.length === 0) {
     return null;
   }
-  return (ilerleme.find((hareket) => hareket.completedSets < hareket.plannedSets) ?? ilerleme[0]).exerciseId;
+  return (
+    secilebilirIlerleme.find((hareket) => hareket.completedSets < hareket.plannedSets) ?? secilebilirIlerleme[0]
+  ).exerciseId;
 }

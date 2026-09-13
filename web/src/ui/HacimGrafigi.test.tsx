@@ -25,3 +25,11 @@ test('en yuksek deger yalnizca bir kez kg ile yazilir', () => {
   expect(screen.getAllByText('2.400 kg')).toHaveLength(1);
   expect(screen.queryByText('1.200 kg')).not.toBeInTheDocument();
 });
+
+test('bos girdi hicbir sey render etmez (gecersiz viewBox olusmaz)', () => {
+  // F4 (review bulgusu): bos `noktalar`, `viewBox="0 0 0 100"` gibi gecersiz bir SVG uretirdi.
+  const { container } = render(<HacimGrafigi noktalar={[]} baslik="Hacim" />);
+
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  expect(container).toBeEmptyDOMElement();
+});

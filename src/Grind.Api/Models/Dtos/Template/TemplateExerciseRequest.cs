@@ -20,6 +20,9 @@ public class TemplateExerciseRequest
     /// <see cref="Grind.Api.Models.Entities.TemplateExercise.DefaultRestSeconds"/> yazılır. <c>int</c>
     /// olsaydı alanı göndermeyen bir istemci C#'ın varsayılanı 0'ı, yani "sayaç yok"u sessizce
     /// yazardı. Veritabanında da CHECK ile korunuyor.
+    /// DİKKAT: PUT/PATCH bir egzersiz listesiyle geldiğinde satırlar HER SEFERİNDE sıfırdan
+    /// yeniden kurulur (Karar 1) — yani bu alanı olmadan gönderilen bir satır "eskisi gibi kalsın"
+    /// anlamına GELMEZ, mevcut değer korunmaz; varsayılan değer yeniden yazılır.
     /// </summary>
     [Range(0, 900, ErrorMessage = "Dinlenme süresi 0-900 saniye arasında olmalı.")]
     public int? RestSeconds { get; set; }

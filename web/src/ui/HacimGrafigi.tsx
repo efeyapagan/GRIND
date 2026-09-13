@@ -27,6 +27,11 @@ const EN_KISA_CUBUK = 2;
  * vurgulu (bugun) `fg`; accent KULLANILMAZ. Ayni veri ekran okuyucuya gizli bir listeyle verilir.
  */
 export default function HacimGrafigi({ noktalar, baslik }: Props) {
+  // F4 (review bulgusu): bos girdi `viewBox="0 0 0 100"` gibi gecersiz bir SVG uretirdi.
+  if (noktalar.length === 0) {
+    return null;
+  }
+
   const enBuyuk = Math.max(0, ...noktalar.map((nokta) => nokta.deger));
   const enBuyukSira = enBuyuk > 0 ? noktalar.findIndex((nokta) => nokta.deger === enBuyuk) : -1;
 

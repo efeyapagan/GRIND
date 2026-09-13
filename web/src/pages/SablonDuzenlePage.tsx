@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react';
 import {
@@ -118,6 +118,23 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [silmeOnayi, setSilmeOnayi] = useState(false);
   const [silmeHatasi, setSilmeHatasi] = useState<string | null>(null);
+  const silDugmesiRef = useRef<HTMLButtonElement>(null);
+  const vazgecDugmesiRef = useRef<HTMLButtonElement>(null);
+  // F3 (review bulgusu): iki adimli silme onayinda odaklanmis dugme her gecISte UNMOUNT olur,
+  // odak body'ye duser. Onay acilinca "Vazgec"e, kapaninca (Vazgec ya da basarisiz silme) geri
+  // "Sablonu sil"e tasinir. Ilk render'da CALISMAMALI -- sayfa ilk acildiginda odak calinmaz.
+  const ilkRenderRef = useRef(true);
+  useEffect(() => {
+    if (ilkRenderRef.current) {
+      ilkRenderRef.current = false;
+      return;
+    }
+    if (silmeOnayi) {
+      vazgecDugmesiRef.current?.focus();
+    } else {
+      silDugmesiRef.current?.focus();
+    }
+  }, [silmeOnayi]);
 
   const secilenIdler = new Set(satirlar.map((satir) => satir.exerciseId));
   const eklenebilirEgzersiz = siraliEgzersizler.find((eg) => !secilenIdler.has(eg.id));
@@ -305,12 +322,15 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
                   Evet, sil
                 </button>
                 <div className="flex-1">
-                  <IkincilDugme onClick={() => setSilmeOnayi(false)}>Vazgeç</IkincilDugme>
+                  <IkincilDugme ref={vazgecDugmesiRef} onClick={() => setSilmeOnayi(false)}>
+                    Vazgeç
+                  </IkincilDugme>
                 </div>
               </div>
             </div>
           ) : (
             <button
+              ref={silDugmesiRef}
               type="button"
               onClick={() => setSilmeOnayi(true)}
               className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
