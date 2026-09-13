@@ -1,7 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AtSign } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { apiHatasiniAyir } from '../lib/apiErrors';
+import AuthLayout from '../ui/AuthLayout';
+import Alan from '../ui/Alan';
+import SifreAlani from '../ui/SifreAlani';
+import HataKutusu from '../ui/HataKutusu';
+import BirincilDugme from '../ui/BirincilDugme';
 
 /**
  * Login'in 401'i bilerek nötr: kullanıcı adının var olup olmadığını ya da hesabın
@@ -63,36 +69,42 @@ export default function LoginPage() {
   }
 
   return (
-    <main>
-      <h1>Giriş Yap</h1>
-      {genelHata && <p role="alert">{genelHata}</p>}
-      <form onSubmit={gonder}>
-        <div>
-          <label htmlFor="username">Kullanıcı adı</label>
-          <input
-            id="username"
-            value={kullaniciAdi}
-            onChange={(e) => setKullaniciAdi(e.target.value)}
-          />
-          {alanHatalari.username && <p role="alert">{alanHatalari.username}</p>}
-        </div>
-        <div>
-          <label htmlFor="password">Şifre</label>
-          <input
-            id="password"
-            type="password"
-            value={sifre}
-            onChange={(e) => setSifre(e.target.value)}
-          />
-          {alanHatalari.password && <p role="alert">{alanHatalari.password}</p>}
-        </div>
-        <button type="submit" disabled={gonderiliyor}>
-          Giriş Yap
-        </button>
+    <AuthLayout
+      baslik="Giriş yap"
+      altBaglanti={
+        <>
+          Hesabın yok mu?{' '}
+          <Link to="/register" className="inline-flex min-h-11 items-center font-semibold text-accent-soft">
+            Kayıt ol
+          </Link>
+        </>
+      }
+    >
+      {genelHata && <HataKutusu baslik="Giriş başarısız" mesaj={genelHata} />}
+      <form onSubmit={gonder} className="flex flex-col gap-4">
+        <Alan
+          id="username"
+          etiket="Kullanıcı adı"
+          ikon={AtSign}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={kullaniciAdi}
+          onChange={(e) => setKullaniciAdi(e.target.value)}
+          hata={alanHatalari.username}
+        />
+        <SifreAlani
+          id="password"
+          etiket="Şifre"
+          autoComplete="current-password"
+          value={sifre}
+          onChange={(e) => setSifre(e.target.value)}
+          hata={alanHatalari.password}
+        />
+        <BirincilDugme type="submit" yukseklik="normal" disabled={gonderiliyor}>
+          Giriş yap
+        </BirincilDugme>
       </form>
-      <p>
-        Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
-      </p>
-    </main>
+    </AuthLayout>
   );
 }

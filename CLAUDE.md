@@ -10,12 +10,15 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **Backend tamamlandı (Faz 0-13, 2026-09-12).** Frontend kararı verildi: **React + Vite +
   TypeScript, kurulabilir PWA** — repo kökünde `web/` klasöründe. Mimari plan:
   [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
-- **Görsel tasarım (palet, tipografi, yerleşim) HENÜZ yapılmadı** ve bilerek ertelendi; ilk iş
-  mimari plan ve çalışan bir çekirdek. Tasarıma girmeden önce kullanıcıya sor.
+- **Görsel tasarım tamamlandı (2026-09-13).** Bağlayıcı kaynak
+  [docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md):
+  yeni ekranlar yalnızca oradaki token setini (Karar 2) kullanır; yeni bir Stitch çıktısının renkleri
+  Karar 2'nin eşleme tablosuyla çevrilir, kodu olduğu gibi kopyalanmaz (Karar 7); `accent` kullanım
+  kuralı bağlayıcıdır. Yeni bir görsel yön (açık tema, yeni bileşen dili) için kullanıcıya sor.
 - İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
   geçmiş. Şablon, istatistik, tartı, export ve AI ekranları sonraki dilimlere bırakıldı.
 - **Frontend dilim 1 tamamlandı (2026-09-12)** — ayrıntı ve devreden notlar PLAN.md'de. Kapsam
-  dışı kalanlar: görsel tasarım (PWA manifest ikonları dahil), çevrimdışı okuma/yazma, dağıtım/CORS
+  dışı kalanlar: çevrimdışı okuma/yazma, dağıtım/CORS
   ve yukarıdaki sonraki dilimler. `web/`'de tip kontrolü `npm run typecheck` = `tsc -b`'dir:
   `tsc --noEmit` kök tsconfig'te (`files: []` + proje referansları) HİÇBİR dosyayı kontrol etmez,
   geri çevirme.
@@ -29,7 +32,7 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | ORM | Entity Framework Core — Code-First, Migrations |
 | Veritabanı | PostgreSQL (Npgsql provider) |
 | Mimari | Katmanlı: Controller → Service → Repository / Unit of Work |
-| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router |
+| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu |
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.
@@ -279,8 +282,8 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
 8. ✅ Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.
 
 ## Kısıtlar / Yapılmaması Gerekenler
-- Görsel tasarıma (renk, tipografi, yerleşim) kullanıcı açıkça istemeden girme — frontend planı
-  hazır, tasarım adımı bilerek bekletiliyor.
+- Görsel tasarım spec'inin dışına çıkma: Tailwind'in hazır renk paleti, satır içi `style=`, `@apply`,
+  UI kütüphanesi ve `focus:outline-none` kullanılmaz; tekrarlanan sınıf kümesi bir bileşene çıkar.
 - Frontend'de sunucudaki hesabı istemcide yeniden hesaplama (hacim, PR, seri): bunların hepsi
   API'den gelir, ikinci bir doğruluk kaynağı üretme.
 - Kişisel/tek kullanıcı ölçeğinde gereksiz karmaşıklık ekleme (mikroservis, mesaj kuyruğu, vb. — KISS).

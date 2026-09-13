@@ -8,6 +8,7 @@ import { AuthProvider } from '../auth/AuthContext';
 import { session } from '../auth/session';
 import TodayPage from './TodayPage';
 import type { components } from '../api/schema';
+import { tamMetin } from '../test/metin';
 
 type ExerciseResponse = components['schemas']['ExerciseResponse'];
 type SessionResponse = components['schemas']['SessionResponse'];
@@ -130,7 +131,7 @@ async function setEkle(
   await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), agirlik);
   await kullanici.clear(screen.getByLabelText('Tekrar'));
   await kullanici.type(screen.getByLabelText('Tekrar'), tekrar);
-  await kullanici.click(screen.getByRole('button', { name: 'Set Ekle' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Set ekle' }));
 }
 
 beforeEach(() => {
@@ -142,11 +143,11 @@ test('acik oturum yokken (404) bos durum gorunur ve set ekleme formu kullanilabi
 
   bugunSayfasiniOlustur();
 
-  expect(await screen.findByText('Bugün henüz antrenman yok.')).toBeInTheDocument();
+  expect(await screen.findByText('Bugün henüz antrenman yok')).toBeInTheDocument();
   expect(screen.getByLabelText('Egzersiz')).toBeInTheDocument();
   expect(screen.getByLabelText('Ağırlık (kg)')).toBeInTheDocument();
   expect(screen.getByLabelText('Tekrar')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Set Ekle' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Set ekle' })).toBeInTheDocument();
 });
 
 test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tasir', async () => {
@@ -158,7 +159,7 @@ test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tas
   await egzersizSecimineBekle();
   await setEkle(kullanici, '60', '8');
 
-  expect(await screen.findByText('60 × 8')).toBeInTheDocument();
+  expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
   expect(ortam.sonGonderilenGovde()).toMatchObject({ exerciseId: 1, weight: 60, reps: 8 });
   // Basarili gonderimden sonra odak agirlik alanina doner (spec Karar 6) -- ust uste ayni seti
   // girmek en sik akis, kullanici her seferinde alana tekrar tiklamak zorunda kalmamali.
@@ -174,7 +175,7 @@ test('recordType Weight donen set icin rekor rozeti gorunur', async () => {
   await egzersizSecimineBekle();
   await setEkle(kullanici, '70', '5');
 
-  expect(await screen.findByText(/ağırlık rekoru/)).toBeInTheDocument();
+  expect(await screen.findByText(/ağırlık rekoru/i)).toBeInTheDocument();
 });
 
 test('recordType Reps donen set icin rekor rozeti gorunur', async () => {
@@ -186,7 +187,7 @@ test('recordType Reps donen set icin rekor rozeti gorunur', async () => {
   await egzersizSecimineBekle();
   await setEkle(kullanici, '70', '5');
 
-  expect(await screen.findByText(/tekrar rekoru/)).toBeInTheDocument();
+  expect(await screen.findByText(/tekrar rekoru/i)).toBeInTheDocument();
 });
 
 test('recordType None donen set icin rekor rozeti gorunmez', async () => {
@@ -198,7 +199,7 @@ test('recordType None donen set icin rekor rozeti gorunmez', async () => {
   await egzersizSecimineBekle();
   await setEkle(kullanici, '70', '5');
 
-  await screen.findByText('70 × 5');
+  await screen.findByText(tamMetin('70 kg × 5'));
   expect(screen.queryByText(/rekoru/)).not.toBeInTheDocument();
 });
 
@@ -211,7 +212,7 @@ test('agirlik 0 ile set eklenebilir', async () => {
   await egzersizSecimineBekle();
   await setEkle(kullanici, '0', '12');
 
-  expect(await screen.findByText('0 × 12')).toBeInTheDocument();
+  expect(await screen.findByText(tamMetin('0 kg × 12'))).toBeInTheDocument();
 });
 
 test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir', async () => {
@@ -243,7 +244,7 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
   await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
   await kullanici.clear(screen.getByLabelText('Tekrar'));
   await kullanici.type(screen.getByLabelText('Tekrar'), '8');
-  await kullanici.click(screen.getByRole('button', { name: 'Set Ekle' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Set ekle' }));
 
   const hatalar = await screen.findAllByRole('alert');
   expect(hatalar.length).toBeGreaterThan(0);
@@ -363,7 +364,7 @@ test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek
   await kullanici.clear(screen.getByLabelText('Tekrar'));
   await kullanici.type(screen.getByLabelText('Tekrar'), '8');
   await kullanici.type(screen.getByLabelText('RIR (opsiyonel)'), 'abc');
-  await kullanici.click(screen.getByRole('button', { name: 'Set Ekle' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Set ekle' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('RIR tam sayı olmalı.');
   expect(istekYapildiMi).toBe(false);
@@ -385,7 +386,7 @@ test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ'
   // KRITIK: bir sunucu hatasi, "bugun henuz antrenman yok" bos durumuyla KARISTIRILMAMALI --
   // aksi halde kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye
   // kalkisir (review bulgusu).
-  expect(screen.queryByText('Bugün henüz antrenman yok.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Bugün henüz antrenman yok')).not.toBeInTheDocument();
 });
 
 test('setler sorgusu 500 donerse hata gosterilir, "henuz set eklenmedi" bos durum metni GORUNMEZ', async () => {
@@ -516,4 +517,50 @@ test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri g
   // Ag hatasi sonrasi acik oturum sorgusu invalidate edilip YENIDEN cekilir -- baglanti geri
   // gelince ekran bayat kalmaz (review bulgusu R15).
   await waitFor(() => expect(acikOturumIstekSayisi).toBeGreaterThan(ilkIstekSayisi));
+});
+
+test('set eklenince durum satiri eklenen seti duyurur', async () => {
+  // Spec davranis 5: sabit panel listeyi kismen ortebilir; eklenen set hem gorunur hem ekran
+  // okuyucuya (role=status, polite) duyurulur. Dugmenin adi DEGISMEZ.
+  sahteSunucuyuKur();
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '82,5', '5');
+
+  await waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent('Eklendi: 82,5 kg × 5'),
+  );
+  expect(screen.getByRole('button', { name: 'Set ekle' })).toBeInTheDocument();
+});
+
+test('antrenmani bitir basarisiz olursa hata gosterilir ve dugme yerinde kalir', async () => {
+  const acikOturum: SessionResponse = {
+    id: 7,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  server.use(
+    http.post('/api/sessions/:id/finish', () =>
+      HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Antrenman bitirilemedi. Lütfen tekrar deneyin.',
+  );
+  expect(screen.getByRole('button', { name: 'Antrenmanı bitir' })).toBeInTheDocument();
 });

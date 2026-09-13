@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import HistoryPage from './HistoryPage';
 import type { components } from '../api/schema';
+import { tamMetin } from '../test/metin';
 
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
@@ -92,6 +93,9 @@ test('sonraki sayfaya gecilebilir ve ikinci istek Page=2 tasir', async () => {
   gecmisSayfasiniOlustur();
 
   await screen.findAllByRole('listitem');
+  // Sayfa bilgisi ve toplam sayi sunucunun zarfindan gelir, istemcide hesaplanmaz (spec).
+  expect(screen.getByText('Sayfa 1 / 2')).toBeInTheDocument();
+  expect(screen.getByText('40 antrenman')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Önceki' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Sonraki' })).toBeEnabled();
 
@@ -109,7 +113,7 @@ test('hic oturum yoksa bos durum metni gorunur', async () => {
 
   gecmisSayfasiniOlustur();
 
-  expect(await screen.findByText('Henüz antrenman geçmişi yok.')).toBeInTheDocument();
+  expect(await screen.findByText('Henüz antrenman geçmişi yok')).toBeInTheDocument();
 });
 
 test('seti olmayan oturum setCount 0 ile GIZLENMEDEN gosterilir', async () => {
@@ -156,7 +160,7 @@ test('oturum detayi acilinca setleri SetList ile gosterir (ayri istek atmadan)',
   const ozet = await screen.findByText(/10\.09\.2026/);
   await kullanici.click(ozet);
 
-  expect(await screen.findByText('60 × 8')).toBeInTheDocument();
+  expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
 });
 
 test('genisletilmis, seti olmayan bir gecmis oturumu "Bugün" metni DEGIL notr bir metin gosterir', async () => {
@@ -175,7 +179,7 @@ test('genisletilmis, seti olmayan bir gecmis oturumu "Bugün" metni DEGIL notr b
   const ozet = await screen.findByText(/10\.09\.2026/);
   await kullanici.click(ozet);
 
-  expect(await screen.findByText('Bu oturumda set yok.')).toBeInTheDocument();
+  expect(await screen.findByText('Bu antrenmanda set yok.')).toBeInTheDocument();
   expect(screen.queryByText('Bugün henüz set eklenmedi.')).not.toBeInTheDocument();
 });
 
@@ -193,5 +197,5 @@ test('gecmis istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ',
   );
   // KRITIK: bir sunucu hatasi, "hic oturum yok" bos durumuyla KARISTIRILMAMALI (Task 4'te
   // aynen bu hataya dusulmustu, TodayPage'de duzeltildi -- burada tekrarlanmiyor).
-  expect(screen.queryByText('Henüz antrenman geçmişi yok.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Henüz antrenman geçmişi yok')).not.toBeInTheDocument();
 });
