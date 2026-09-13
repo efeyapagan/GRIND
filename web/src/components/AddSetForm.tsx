@@ -59,7 +59,7 @@ function SayiAlani({
 }: SayiAlaniProps) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="relative">
+      <span className="relative block">
         <input
           id={id}
           ref={girdiRef}
@@ -82,8 +82,8 @@ function SayiAlani({
         >
           {birim}
         </span>
-        {hata && <p role="alert" className="text-label text-danger">{hata}</p>}
-      </div>
+      </span>
+      {hata && <p role="alert" className="text-label text-danger">{hata}</p>}
     </div>
   );
 }
