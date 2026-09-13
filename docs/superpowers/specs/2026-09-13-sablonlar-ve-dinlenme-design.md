@@ -4,7 +4,7 @@
 **Kapsam:** Antrenman şablonlarının (ör. "Push Day") arayüzü, antrenmanı şablonla başlatma ve hareket
 kartlarıyla ilerleme, setler arası dinlenme sayacı (süre harekete göre şablonda), Geçmiş'te antrenman
 türü rozeti. Takvim ve seri ayrı bir dilimdir.
-**Durum:** 📋 Spec. Kullanıcı kararları:
+**Durum:** ✅ Uygulandı (plan: `docs/superpowers/plans/2026-09-13-frontend-dilim-2-sablonlar-ve-dinlenme.md`). Kullanıcı kararları:
 - Şablon bir "taslak"tır: bir kez kurulur, dokununca hareketler hazır gelir.
 - Bir harekete dokununca mevcut "Set ekle" paneli o hareket seçili gelir; panel aynen kalır.
 - Dinlenme süresi **harekete göre**, şablonda saklanır (backend değişikliği kabul edildi).
@@ -235,5 +235,4 @@ kopyalama; egzersiz oluşturma/arşivleme arayüzü.
   isteğe bağlı iyileştirmedir, yokluğunda sayaç çalışmaya devam eder.
 - **Ses** ancak kullanıcı etkileşiminden sonra çalınabilir; "Set ekle" dokunuşu bu etkileşimi sağlar.
 - **Migration** mevcut şablon satırlarına 90 yazar; bu bilinçli bir varsayılandır.
-- **PR #39** (görsel tasarım) henüz merge edilmedi; bu dilim `feature/frontend-tasarim`'ın üzerine
-  kurulur.
+- **PR #39** (görsel tasarım) dev'e #39, master'a #40 ile merge edildi; bu dilim onun üzerine kuruldu.

@@ -16,12 +16,16 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   Karar 2'nin eşleme tablosuyla çevrilir, kodu olduğu gibi kopyalanmaz (Karar 7); `accent` kullanım
   kuralı bağlayıcıdır. Yeni bir görsel yön (açık tema, yeni bileşen dili) için kullanıcıya sor.
 - İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
-  geçmiş. Şablon, istatistik, tartı, export ve AI ekranları sonraki dilimlere bırakıldı.
+  geçmiş. Şablonlar dilim 2'de geldi; istatistik, tartı, export ve AI ekranları sonraki dilimlere
+  bırakıldı.
 - **Frontend dilim 1 tamamlandı (2026-09-12)** — ayrıntı ve devreden notlar PLAN.md'de. Kapsam
   dışı kalanlar: çevrimdışı okuma/yazma, dağıtım/CORS
   ve yukarıdaki sonraki dilimler. `web/`'de tip kontrolü `npm run typecheck` = `tsc -b`'dir:
   `tsc --noEmit` kök tsconfig'te (`files: []` + proje referansları) HİÇBİR dosyayı kontrol etmez,
   geri çevirme.
+- **Frontend dilim 2 tamamlandı (2026-09-13)** — şablon ekranları, şablonla başlatma ve hareket kartları,
+  dinlenme sayacı, hareket geçmişi grafiği; ayrıntı ve devreden notlar PLAN.md'de. Takvim/seri ayrı bir
+  dilim.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -96,7 +100,8 @@ Object Reference) açığıdır.
 - **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`
 - **TemplateExercise**: `Id`, `WorkoutTemplateId` (FK), `ExerciseId` (FK), `OrderIndex`,
   `PlannedSets` — o egzersiz için hedeflenen set sayısı (ağırlık/tekrar burada YOK, onlar
-  gerçek performans anında `SetEntry`'ye girilir)
+  gerçek performans anında `SetEntry`'ye girilir), `RestSeconds` — setler arası dinlenme (0–900 sn,
+  varsayılan 90, `0` = sayaç yok; dilim 2)
 - **WorkoutSession**: `Id`, `UserId` (FK), `TemplateId` (FK, nullable — şablonsuz açılan
   session'lar için null), `StartedAt`, `EndedAt` (nullable — `null` = oturum hâlâ açık/devam
   ediyor), `Notes` (nullable — serbest metin, örn. "omuz sıkıştı, güçlü hissettim")
