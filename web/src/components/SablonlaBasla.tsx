@@ -10,9 +10,6 @@ interface Props {
 /**
  * Bugun'un bos durumundaki "Sablonla basla" bolumu (spec Karar 2 ve 4). Baslatma mutasyonu ve
  * "sablon uygulanmadi" bilgisi TodayPage'dedir: oturum acilinca bu bolum kaybolur, bilgi kaybolmamali.
- *
- * Sablon listesinin hatasi `role="alert"` DEGIL: bolum ikincil bir kisayoldur, serbest antrenman
- * paneli calismaya devam eder.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
   const { data: sablonlar, isLoading, isError } = useTemplates();
@@ -24,7 +21,11 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
       </h2>
 
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
-      {isError && <p className="text-body text-muted">Şablonlar alınamadı.</p>}
+      {isError && (
+        <p role="alert" className="text-body text-danger">
+          Şablonlar alınamadı.
+        </p>
+      )}
 
       {sablonlar && sablonlar.length === 0 && (
         <p className="text-body text-muted">

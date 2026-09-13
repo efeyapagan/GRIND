@@ -20,9 +20,12 @@ const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uy
  *
  * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
- * Secim (spec Karar 5) burada TEK durumdur; kartlar ve panel paylasir. Sablonlu oturum yuklenip
- * henuz secim yokken varsayilan hareket BIR KEZ duruma yazilir (render sirasinda kosullu set -- efekt
- * yok). Boylece hareket tamamlaninca secim kendiliginden sonrakine ATLAMAZ.
+ * Secim (spec Karar 5) burada TEK durumdur; kartlar ve panel paylasir. YENI bir sablonlu oturum
+ * gorununce (id, varsayilanin en son uygulandigi oturumdan FARKLIYSA) secim o oturumun varsayilanina
+ * SIFIRLANIR -- aksi halde onceki oturumdan kalma bir secim (orn. Bench Press) yeni sablonda hic
+ * olmayabilir (review bulgusu I1). Ayni oturum icinde ise hareket tamamlaninca secim kendiliginden
+ * sonrakine ATLAMAZ; sablonsuz bir oturum (bos durumdan ilk set ile acilan) secimi SIFIRLAMAZ --
+ * kullanicinin panelde yaptigi secim korunur. Render sirasinda kosullu set (efekt yok).
  *
  * `pb-72` (18rem): sabit set ekle paneli listenin son satirini ortmesin.
  */
@@ -42,7 +45,13 @@ export default function TodayPage() {
   const ilerleme = gorunenOturum?.progress ?? [];
   const sablonVarsayilani = varsayilanHareket(ilerleme);
   const [secim, setSecim] = useState<number | null>(null);
-  if (secim === null && sablonVarsayilani !== null) {
+  // Sablonlu oturumun kimligi degisince (yeni bir sablonla baslatilinca) secim o oturumun
+  // varsayilanina sifirlanir; sablonsuz bir oturum (id null gibi degil, ilerleme BOS) bu
+  // sifirlamayi TETIKLEMEZ -- kullanicinin bos durumdan yaptigi panel secimi korunur (I1).
+  const sablonluOturumId = gorunenOturum && ilerleme.length > 0 ? gorunenOturum.id : null;
+  const [varsayilanUygulananOturum, setVarsayilanUygulananOturum] = useState<number | null>(null);
+  if (sablonluOturumId !== null && sablonluOturumId !== varsayilanUygulananOturum) {
+    setVarsayilanUygulananOturum(sablonluOturumId);
     setSecim(sablonVarsayilani);
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;

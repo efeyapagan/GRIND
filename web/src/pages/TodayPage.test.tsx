@@ -756,3 +756,66 @@ test('sablonda olmayan harekete girilen setler Plan disi grubunda gorunur', asyn
   const planDisi = await screen.findByRole('region', { name: 'Plan dışı' });
   expect(within(planDisi).getByText(tamMetin('70 kg × 5'))).toBeInTheDocument();
 });
+
+test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', async () => {
+  // I1: onceki oturumdan kalma bir secim (Bench Press) yeni sablonda hic olmayabilir -- bitirip
+  // FARKLI bir sablonla (Leg Day) baslatinca secim o oturumun kendi varsayilanina (Squat) donmeli.
+  sahteSunucuyuKur({ sablonlar: [PUSH_DAY] });
+  let acik: SessionResponse | null = sablonluOturum([
+    ilerleme(1, 'Bench Press', 4, 0),
+    ilerleme(2, 'Squat', 3, 0),
+  ]);
+  const LEG_DAY: TemplateResponse = {
+    id: 11,
+    name: 'Leg Day',
+    createdAt: '2026-09-02T08:00:00Z',
+    exercises: [
+      { id: 3, exerciseId: 2, exerciseName: 'Squat', category: 'Legs', isArchived: false, orderIndex: 0, plannedSets: 3, restSeconds: 90 },
+    ],
+  };
+  server.use(
+    http.get('/api/sessions/open', () =>
+      acik ? HttpResponse.json(acik) : HttpResponse.json({ title: 'Not Found', status: 404 }, { status: 404 }),
+    ),
+    http.get('/api/templates', () => HttpResponse.json([PUSH_DAY, LEG_DAY])),
+    http.post('/api/sessions/:id/finish', () => {
+      const bitenOturum = acik;
+      acik = null;
+      return HttpResponse.json(
+        bitenOturum ? { ...bitenOturum, endedAt: new Date().toISOString(), isOpen: false } : null,
+      );
+    }),
+    http.post('/api/sessions', async ({ request }) => {
+      const govde = (await request.json()) as { templateId?: number | null };
+      acik = {
+        id: 40,
+        startedAt: new Date().toISOString(),
+        endedAt: null,
+        isOpen: true,
+        templateId: govde.templateId ?? null,
+        templateName: 'Leg Day',
+        notes: null,
+        progress: [ilerleme(2, 'Squat', 3, 0)],
+      };
+      return HttpResponse.json(acik, { status: 201 });
+    }),
+  );
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  // Ilk sablonlu oturumun varsayilani: tamamlanmamis ilk hareket, Bench Press.
+  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument(),
+  );
+
+  await kullanici.click(await screen.findByRole('button', { name: /Leg Day/ }));
+
+  expect(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('2'));
+});
