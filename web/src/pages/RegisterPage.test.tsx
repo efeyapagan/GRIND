@@ -46,7 +46,8 @@ test('kullanici adi deseni istemcide dogrulanir: istek gitmez, alan hatasi goste
   // "ab" -- 3 karakterden kisa, ^[a-zA-Z0-9_-]{3,50}$ desenini ihlal eder.
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'ab');
   await kullanici.type(screen.getByLabelText('Şifre'), 'gecerlisifre');
-  await kullanici.click(screen.getByRole('button', { name: 'Kayıt Ol' }));
+  await kullanici.type(screen.getByLabelText('Şifre tekrarı'), 'gecerlisifre');
+  await kullanici.click(screen.getByRole('button', { name: 'Kayıt ol' }));
 
   expect(await screen.findByRole('alert')).toBeInTheDocument();
   expect(istekYapildiMi).toBe(false);
@@ -69,7 +70,8 @@ test('72 bayti asan sifre istemcide reddedilir: istek gitmez', async () => {
   const cokBaytliSifre = 'ğ'.repeat(72);
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'gecerli_kullanici');
   await kullanici.type(screen.getByLabelText('Şifre'), cokBaytliSifre);
-  await kullanici.click(screen.getByRole('button', { name: 'Kayıt Ol' }));
+  await kullanici.type(screen.getByLabelText('Şifre tekrarı'), cokBaytliSifre);
+  await kullanici.click(screen.getByRole('button', { name: 'Kayıt ol' }));
 
   expect(await screen.findByRole('alert')).toBeInTheDocument();
   expect(istekYapildiMi).toBe(false);
@@ -87,8 +89,32 @@ test('409: kullanici adi alinmis hatasi sunucu mesajiyla gosterilir', async () =
 
   await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'mevcut_kullanici');
   await kullanici.type(screen.getByLabelText('Şifre'), 'gecerlisifre');
-  await kullanici.click(screen.getByRole('button', { name: 'Kayıt Ol' }));
+  await kullanici.type(screen.getByLabelText('Şifre tekrarı'), 'gecerlisifre');
+  await kullanici.click(screen.getByRole('button', { name: 'Kayıt ol' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Kullanıcı adı alınmış.');
   expect(session.read()).toBeNull();
+});
+
+test('sifre tekrari eslesmezse istek gitmez ve alan hatasi gosterilir', async () => {
+  // Spec davranis 1: uygulamada sifre sifirlama yok -- kayittaki bir yazim hatasi hesabi kalici
+  // kilitlerdi.
+  let istekYapildiMi = false;
+  server.use(
+    http.post('/api/auth/register', () => {
+      istekYapildiMi = true;
+      return HttpResponse.json({ token: 't', expiresAtUtc: new Date().toISOString(), username: 'x' });
+    }),
+  );
+
+  const kullanici = userEvent.setup();
+  kayitSayfasiniOlustur();
+
+  await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'gecerli_kullanici');
+  await kullanici.type(screen.getByLabelText('Şifre'), 'gecerlisifre');
+  await kullanici.type(screen.getByLabelText('Şifre tekrarı'), 'baskasifre1');
+  await kullanici.click(screen.getByRole('button', { name: 'Kayıt ol' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Şifreler eşleşmiyor.');
+  expect(istekYapildiMi).toBe(false);
 });
