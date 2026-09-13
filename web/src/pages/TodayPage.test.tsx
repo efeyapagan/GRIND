@@ -818,6 +818,31 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('2'));
 });
 
+test('sablonsuz oturumda secili hareketin gecmisi istenir ve set eklenince yeniden istenir', async () => {
+  const acikOturum: SessionResponse = {
+    id: 40,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await waitFor(() => expect(ortam.gecmisAramalari().length).toBeGreaterThan(0));
+  expect(ortam.gecmisAramalari()[0]).toContain('ExerciseId=1');
+  const ilkSayi = ortam.gecmisAramalari().length;
+
+  await setEkle(kullanici, '60', '8');
+
+  await waitFor(() => expect(ortam.gecmisAramalari().length).toBeGreaterThan(ilkSayi));
+});
+
 describe('dinlenme sayaci', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });

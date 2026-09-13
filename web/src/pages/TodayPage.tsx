@@ -6,6 +6,7 @@ import { adaGoreSirala } from '../lib/egzersizler';
 import { varsayilanHareket } from '../lib/ilerleme';
 import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
+import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import BosDurum from '../ui/BosDurum';
@@ -55,6 +56,7 @@ export default function TodayPage() {
     setSecim(sablonVarsayilani);
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
+  const seciliEgzersizAdi = egzersizler?.find((eg) => eg.id === etkinSecim)?.name ?? null;
 
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
@@ -134,9 +136,25 @@ export default function TodayPage() {
           {!setlerYukleniyor &&
             !setlerHataliMi &&
             (ilerleme.length > 0 ? (
-              <HareketKartlari ilerleme={ilerleme} setler={setler ?? []} secilenId={etkinSecim} onSec={setSecim} />
+              <HareketKartlari
+                ilerleme={ilerleme}
+                setler={setler ?? []}
+                secilenId={etkinSecim}
+                onSec={setSecim}
+                bugunkuOturumId={gorunenOturum.id}
+              />
             ) : (
-              <SetList sets={setler ?? []} />
+              <>
+                {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9). */}
+                {etkinSecim !== null && seciliEgzersizAdi && (
+                  <HareketGecmisi
+                    exerciseId={etkinSecim}
+                    exerciseName={seciliEgzersizAdi}
+                    bugunkuOturumId={gorunenOturum.id}
+                  />
+                )}
+                <SetList sets={setler ?? []} />
+              </>
             ))}
         </>
       )}

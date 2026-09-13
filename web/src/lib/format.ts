@@ -32,6 +32,15 @@ export function formatTrTime(iso: string): string {
   return bicimlendirici.format(new Date(iso));
 }
 
+/** Grafik ekseni icin kisa tarih ("12 Eyl"), TR gunune gore. */
+export function formatKisaTarih(iso: string): string {
+  return new Intl.DateTimeFormat('tr-TR', {
+    timeZone: TR_ZAMAN_DILIMI,
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(iso));
+}
+
 export function formatWeight(kg: number): string {
   // TR ondalik ayraci virgul; gereksiz ",0" eklenmez (80 -> "80"), ama 0 gecerli bir
   // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil). Backend Weight'i

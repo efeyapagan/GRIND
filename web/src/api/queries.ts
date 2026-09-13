@@ -38,6 +38,7 @@ export const queryKeys = {
   // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
   // cekilmesin (silmeden hemen sonra 404'e dusmesin).
   template: (id: number) => ['template', id] as const,
+  exerciseHistory: (exerciseId: number) => ['exerciseHistory', exerciseId] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -304,6 +305,24 @@ export function useHistory(page: number) {
 }
 
 /**
+ * Bir hareketin son 10 oturumu (spec Karar 9). Egzersiz filtresi verildiginde sunucu her oturumun
+ * `totalVolume`/`setCount`'unu YALNIZCA o egzersizin setlerinden hesaplar -- istemci toplamaz.
+ * Acik bugunku oturum da (o harekete set girildiyse) listededir.
+ */
+export function useExerciseHistory(exerciseId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.exerciseHistory(exerciseId ?? 0),
+    queryFn: async (): Promise<GecmisOturum[]> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>(
+        `/history?ExerciseId=${exerciseId}&PageSize=10`,
+      );
+      return dogrulanmisGecmisSayfasi(yanit).items;
+    },
+    enabled: exerciseId !== null,
+  });
+}
+
+/**
  * Polling YOK (spec) -- yalnizca `useAddSet`in basarili olunca invalidate ettigi `records`
  * anahtari araciligiyla tazelenir.
  */
@@ -355,6 +374,8 @@ export function useAddSet() {
       // Yeni set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
       // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
       void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+      // Bugunku cubuk buyusun (spec Karar 9): yalnizca eklenen setin hareketi.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseHistory(set.exerciseId) });
     },
   });
 }

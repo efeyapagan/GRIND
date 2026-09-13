@@ -1,4 +1,4 @@
-import { formatTrDate, formatTrTime, formatWeight } from './format';
+import { formatKisaTarih, formatTrDate, formatTrTime, formatWeight } from './format';
 
 // Turkiye 2016'dan beri yaz saati uygulamiyor, sabit UTC+3 -- bu yuzden bu testler
 // cihazin/CI'in yerel saat dilimine bagli olmadan hep ayni sonucu vermeli.
@@ -31,4 +31,10 @@ test('formatWeight iki ondalikli agirligi YUVARLAMADAN gosterir', () => {
 
 test('formatWeight hacim gibi iki ondalikli buyuk degerleri de yuvarlamaz', () => {
   expect(formatWeight(306.25)).toBe('306,25');
+});
+
+test('formatKisaTarih gun ve kisa ay adini TR gunune gore verir', () => {
+  expect(formatKisaTarih('2026-09-12T08:00:00Z')).toBe('12 Eyl');
+  // UTC 22:30 -> TR 01:30, ERTESI GUN.
+  expect(formatKisaTarih('2026-09-12T22:30:00Z')).toBe('13 Eyl');
 });
