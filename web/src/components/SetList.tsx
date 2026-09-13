@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Flame, Zap } from 'lucide-react';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
 import Rozet from '../ui/Rozet';
@@ -9,6 +10,8 @@ interface Props {
   // Bos durumda gosterilecek metin cagiran tarafa birakilir (T5): TodayPage "bugun" baglaminda
   // (varsayilan), HistoryPage ise gecmis bir gunu gosterirken "Bugün..." metnini KULLANAMAZ.
   bosDurumMetni?: string;
+  // 'bugun': buyuk degerli kart satirlari (Bugun). 'gecmis': Gecmis kartinin icinde kompakt satirlar.
+  varyant?: 'bugun' | 'gecmis';
 }
 
 interface EgzersizGrubu {
@@ -38,7 +41,11 @@ function rekorRozetiMetni(kayit: SetKaydi): string | null {
  * Deger metni (`60 kg × 8`) bosluklari `{' '}` ile acikca tasir: textContent tek parca okunabilsin
  * (ekran okuyucu ve testler), gorsel olarak ise birim ve "×" soluk kalsin.
  */
-export default function SetList({ sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' }: Props) {
+export default function SetList({
+  sets,
+  bosDurumMetni = 'Bugün henüz set eklenmedi.',
+  varyant = 'bugun',
+}: Props) {
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
     for (const kayit of sets) {
@@ -58,6 +65,52 @@ export default function SetList({ sets, bosDurumMetni = 'Bugün henüz set eklen
 
   if (gruplar.length === 0) {
     return <p className="text-body text-muted">{bosDurumMetni}</p>;
+  }
+
+  if (varyant === 'gecmis') {
+    return (
+      <div className="flex flex-col gap-5">
+        {gruplar.map((grup) => (
+          <section key={grup.exerciseId} className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <h3 className="truncate text-body-lg font-semibold">{grup.exerciseName}</h3>
+              <span className="shrink-0 rounded bg-surface-1 px-2 py-0.5 text-label-xs text-muted uppercase">
+                {grup.sets.length} set
+              </span>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {grup.sets.map((kayit, setSirasi) => {
+                const rozet = rekorRozetiMetni(kayit);
+                return (
+                  <li
+                    key={kayit.id}
+                    className="flex min-h-12 flex-col justify-center gap-1.5 rounded-lg bg-surface-1 px-4 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-4">
+                        <span className="w-5 text-label text-muted">{setSirasi + 1}</span>
+                        <span className="text-body-lg tabular-nums">
+                          {formatWeight(kayit.weight)} kg{' '}
+                          <span className="text-muted">×</span> {kayit.reps}
+                        </span>
+                      </div>
+                      {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+                    </div>
+                    {rozet && (
+                      <div>
+                        <Rozet ikon={kayit.recordType === 'Weight' ? Zap : Flame} tamYuvarlak>
+                          {rozet}
+                        </Rozet>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
   }
 
   return (
