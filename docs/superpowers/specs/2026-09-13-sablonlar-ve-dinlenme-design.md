@@ -163,6 +163,42 @@ düğmesi. Boş durum: `BosDurum` ("Henüz şablon yok").
   (mevcut desen, `!` yok).
 - Sunucu değerleri istemcide yeniden hesaplanmaz: ilerleme sayıları, tamamlanma, sıra sunucudan gelir.
   Şablon kartındaki "4 hareket" yanıttaki listenin uzunluğudur (sunum).
+- Karar 9 için `useExerciseHistory(exerciseId)` ve anahtar `exerciseHistory(exerciseId)`; set ekleme
+  ve silme bu anahtarı (o egzersiz için) tazeler.
+
+## Karar 9 — Hareket geçmişi grafiği (ortak bileşen)
+
+Kullanıcı isteği: seçili hareketin önceki antrenmanlardaki hacmi grafikle görünsün, hareketi her
+yaptığında grafiğe yeni bir çubuk eklensin. Grafik **her hareket için ayrı yazılmaz**: tek bir ortak
+bileşen olur, bugün Bugün ekranında, ileride Rekorlar ve istatistik ekranlarında aynen kullanılır.
+
+- **Veri — backend değişikliği YOK:** `GET /api/history?ExerciseId={id}&PageSize=10`. Bu uç egzersiz
+  filtresi verildiğinde her oturumun `totalVolume` ve `setCount`'unu YALNIZCA o egzersizin setlerinden
+  hesaplar (Faz 9 spec Karar 8). Böylece hacim sunucudan gelir, istemci yeniden hesaplamaz. Açık
+  bugünkü oturum da listededir: set eklenince sorgu tazelenir ve bugünün çubuğu büyür.
+- **Ayrım (SOLID):**
+  - `HacimGrafigi` (`web/src/ui/`): yalnızca çizer, veriyi bilmez. Girdi
+    `noktalar: { etiket: string; deger: number; vurgulu?: boolean }[]` ve erişilebilir `baslik`.
+    Hareket, oturum ya da API bilmez; bu yüzden her ekranda kullanılır.
+  - `HareketGecmisi` (`web/src/components/`): `exerciseId` alır, `useExerciseHistory` ile veriyi
+    çeker, oturumları eskiden yeniye çevirip `HacimGrafigi`'ne verir, bugünkü oturumu `vurgulu`
+    işaretler; yüklenme, hata ve boş durumu gösterir.
+- **Çizim:** kütüphane YOK (UI kütüphanesi yasağı ve paket boyutu); elle SVG çubuk grafik. Çubuklar
+  `surface-4`, bugünkü çubuk `fg` ve altında "Bugün" etiketi. `accent` ve `accent-soft`
+  KULLANILMAZ (accent kuralı; accent-soft yalnızca metin/ikon rengidir). Eksen etiketi tarih
+  ("12 Eyl"), en yüksek değer çubuğun üstünde "2.400 kg". Yükseklik sabit (ör. 96 px), genişlik
+  kaba yayılır. Değerler `tabular-nums`.
+- **Erişilebilirlik:** SVG `role="img"` ve özet `aria-label` ("Bench Press hacmi, son 6 antrenman");
+  aynı veri görsel olarak gizli bir listeyle ekran okuyucuya verilir (tarih + hacim).
+- **Yerleşim:** Bugün ekranında seçili hareketin kartı açıkken, kartın setlerinin altında
+  "Geçmiş" başlığıyla. Grafiğin altında tek satır "Geçen sefer: 3 set · 2.400 kg": bugünden önceki
+  en yeni oturumun sunucudan gelen `setCount` ve `totalVolume`'u ("en ağır set" gibi istemcide
+  türetilen değer gösterilmez). Şablonsuz antrenmanda panelde seçili hareket için aynı bölüm set listesinin
+  üstünde gösterilir.
+- **Boş durum:** hiç geçmiş yoksa grafik yerine "Bu hareketin ilk antrenmanı" metni. Tek oturum varsa
+  tek çubuk çizilir.
+- **Kapsam:** yalnızca hacim. Hareket başına en ağır set/1RM grafiği istemci hesabı gerektirir, bu
+  dilimde yok (gerekirse ileride sunucu ucu olarak).
 
 ---
 
@@ -180,9 +216,12 @@ düğmesi. Boş durum: `BosDurum` ("Henüz şablon yok").
   - set eklenince sayaç hareketin `restSeconds`'ıyla başlar (sahte zamanlayıcılar), `0`'da başlamaz,
     plan dışında 90 sn; "+15 sn" ve "Atla" çalışır; bitişte "Dinlenme bitti" duyurulur;
   - Geçmiş kartında şablon adı ya da "Serbest" görünür;
+  - `HareketGecmisi` `ExerciseId` ve `PageSize=10` ile ister, çubukları eskiden yeniye ve sunucunun
+    `totalVolume` değerleriyle çizer, bugünü vurgular, boş geçmişte "Bu hareketin ilk antrenmanı" der;
+    set eklenince tazelenir; `HacimGrafigi` saf girdiyle (API'siz) test edilir;
   - sayaç modülünün saf fonksiyonları için birim testleri.
 - **Görsel doğrulama:** Playwright ekran görüntüleri (390×844): şablon listesi, düzenleyici, boş
-  Bugün'de şablon bölümü, şablonlu Bugün (seçili kart + çalışan sayaç), Geçmiş rozeti.
+  Bugün'de şablon bölümü, şablonlu Bugün (seçili kart + hareket geçmişi grafiği + çalışan sayaç), Geçmiş rozeti.
 
 ## Kapsam dışı
 
