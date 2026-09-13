@@ -13,7 +13,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Ikonlar Gorev 6'da eklenir. Tema rengi gorsel tasarim spec'i Karar 5.
+      // Manifest'te listelenmeyen ama kabukta kullanilan ikonlar da precache'e girsin.
+      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
+      // Ikonlar ve tema rengi: gorsel tasarim spec'i Karar 5 ve 6.
       manifest: {
         name: 'GRIND',
         short_name: 'GRIND',
@@ -22,6 +24,12 @@ export default defineConfig({
         lang: 'tr',
         theme_color: '#121316',
         background_color: '#121316',
+        icons: [
+          { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         // Uygulama kabugu onbellekten acilir. API yanitlari onbelleklenmez: bayat antrenman
