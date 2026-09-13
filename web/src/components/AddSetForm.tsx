@@ -6,8 +6,11 @@ import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { ApiError } from '../api/problem';
 import { formatWeight } from '../lib/format';
+import { dinlenmeBaslat, dinlenmeSuresi, type Dinlenme } from '../lib/dinlenme';
+import { sesiHazirla } from '../lib/uyari';
 import BirincilDugme from '../ui/BirincilDugme';
 import SecimKutusu from '../ui/SecimKutusu';
+import DinlenmeSayaci from './DinlenmeSayaci';
 
 /**
  * Spec Karar 8 (cevrimdisi kuyruk YOK): fetch'in kendisi reddederse (ag yok) `request()`
@@ -121,6 +124,9 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
   // ya da hatada temizlenir. Dugmenin adi degismez.
   const [sonEklenen, setSonEklenen] = useState<string | null>(null);
 
+  // Spec Karar 6: her basarili set sonrasi yeniden baslar; hareket secimini degistirmek durdurmaz.
+  const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
+
   const agirlikRef = useRef<HTMLInputElement>(null);
 
   /**
@@ -166,6 +172,8 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
+    // Ses ancak kullanici etkilesimiyle acilabilir: "Set ekle" dokunusu bu etkilesimdir.
+    sesiHazirla();
     setGenelHata(null);
     setAlanHatalari({});
     setSonEklenen(null);
@@ -195,6 +203,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
       // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
       // en sik akis (spec Karar 6). Odak agirlik alanina doner.
       setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
+      setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
       agirlikRef.current?.focus();
     } catch (hata) {
       if (hata instanceof ApiError) {
@@ -226,6 +235,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
       className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2"
     >
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-4 shadow-2xl">
+        <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
         {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
         <div>
           <label htmlFor="set-egzersiz" className="sr-only">

@@ -615,9 +615,7 @@ test('set eklenince durum satiri eklenen seti duyurur', async () => {
   await egzersizSecimineBekle();
   await setEkle(kullanici, '82,5', '5');
 
-  await waitFor(() =>
-    expect(screen.getByRole('status')).toHaveTextContent('Eklendi: 82,5 kg × 5'),
-  );
+  expect(await screen.findByText('Eklendi: 82,5 kg × 5')).toHaveAttribute('role', 'status');
   expect(screen.getByRole('button', { name: 'Set ekle' })).toBeInTheDocument();
 });
 
@@ -818,4 +816,51 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
     'true',
   );
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('2'));
+});
+
+describe('dinlenme sayaci', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-13T10:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('sablondaki harekete set eklenince sayac hareketin restSeconds degeriyle baslar', async () => {
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0, 120)]) });
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await egzersizSecimineBekle();
+    await setEkle(kullanici, '60', '8');
+
+    expect(await screen.findByText('2:00')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+15 sn' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Atla' })).toBeInTheDocument();
+  });
+
+  test('restSeconds 0 olan harekette sayac baslamaz', async () => {
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0, 0)]) });
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await egzersizSecimineBekle();
+    await setEkle(kullanici, '60', '8');
+
+    expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Atla' })).not.toBeInTheDocument();
+  });
+
+  test('sablonsuz antrenmanda sayac varsayilan 90 sn ile baslar', async () => {
+    sahteSunucuyuKur();
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await egzersizSecimineBekle();
+    await setEkle(kullanici, '60', '8');
+
+    expect(await screen.findByText('1:30')).toBeInTheDocument();
+  });
 });
