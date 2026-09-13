@@ -52,7 +52,7 @@ export default function HistoryPage() {
                   className={`overflow-hidden rounded-xl bg-surface-2 ${bos ? 'opacity-80' : ''}`}
                 >
                   <details className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 group-open:bg-surface-3 [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 group-open:bg-surface-3 focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
                       <div className="flex min-w-0 flex-col gap-1">
                         <span className="flex items-center gap-1 text-label">
                           <CalendarDays aria-hidden size={18} className="text-muted" />
