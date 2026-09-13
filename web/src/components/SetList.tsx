@@ -2,8 +2,10 @@ import { useMemo } from 'react';
 import { Flame, Zap } from 'lucide-react';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
+import { rekorRozetiMetni } from '../lib/rekor';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
+import SetSatiri from './SetSatiri';
 
 interface Props {
   sets: SetKaydi[];
@@ -18,20 +20,6 @@ interface EgzersizGrubu {
   exerciseId: number;
   exerciseName: string;
   sets: SetKaydi[];
-}
-
-/**
- * PR rozeti dogrudan sunucunun `recordType`'indan cizilir -- rekor istemcide YENIDEN
- * HESAPLANMAZ (spec). `None` icin rozet yok. Buyuk harf CSS ile gelir.
- */
-function rekorRozetiMetni(kayit: SetKaydi): string | null {
-  if (kayit.recordType === 'Weight') {
-    return 'Ağırlık rekoru';
-  }
-  if (kayit.recordType === 'Reps') {
-    return 'Tekrar rekoru';
-  }
-  return null;
 }
 
 /**
@@ -130,28 +118,9 @@ export default function SetList({
             <span className="shrink-0 text-label-xs text-muted uppercase">{grup.sets.length} set</span>
           </div>
           <ul className="flex flex-col gap-1">
-            {grup.sets.map((kayit, setSirasi) => {
-              const rozet = rekorRozetiMetni(kayit);
-              return (
-                <li
-                  key={kayit.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 p-2"
-                >
-                  <div className="flex min-w-0 items-center gap-4">
-                    <span className="w-12 shrink-0 text-label text-muted">{setSirasi + 1}. Set</span>
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-metric tabular-nums">
-                        {formatWeight(kayit.weight)}{' '}
-                        <span className="text-body text-muted">kg</span>{' '}
-                        <span className="font-light text-muted">×</span> {kayit.reps}
-                      </span>
-                      {rozet && <Rozet>{rozet}</Rozet>}
-                    </div>
-                  </div>
-                  {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
-                </li>
-              );
-            })}
+            {grup.sets.map((kayit, setSirasi) => (
+              <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} />
+            ))}
           </ul>
         </section>
       ))}

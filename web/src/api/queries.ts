@@ -10,6 +10,11 @@ type CreateSetRequest = components['schemas']['CreateSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type TemplateResponse = components['schemas']['TemplateResponse'];
+type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
+type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
+type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
+type StartSessionRequest = components['schemas']['StartSessionRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -29,13 +34,29 @@ export const queryKeys = {
   records: ['records'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
+  templates: ['templates'] as const,
+  // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
+  // cekilmesin (silmeden hemen sonra 404'e dusmesin).
+  template: (id: number) => ['template', id] as const,
+  exerciseHistory: (exerciseId: number) => ['exerciseHistory', exerciseId] as const,
 };
+
+export interface HareketIlerlemesi {
+  exerciseId: number;
+  exerciseName: string;
+  plannedSets: number;
+  completedSets: number;
+  restSeconds: number;
+}
 
 export interface AcikOturum {
   id: number;
   startedAt: string;
   isOpen: boolean;
+  templateId: number | null;
   templateName: string | null;
+  // Sablonsuz oturumda bos. Sira, hedef ve gerceklesen sayilar SUNUCUDAN gelir (spec Karar 8).
+  progress: HareketIlerlemesi[];
 }
 
 export interface SetKaydi {
@@ -61,6 +82,25 @@ export interface Egzersiz {
  * bir yerde yapip cagiran taraflari "!" ile susturmak yerine, gercekten eksik bir yanit gelirse
  * sessizce yutmadan haber veriyoruz.
  */
+function dogrulanmisIlerleme(yanit: SessionProgressResponse): HareketIlerlemesi {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.plannedSets === undefined ||
+    yanit.completedSets === undefined ||
+    yanit.restSeconds === undefined
+  ) {
+    throw new Error('Sunucudan eksik ilerleme yaniti alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    plannedSets: yanit.plannedSets,
+    completedSets: yanit.completedSets,
+    restSeconds: yanit.restSeconds,
+  };
+}
+
 function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
   if (yanit.id === undefined || !yanit.startedAt || yanit.isOpen === undefined) {
     throw new Error('Sunucudan eksik oturum yaniti alindi.');
@@ -69,7 +109,9 @@ function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
     id: yanit.id,
     startedAt: yanit.startedAt,
     isOpen: yanit.isOpen,
+    templateId: yanit.templateId ?? null,
     templateName: yanit.templateName ?? null,
+    progress: (yanit.progress ?? []).map(dogrulanmisIlerleme),
   };
 }
 
@@ -109,6 +151,7 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
 export interface GecmisOturum {
   sessionId: number;
   startedAt: string;
+  templateName: string | null;
   totalVolume: number;
   setCount: number;
   sets: SetKaydi[];
@@ -139,6 +182,7 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
   return {
     sessionId: yanit.sessionId,
     startedAt: yanit.startedAt,
+    templateName: yanit.templateName ?? null,
     totalVolume: yanit.totalVolume,
     setCount: yanit.setCount,
     sets: (yanit.sets ?? []).map(dogrulanmisSet),
@@ -263,6 +307,24 @@ export function useHistory(page: number) {
 }
 
 /**
+ * Bir hareketin son 10 oturumu (spec Karar 9). Egzersiz filtresi verildiginde sunucu her oturumun
+ * `totalVolume`/`setCount`'unu YALNIZCA o egzersizin setlerinden hesaplar -- istemci toplamaz.
+ * Acik bugunku oturum da (o harekete set girildiyse) listededir.
+ */
+export function useExerciseHistory(exerciseId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.exerciseHistory(exerciseId ?? 0),
+    queryFn: async (): Promise<GecmisOturum[]> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>(
+        `/history?ExerciseId=${exerciseId}&PageSize=10`,
+      );
+      return dogrulanmisGecmisSayfasi(yanit).items;
+    },
+    enabled: exerciseId !== null,
+  });
+}
+
+/**
  * Polling YOK (spec) -- yalnizca `useAddSet`in basarili olunca invalidate ettigi `records`
  * anahtari araciligiyla tazelenir.
  */
@@ -314,6 +376,8 @@ export function useAddSet() {
       // Yeni set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
       // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
       void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+      // Bugunku cubuk buyusun (spec Karar 9): yalnizca eklenen setin hareketi.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseHistory(set.exerciseId) });
     },
   });
 }
@@ -326,6 +390,150 @@ export function useFinishSession() {
       await request<SessionResponse>(`/sessions/${sessionId}/finish`, { method: 'POST' });
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+/**
+ * `POST /api/sessions { templateId }`. Bugun acik oturum varsa sunucu onu 200 ile oldugu gibi doner
+ * ve `templateId` UYGULANMAZ (Faz 7 karari) -- cagiran taraf donen oturumun `templateId`'sine bakar.
+ */
+export function useStartSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (templateId: number): Promise<AcikOturum> => {
+      const govde: StartSessionRequest = { templateId };
+      const yanit = await request<SessionResponse>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify(govde),
+      });
+      return dogrulanmisOturum(yanit);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+    },
+  });
+}
+
+export interface SablonHareketi {
+  exerciseId: number;
+  exerciseName: string;
+  isArchived: boolean;
+  plannedSets: number;
+  restSeconds: number;
+}
+
+export interface Sablon {
+  id: number;
+  name: string;
+  exercises: SablonHareketi[];
+}
+
+function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHareketi {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.isArchived === undefined ||
+    yanit.plannedSets === undefined ||
+    yanit.restSeconds === undefined
+  ) {
+    throw new Error('Sunucudan eksik sablon hareketi yaniti alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    isArchived: yanit.isArchived,
+    plannedSets: yanit.plannedSets,
+    restSeconds: yanit.restSeconds,
+  };
+}
+
+/** Hareketler sunucunun `orderIndex` sirasiyla gelir; istemci yeniden SIRALAMAZ. */
+function dogrulanmisSablon(yanit: TemplateResponse): Sablon {
+  if (yanit.id === undefined || !yanit.name) {
+    throw new Error('Sunucudan eksik sablon yaniti alindi.');
+  }
+  return {
+    id: yanit.id,
+    name: yanit.name,
+    exercises: (yanit.exercises ?? []).map(dogrulanmisSablonHareketi),
+  };
+}
+
+export interface SablonGirdisi {
+  name: string;
+  // Sira dizideki konumdur; sunucu `OrderIndex`i buradan turetir (istemci gondermez).
+  exercises: { exerciseId: number; plannedSets: number; restSeconds: number }[];
+}
+
+export function useTemplates() {
+  return useQuery({
+    queryKey: queryKeys.templates,
+    queryFn: async (): Promise<Sablon[]> => {
+      const yanit = await request<TemplateResponse[]>('/templates');
+      return yanit.map(dogrulanmisSablon);
+    },
+  });
+}
+
+export function useTemplate(id: number | null) {
+  return useQuery({
+    queryKey: queryKeys.template(id ?? 0),
+    queryFn: async (): Promise<Sablon> =>
+      dogrulanmisSablon(await request<TemplateResponse>(`/templates/${id}`)),
+    enabled: id !== null,
+  });
+}
+
+function sablonGovdesi(girdi: SablonGirdisi): string {
+  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises };
+  return JSON.stringify(govde);
+}
+
+export function useCreateTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (girdi: SablonGirdisi): Promise<Sablon> =>
+      dogrulanmisSablon(
+        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi) }),
+      ),
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+    },
+  });
+}
+
+/**
+ * PUT ad ve hareket listesini BIRLIKTE degistirir (PATCH yalnizca ad). Acik oturum da tazelenir:
+ * ilerleme ve dinlenme sureleri sunucuda sablondan canli okunur (spec Karar 8).
+ */
+export function useUpdateTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, girdi }: { id: number; girdi: SablonGirdisi }): Promise<Sablon> =>
+      dogrulanmisSablon(
+        await request<TemplateResponse>(`/templates/${id}`, { method: 'PUT', body: sablonGovdesi(girdi) }),
+      ),
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await request<void>(`/templates/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
     },
   });

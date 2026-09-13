@@ -41,6 +41,15 @@ public class CheckConstraintTests
         Assert.Contains("> 0", SqlOf<TemplateExercise>("CK_TemplateExercise_PlannedSets_Positive"));
     }
 
+    /// <summary>0 = bu harekette dinlenme sayacı yok; üst sınır 15 dakika.</summary>
+    [Fact]
+    public void Dinlenme_suresi_sifir_ile_dokuz_yuz_saniye_arasindadir()
+    {
+        var sql = SqlOf<TemplateExercise>("CK_TemplateExercise_RestSeconds_Range");
+        Assert.Contains("\"RestSeconds\" >= 0", sql);
+        Assert.Contains("\"RestSeconds\" <= 900", sql);
+    }
+
     [Fact]
     public void Oturum_baslamadan_bitemez_ama_acik_kalabilir()
     {

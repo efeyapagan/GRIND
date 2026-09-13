@@ -89,4 +89,20 @@ public class ColumnMappingTests
         Assert.Equal("date", property.GetColumnType());
         Assert.True(property.IsNullable);
     }
+
+    /// <summary>
+    /// Kolon varsayılanı 90 (migration mevcut satırlara bunu yazar). Sentinel -1: EF, 0'ı "değer
+    /// verilmedi" sayıp kolon varsayılanına bırakmasın — 0 "sayaç yok" demek (bkz. yapılandırma).
+    /// </summary>
+    [Fact]
+    public void Dinlenme_suresi_varsayilani_90_ve_sifir_acikca_yazilir()
+    {
+        var property = TestModel.Entity<TemplateExercise>().FindProperty(nameof(TemplateExercise.RestSeconds))!;
+
+        Assert.NotNull(property);
+        Assert.Equal(90, TemplateExercise.DefaultRestSeconds);
+        Assert.Equal(TemplateExercise.DefaultRestSeconds, (int)property.GetDefaultValue()!);
+        Assert.Equal(-1, (int)property.Sentinel!);
+        Assert.False(property.IsNullable);
+    }
 }

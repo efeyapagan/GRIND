@@ -1,11 +1,16 @@
 import { useMemo, useRef, useState, type FormEvent, type Ref } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
+import { adaGoreSirala } from '../lib/egzersizler';
 import { ApiError } from '../api/problem';
 import { formatWeight } from '../lib/format';
+import { dinlenmeBaslat, dinlenmeSuresi, type Dinlenme } from '../lib/dinlenme';
+import { sesiHazirla } from '../lib/uyari';
 import BirincilDugme from '../ui/BirincilDugme';
+import SecimKutusu from '../ui/SecimKutusu';
+import DinlenmeSayaci from './DinlenmeSayaci';
 
 /**
  * Spec Karar 8 (cevrimdisi kuyruk YOK): fetch'in kendisi reddederse (ag yok) `request()`
@@ -88,28 +93,26 @@ function SayiAlani({
   );
 }
 
+interface Props {
+  // Secim TodayPage'dedir (hareket kartlari ve panel ayni secimi paylasir, spec Karar 5). `null`:
+  // egzersiz listesi henuz yuklenmedi.
+  egzersizId: number | null;
+  onEgzersizSec: (exerciseId: number) => void;
+}
+
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
  * cunku ilk set eklendiginde oturum sunucu tarafinda kendiliginden acilir (spec). Bu yuzden
- * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir.
+ * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir. Secilen egzersiz disaridan
+ * gelir (kontrollu).
  */
-export default function AddSetForm() {
+export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
-  const siraliEgzersizler = useMemo(
-    () => [...(egzersizler ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'tr')),
-    [egzersizler],
-  );
-
-  // Kullanici henuz elle bir secim yapmadiysa (`manuelSecim === null`), etkin deger render
-  // aninda ilk (isme gore siralanmis) egzersize turetilir -- egzersiz listesi async geldigi icin
-  // bunu bir efekt ile state'e yazmak gereksiz bir render zinciri baslatirdi (oxlint uyarisi).
-  const [manuelSecim, setManuelSecim] = useState<string | null>(null);
-  const ilkEgzersizId = siraliEgzersizler[0]?.id;
-  const egzersizId = manuelSecim ?? (ilkEgzersizId !== undefined ? String(ilkEgzersizId) : '');
+  const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -120,6 +123,9 @@ export default function AddSetForm() {
   // Spec davranis 5: son eklenen set gorunur + role=status ile duyurulur; bir sonraki gonderimde
   // ya da hatada temizlenir. Dugmenin adi degismez.
   const [sonEklenen, setSonEklenen] = useState<string | null>(null);
+
+  // Spec Karar 6: her basarili set sonrasi yeniden baslar; hareket secimini degistirmek durdurmaz.
+  const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
 
   const agirlikRef = useRef<HTMLInputElement>(null);
 
@@ -166,9 +172,15 @@ export default function AddSetForm() {
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
+    // Ses ancak kullanici etkilesimiyle acilabilir: "Set ekle" dokunusu bu etkilesimdir.
+    sesiHazirla();
     setGenelHata(null);
     setAlanHatalari({});
     setSonEklenen(null);
+
+    if (egzersizId === null) {
+      return;
+    }
 
     const dogrulamaHatalari = alanlariDogrula();
     if (Object.keys(dogrulamaHatalari).length > 0) {
@@ -183,7 +195,7 @@ export default function AddSetForm() {
 
     try {
       await eklemeMutasyonu.mutateAsync({
-        exerciseId: Number(egzersizId),
+        exerciseId: egzersizId,
         weight: ayristirilmisAgirlik,
         reps: ayristirilmisTekrar,
         rir: ayristirilmisRir,
@@ -191,6 +203,7 @@ export default function AddSetForm() {
       // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
       // en sik akis (spec Karar 6). Odak agirlik alanina doner.
       setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
+      setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
       agirlikRef.current?.focus();
     } catch (hata) {
       if (hata instanceof ApiError) {
@@ -222,28 +235,23 @@ export default function AddSetForm() {
       className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2"
     >
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-4 shadow-2xl">
+        <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
         {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
-        <div className="relative">
+        <div>
           <label htmlFor="set-egzersiz" className="sr-only">
             Egzersiz
           </label>
-          <select
+          <SecimKutusu
             id="set-egzersiz"
-            value={egzersizId}
-            onChange={(e) => setManuelSecim(e.target.value)}
-            className="h-12 w-full appearance-none rounded-lg bg-inset pr-10 pl-4 text-body-lg text-fg"
+            value={egzersizId ?? ''}
+            onChange={(e) => onEgzersizSec(Number(e.target.value))}
           >
             {siraliEgzersizler.map((eg) => (
               <option key={eg.id} value={eg.id}>
                 {eg.name}
               </option>
             ))}
-          </select>
-          <ChevronsUpDown
-            aria-hidden
-            size={20}
-            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted"
-          />
+          </SecimKutusu>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <SayiAlani
