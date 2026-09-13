@@ -118,3 +118,29 @@ test('sifre tekrari eslesmezse istek gitmez ve alan hatasi gosterilir', async ()
   expect(await screen.findByRole('alert')).toHaveTextContent('Şifreler eşleşmiyor.');
   expect(istekYapildiMi).toBe(false);
 });
+
+test('sifre kendisi hataliysa sifre tekrari icin ikinci bir hata eklenmez', async () => {
+  // Sifre zaten gecersizken (8 karakterden kisa) eslesmeme mesaji EKLENMEZ: kullanici once
+  // sifrenin kendisini duzeltmeli, iki hata ust uste gelmemeli.
+  let istekYapildiMi = false;
+  server.use(
+    http.post('/api/auth/register', () => {
+      istekYapildiMi = true;
+      return HttpResponse.json({ token: 't', expiresAtUtc: new Date().toISOString(), username: 'x' });
+    }),
+  );
+
+  const kullanici = userEvent.setup();
+  kayitSayfasiniOlustur();
+
+  await kullanici.type(screen.getByLabelText('Kullanıcı adı'), 'gecerli_kullanici');
+  await kullanici.type(screen.getByLabelText('Şifre'), 'kisa');
+  await kullanici.type(screen.getByLabelText('Şifre tekrarı'), 'baska');
+  await kullanici.click(screen.getByRole('button', { name: 'Kayıt ol' }));
+
+  const hatalar = await screen.findAllByRole('alert');
+  expect(hatalar).toHaveLength(1);
+  expect(hatalar[0]).toHaveTextContent('Şifre en az 8 karakter olmalı.');
+  expect(screen.queryByText('Şifreler eşleşmiyor.')).not.toBeInTheDocument();
+  expect(istekYapildiMi).toBe(false);
+});
