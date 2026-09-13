@@ -90,25 +90,26 @@ function SayiAlani({
   );
 }
 
+interface Props {
+  // Secim TodayPage'dedir (hareket kartlari ve panel ayni secimi paylasir, spec Karar 5). `null`:
+  // egzersiz listesi henuz yuklenmedi.
+  egzersizId: number | null;
+  onEgzersizSec: (exerciseId: number) => void;
+}
+
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
  * cunku ilk set eklendiginde oturum sunucu tarafinda kendiliginden acilir (spec). Bu yuzden
- * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir.
+ * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir. Secilen egzersiz disaridan
+ * gelir (kontrollu).
  */
-export default function AddSetForm() {
+export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
-
-  // Kullanici henuz elle bir secim yapmadiysa (`manuelSecim === null`), etkin deger render
-  // aninda ilk (isme gore siralanmis) egzersize turetilir -- egzersiz listesi async geldigi icin
-  // bunu bir efekt ile state'e yazmak gereksiz bir render zinciri baslatirdi (oxlint uyarisi).
-  const [manuelSecim, setManuelSecim] = useState<string | null>(null);
-  const ilkEgzersizId = siraliEgzersizler[0]?.id;
-  const egzersizId = manuelSecim ?? (ilkEgzersizId !== undefined ? String(ilkEgzersizId) : '');
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -169,6 +170,10 @@ export default function AddSetForm() {
     setAlanHatalari({});
     setSonEklenen(null);
 
+    if (egzersizId === null) {
+      return;
+    }
+
     const dogrulamaHatalari = alanlariDogrula();
     if (Object.keys(dogrulamaHatalari).length > 0) {
       setAlanHatalari(dogrulamaHatalari);
@@ -182,7 +187,7 @@ export default function AddSetForm() {
 
     try {
       await eklemeMutasyonu.mutateAsync({
-        exerciseId: Number(egzersizId),
+        exerciseId: egzersizId,
         weight: ayristirilmisAgirlik,
         reps: ayristirilmisTekrar,
         rir: ayristirilmisRir,
@@ -226,7 +231,11 @@ export default function AddSetForm() {
           <label htmlFor="set-egzersiz" className="sr-only">
             Egzersiz
           </label>
-          <SecimKutusu id="set-egzersiz" value={egzersizId} onChange={(e) => setManuelSecim(e.target.value)}>
+          <SecimKutusu
+            id="set-egzersiz"
+            value={egzersizId ?? ''}
+            onChange={(e) => onEgzersizSec(Number(e.target.value))}
+          >
             {siraliEgzersizler.map((eg) => (
               <option key={eg.id} value={eg.id}>
                 {eg.name}

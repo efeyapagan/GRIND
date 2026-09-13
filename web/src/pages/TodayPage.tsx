@@ -1,24 +1,30 @@
+import { useState } from 'react';
 import { CircleCheck, Dumbbell } from 'lucide-react';
-import { useOpenSession, useSessionSets, useFinishSession } from '../api/queries';
+import { useExercises, useFinishSession, useOpenSession, useSessionSets, useStartSession } from '../api/queries';
 import { formatTrTime } from '../lib/format';
+import { adaGoreSirala } from '../lib/egzersizler';
+import { varsayilanHareket } from '../lib/ilerleme';
 import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
+import HareketKartlari from '../components/HareketKartlari';
+import SablonlaBasla from '../components/SablonlaBasla';
 import BosDurum from '../ui/BosDurum';
+import TurEtiketi from '../ui/TurEtiketi';
+
+const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
 /**
- * "Bugun" ekrani -- dilimin kalbi. Acik oturum varsa baslangic saati (TR) ve setleri gosterir;
- * yoksa (404 -> null, spec) bos durum. Set ekleme paneli HER DURUMDA render edilir: ilk set
- * sunucu tarafinda oturumu kendiliginden acar -- ayri bir "oturum baslat" dugmesi yok.
+ * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablonluysa sablon adi ve hareket kartlari,
+ * degilse gruplu set listesi; yoksa bos durum + "Sablonla basla". Set ekleme paneli HER DURUMDA
+ * render edilir: ilk set sunucu tarafinda sablonsuz oturumu kendiliginden acar.
  *
- * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI
- * gosterilir -- bir sunucu kesintisini "bugun henuz antrenman yok" ile karistirmak, gercekte var
- * olan bir oturumu gizler.
+ * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
- * "Antrenmani bitir" basliktadir, "Set ekle"den uzakta (spec): yanlislikla basilirsa sonraki set
- * ayni gun yeni bir antrenman acar. Basarisiz olursa hata gosterilir (spec davranis 4).
+ * Secim (spec Karar 5) burada TEK durumdur; kartlar ve panel paylasir. Sablonlu oturum yuklenip
+ * henuz secim yokken varsayilan hareket BIR KEZ duruma yazilir (render sirasinda kosullu set -- efekt
+ * yok). Boylece hareket tamamlaninca secim kendiliginden sonrakine ATLAMAZ.
  *
- * `pb-72` (18rem): sabit set ekle paneli (~240 px) listenin son satirini ortmesin; sekme cubugunun
- * boslugunu ise kabuk (`App`) zaten verir.
+ * `pb-72` (18rem): sabit set ekle paneli listenin son satirini ortmesin.
  */
 export default function TodayPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
@@ -28,7 +34,31 @@ export default function TodayPage() {
     isLoading: setlerYukleniyor,
     isError: setlerHataliMi,
   } = useSessionSets(oturum?.id ?? null);
+  const { data: egzersizler } = useExercises();
   const bitirMutasyonu = useFinishSession();
+  const baslatMutasyonu = useStartSession();
+  const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
+
+  const ilerleme = gorunenOturum?.progress ?? [];
+  const sablonVarsayilani = varsayilanHareket(ilerleme);
+  const [secim, setSecim] = useState<number | null>(null);
+  if (secim === null && sablonVarsayilani !== null) {
+    setSecim(sablonVarsayilani);
+  }
+  const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
+
+  function sablonlaBasla(templateId: number) {
+    setBaslatmaBilgisi(null);
+    baslatMutasyonu.mutate(templateId, {
+      onSuccess: (acilan) => {
+        // request() durum kodunu vermez; anlam "sablon uygulanmadi" oldugu icin donen oturumun
+        // sablonuna bakilir (plan: spec Karar 4'ten bilincli sapma).
+        if (acilan.templateId !== templateId) {
+          setBaslatmaBilgisi(SABLON_UYGULANMADI);
+        }
+      },
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-72">
@@ -48,19 +78,30 @@ export default function TodayPage() {
           )}
         </div>
         {gorunenOturum && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {gorunenOturum.isOpen && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
                 <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
                 Devam ediyor
               </span>
             )}
+            {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
             <span className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</span>
           </div>
         )}
         {bitirMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
             Antrenman bitirilemedi. Lütfen tekrar deneyin.
+          </p>
+        )}
+        {baslatMutasyonu.isError && (
+          <p role="alert" className="text-label text-danger">
+            Antrenman başlatılamadı. Lütfen tekrar deneyin.
+          </p>
+        )}
+        {baslatmaBilgisi && (
+          <p role="status" className="text-label text-muted">
+            {baslatmaBilgisi}
           </p>
         )}
       </header>
@@ -81,19 +122,28 @@ export default function TodayPage() {
               Setler alınamadı. Lütfen sayfayı yenileyin.
             </p>
           )}
-          {!setlerYukleniyor && !setlerHataliMi && <SetList sets={setler ?? []} />}
+          {!setlerYukleniyor &&
+            !setlerHataliMi &&
+            (ilerleme.length > 0 ? (
+              <HareketKartlari ilerleme={ilerleme} setler={setler ?? []} secilenId={etkinSecim} onSec={setSecim} />
+            ) : (
+              <SetList sets={setler ?? []} />
+            ))}
         </>
       )}
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
-        <BosDurum
-          ikon={Dumbbell}
-          baslik="Bugün henüz antrenman yok"
-          aciklama="İlk seti ekleyerek antrenmanı başlatın."
-        />
+        <>
+          <BosDurum
+            ikon={Dumbbell}
+            baslik="Bugün henüz antrenman yok"
+            aciklama="İlk seti ekleyerek antrenmanı başlatın."
+          />
+          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+        </>
       )}
 
-      <AddSetForm />
+      <AddSetForm egzersizId={etkinSecim} onEgzersizSec={setSecim} />
     </div>
   );
 }

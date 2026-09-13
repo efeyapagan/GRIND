@@ -13,6 +13,8 @@ type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
+type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
+type StartSessionRequest = components['schemas']['StartSessionRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -38,11 +40,22 @@ export const queryKeys = {
   template: (id: number) => ['template', id] as const,
 };
 
+export interface HareketIlerlemesi {
+  exerciseId: number;
+  exerciseName: string;
+  plannedSets: number;
+  completedSets: number;
+  restSeconds: number;
+}
+
 export interface AcikOturum {
   id: number;
   startedAt: string;
   isOpen: boolean;
+  templateId: number | null;
   templateName: string | null;
+  // Sablonsuz oturumda bos. Sira, hedef ve gerceklesen sayilar SUNUCUDAN gelir (spec Karar 8).
+  progress: HareketIlerlemesi[];
 }
 
 export interface SetKaydi {
@@ -68,6 +81,25 @@ export interface Egzersiz {
  * bir yerde yapip cagiran taraflari "!" ile susturmak yerine, gercekten eksik bir yanit gelirse
  * sessizce yutmadan haber veriyoruz.
  */
+function dogrulanmisIlerleme(yanit: SessionProgressResponse): HareketIlerlemesi {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.plannedSets === undefined ||
+    yanit.completedSets === undefined ||
+    yanit.restSeconds === undefined
+  ) {
+    throw new Error('Sunucudan eksik ilerleme yaniti alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    plannedSets: yanit.plannedSets,
+    completedSets: yanit.completedSets,
+    restSeconds: yanit.restSeconds,
+  };
+}
+
 function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
   if (yanit.id === undefined || !yanit.startedAt || yanit.isOpen === undefined) {
     throw new Error('Sunucudan eksik oturum yaniti alindi.');
@@ -76,7 +108,9 @@ function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
     id: yanit.id,
     startedAt: yanit.startedAt,
     isOpen: yanit.isOpen,
+    templateId: yanit.templateId ?? null,
     templateName: yanit.templateName ?? null,
+    progress: (yanit.progress ?? []).map(dogrulanmisIlerleme),
   };
 }
 
@@ -334,6 +368,29 @@ export function useFinishSession() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+/**
+ * `POST /api/sessions { templateId }`. Bugun acik oturum varsa sunucu onu 200 ile oldugu gibi doner
+ * ve `templateId` UYGULANMAZ (Faz 7 karari) -- cagiran taraf donen oturumun `templateId`'sine bakar.
+ */
+export function useStartSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (templateId: number): Promise<AcikOturum> => {
+      const govde: StartSessionRequest = { templateId };
+      const yanit = await request<SessionResponse>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify(govde),
+      });
+      return dogrulanmisOturum(yanit);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
     },
   });
 }
