@@ -84,6 +84,37 @@ public class TemplateEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
     }
 
     [Fact]
+    public async Task RestSeconds_gidip_gelir_gonderilmezse_90_olur()
+    {
+        var client = await AuthenticatedClientAsync();
+        var payload = new StringContent(
+            $$"""{"name":"{{UniqueName()}}","exercises":[{"exerciseId":1,"plannedSets":4,"restSeconds":180},{"exerciseId":11,"plannedSets":3}]}""",
+            Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync("/api/templates", payload);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var olusan = await response.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+        Assert.Equal([180, 90], olusan!.Exercises.Select(e => e.RestSeconds));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(901)]
+    public async Task Aralik_disi_restSeconds_400_verir(int restSeconds)
+    {
+        var client = await AuthenticatedClientAsync();
+        var payload = new StringContent(
+            $$"""{"name":"{{UniqueName()}}","exercises":[{"exerciseId":1,"plannedSets":4,"restSeconds":{{restSeconds}}}]}""",
+            Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync("/api/templates", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("restSeconds", await response.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Baska_kullanicinin_sablonu_404_verir()
     {
         var birinci = await AuthenticatedClientAsync();

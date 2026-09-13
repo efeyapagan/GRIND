@@ -4,6 +4,7 @@ import { useHistory } from '../api/queries';
 import { formatTrDate, formatWeight } from '../lib/format';
 import SetList from '../components/SetList';
 import BosDurum from '../ui/BosDurum';
+import TurEtiketi from '../ui/TurEtiketi';
 
 // Sayfalama dugmeleri (Stitch: 52 px).
 const SAYFA_DUGMESI =
@@ -54,9 +55,13 @@ export default function HistoryPage() {
                   <details className="group">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 group-open:bg-surface-3 focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
                       <div className="flex min-w-0 flex-col gap-1">
-                        <span className="flex items-center gap-1 text-label">
-                          <CalendarDays aria-hidden size={18} className="text-muted" />
-                          {formatTrDate(oturum.startedAt)}
+                        <span className="flex flex-wrap items-center gap-2 text-label">
+                          <span className="flex items-center gap-1">
+                            <CalendarDays aria-hidden size={18} className="text-muted" />
+                            {formatTrDate(oturum.startedAt)}
+                          </span>
+                          {/* Spec Karar 7: sablon adi ya da "Serbest"; notr hap, accent yok. */}
+                          <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
                         </span>
                         <span className="flex items-baseline gap-4">
                           <span className="flex items-baseline gap-1">

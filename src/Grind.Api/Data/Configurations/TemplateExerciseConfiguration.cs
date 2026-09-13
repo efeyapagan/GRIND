@@ -20,7 +20,18 @@ public class TemplateExerciseConfiguration : IEntityTypeConfiguration<TemplateEx
 
         builder.HasIndex(te => new { te.WorkoutTemplateId, te.OrderIndex });
 
+        builder.Property(te => te.RestSeconds)
+            .HasDefaultValue(TemplateExercise.DefaultRestSeconds)
+            // Sentinel -1: EF varsayılan olarak CLR'nin 0'ını "değer verilmedi" sayar ve INSERT'te
+            // kolon varsayılanına (90) bırakır. Oysa 0 "sayaç yok" demek. -1 CHECK yüzünden hiçbir
+            // zaman geçerli olmadığı için güvenli bir "atanmadı" işaretidir.
+            .HasSentinel(-1);
+
         builder.ToTable(t =>
-            t.HasCheckConstraint("CK_TemplateExercise_PlannedSets_Positive", "\"PlannedSets\" > 0"));
+        {
+            t.HasCheckConstraint("CK_TemplateExercise_PlannedSets_Positive", "\"PlannedSets\" > 0");
+            t.HasCheckConstraint(
+                "CK_TemplateExercise_RestSeconds_Range", "\"RestSeconds\" >= 0 AND \"RestSeconds\" <= 900");
+        });
     }
 }

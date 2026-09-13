@@ -169,7 +169,8 @@ public class WorkoutTemplateService(
             {
                 ExerciseId = requested[index].ExerciseId,
                 OrderIndex = index,
-                PlannedSets = requested[index].PlannedSets
+                PlannedSets = requested[index].PlannedSets,
+                RestSeconds = requested[index].RestSeconds ?? TemplateExercise.DefaultRestSeconds
             });
         }
     }
@@ -211,6 +212,7 @@ public class WorkoutTemplateService(
                 te.Exercise.Category,
                 te.Exercise.IsArchived,
                 te.OrderIndex,
-                te.PlannedSets))
+                te.PlannedSets,
+                te.RestSeconds))
             .ToList());
 }

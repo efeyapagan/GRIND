@@ -24,6 +24,7 @@
 | 13 | Feature: Hesap silme (soft delete) | ✅ |
 | F1 | Frontend dilim 1: antrenman çekirdeği (`web/`) | ✅ |
 | F2 | Frontend görsel tasarım (Tailwind, 6 ekran, PWA ikonları) | ✅ |
+| F3 | Frontend dilim 2: şablonlar, dinlenme sayacı, hareket geçmişi | ✅ |
 
 ---
 
@@ -788,8 +789,8 @@ Devreden notlar (bilerek yapılmadı):
   kapandı); `VITE_API_PROXY_TARGET` `.env` dosyasından okunmuyor (`vite.config` `process.env` okuyor,
   `loadEnv` gerekir); testlerdeki sorgu istemcisi yardımcısı beş dosyada kopya; oturum açıkken
   `/login`'de yanlış şifre global `logout`'u da tetikliyor.
-- **Sonraki dilimler:** şablonlar, istatistik/grafikler, vücut ağırlığı, export, AI yorumları,
-  egzersiz yönetimi.
+- **Sonraki dilimler:** ~~şablonlar~~ (dilim 2'de yapıldı), istatistik/grafikler, vücut ağırlığı,
+  export, AI yorumları, egzersiz yönetimi.
 
 ---
 
@@ -833,6 +834,59 @@ Devreden notlar (bilerek yapılmadı):
 - Tekrarlanan sınıf kümeleri (auth bağlantıları, yükleniyor/hata metinleri) ve "spec Karar N"
   yorumlarının hangi spec'i kastettiği küçük temizlik işleri.
 - Açık tema yok; Stitch'in "Grind System" dokümanı repoya alınmadı (metni koddaki değerlerle çelişiyor).
+
+---
+
+## Frontend Dilim 2 — Şablonlar ve dinlenme ✅ (2026-09-13)
+
+Spec: [docs/superpowers/specs/2026-09-13-sablonlar-ve-dinlenme-design.md](docs/superpowers/specs/2026-09-13-sablonlar-ve-dinlenme-design.md)
+· Plan: [docs/superpowers/plans/2026-09-13-frontend-dilim-2-sablonlar-ve-dinlenme.md](docs/superpowers/plans/2026-09-13-frontend-dilim-2-sablonlar-ve-dinlenme.md)
+
+- **Backend (tek değişiklik):** `TemplateExercise.RestSeconds` (0–900 sn, varsayılan 90, `0` = sayaç yok);
+  CHECK kısıtı, `int?` istek alanı (gönderilmezse 90), şablon ve oturum ilerleme yanıtlarında
+  `restSeconds`; migration `SablonDinlenmeSuresi` (mevcut satırlar 90 aldı). Frontend tipleri yeniden
+  üretildi.
+- **Şablon ekranları:** `/templates` listesi, `/templates/new` ve `/templates/:id` düzenleyicisi (hareket
+  ekle / yukarı / aşağı / kaldır, hedef set, dinlenme seçimi, arşivli hareket hapı, iki adımlı silme);
+  hesap menüsünde "Şablonlar". Sekme eklenmedi.
+- **Bugün:** boş durumda "Şablonla başla"; şablonlu oturumda sunucunun `progress`'iyle hareket kartları
+  ("2 / 4 set", tamamlananda onay ikonu), "Plan dışı" grubu, kartlar ve panel tek bir seçimi paylaşır.
+- **Dinlenme sayacı:** her setten sonra hareketin süresiyle başlar; bitiş anından hesaplanır, "+15 sn",
+  "Atla", bitişte titreşim + bip + `role="status"` duyurusu, çalışırken Wake Lock.
+- **Hareket geçmişi grafiği:** veri bilmeyen `ui/HacimGrafigi` (elle SVG) + `components/HareketGecmisi`
+  (`GET /api/history?ExerciseId=&PageSize=10`); "Geçen sefer" satırı sunucu değerleriyle.
+- **Geçmiş:** kartta şablon adı ya da "Serbest" hapı.
+- **Test:** backend **651** / frontend **109** (19 dosya) — ayrı sayılar, ikisi de komutla sayıldı.
+  `tsc -b` temiz, üretim derlemesi yeşil. Görsel doğrulama 390×844 Playwright ekran görüntüleriyle.
+
+Verilen kararlar:
+- EF `HasDefaultValue(90)` + `HasSentinel(-1)`: sentinel olmadan EF açıkça yazılan `0`'ı "değer
+  verilmedi" sayıp veritabanına 90 yazıyordu; veritabanından geri okuyan test sabitliyor.
+- "Şablon uygulanmadı" bilgisi HTTP 200 yerine dönen oturumun `templateId`'sine bakar (`request()` durum
+  kodunu vermez; aynı şablona ikinci dokunuş yanlış mesaj üretmez).
+- Hareket kartının başlığı düğmedir, setler ve grafik düğmenin dışında (düğme adı setlerle şişmesin).
+- `queryKeys.template(id)` `templates`'in öneki değil (liste tazelenirken açık düzenleyici 404'e düşmesin).
+- Seçim yeni bir şablonlu oturum göründüğünde o oturumun varsayılanına sıfırlanır; şablonsuz oturum (ilk
+  set) doğunca sıfırlanmaz. Seçilebilir id'ler yüklü egzersiz listesiyle sınırlı (arşivli şablon hareketi
+  panelde seçili hâle gelip 400'e düşmesin — final inceleme bulgusu).
+- İkincil bölümlerin hataları da `role="alert"` (şablon listesi, hareket geçmişi) — kural istisnasız.
+- Sayfada ikinci canlı bölge (sayaç) olduğu için durum satırı testi `getByRole('status')` yerine metinden
+  bulup `role`'ünü doğruluyor.
+
+Devreden notlar (bilerek yapılmadı):
+- Sayaç bildirimi (arka plan) ve kalıcılığı yok; iOS'ta titreşim yok; Wake Lock ve bip gerçek cihazda
+  denenmedi.
+- Şablonlu antrenmanda plan dışı seçilen hareketin geçmiş grafiği görünmez (spec kapsamaz).
+- Yalnızca bugünkü oturum varsa grafik yerine "Bu hareketin ilk antrenmanı" yazar.
+- Az antrenmanda grafik çubukları geniş, köşeler yatay esnemeden elips; bar genişliği sınırlanabilir.
+- Şablon silinince `template(id)` önbellek girdisi `gcTime` boyunca kalır (geri tuşunda kısa süre bayat
+  form); `useDeleteTemplate`'e `removeQueries` eklenebilir.
+- Düzenleyici arka plan tazelemesini forma yansıtmaz (tek kullanıcılı ölçekte kabul).
+- `PUT` bir hareketi `restSeconds`'sız gönderirse değer 90'a döner (satırlar yeniden kurulur; DTO
+  doc'unda yazılı).
+- Test boşlukları: `visibilitychange` yolu, `lib/uyari.ts`, sayacın eski "şimdi" ile yeniden başlama yolu,
+  PATCH ucunda `restSeconds`, sıfır hareketli şablon kaydı.
+- Mevcut lint uyarısı (`AuthContext.tsx`, `only-export-components`) bu dilimden önce vardı.
 
 ---
 

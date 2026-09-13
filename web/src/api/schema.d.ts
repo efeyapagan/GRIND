@@ -2688,6 +2688,8 @@ export interface components {
             plannedSets?: number;
             /** Format: int32 */
             completedSets?: number;
+            /** Format: int32 */
+            restSeconds?: number;
         };
         SessionResponse: {
             /** Format: int64 */
@@ -2731,6 +2733,8 @@ export interface components {
             exerciseId?: number;
             /** Format: int32 */
             plannedSets?: number;
+            /** Format: int32 */
+            restSeconds?: number | null;
         };
         TemplateExerciseResponse: {
             /** Format: int64 */
@@ -2744,6 +2748,8 @@ export interface components {
             orderIndex?: number;
             /** Format: int32 */
             plannedSets?: number;
+            /** Format: int32 */
+            restSeconds?: number;
         };
         TemplateResponse: {
             /** Format: int64 */
