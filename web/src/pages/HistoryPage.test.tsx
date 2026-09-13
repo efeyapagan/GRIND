@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import HistoryPage from './HistoryPage';
 import type { components } from '../api/schema';
+import { tamMetin } from '../test/metin';
 
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
@@ -156,7 +157,7 @@ test('oturum detayi acilinca setleri SetList ile gosterir (ayri istek atmadan)',
   const ozet = await screen.findByText(/10\.09\.2026/);
   await kullanici.click(ozet);
 
-  expect(await screen.findByText('60 × 8')).toBeInTheDocument();
+  expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
 });
 
 test('genisletilmis, seti olmayan bir gecmis oturumu "Bugün" metni DEGIL notr bir metin gosterir', async () => {

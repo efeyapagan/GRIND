@@ -1,8 +1,11 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent, type Ref } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChevronsUpDown, Plus } from 'lucide-react';
 import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { ApiError } from '../api/problem';
+import { formatWeight } from '../lib/format';
+import BirincilDugme from '../ui/BirincilDugme';
 
 /**
  * Spec Karar 8 (cevrimdisi kuyruk YOK): fetch'in kendisi reddederse (ag yok) `request()`
@@ -22,6 +25,68 @@ const BAGLANTI_HATASI_MESAJI =
 // `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
 // kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
 const BILINEN_ALANLAR = ['weight', 'reps', 'rir'];
+
+interface SayiAlaniProps {
+  id: string;
+  etiket: string;
+  // Gorunmeyen ama erisilebilir ada giren ek (orn. " (kg)") -- etiket gorselde kisa kalir.
+  ekranOkuyucuEki?: string;
+  birim: string;
+  inputMode: 'decimal' | 'numeric';
+  placeholder: string;
+  value: string;
+  onChange: (deger: string) => void;
+  hata?: string;
+  girdiRef?: Ref<HTMLInputElement>;
+}
+
+/**
+ * Paneldeki kompakt sayi alani. Girdi kutunun TAMAMIDIR (60 px dokunma hedefi); etiket ve birim
+ * onun ustune bindirilir ve `pointer-events-none` ile dokunmayi girdiye birakir. Birim `aria-hidden`
+ * -- erisilebilir ad etiketten gelir ("Ağırlık (kg)").
+ */
+function SayiAlani({
+  id,
+  etiket,
+  ekranOkuyucuEki,
+  birim,
+  inputMode,
+  placeholder,
+  value,
+  onChange,
+  hata,
+  girdiRef,
+}: SayiAlaniProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="relative">
+        <input
+          id={id}
+          ref={girdiRef}
+          inputMode={inputMode}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-15 w-full rounded-lg bg-inset pt-5 pr-12 pl-2 text-heading text-fg tabular-nums placeholder:text-muted/40 focus:bg-surface-2"
+        />
+        <label
+          htmlFor={id}
+          className="pointer-events-none absolute top-2 left-2 text-label-xs text-muted uppercase"
+        >
+          {etiket}
+          {ekranOkuyucuEki && <span className="sr-only">{ekranOkuyucuEki}</span>}
+        </label>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-2 bottom-2.5 text-label-xs text-muted"
+        >
+          {birim}
+        </span>
+        {hata && <p role="alert" className="text-label text-danger">{hata}</p>}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
@@ -51,6 +116,10 @@ export default function AddSetForm() {
   const [rir, setRir] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
+
+  // Spec davranis 5: son eklenen set gorunur + role=status ile duyurulur; bir sonraki gonderimde
+  // ya da hatada temizlenir. Dugmenin adi degismez.
+  const [sonEklenen, setSonEklenen] = useState<string | null>(null);
 
   const agirlikRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +168,7 @@ export default function AddSetForm() {
     e.preventDefault();
     setGenelHata(null);
     setAlanHatalari({});
+    setSonEklenen(null);
 
     const dogrulamaHatalari = alanlariDogrula();
     if (Object.keys(dogrulamaHatalari).length > 0) {
@@ -120,6 +190,7 @@ export default function AddSetForm() {
       });
       // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
       // en sik akis (spec Karar 6). Odak agirlik alanina doner.
+      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
       agirlikRef.current?.focus();
     } catch (hata) {
       if (hata instanceof ApiError) {
@@ -145,56 +216,78 @@ export default function AddSetForm() {
   }
 
   return (
-    <form onSubmit={gonder}>
-      {genelHata && <p role="alert">{genelHata}</p>}
-      <div>
-        <label htmlFor="set-egzersiz">Egzersiz</label>
-        <select
-          id="set-egzersiz"
-          value={egzersizId}
-          onChange={(e) => setManuelSecim(e.target.value)}
-        >
-          {siraliEgzersizler.map((eg) => (
-            <option key={eg.id} value={eg.id}>
-              {eg.name}
-            </option>
-          ))}
-        </select>
+    // Panel sekme cubugunun HEMEN ustunde sabit (spec): 4rem = sekme cubugu yuksekligi (h-16).
+    <form
+      onSubmit={gonder}
+      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2"
+    >
+      <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-4 shadow-2xl">
+        {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
+        <div className="relative">
+          <label htmlFor="set-egzersiz" className="sr-only">
+            Egzersiz
+          </label>
+          <select
+            id="set-egzersiz"
+            value={egzersizId}
+            onChange={(e) => setManuelSecim(e.target.value)}
+            className="h-12 w-full appearance-none rounded-lg bg-inset pr-10 pl-4 text-body-lg text-fg"
+          >
+            {siraliEgzersizler.map((eg) => (
+              <option key={eg.id} value={eg.id}>
+                {eg.name}
+              </option>
+            ))}
+          </select>
+          <ChevronsUpDown
+            aria-hidden
+            size={20}
+            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted"
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <SayiAlani
+            id="set-agirlik"
+            etiket="Ağırlık"
+            ekranOkuyucuEki=" (kg)"
+            birim="kg"
+            inputMode="decimal"
+            placeholder="0"
+            value={agirlik}
+            onChange={setAgirlik}
+            hata={alanHatalari.weight}
+            girdiRef={agirlikRef}
+          />
+          <SayiAlani
+            id="set-tekrar"
+            etiket="Tekrar"
+            birim="tekrar"
+            inputMode="numeric"
+            placeholder="0"
+            value={tekrar}
+            onChange={setTekrar}
+            hata={alanHatalari.reps}
+          />
+          <SayiAlani
+            id="set-rir"
+            etiket="RIR"
+            ekranOkuyucuEki=" (opsiyonel)"
+            birim="kalan"
+            inputMode="numeric"
+            placeholder="—"
+            value={rir}
+            onChange={setRir}
+            hata={alanHatalari.rir}
+          />
+        </div>
+        <p role="status" className="min-h-4 text-label text-muted">
+          {sonEklenen}
+        </p>
+        <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
+          <Plus aria-hidden size={24} />
+          Set ekle
+        </BirincilDugme>
       </div>
-      <div>
-        <label htmlFor="set-agirlik">Ağırlık (kg)</label>
-        <input
-          id="set-agirlik"
-          ref={agirlikRef}
-          inputMode="decimal"
-          value={agirlik}
-          onChange={(e) => setAgirlik(e.target.value)}
-        />
-        {alanHatalari.weight && <p role="alert">{alanHatalari.weight}</p>}
-      </div>
-      <div>
-        <label htmlFor="set-tekrar">Tekrar</label>
-        <input
-          id="set-tekrar"
-          inputMode="numeric"
-          value={tekrar}
-          onChange={(e) => setTekrar(e.target.value)}
-        />
-        {alanHatalari.reps && <p role="alert">{alanHatalari.reps}</p>}
-      </div>
-      <div>
-        <label htmlFor="set-rir">RIR (opsiyonel)</label>
-        <input
-          id="set-rir"
-          inputMode="numeric"
-          value={rir}
-          onChange={(e) => setRir(e.target.value)}
-        />
-        {alanHatalari.rir && <p role="alert">{alanHatalari.rir}</p>}
-      </div>
-      <button type="submit" disabled={eklemeMutasyonu.isPending}>
-        Set Ekle
-      </button>
     </form>
   );
 }
