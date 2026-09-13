@@ -151,6 +151,7 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
 export interface GecmisOturum {
   sessionId: number;
   startedAt: string;
+  templateName: string | null;
   totalVolume: number;
   setCount: number;
   sets: SetKaydi[];
@@ -181,6 +182,7 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
   return {
     sessionId: yanit.sessionId,
     startedAt: yanit.startedAt,
+    templateName: yanit.templateName ?? null,
     totalVolume: yanit.totalVolume,
     setCount: yanit.setCount,
     sets: (yanit.sets ?? []).map(dogrulanmisSet),

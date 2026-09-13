@@ -199,3 +199,22 @@ test('gecmis istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ',
   // aynen bu hataya dusulmustu, TodayPage'de duzeltildi -- burada tekrarlanmiyor).
   expect(screen.queryByText('Henüz antrenman geçmişi yok')).not.toBeInTheDocument();
 });
+
+test('kart ozetinde sablon adi ya da Serbest gorunur', async () => {
+  server.use(
+    http.get('/api/history', () =>
+      HttpResponse.json(
+        sayfaYaniti([
+          ornekOturum({ sessionId: 2, startedAt: '2026-09-11T08:00:00Z', templateName: 'Push Day' }),
+          ornekOturum({ sessionId: 1, startedAt: '2026-09-10T08:00:00Z', templateName: null }),
+        ]),
+      ),
+    ),
+  );
+
+  gecmisSayfasiniOlustur();
+
+  const satirlar = await screen.findAllByRole('listitem');
+  expect(satirlar[0]).toHaveTextContent('Push Day');
+  expect(satirlar[1]).toHaveTextContent('Serbest');
+});
