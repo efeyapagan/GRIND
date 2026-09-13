@@ -14,7 +14,8 @@ bileşeni ilk ihtiyaç duyan görev oluşturur, sonrakiler yeniden kullanır. En
 Görsel doğrulama (ekran görüntüsü karşılaştırması) kontrolcü görevidir.
 
 **Tech Stack:** Tailwind CSS 4.3 (`@tailwindcss/vite`), `@fontsource-variable/inter` 5.3,
-`lucide-react` 1.45, `@vite-pwa/assets-generator` 2.0; mevcut React 19 + Vite 8 + Vitest + RTL + MSW.
+`lucide-react` 1.45, `@vite-pwa/assets-generator` 1.0 (`vite-plugin-pwa` 1.3'ün peer aralığı; spec
+Karar 6); mevcut React 19 + Vite 8 + Vitest + RTL + MSW.
 
 **Spec:** `docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md` (bağlayıcı).
 Görsel referans: `docs/design/stitch/*.html`. Mimari spec
@@ -316,8 +317,9 @@ git commit -m "chore(web): tailwind v4, tasarim tokenlari ve inter fontu" -m "Co
   Görev 3, Bugün'ün sabit panelini sekme çubuğunun üstüne `bottom-[calc(4rem+env(safe-area-inset-bottom))]`
   ile yerleştirir.
 
-jsdom Popover API'yi uygulamaz: testte menü içeriği her zaman "görünür"dür. Testler görünürlüğü
-değil, yapıyı ve davranışı sınar (spec Riskler).
+jsdom Popover API'yi uygulamaz ve kapalı popover'ı varsayılan stiliyle gizler: testte menüdeki
+"Çıkış yap" `{ hidden: true }` ile sorgulanır (uygulamada bulundu). Testler görünürlüğü değil,
+yapıyı ve davranışı sınar (spec Riskler).
 
 - [ ] **Step 1: Başarısız testi yaz**
 
@@ -482,8 +484,8 @@ export default function App() {
 - [ ] **Step 5: Testleri çalıştır**
 
 Run: `cd web && npx vitest run src/App.test.tsx`
-Expected: 5 test PASS (4 eski + 1 yeni). Eski "cikis yap tiklaninca…" testi değişmeden geçer: düğme
-artık menüde, jsdom'da yine erişilebilir.
+Expected: 5 test PASS (4 eski + 1 yeni). Uygulamada: eski "cikis yap tiklaninca…" testi ve yeni test,
+kapalı popover jsdom'da gizlendiği için "Çıkış yap" sorgusuna `{ hidden: true }` eklenerek geçer.
 
 - [ ] **Step 6: Tüm doğrulama ve commit**
 
@@ -498,6 +500,11 @@ Expected: 66 test PASS.
 ---
 
 ### Task 3: Bugün ekranı — set listesi, set ekle paneli, boş durum
+
+> **Uygulamada değişti:** `SayiAlani`'nın konumlandırılmış sarmalayıcısı `<div className="relative">`
+> yerine `<span className="relative block">` oldu ve alan hatası onun DIŞINA, dış sütuna taşındı —
+> aksi halde hata görünürken birim yazısı girdiden kayıyordu. Final incelemede "×" `font-light text-muted`
+> yapıldı.
 
 **Files:**
 - Create: `web/src/ui/BirincilDugme.tsx`, `web/src/ui/Rozet.tsx`, `web/src/ui/Hap.tsx`,
@@ -1113,6 +1120,11 @@ Expected: 68 test PASS.
 
 ### Task 4: Geçmiş ve Rekorlar ekranları
 
+> **Uygulamada değişti:** Rekorlar testindeki kart kapsamlı `getByText` satırları yetersizdi (tarihler
+> yer değiştirse de geçiyordu); her rozetin kendi satırına (`closest('div')`) kapsanan `within`
+> doğrulamaları kullanıldı. Final incelemede Geçmiş özetine `focus-visible:-outline-offset-2` eklendi
+> (odak halkası kartın `overflow-hidden`'ı yüzünden kırpılıyordu).
+
 **Files:**
 - Modify: `web/src/ui/Rozet.tsx`, `web/src/components/SetList.tsx`, `web/src/pages/HistoryPage.tsx`,
   `web/src/pages/RecordsPage.tsx`
@@ -1499,6 +1511,9 @@ Expected: 68 test PASS.
 ---
 
 ### Task 5: Giriş ve Kayıt ekranları — ortak düzen, şifre göster, şifre tekrarı
+
+> **Uygulamada eklendi:** final incelemede, şifrenin kendisi hatalıyken ikinci bir "Şifreler
+> eşleşmiyor." hatası eklenmediğini doğrulayan test (Kayıt 5 test).
 
 **Files:**
 - Create: `web/src/ui/AuthLayout.tsx`, `web/src/ui/Alan.tsx`, `web/src/ui/SifreAlani.tsx`,
@@ -1924,6 +1939,10 @@ Expected: 70 test PASS.
 
 ### Task 6: Uygulama ikonu ve kurulabilirlik
 
+> **Uygulamada değişti:** kurulu üretici 1.0.4 (`vite-plugin-pwa` 1.3'ün peer aralığı `^1.0.0`); maskable
+> ve apple ikonları için yapılandırmaya `padding: 0` + `#121316` arka plan eklendi (aşağıdaki
+> yapılandırma bloğu günceldir).
+
 **Files:**
 - Create: `web/public/icon.svg`, `web/pwa-assets.config.ts`
 - Create (üretilir, commit edilir): `web/public/pwa-64x64.png`, `web/public/pwa-192x192.png`,
@@ -1968,7 +1987,12 @@ import { defineConfig, minimal2023Preset as preset } from '@vite-pwa/assets-gene
 // Bir kerelik uretim (spec Karar 6): `npm run pwa:icons` ciktilari commit edilir, derleme hattina
 // girmez. minimal-2023: 64/192/512 PNG, 512 maskable, 180 apple-touch, 48 px favicon.ico.
 export default defineConfig({
-  preset,
+  preset: {
+    ...preset,
+    // Uygulamada eklendi: uretici maskable/apple icin %30 beyaz dolgu varsayar; spec Karar 6 tam kaplama ister.
+    maskable: { ...preset.maskable, padding: 0, resizeOptions: { background: '#121316' } },
+    apple: { ...preset.apple, padding: 0, resizeOptions: { background: '#121316' } },
+  },
   images: ['public/icon.svg'],
 });
 ```
@@ -2236,7 +2260,8 @@ git commit -m "docs: frontend gorsel tasarim tamamlandi" -m "Co-Authored-By: Cla
   - Tailwind v4 varsayılan köşeleri Stitch'le aynı: `rounded` 0.25rem, `-lg` 0.5rem, `-xl` 0.75rem.
   - `@fontsource-variable/inter` 5.3.0'da ayrı latin ve latin-ext `woff2` dosyaları var; `unicode-range` değerleri `wght.css`'ten.
   - Spec'teki 23 lucide ikonunun hepsi 1.45.0'da mevcut; `Dumbbell` yolları birebir.
-  - `@types/react` 19.3 `popover` / `popoverTarget` tiplerini içeriyor; jsdom Popover API'yi uygulamıyor.
+  - `@types/react` 19.3 `popover` / `popoverTarget` tiplerini içeriyor; jsdom Popover API'yi uygulamıyor
+    ve kapalı popover'ı gizliyor (uygulamada bulundu).
   - `minimal2023Preset` çıktı adları ve boyutları (64/192/512, maskable 512, apple 180, favicon 48).
 - **Bilinen riskler:**
   1. `url('@fontsource-variable/…')` Vite'ta çözülmezse Görev 1 Step 6'daki yedek yol (`wght.css` +

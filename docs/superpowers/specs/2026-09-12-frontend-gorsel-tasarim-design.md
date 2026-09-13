@@ -4,8 +4,9 @@
 **Kapsam:** Dilim 1'in altı ekranına (Bugün, Bugün boş durum, Geçmiş, Rekorlar, Giriş, Kayıt) Google
 Stitch'te hazırlanan görsel tasarımın uygulanması: tasarım tokenları, uygulama kabuğu, font, ikonlar,
 PWA ikonları ve tasarımın getirdiği birkaç küçük davranış.
-**Durum:** 📋 Spec. Kullanıcı kararları: Stitch'te üretilip revize edilen altı ekran onaylandı; stil
-yöntemi **Tailwind**.
+**Durum:** ✅ Uygulandı (2026-09-13, `feature/frontend-tasarim`). Kullanıcı kararları: Stitch'te
+üretilip revize edilen altı ekran onaylandı; stil yöntemi **Tailwind**. Uygulama sırasında verilen
+kararlar ilgili maddelere "Uygulamada" notlarıyla işlendi.
 **Bağlayıcılık:** Bu doküman bağlayıcıdır. Stitch çıktısı (`docs/design/stitch/*.html`) görsel
 REFERANSTIR; ikisi çelişirse bu spec kazanır. Mimari spec
 (`2026-09-12-frontend-react-pwa-design.md`) geçerliliğini korur; bu doküman yalnızca görsel katmanı ve
@@ -102,8 +103,10 @@ Sayfa kenar boşluğu 16 px.
 - `@fontsource-variable/inter` (5.3.x). Google Fonts'tan çalışma anında YÜKLENMEZ: çevrimdışı salonda
   font gelmez ve kullanıcının IP'si üçüncü tarafa gider.
 - Yalnızca `latin` ve `latin-ext` alt kümeleri paketlenir — Türkçe'nin ğ, ş, ı, İ harfleri
-  `latin-ext`'tedir. Kiril, Yunan ve Vietnam alt kümeleri bundle'a ve precache'e girmez. (Paketin alt
-  küme içe aktarma yolu sürüme göre doğrulanır.)
+  `latin-ext`'tedir. Kiril, Yunan ve Vietnam alt kümeleri bundle'a ve precache'e girmez. Uygulamada:
+  5.3.0 alt küme başına CSS sunmadığı için `index.css`'te iki `@font-face` kendimiz tanımladık; `src`
+  paketin `files/inter-latin(-ext)-wght-normal.woff2` dosyalarına işaret eder, `unicode-range`
+  değerleri paketin `wght.css`'inden birebir alındı.
 - Font dosyaları service worker precache'ine eklenir (Workbox `globPatterns`'a `woff2`), böylece kabuk
   çevrimdışı açıldığında font da gelir. Bu, mimari spec'in R14 kararıyla çelişmez: precache'e giren
   kabuk varlığıdır, kullanıcı verisi değil.
@@ -153,9 +156,14 @@ content="#121316">`, manifest'te `theme_color` ve `background_color` `#121316`.
 
 - Tek SVG kaynak `web/public/icon.svg`: tam dolgu `bg` (#121316) zemin, ortada `accent` (#ff5722)
   dambıl — auth ekranlarındaki logo karosuyla aynı motif.
-- `@vite-pwa/assets-generator` (2.0.x) ile bir kerelik üretim: 64, 192, 512 PNG, 512 maskable, 180
-  apple-touch-icon ve favicon. Üretilen dosyalar commit edilir. Üretici derleme hattına girmez; bir npm
-  betiği olarak durur (`npm run pwa:icons`).
+- `@vite-pwa/assets-generator` (1.0.x — `vite-plugin-pwa` 1.3'ün desteklediği peer aralığı `^1.0.0`)
+  ile bir kerelik üretim: 64, 192, 512 PNG, 512 maskable, 180 apple-touch-icon ve 48 px favicon.
+  Üretilen dosyalar commit edilir. Üretici derleme hattına girmez; bir npm betiği olarak durur
+  (`npm run pwa:icons`).
+- Uygulamada: üretici `maskable` ve `apple` için varsayılan olarak %30 BEYAZ dolgu ekler;
+  `pwa-assets.config.ts` bu ikisini `padding: 0` ve `#121316` arka planla ezer (yoksa kurulan ikonun
+  çevresinde beyaz bir halka görünür). Üç `pwa-*.png` üreticinin saydam %5 kenar payını korur; bunlar
+  `purpose: any` ikonlarıdır, maskable değildir.
 - Manifest'e `icons` eklenir → Chrome/Android "uygulama olarak yükle"yi sunar. Dilim 1'in "manifest'te
   ikon yok" devreden notu kapanır.
 
@@ -205,9 +213,10 @@ Her ekran için Stitch dosyası görsel referanstır; burada yazan düzeltmeler 
   ekrandaki listenin sunumudur (satır sayısı), sunucu hesabının tekrarı değildir.
 - **Set satırı** (`surface-2`, `rounded-lg`):
   - solda "1. Set" (`label`, `muted`);
-  - değer `metric`: "80" + küçük "kg" (`body`, `muted`) + "×" (`muted`) + "8";
+  - değer `metric`: "80" + küçük "kg" (`body`, `muted`) + ince "×" (`muted`, `font-light`) + "8";
   - rekor varsa değerin yanında rozet (`label-xs`, büyük harf, `accent` dolgu, `on-accent` metin):
-    "AĞIRLIK REKORU" / "TEKRAR REKORU";
+    "AĞIRLIK REKORU" / "TEKRAR REKORU" — satır dar olduğunda rozet değerin altına sarar (Stitch de
+    aynı `flex-wrap` yapısını kullanır);
   - sağda "RIR 2" hapı (`surface-3`, `label`, `muted`) — RIR yoksa hap yok.
 - **Set ekle paneli:** sekme çubuğunun HEMEN üstünde sabit (`surface-3`, `rounded-xl`, gölge). İçinde:
   - egzersiz seçimi: tam genişlik, 48 px, `inset`, sağda `ChevronsUpDown`;
@@ -267,8 +276,10 @@ yükseklikleri 56 / 48 px; alan ikonu Giriş'te sağda, Kayıt'ta solda. TEK ort
 - **Alanlar:** etiket üstte (`label`, `fg`); 48 px alan (`surface-2`, `rounded-xl`, odakta `surface-3`);
   SOLDA süs ikonu (`AtSign` kullanıcı adı, `Lock` şifre, `LockKeyhole` şifre tekrarı); ipuçları altta
   (`label`, `muted`): "3–50 karakter (harf, rakam, _ ve -)", "En az 8 karakter".
-- **Şifre alanlarında SAĞDA göster/gizle** düğmesi (44 px, `Eye` / `EyeOff`, `aria-label` "Şifreyi
-  göster" / "Şifreyi gizle", `aria-pressed`).
+- **Şifre alanlarında SAĞDA göster/gizle** düğmesi (44 px, `Eye` / `EyeOff`). Adı SABİTTİR ("Şifreyi
+  göster"; Kayıt'taki şifre tekrarı alanında "Şifre tekrarını göster"), durum `aria-pressed` ile
+  bildirilir — adı değiştirmek ve `aria-pressed` birlikte durumu iki kez duyururdu (ARIA toggle button
+  kalıbı).
 - **Birincil düğme** 52 px, `accent` / `on-accent` ("Kayıt ol"da `UserPlus` ikonu).
 - **Genel hata:** `danger-bg` kutu, `CircleAlert` (`danger`), kalın başlık ("Giriş başarısız" / "Kayıt
   başarısız") + mesaj (`on-danger-bg`), `role="alert"`. Giriş 401'inin mesajı NÖTR kalır ("Kullanıcı adı
@@ -307,15 +318,16 @@ kararları (R14 dahil: API yanıtları önbelleklenmez).
 
 - Mevcut 65 test yeşil kalır. Metni ya da yeri değişen yerlerde (çıkışın menüye taşınması, boş set
   metni) testler davranışı koruyarak güncellenir. Testler sınıf adı ya da renk sınamaz (Vitest
-  `css: false`).
+  `css: false`). Uygulama sonunda: 13 dosyada 71 test.
 - Davranış değişikliklerinin (1-6) her biri için bir davranış testi.
 - **Görsel doğruluk birim testle ölçülmez.** Her ekranın 390×844 ekran görüntüsü alınır ve aynı boyutta
   açılan Stitch dosyasının görüntüsüyle yan yana karşılaştırılır. Araç Playwright'tır, `npx` ile geçici
   çalıştırılır: projeye bağımlılık EKLENMEZ, CI'da yoktur. Mimari spec Karar 12'deki "uçtan uca test
   yok" kararı geçerlidir — bu bir test paketi değil, doğrulama aracıdır.
-- **Kontrast** (WCAG AA — normal metin 4.5:1, büyük metin 3:1): `muted`/`bg` ≈ 11:1;
-  `accent-soft`/`surface-2` ≈ 10:1; `on-accent`/`accent` ≈ 4.5:1 — sınırda, bu yüzden yalnızca kalın
-  düğme ve rozet metninde kullanılır.
+- **Kontrast** (WCAG AA — normal metin 4.5:1, büyük metin 3:1): `muted` her yüzeyde ≥ 7.17:1;
+  `accent-soft`/`surface-2` ≈ 10:1; `on-accent`/`accent` ölçüldü **4.54:1** — sınırda, bu yüzden
+  yalnızca kalın düğme ve rozet metninde kullanılır ve rozetlere opaklık ya da renk tonu UYGULANMAZ.
+  Yer tutucular (2.71–3.46:1) bilerek soluktur; her alanın görünür bir etiketi vardır.
 
 ## Kapsam dışı
 
@@ -325,8 +337,10 @@ kararları (R14 dahil: API yanıtları önbelleklenmez).
 
 ## Riskler
 
-- **jsdom Popover API'yi uygulamaz** → menü testleri görünürlüğü değil davranışı sınar (düğme var,
-  tıklayınca oturum kapanır).
+- **jsdom Popover API'yi uygulamaz ve kapalı popover'ı kendi varsayılan stiliyle GİZLER**
+  (`[popover]:not(:popover-open) { display: none }`, jsdom 30) → menüdeki "Çıkış yap" testte
+  `{ hidden: true }` ile sorgulanır; testler yapıyı (`popovertarget`, düğmenin menüde olması) ve
+  oturumun kapanmasını sınar, menünün açılmasını değil.
 - **Görsel regresyon testlerle yakalanmaz** (`css: false`) → ekran görevleri bittikten sonra, final
   incelemeden ÖNCE, her ekranın ekran görüntüsü Stitch'le karşılaştırılır (kontrolcü görevi); sapmalar
   final düzeltme dalgasına girer. Her ekran görevinin kendi incelemesi ise kodu bu spec'e (tokenlar,

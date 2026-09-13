@@ -23,6 +23,7 @@
 | 12 | Feature: AiInsight altyapısı | ✅ |
 | 13 | Feature: Hesap silme (soft delete) | ✅ |
 | F1 | Frontend dilim 1: antrenman çekirdeği (`web/`) | ✅ |
+| F2 | Frontend görsel tasarım (Tailwind, 6 ekran, PWA ikonları) | ✅ |
 
 ---
 
@@ -734,7 +735,7 @@ Faz 0-13 bitti.
 **Frontend kararı verildi (2026-09-12): React + Vite + TypeScript, kurulabilir PWA.** İlk dilim
 antrenman çekirdeği (giriş, bugünün oturumu, set ekleme, PR rozetleri, basit geçmiş). Mimari plan:
 [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
-Görsel tasarım bilerek ertelendi.
+Görsel tasarım da tamamlandı (bkz. "Frontend Görsel Tasarım" bölümü).
 
 Plandan çıkan, frontend başlamadan önce bilinmesi gereken backend işleri:
 - **CORS**: `Program.cs`'te CORS yapılandırması yok. Geliştirmede Vite proxy'si bunu gereksiz kılıyor,
@@ -776,20 +777,62 @@ Uygulama ve inceleme sırasında bulunup düzeltilenler:
   görünüyordu; hata artık ayrı gösteriliyor.
 
 Devreden notlar (bilerek yapılmadı):
-- **Görsel tasarım** hâlâ ertelendi. PWA manifest'inde ikon YOK: Chrome/Android ikon olmadan
-  "uygulama olarak yükle" sunmaz, yani spec Karar 1'deki tam ekran kurulum ikonlar (tasarım turu)
-  gelene kadar eksik.
+- ~~**Görsel tasarım** hâlâ ertelendi; PWA manifest'inde ikon yok.~~ → Kapandı: "Frontend Görsel
+  Tasarım" bölümü (Tailwind tasarımı ve PWA ikonları; Android'de "uygulama olarak yükle" açıldı).
 - **Çevrimdışı okuma — spec Karar 10'dan bilinçli sapma:** `GET /api/*` yanıtları önbelleklenmiyor;
   gerekçe spec'te Karar 10'un altındaki notta. **Çevrimdışı yazma** hâlâ geçmişe dönük set girişi
   isteyen bir backend işine bağlı.
 - **Dağıtım / CORS:** frontend'in nereden sunulacağı henüz karara bağlanmadı; ayrı bir origin ise
   backend'e CORS politikası gerekir.
-- **Küçük işler:** "Antrenmanı bitir" hatası ekranda gösterilmiyor; `VITE_API_PROXY_TARGET`
-  `.env` dosyasından okunmuyor (`vite.config` `process.env` okuyor, `loadEnv` gerekir); testlerdeki
-  sorgu istemcisi yardımcısı beş dosyada kopya; oturum açıkken `/login`'de yanlış şifre global
-  `logout`'u da tetikliyor.
+- **Küçük işler:** ~~"Antrenmanı bitir" hatası ekranda gösterilmiyor~~ (görsel tasarım turunda
+  kapandı); `VITE_API_PROXY_TARGET` `.env` dosyasından okunmuyor (`vite.config` `process.env` okuyor,
+  `loadEnv` gerekir); testlerdeki sorgu istemcisi yardımcısı beş dosyada kopya; oturum açıkken
+  `/login`'de yanlış şifre global `logout`'u da tetikliyor.
 - **Sonraki dilimler:** şablonlar, istatistik/grafikler, vücut ağırlığı, export, AI yorumları,
   egzersiz yönetimi.
+
+---
+
+## Frontend Görsel Tasarım ✅ (2026-09-13)
+
+Spec: [docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md)
+· Plan: [docs/superpowers/plans/2026-09-12-frontend-gorsel-tasarim.md](docs/superpowers/plans/2026-09-12-frontend-gorsel-tasarim.md)
+· Stitch referansları: `docs/design/stitch/`
+
+Google Stitch'te tasarlanıp onaylanan altı ekran (Bugün, Bugün boş durum, Geçmiş, Rekorlar, Giriş,
+Kayıt) `web/`'e uygulandı. Backend'e dokunulmadı.
+
+- **Temel:** Tailwind CSS v4 (`@tailwindcss/vite`, CSS-first `@theme`); tokenlar Stitch'in render
+  ettiği değerlerden, okunur adlarla (`bg`, `surface-1..4`, `accent`, `accent-soft`…); Inter uygulamaya
+  gömülü (yalnızca latin + latin-ext, precache'te); ikonlar `lucide-react`; yalnızca koyu tema.
+- **Kabuk:** üst başlık + Popover API ile hesap menüsü ("Çıkış yap" artık burada) + alt sekme çubuğu.
+- **Ekranlar:** sabit "Set ekle" paneli ve durum satırı; Geçmiş'te yerinde açılan kartlar; Rekorlar'da
+  iki ayrı rozetli satır; Giriş ve Kayıt için tek ortak düzen, şifreyi göster, şifre tekrarı;
+  "Antrenmanı bitir" hatası artık gösteriliyor.
+- **PWA:** tek SVG kaynaktan üretilen ikonlar (maskable dahil) → Android'de kurulabilir.
+- **Test:** backend **638** / frontend **71** (13 dosya) — ayrı sayılar, ikisi de komutla sayıldı.
+  `tsc -b` temiz, üretim derlemesi yeşil. Görsel doğruluk 390×844 Playwright ekran görüntüleriyle
+  Stitch'e karşı kontrol edildi (açık Geçmiş kartı, alan hatası ve açık menü dahil).
+
+Uygulama ve incelemede verilen kararlar:
+- Şifre göster düğmesinin adı sabit, durum `aria-pressed` ile (değişen ad + `aria-pressed` durumu iki
+  kez duyururdu).
+- `@vite-pwa/assets-generator` 1.0.4 (spec 2.0 diyordu; `vite-plugin-pwa` 1.3'ün peer aralığı
+  `^1.0.0`); maskable/apple ikonları `padding: 0` + `#121316` ile üretiliyor (varsayılan beyaz dolgu).
+- jsdom kapalı popover'ı gizlediği için çıkış testleri `{ hidden: true }` kullanıyor.
+- Rekorlar testi tarihleri kendi satırına bağlayacak şekilde güçlendirildi.
+- Geçmiş kartında klavye odak halkası kartın içine çizildi (kırpılıyordu).
+
+Devreden notlar (bilerek yapılmadı):
+- Hesap menüsünün konumu çentiği (üst güvenli alan) ve tablet genişliğini hesaba katmıyor.
+- Hata satırları sabit paneli uzatınca son set kısmen örtülebiliyor; yatay ekranda panel neredeyse
+  tüm alanı kaplıyor (manifest `orientation: portrait` ya da panel yüksekliğini ölçmek).
+- Yazılım klavyesi açıkken sabit panel gerçek bir cihazda denenmedi.
+- Alan hataları girdiye `aria-invalid` / `aria-describedby` ile bağlı değil (önceden gelen desen).
+- `on-accent`/`accent` kontrastı 4.54:1 — rozetlere opaklık uygulanmamalı.
+- Tekrarlanan sınıf kümeleri (auth bağlantıları, yükleniyor/hata metinleri) ve "spec Karar N"
+  yorumlarının hangi spec'i kastettiği küçük temizlik işleri.
+- Açık tema yok; Stitch'in "Grind System" dokümanı repoya alınmadı (metni koddaki değerlerle çelişiyor).
 
 ---
 
