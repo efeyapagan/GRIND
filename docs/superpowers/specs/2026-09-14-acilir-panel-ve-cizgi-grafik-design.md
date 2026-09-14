@@ -5,7 +5,7 @@
 **Kapsam:** Bugün ekranındaki "Set ekle" panelinin yalnızca gerektiğinde açılması; hareket grafiğinin
 sekmeli, turuncu bir çizgi grafiğe dönüşmesi (Ağırlık / Antrenman / Tahmini 1RM, 1 Ay / 3 Ay / Tüm);
 bunu besleyen yeni bir hareket ilerleme ucu ve tahmini 1RM hesaplayıcısı.
-**Durum:** 📋 Spec. Kullanıcı kararları (2026-09-14, telefonda gerçek kullanım sonrası):
+**Durum:** ✅ Uygulandı (plan: `docs/superpowers/plans/2026-09-14-frontend-dilim-3-panel-grafik-1rm.md`). Kullanıcı kararları (2026-09-14, telefonda gerçek kullanım sonrası):
 - Panel her zaman açık olmasın; **harekete dokununca açılsın**.
 - Grafik referans görseldeki gibi olsun (sekmeler, "Şu anki" / "Fark", noktalı dolgulu çizgi, aralık
   seçimi) ve **turuncu** olsun.
@@ -152,7 +152,10 @@ Izgara çizgileri, eksen metinleri, "Şu anki"/"Fark" etiketleri ve aralık seç
   dilim 2 Karar 6 aynen; canlı bölge tek kalır.
 - **Arayüz:** `AddSetForm`'a `acik: boolean` ve `onAcikDegis(acik: boolean)` eklenir; açık/kapalı durumu
   `TodayPage`'dedir (kart dokunuşu da açtığı için).
-- **Boşluk:** liste alt boşluğu duruma göre (kapalıyken kısa, açıkken bugünkü `pb-72`).
+- **Boşluk (final inceleme I1 ile güncellendi):** alt alan `fixed` değil, akış içinde `sticky`'dir
+  (sekme çubuğunun hemen üstünde, `mt-auto`); kendi yüksekliğini — dinlenme sayacı dahil — akışta
+  kapladığı için liste için ayrıca alt boşluk hesaplanmaz. Kısa içerikte çubuğun ekranın altında kalması
+  için `TodayPage` kökü en az görünür yükseklik kadardır.
 - Dilim 2'deki diğer panel davranışları (doğrulama, hata, durum satırı, ağ hatası mesajı) değişmez.
 
 ## Karar 7 — Sorgular
