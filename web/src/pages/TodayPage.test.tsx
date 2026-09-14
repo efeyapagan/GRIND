@@ -78,7 +78,7 @@ const HAREKET_KARTI_ADI = /, \d+ \/ \d+ set$/;
 
 /**
  * Bellek-ici sahte bir sunucu durumu kurar: acik oturum, o oturumun setleri, egzersiz listesi,
- * sablon listesi ve gecmis ucu. `POST /api/sets` gercek backend gibi davranir -- oturum yoksa
+ * sablon listesi ve hareket ilerleme ucu. `POST /api/sets` gercek backend gibi davranir -- oturum yoksa
  * kendiliginden acar, yeni seti listeye ekler ve ilgili hareketin `completedSets` sayacini artirir.
  * `POST /api/sessions` acik oturum varsa onu OLDUGU GIBI 200 ile doner (templateId UYGULANMAZ),
  * yoksa sablonun hareketleriyle 201 doner. `recordTypeUret`, testin hangi seti "rekor" olarak
@@ -97,7 +97,7 @@ function sahteSunucuyuKur(
   const siradakiOturumId = 1;
   const gonderilenGovdeler: unknown[] = [];
   const baslatmaGovdeleri: unknown[] = [];
-  const gecmisAramalari: string[] = [];
+  const ilerlemeAramalari: string[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -109,9 +109,9 @@ function sahteSunucuyuKur(
     }),
     http.get('/api/sessions/:id/sets', () => HttpResponse.json(setler)),
     http.get('/api/templates', () => HttpResponse.json(opsiyonlar.sablonlar ?? [])),
-    http.get('/api/history', ({ request }) => {
-      gecmisAramalari.push(new URL(request.url).search);
-      return HttpResponse.json({ items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0 });
+    http.get('/api/stats/exercises/:id/progress', ({ request, params }) => {
+      ilerlemeAramalari.push(new URL(request.url).pathname);
+      return HttpResponse.json({ exerciseId: Number(params.id), exerciseName: '', points: [] });
     }),
     // Gercek backend gibi: acik oturum varsa 200 ile oldugu gibi doner (templateId UYGULANMAZ),
     // yoksa sablonun hareketleriyle 201.
@@ -192,7 +192,7 @@ function sahteSunucuyuKur(
   return {
     sonGonderilenGovde: () => gonderilenGovdeler.at(-1),
     baslatmaGovdeleri: () => baslatmaGovdeleri,
-    gecmisAramalari: () => gecmisAramalari,
+    ilerlemeAramalari: () => ilerlemeAramalari,
   };
 }
 
@@ -854,13 +854,13 @@ test('sablonsuz oturumda secili hareketin gecmisi istenir ve set eklenince yenid
   bugunSayfasiniOlustur();
 
   await egzersizSecimineBekle();
-  await waitFor(() => expect(ortam.gecmisAramalari().length).toBeGreaterThan(0));
-  expect(ortam.gecmisAramalari()[0]).toContain('ExerciseId=1');
-  const ilkSayi = ortam.gecmisAramalari().length;
+  await waitFor(() => expect(ortam.ilerlemeAramalari().length).toBeGreaterThan(0));
+  expect(ortam.ilerlemeAramalari()[0]).toBe('/api/stats/exercises/1/progress');
+  const ilkSayi = ortam.ilerlemeAramalari().length;
 
   await setEkle(kullanici, '60', '8');
 
-  await waitFor(() => expect(ortam.gecmisAramalari().length).toBeGreaterThan(ilkSayi));
+  await waitFor(() => expect(ortam.ilerlemeAramalari().length).toBeGreaterThan(ilkSayi));
 });
 
 describe('dinlenme sayaci', () => {

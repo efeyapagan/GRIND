@@ -52,3 +52,24 @@ export function formatWeight(kg: number): string {
     maximumFractionDigits: 2,
   });
 }
+
+/** "YYYY-MM-DD": TR bugununden `gun` gun onceki TR gunu (API'nin DateOnly `From` parametresi icin). */
+export function trBugundenOnce(gun: number, simdi: Date = new Date()): string {
+  const { gun: ayinGunu, ay, yil } = tarihParcalariniAl(
+    new Date(simdi.getTime() - gun * 86_400_000).toISOString(),
+  );
+  return `${yil}-${ay}-${ayinGunu}`;
+}
+
+/** Grafik araligi metni: "25 Ağu – 10 Eyl 2026" (yil, son tarihin TR yili). */
+export function formatAralik(ilkIso: string, sonIso: string): string {
+  return `${formatKisaTarih(ilkIso)} – ${formatKisaTarih(sonIso)} ${tarihParcalariniAl(sonIso).yil}`;
+}
+
+/** Isaretli fark: "+2,5", "−32,5" (U+2212 eksi isareti), "0". */
+export function formatFark(fark: number): string {
+  if (fark === 0) {
+    return '0';
+  }
+  return `${fark > 0 ? '+' : '−'}${formatWeight(Math.abs(fark))}`;
+}

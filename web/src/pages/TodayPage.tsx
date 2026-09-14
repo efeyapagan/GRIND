@@ -157,17 +157,12 @@ export default function TodayPage() {
                 setler={setler ?? []}
                 secilenId={etkinSecim}
                 onSec={secimYap}
-                bugunkuOturumId={gorunenOturum.id}
               />
             ) : (
               <>
                 {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9). */}
                 {etkinSecim !== null && seciliEgzersizAdi && (
-                  <HareketGecmisi
-                    exerciseId={etkinSecim}
-                    exerciseName={seciliEgzersizAdi}
-                    bugunkuOturumId={gorunenOturum.id}
-                  />
+                  <HareketGecmisi exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
                 )}
                 <SetList sets={setler ?? []} />
               </>
