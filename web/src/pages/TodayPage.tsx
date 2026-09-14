@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react';
-import { CircleCheck, Dumbbell } from 'lucide-react';
-import { useExercises, useFinishSession, useOpenSession, useSessionSets, useStartSession } from '../api/queries';
+import { CircleCheck, Dumbbell, X } from 'lucide-react';
+import {
+  useDeleteSession,
+  useExercises,
+  useFinishSession,
+  useOpenSession,
+  useSessionSets,
+  useStartSession,
+} from '../api/queries';
 import { formatTrTime } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { varsayilanHareket } from '../lib/ilerleme';
@@ -41,9 +48,15 @@ export default function TodayPage() {
     isLoading: setlerYukleniyor,
     isError: setlerHataliMi,
   } = useSessionSets(oturum?.id ?? null);
+  // Issue #47: "iptal et" YALNIZCA setlerin gercekten yuklendigi ve BOS oldugu bilindiginde cikar.
+  // `isLoading` tek basina yetmez: sorgu `enabled: sessionId !== null` oldugu icin oturum yokken
+  // de false doner ama veri yoktur -- belirleyici olan `setler`in kendisidir.
+  const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
+  const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
   const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
+  const iptalMutasyonu = useDeleteSession();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
 
@@ -107,17 +120,35 @@ export default function TodayPage() {
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-title">Bugün</h1>
-          {gorunenOturum?.isOpen && (
-            <button
-              type="button"
-              onClick={() => bitirMutasyonu.mutate(gorunenOturum.id)}
-              disabled={bitirMutasyonu.isPending}
-              className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
-            >
-              <CircleCheck aria-hidden size={18} />
-              Antrenmanı bitir
-            </button>
-          )}
+          {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
+              dokunulan bir sablon kartinin geri alinmasi budur. "Bitir" bu durumda gecmise BOS bir
+              antrenman birakirdi (sorunun ta kendisi). Set girilince iptal kaybolur, "bitir" doner:
+              artik silinecek gercek veri var. Set durumu HENUZ BILINMIYORKEN (yukleniyor/hata) ikisi
+              de gosterilmez -- yanlis dugmeyi gosterip sonra degistirmek, kullanicinin o kisa anda
+              yanlis olana dokunmasina yol acar. */}
+          {gorunenOturum?.isOpen &&
+            setlerYuklendi &&
+            (oturumBos ? (
+              <button
+                type="button"
+                onClick={() => iptalMutasyonu.mutate(gorunenOturum.id)}
+                disabled={iptalMutasyonu.isPending}
+                className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-danger disabled:opacity-60"
+              >
+                <X aria-hidden size={18} />
+                Antrenmanı iptal et
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => bitirMutasyonu.mutate(gorunenOturum.id)}
+                disabled={bitirMutasyonu.isPending}
+                className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
+              >
+                <CircleCheck aria-hidden size={18} />
+                Antrenmanı bitir
+              </button>
+            ))}
         </div>
         {gorunenOturum && (
           <div className="flex flex-wrap items-center gap-2">
@@ -139,6 +170,11 @@ export default function TodayPage() {
         {baslatMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
             Antrenman başlatılamadı. Lütfen tekrar deneyin.
+          </p>
+        )}
+        {iptalMutasyonu.isError && (
+          <p role="alert" className="text-label text-danger">
+            Antrenman iptal edilemedi. Lütfen tekrar deneyin.
           </p>
         )}
         {/* F2 (review bulgusu): canli bolge HER ZAMAN monte edilir -- metniyle BIRLIKTE eklenirse

@@ -42,7 +42,13 @@ export const queryKeys = {
   // cekilmesin (silmeden hemen sonra 404'e dusmesin).
   template: (id: number) => ['template', id] as const,
   // Onek: bir egzersizin TUM araliklarini tek seferde tazelemek icin (set eklenince).
-  exerciseProgressAll: (exerciseId: number) => ['exerciseProgress', exerciseId] as const,
+  // `exerciseProgressRoot` ise TUM hareketleri kapsar -- bir oturum silinince hangi hareketlerin
+  // etkilendigi istemcide bilinmez (setler yanitla birlikte gelmez), bu yuzden kok onekten
+  // invalidate edilir. `historyAll` ile ayni gerekce: ham string literal yerine anahtar TEK
+  // bir yerde tanimli kalir (DRY).
+  exerciseProgressRoot: ['exerciseProgress'] as const,
+  exerciseProgressAll: (exerciseId: number) =>
+    [...queryKeys.exerciseProgressRoot, exerciseId] as const,
   exerciseProgress: (exerciseId: number, aralik: IlerlemeAraligi) =>
     [...queryKeys.exerciseProgressAll(exerciseId), aralik] as const,
 };
@@ -449,6 +455,35 @@ export function useFinishSession() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+/**
+ * `DELETE /api/sessions/{id}`. Oturumu ve setlerini siler; sunucu etkilenen hareketlerin
+ * rekorlarini (`RecordType`) yeniden hesaplar (Faz 7). Bu yuzden `records` ve hareket ilerlemesi
+ * de tazelenir -- silinen bir rekor seti, o hareketin "en iyi"sini ve grafigini degistirir.
+ *
+ * `exerciseProgressRoot` (tek bir hareket degil, KOK onek) invalidate edilir: yanit hangi
+ * hareketlerin etkilendigini SOYLEMEZ (204), istemcide bunu bilmenin yolu yok. Silinen oturum
+ * bugunun acik oturumuysa `openSession` da tazelenmeli -- cagiran taraf hangi durumda oldugunu
+ * bilmek zorunda kalmasin diye ikisi de kosulsuz invalidate edilir (KISS).
+ */
+export function useDeleteSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: number): Promise<void> => {
+      await request<void>(`/sessions/${sessionId}`, { method: 'DELETE' });
+    },
+    onSuccess: (_veri, sessionId) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressRoot });
+      // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
+      // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
+      queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
     },
   });
 }

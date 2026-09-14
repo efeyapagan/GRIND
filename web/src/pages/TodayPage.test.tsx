@@ -41,6 +41,21 @@ const EGZERSIZLER: ExerciseResponse[] = [
   { id: 2, name: 'Squat', category: 'Legs', isArchived: false, isGlobal: true, media: [] },
 ];
 
+/** Acik oturumu "set girilmis" hale getirir -- "Antrenmani bitir" ancak o zaman gorunur (#47). */
+function girilmisSet(sessionId: number): SetEntryResponse {
+  return {
+    id: 500,
+    sessionId,
+    exerciseId: 1,
+    exerciseName: 'Bench Press',
+    weight: 60,
+    reps: 8,
+    recordType: 'None',
+    rir: null,
+    createdAt: '2026-09-14T09:00:00Z',
+  };
+}
+
 const PUSH_DAY: TemplateResponse = {
   id: 10,
   name: 'Push Day',
@@ -87,17 +102,21 @@ const HAREKET_KARTI_ADI = /, \d+ \/ \d+ set$/;
 function sahteSunucuyuKur(
   opsiyonlar: {
     baslangicOturumu?: SessionResponse | null;
+    // Acik oturumun ZATEN setleri varmis gibi baslatir: "Antrenmani bitir" yalnizca set
+    // girilmis oturumda gorunur (issue #47), bu yuzden o akisi sinayan testler set ister.
+    baslangicSetleri?: SetEntryResponse[];
     recordTypeUret?: (govde: { exerciseId: number; weight: number; reps: number }) => RecordType;
     sablonlar?: TemplateResponse[];
   } = {},
 ) {
   let oturum: SessionResponse | null = opsiyonlar.baslangicOturumu ?? null;
-  let setler: SetEntryResponse[] = [];
+  let setler: SetEntryResponse[] = opsiyonlar.baslangicSetleri ?? [];
   let siradakiSetId = 100;
   const siradakiOturumId = 1;
   const gonderilenGovdeler: unknown[] = [];
   const baslatmaGovdeleri: unknown[] = [];
   const ilerlemeAramalari: string[] = [];
+  const silinenOturumlar: number[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -187,12 +206,20 @@ function sahteSunucuyuKur(
       }
       return HttpResponse.json(oturum);
     }),
+    // Gercek backend gibi 204 (govde yok): oturum ve setleri gider, bos duruma donulur.
+    http.delete('/api/sessions/:id', ({ params }) => {
+      silinenOturumlar.push(Number(params.id));
+      oturum = null;
+      setler = [];
+      return new HttpResponse(null, { status: 204 });
+    }),
   );
 
   return {
     sonGonderilenGovde: () => gonderilenGovdeler.at(-1),
     baslatmaGovdeleri: () => baslatmaGovdeleri,
     ilerlemeAramalari: () => ilerlemeAramalari,
+    silinenOturumlar: () => silinenOturumlar,
   };
 }
 
@@ -528,7 +555,8 @@ test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', 
     notes: null,
     progress: [],
   };
-  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  // Set GIRILMIS oturum: "bitir" yalnizca bu durumda cikar (#47).
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
@@ -539,6 +567,89 @@ test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', 
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument(),
   );
+});
+
+test('setsiz acik oturumda bitir yerine iptal cikar ve DELETE ile bos duruma donulur', async () => {
+  const acikOturum: SessionResponse = {
+    id: 7,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: 10,
+    templateName: 'Push Day',
+    notes: null,
+    progress: [],
+  };
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum, sablonlar: [PUSH_DAY] });
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  const iptal = await screen.findByRole('button', { name: 'Antrenmanı iptal et' });
+  // Issue #47: setsiz oturumda "bitir" GORUNMEZ -- gecmise bos bir antrenman birakan yol budur.
+  expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument();
+
+  await kullanici.click(iptal);
+
+  expect(await screen.findByText('Bugün henüz antrenman yok')).toBeInTheDocument();
+  expect(ortam.silinenOturumlar()).toEqual([7]);
+});
+
+test('set girilince iptal dugmesi yerini bitir dugmesine birakir', async () => {
+  const acikOturum: SessionResponse = {
+    id: 1,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  expect(await screen.findByRole('button', { name: 'Antrenmanı iptal et' })).toBeInTheDocument();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '60', '8');
+
+  // Artik silinecek gercek veri var: iptal kaybolur, yerine bitir gelir.
+  expect(await screen.findByRole('button', { name: 'Antrenmanı bitir' })).toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Antrenmanı iptal et' })).not.toBeInTheDocument(),
+  );
+});
+
+test('iptal basarisiz olursa hata gosterilir ve dugme yerinde kalir', async () => {
+  const acikOturum: SessionResponse = {
+    id: 7,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  server.use(
+    http.delete('/api/sessions/:id', () =>
+      HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı iptal et' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Antrenman iptal edilemedi. Lütfen tekrar deneyin.',
+  );
+  expect(screen.getByRole('button', { name: 'Antrenmanı iptal et' })).toBeInTheDocument();
 });
 
 test('sunucu 400 donerse detay gosterilir ve form icerigi kaybolmaz', async () => {
@@ -644,7 +755,7 @@ test('antrenmani bitir basarisiz olursa hata gosterilir ve dugme yerinde kalir',
     notes: null,
     progress: [],
   };
-  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
   server.use(
     http.post('/api/sessions/:id/finish', () =>
       HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
@@ -810,12 +921,10 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
       acik ? HttpResponse.json(acik) : HttpResponse.json({ title: 'Not Found', status: 404 }, { status: 404 }),
     ),
     http.get('/api/templates', () => HttpResponse.json([PUSH_DAY, LEG_DAY])),
-    http.post('/api/sessions/:id/finish', () => {
-      const bitenOturum = acik;
+    // Onceki oturumda set YOK: onu temizlemenin yolu "Antrenmani iptal et"tir (#47).
+    http.delete('/api/sessions/:id', () => {
       acik = null;
-      return HttpResponse.json(
-        bitenOturum ? { ...bitenOturum, endedAt: new Date().toISOString(), isOpen: false } : null,
-      );
+      return new HttpResponse(null, { status: 204 });
     }),
     http.post('/api/sessions', async ({ request }) => {
       const govde = (await request.json()) as { templateId?: number | null };
@@ -838,9 +947,9 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
   // Ilk sablonlu oturumun varsayilani: tamamlanmamis ilk hareket, Bench Press.
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
 
-  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı iptal et' }));
   await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument(),
+    expect(screen.queryByRole('button', { name: 'Antrenmanı iptal et' })).not.toBeInTheDocument(),
   );
 
   await kullanici.click(await screen.findByRole('button', { name: /Leg Day/ }));
