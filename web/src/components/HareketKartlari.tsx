@@ -9,7 +9,6 @@ interface Props {
   setler: SetKaydi[];
   secilenId: number | null;
   onSec: (exerciseId: number) => void;
-  bugunkuOturumId: number;
 }
 
 /**
@@ -20,7 +19,7 @@ interface Props {
  * (dugme icinde liste, erisilebilir adi setlerle sisirirdi). Secim `aria-pressed` ile ve accent
  * KULLANMADAN (notr halka) gosterilir.
  */
-export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, bugunkuOturumId }: Props) {
+export default function HareketKartlari({ ilerleme, setler, secilenId, onSec }: Props) {
   const planliIdler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
   const planDisiSetler = setler.filter((kayit) => !planliIdler.has(kayit.exerciseId));
 
@@ -65,11 +64,7 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, bu
                 </ul>
               )}
               {secili && (
-                <HareketGecmisi
-                  exerciseId={hareket.exerciseId}
-                  exerciseName={hareket.exerciseName}
-                  bugunkuOturumId={bugunkuOturumId}
-                />
+                <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
               )}
             </li>
           );

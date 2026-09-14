@@ -25,6 +25,7 @@
 | F1 | Frontend dilim 1: antrenman çekirdeği (`web/`) | ✅ |
 | F2 | Frontend görsel tasarım (Tailwind, 6 ekran, PWA ikonları) | ✅ |
 | F3 | Frontend dilim 2: şablonlar, dinlenme sayacı, hareket geçmişi | ✅ |
+| F4 | Frontend dilim 3: açılır set paneli, çizgi grafik, tahmini 1RM (#43) | ✅ |
 
 ---
 
@@ -877,8 +878,10 @@ Devreden notlar (bilerek yapılmadı):
 - Sayaç bildirimi (arka plan) ve kalıcılığı yok; iOS'ta titreşim yok; Wake Lock ve bip gerçek cihazda
   denenmedi.
 - Şablonlu antrenmanda plan dışı seçilen hareketin geçmiş grafiği görünmez (spec kapsamaz).
-- Yalnızca bugünkü oturum varsa grafik yerine "Bu hareketin ilk antrenmanı" yazar.
-- Az antrenmanda grafik çubukları geniş, köşeler yatay esnemeden elips; bar genişliği sınırlanabilir.
+- ~~Yalnızca bugünkü oturum varsa grafik yerine "Bu hareketin ilk antrenmanı" yazar.~~ → Dilim 3'te
+  çizgi grafik tek noktayı da çiziyor; "ilk antrenman" metni yalnızca "Tüm" aralığında hiç kayıt yoksa.
+- ~~Az antrenmanda grafik çubukları geniş, köşeler yatay esnemeden elips.~~ → Dilim 3'te çubuk grafik
+  kalktı; çizgi grafik gerçek piksel genişliğiyle çiziliyor.
 - Şablon silinince `template(id)` önbellek girdisi `gcTime` boyunca kalır (geri tuşunda kısa süre bayat
   form); `useDeleteTemplate`'e `removeQueries` eklenebilir.
 - Düzenleyici arka plan tazelemesini forma yansıtmaz (tek kullanıcılı ölçekte kabul).
@@ -887,6 +890,50 @@ Devreden notlar (bilerek yapılmadı):
 - Test boşlukları: `visibilitychange` yolu, `lib/uyari.ts`, sayacın eski "şimdi" ile yeniden başlama yolu,
   PATCH ucunda `restSeconds`, sıfır hareketli şablon kaydı.
 - Mevcut lint uyarısı (`AuthContext.tsx`, `only-export-components`) bu dilimden önce vardı.
+
+---
+
+## Frontend Dilim 3 — Açılır panel, çizgi grafik, tahmini 1RM ✅ (2026-09-14)
+
+Issue: #43 · Spec: [docs/superpowers/specs/2026-09-14-acilir-panel-ve-cizgi-grafik-design.md](docs/superpowers/specs/2026-09-14-acilir-panel-ve-cizgi-grafik-design.md)
+· Plan: [docs/superpowers/plans/2026-09-14-frontend-dilim-3-panel-grafik-1rm.md](docs/superpowers/plans/2026-09-14-frontend-dilim-3-panel-grafik-1rm.md)
+
+Telefonda gerçek kullanımdan gelen iki istek ve Obsidian "Tahmini 1RM" notu. Bu dilimden itibaren iş
+akışı issue ile başlar (CONTRIBUTING.md adım 0).
+
+- **Backend:** saf `OneRepMaxEstimator` (Brzycki `ağırlık × 36 / (37 − tekrar)`, tekrar tavanı 12, 0 kg
+  ve 1–12 dışı tekrarda `null`, sorguda hesaplanır, saklanmaz). `GET /api/stats/exercises/{id}/progress`
+  ayrı `IExerciseProgressService` ile: oturum başına en ağır set (eşitlikte çok tekrarlı), hacim, set
+  sayısı, en büyük tahmini 1RM; eskiden yeniye, TR günü, sahiplik `GetVisibleByIdAsync` ile (nötr 404).
+  Migration YOK.
+- **Grafik:** veri bilmeyen `ui/CizgiGrafik` (turuncu çizgi, noktalar, degrade, ilk/son değer etiketi,
+  gerçek piksel genişliği) eski çubuk grafiğin yerine; `HareketGecmisi` sekmeli (Ağırlık / Antrenman /
+  Tahmini 1RM), aralıklı (1 Ay / 3 Ay / Tüm), "Şu anki" ve "Fark". `useExerciseHistory` kaldırıldı.
+- **Açılır set paneli:** varsayılan kapalı; "Set ekle" düğmesi ya da hareket kartına dokunmak açar; form
+  kapalıyken `hidden` (yazılanlar ve dinlenme sayacı korunur); set sonrası açık kalır; alt alan akış
+  içinde `sticky`.
+- **Görsel kural:** `accent` listesi grafik çizgisi/noktaları/degradesi/değer etiketleri ve grafik aktif
+  sekme alt çizgisiyle genişletildi (kullanıcı kararı; görsel tasarım spec'i güncellendi).
+- **Test:** backend **671** / frontend **122** (20 dosya) — ayrı sayılar, komutla sayıldı. `tsc -b`
+  temiz, üretim derlemesi yeşil. Görsel doğrulama 390×844 Playwright ekran görüntüleri ve ölçümle.
+
+Verilen kararlar:
+- Dinlenme sayacı durumu `TodayPage`'e taşınmadı: `AddSetForm` hiç unmount olmadığı için formda kaldı.
+- Final inceleme: sayaç çalışırken sabit alt alan listenin sonunu örtüyordu (52/80 px) → alt alan
+  `fixed` yerine `sticky`, ölçülen örtüşme sıfır.
+- Final inceleme: kart dokunuşu odağı ağırlık alanına taşıyıp telefonda klavyeyi grafiğin üstüne
+  açıyordu → odak yalnızca "Set ekle" düğmesiyle açılınca taşınır.
+- Brzycki formülü kullanıcının itirazsız kabulüyle seçildi (Epley alternatifi spec'te).
+- Alt ajan bir commit'in co-author satırına farklı model adı yazdı; push edilmeden düzeltildi.
+
+Devreden notlar (bilerek yapılmadı):
+- Vücut ağırlığı hareketlerinde (0 kg) üç sekme de anlamsız; "tekrar" metriği sonraki dilim.
+- Aralık değişirken önceki aralığın değerleri yükleme işareti olmadan kısa süre görünür (`isFetching`
+  işareti eklenebilir).
+- Şablonsuz oturumda seçili hareket değişince sekme/aralık seçimi korunuyor (şablonlu kartlarda sıfırlanır).
+- Çift sayıda noktada x ekseni tarih etiketleri (ilk/orta/son) eşit aralıklı dağılmıyor.
+- Antrenman bitince panel açık kalabilir; arşivli kart dokunuşunun paneli açmadığı ayrıca test edilmedi.
+- Kart dokunuşunda odak davranışı gerçek telefonda denenmeli.
 
 ---
 

@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from './client';
+import { trBugundenOnce } from '../lib/format';
 import { ApiError } from './problem';
 import type { components } from './schema';
 
@@ -15,6 +16,8 @@ type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
+type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
+type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPointResponse'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -38,7 +41,10 @@ export const queryKeys = {
   // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
   // cekilmesin (silmeden hemen sonra 404'e dusmesin).
   template: (id: number) => ['template', id] as const,
-  exerciseHistory: (exerciseId: number) => ['exerciseHistory', exerciseId] as const,
+  // Onek: bir egzersizin TUM araliklarini tek seferde tazelemek icin (set eklenince).
+  exerciseProgressAll: (exerciseId: number) => ['exerciseProgress', exerciseId] as const,
+  exerciseProgress: (exerciseId: number, aralik: IlerlemeAraligi) =>
+    [...queryKeys.exerciseProgressAll(exerciseId), aralik] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -306,21 +312,73 @@ export function useHistory(page: number) {
   });
 }
 
+export type IlerlemeAraligi = '1a' | '3a' | 'tum';
+
+export interface IlerlemeNoktasi {
+  sessionId: number;
+  startedAt: string;
+  topWeight: number;
+  topWeightReps: number;
+  volume: number;
+  setCount: number;
+  // Tahmin edilemeyen oturumda null (0 kg ya da 12'den fazla tekrar).
+  estimatedOneRepMax: number | null;
+}
+
+/** `0` gecerli bir deger: kontroller `=== undefined` ile, `!` ile degil. */
+function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): IlerlemeNoktasi {
+  if (
+    yanit.sessionId === undefined ||
+    !yanit.startedAt ||
+    yanit.topWeight === undefined ||
+    yanit.topWeightReps === undefined ||
+    yanit.volume === undefined ||
+    yanit.setCount === undefined ||
+    yanit.estimatedOneRepMax === undefined
+  ) {
+    throw new Error('Sunucudan eksik ilerleme noktasi alindi.');
+  }
+  return {
+    sessionId: yanit.sessionId,
+    startedAt: yanit.startedAt,
+    topWeight: yanit.topWeight,
+    topWeightReps: yanit.topWeightReps,
+    volume: yanit.volume,
+    setCount: yanit.setCount,
+    estimatedOneRepMax: yanit.estimatedOneRepMax,
+  };
+}
+
+const ARALIK_GUNLERI: Record<IlerlemeAraligi, number | null> = { '1a': 30, '3a': 90, tum: null };
+
 /**
- * Bir hareketin son 10 oturumu (spec Karar 9). Egzersiz filtresi verildiginde sunucu her oturumun
- * `totalVolume`/`setCount`'unu YALNIZCA o egzersizin setlerinden hesaplar -- istemci toplamaz.
- * Acik bugunku oturum da (o harekete set girildiyse) listededir.
+ * `points` schema.d.ts'te optional (Swashbuckle bunu required isaretlemedi) ama sunucu HER ZAMAN
+ * doldurur -- diger `dogrulanmis*` fonksiyonlariyla ayni desen: eksik gelirse `?? []` ile sessizce
+ * yutmak yerine acikca hata firlatilir (review bulgusu M6).
  */
-export function useExerciseHistory(exerciseId: number | null) {
+function dogrulanmisHareketIlerlemesi(yanit: ExerciseProgressResponse): IlerlemeNoktasi[] {
+  if (yanit.points === undefined || yanit.points === null) {
+    throw new Error('Sunucudan eksik hareket ilerlemesi yaniti alindi.');
+  }
+  return yanit.points.map(dogrulanmisIlerlemeNoktasi);
+}
+
+/**
+ * Hareket ilerleme grafiginin verisi (dilim 3 spec Karar 2 ve 5), eskiden yeniye. En agir set, hacim
+ * ve tahmini 1RM SUNUCUDAN gelir; istemci yalnizca araligin baslangic gununu (TR) hesaplar.
+ */
+export function useExerciseProgress(exerciseId: number, aralik: IlerlemeAraligi) {
   return useQuery({
-    queryKey: queryKeys.exerciseHistory(exerciseId ?? 0),
-    queryFn: async (): Promise<GecmisOturum[]> => {
-      const yanit = await request<HistorySessionResponsePagedResponse>(
-        `/history?ExerciseId=${exerciseId}&PageSize=10`,
-      );
-      return dogrulanmisGecmisSayfasi(yanit).items;
+    queryKey: queryKeys.exerciseProgress(exerciseId, aralik),
+    queryFn: async (): Promise<IlerlemeNoktasi[]> => {
+      const gun = ARALIK_GUNLERI[aralik];
+      const sorgu = gun === null ? '' : `?From=${trBugundenOnce(gun)}`;
+      const yanit = await request<ExerciseProgressResponse>(`/stats/exercises/${exerciseId}/progress${sorgu}`);
+      return dogrulanmisHareketIlerlemesi(yanit);
     },
-    enabled: exerciseId !== null,
+    // M5 (review bulgusu): aralik degisince (1 Ay -> 3 Ay gibi) onceki noktalar yeni veri gelene
+    // kadar EKRANDA KALIR -- aksi halde kisa bir "Yükleniyor..." yanip grafik cokup tekrar acilir.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -376,8 +434,8 @@ export function useAddSet() {
       // Yeni set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
       // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
       void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
-      // Bugunku cubuk buyusun (spec Karar 9): yalnizca eklenen setin hareketi.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseHistory(set.exerciseId) });
+      // Grafigin bugunku noktasi guncellensin (dilim 3): eklenen setin hareketinin TUM araliklari.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(set.exerciseId) });
     },
   });
 }

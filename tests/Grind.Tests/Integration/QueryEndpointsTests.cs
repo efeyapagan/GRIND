@@ -62,6 +62,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
     [InlineData("/api/stats/volume/daily")]
     [InlineData("/api/stats/volume/by-exercise")]
     [InlineData("/api/stats/calendar")]
+    [InlineData("/api/stats/exercises/1/progress")]
     public async Task Tokensiz_istekler_401_verir(string path)
     {
         var response = await factory.CreateClient().GetAsync(path);
@@ -197,5 +198,46 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         Assert.Equal(0, takvim.CurrentStreak);
         Assert.Empty(sayfa!.Items);
         Assert.Equal(0, sayfa.TotalPages);
+    }
+
+    [Fact]
+    public async Task Hareket_ilerlemesi_bugunun_noktasini_sunucu_degerleriyle_doner()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        await PostSetAsync(client, exerciseId, 100m, 5);
+        await PostSetAsync(client, exerciseId, 100m, 8);
+
+        var sonuc = await client.GetFromJsonAsync<ExerciseProgressResponse>(
+            $"/api/stats/exercises/{exerciseId}/progress", Json);
+
+        var nokta = Assert.Single(sonuc!.Points);
+        Assert.Equal(100m, nokta.TopWeight);
+        Assert.Equal(8, nokta.TopWeightReps);
+        Assert.Equal(1300m, nokta.Volume);
+        Assert.Equal(2, nokta.SetCount);
+        Assert.Equal(124.14m, nokta.EstimatedOneRepMax);
+    }
+
+    [Fact]
+    public async Task Hareket_ilerlemesi_baskasinin_ozel_egzersizinde_404_verir()
+    {
+        var sahip = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(sahip);
+
+        var davetsiz = await AuthenticatedClientAsync();
+        var response = await davetsiz.GetAsync($"/api/stats/exercises/{exerciseId}/progress");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Hareket_ilerlemesi_ters_aralikta_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.GetAsync("/api/stats/exercises/1/progress?from=2026-03-10&to=2026-03-01");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
