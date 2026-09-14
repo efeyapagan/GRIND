@@ -52,7 +52,9 @@ tavanla birlikte kullanılacağı için Brzycki seçildi.
 
 ## Karar 2 — Backend: hareket ilerleme ucu
 
-- `GET /api/stats/exercises/{exerciseId}/progress?From=&To=` (`StatsController`, ince).
+- `GET /api/stats/exercises/{exerciseId}/progress?From=&To=` (`StatsController`, ince). İş mantığı ayrı
+  bir `IExerciseProgressService`'te (SRP; `StatsService`'in kurucusu Export ve AiInsight testlerinde de
+  kullanıldığı için ona dokunulmaz).
   Parametre tipi mevcut `StatsRangeQuery` (TR günü; `from > to` → 400; ikisi de opsiyonel = tüm geçmiş).
 - **Sahiplik (CLAUDE.md IDOR kuralı):** egzersiz `IExerciseRepository.GetVisibleByIdAsync` ile
   (kendi ya da global) çözülür; görünmüyorsa **nötr** `NotFoundException` (404). Arşivlenmiş egzersiz
@@ -142,10 +144,12 @@ Izgara çizgileri, eksen metinleri, "Şu anki"/"Fark" etiketleri ve aralık seç
   tekrar, RIR ve son eklenen durum satırı kaybolmaz.
 - **Odak:** açılınca ağırlık alanına; "Paneli kapat" ile kapanınca "+ Set ekle" düğmesine. İlk
   render'da odak çalınmaz.
-- **Dinlenme sayacı panelden bağımsızlaşır:** durum `AddSetForm`'dan `TodayPage`'e taşınır;
-  `AddSetForm` başarılı gönderimde `onSetEklendi(exerciseId)` bildirir, sayacı `TodayPage` başlatır
-  (süre kuralı dilim 2 Karar 6 aynen). Sayaç satırı alt alanın en üstünde, panel **açık da kapalı da**
-  görünür; canlı bölge tek kalır.
+- **Dinlenme sayacı panel kapalıyken de görünür:** alt alanın tamamı (sayaç satırı + kapalı çubuk ya da
+  açık panel) `AddSetForm`'dadır ve bileşen hiç unmount olmaz; sayaç durumu formda kalır (taşımaya gerek
+  yok — KISS). Sayaç satırı alt alanın en üstünde, panel **açık da kapalı da** görünür; süre kuralı
+  dilim 2 Karar 6 aynen; canlı bölge tek kalır.
+- **Arayüz:** `AddSetForm`'a `acik: boolean` ve `onAcikDegis(acik: boolean)` eklenir; açık/kapalı durumu
+  `TodayPage`'dedir (kart dokunuşu da açtığı için).
 - **Boşluk:** liste alt boşluğu duruma göre (kapalıyken kısa, açıkken bugünkü `pb-72`).
 - Dilim 2'deki diğer panel davranışları (doğrulama, hata, durum satırı, ağ hatası mesajı) değişmez.
 
@@ -187,5 +191,6 @@ limiting; oturum listesi sayfalama.
   görsel doğrulamada görülür.
 - **Panel kapalıyken klavye/ekran okuyucu:** `hidden` içerik erişilebilirlik ağacından çıkar; açma
   düğmesinin `aria-expanded`'ı durumu bildirir.
-- **Hacim tanımının iki uçta aynı kalması:** `history?ExerciseId=` ile ilerleme ucu aynı toplamı
-  vermeli; servis testi aynı veride ikisini karşılaştırır.
+- **Hacim tanımının iki uçta aynı kalması:** `history?ExerciseId=` ile ilerleme ucu aynı tanımı
+  (Σ ağırlık × tekrar, oturum başlangıcına göre aralık) kullanır; ilerleme ucunun servis ve uçtan uca
+  testleri hacmi bu tanıma göre sabitler.
