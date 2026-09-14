@@ -949,6 +949,29 @@ tasarım issue'da ve sohbette onaylandı.
 - Kapalı başlıkta "Şu anki" özeti bilerek yok: özet için isteği yine atmak gerekirdi.
 - Backend değişmedi; yalnızca `HareketGecmisi` ve `TodayPage` testleri, `tsc -b` ve lint koşturuldu.
 
+### İstek #57 — Kaydedilmiş seti düzenleme ve silme (2026-09-14)
+
+Yanlış girilen bir seti düzeltmenin ya da kaldırmanın yolu yoktu. Backend hazırdı (`PATCH`/`DELETE
+/api/sets/{id}`, Faz 8), migration yok. İş akışı: önce testler yazıldı ve kullanıcıya sunuldu, onaydan sonra
+kod yazıldı.
+- Set satırının kendisi dokunulabilir (ayrı "Düzenle" düğmesi yok); dokununca yerinde `SetDuzenleyici` açılır:
+  Ağırlık / Tekrar / RIR dolu, Kaydet, Vazgeç, "Seti sil". Kapanınca odak satıra döner.
+- Silme onaysız ama geri alınabilir ve gecikmeli: satır hemen gizlenir, "Set silindi · Geri al" şeridi çıkar,
+  `DELETE` süre dolunca ya da sayfadan çıkınca gider. Mekanik `lib/gecikmeliSilme` hook'una çıkarıldı ve
+  Geçmiş ekranı (#46) da onu kullanıyor; `tamamla` artık `setState` güncelleyicisinin içinde çağrılmıyor
+  (StrictMode'da çift istek riski).
+- DRY: sayı alanı `ui/SayiAlani`, doğrulama/ayrıştırma `lib/setGirdisi`, tazeleme `setDegistiTazele`
+  (ekleme, düzeltme ve silme ortak).
+- Testler: `SetDuzenleyici` 4, `TodayPage` 3 (komutla sayıldı). Yalnızca değişen dosyalara bağlı web testleri,
+  `tsc -b` ve lint koşturuldu; backend testleri koşturulmadı.
+
+Devreden notlar (bilerek yapılmadı):
+- RIR düzenleyiciyle boşaltılamaz: `PATCH`'te `null` "değiştirme" demek.
+- Geri alma penceresi boyunca "1 / 3 set" sayısı ve "bitir / iptal et" sunucu verisini gösterir, silme bitince
+  güncellenir.
+- Geçmiş ekranındaki setler düzenlenemez; telefonu sallayarak set silmeyi geri alma yok.
+- Geri alma şeridi 5 sn boyunca alttaki set panelinin üstünü örter.
+
 ---
 
 ## Çalışma Kuralı
