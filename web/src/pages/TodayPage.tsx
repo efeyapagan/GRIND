@@ -176,9 +176,10 @@ export default function TodayPage() {
               />
             ) : (
               <>
-                {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9). */}
+                {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9).
+                    `key`: hareket degisince gecmis yeniden kapali baslar (#50). */}
                 {etkinSecim !== null && seciliEgzersizAdi && (
-                  <HareketGecmisi exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
+                  <HareketGecmisi key={etkinSecim} exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
                 )}
                 <SetList sets={setler ?? []} />
               </>
