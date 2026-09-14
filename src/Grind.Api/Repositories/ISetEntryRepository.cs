@@ -92,4 +92,16 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         DateTime? fromUtcInclusive,
         DateTime? toUtcExclusive,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kullanıcının bir egzersize ait, oturumu verilen UTC aralığında BAŞLAMIŞ setleri; oturumuyla
+    /// (<c>StartedAt</c> için) birlikte ve izlemesiz. Hareket ilerleme grafiği (dilim 3) okur. Aralık
+    /// filtresi <see cref="GetInRangeAsync"/> ile aynı yardımcıdan gelir.
+    /// </summary>
+    Task<IReadOnlyList<SetEntry>> GetForExerciseInRangeAsync(
+        long userId,
+        long exerciseId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default);
 }

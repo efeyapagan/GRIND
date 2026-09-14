@@ -123,9 +123,24 @@ public class SetEntryRepository(AppDbContext context)
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SetEntry>> GetForExerciseInRangeAsync(
+        long userId,
+        long exerciseId,
+        DateTime? fromUtcInclusive,
+        DateTime? toUtcExclusive,
+        CancellationToken cancellationToken = default)
+        => await FilterBySessionRange(userId, fromUtcInclusive, toUtcExclusive)
+            .AsNoTracking()
+            .Where(s => s.ExerciseId == exerciseId)
+            .Include(s => s.WorkoutSession)
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .ToListAsync(cancellationToken);
+
     /// <summary>
-    /// Kullanıcının, oturumu verilen UTC aralığında BAŞLAMIŞ setleri. Egzersiz hacmi (Faz 9) ve
-    /// export (Faz 11) aynı filtreyi paylaşır: iki kopya bir gün sessizce ayrışırdı.
+    /// Kullanıcının, oturumu verilen UTC aralığında BAŞLAMIŞ setleri. Egzersiz hacmi (Faz 9), export
+    /// (Faz 11) ve hareket ilerlemesi (dilim 3) aynı filtreyi paylaşır: iki kopya bir gün sessizce
+    /// ayrışırdı.
     /// </summary>
     private IQueryable<SetEntry> FilterBySessionRange(
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive)
