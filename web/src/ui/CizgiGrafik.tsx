@@ -98,17 +98,25 @@ function Cizim({ noktalar, birim, baslik }: Props) {
               </text>
             </g>
           ))}
-          {tarihSiralari.map((sira) => (
-            <text
-              key={`tarih-${sira}`}
-              x={xKonumu(sira)}
-              y={YUKSEKLIK - 6}
-              textAnchor="middle"
-              className="fill-muted text-label"
-            >
-              {noktalar[sira].etiket}
-            </text>
-          ))}
+          {tarihSiralari.map((sira, index) => {
+            // M2 (review bulgusu): tek etiket ORTALI kalir; birden fazla etiket varken ILK etiket
+            // SVG'nin sol kenarindan, SON etiket sag kenarindan tasmasin diye sirasiyla "start" ve
+            // "end" hizalanir (aradaki -- varsa -- "middle" kalir).
+            const sonIndeks = tarihSiralari.length - 1;
+            const hizalama: 'start' | 'middle' | 'end' =
+              tarihSiralari.length === 1 ? 'middle' : index === 0 ? 'start' : index === sonIndeks ? 'end' : 'middle';
+            return (
+              <text
+                key={`tarih-${sira}`}
+                x={xKonumu(sira)}
+                y={YUKSEKLIK - 6}
+                textAnchor={hizalama}
+                className="fill-muted text-label"
+              >
+                {noktalar[sira].etiket}
+              </text>
+            );
+          })}
           {noktalar.length > 1 && <path d={alan} fill={`url(#${degradeId})`} />}
           {noktalar.length > 1 && (
             <path d={cizgi} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinejoin="round" />

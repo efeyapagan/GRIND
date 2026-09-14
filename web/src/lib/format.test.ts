@@ -55,6 +55,9 @@ test('trBugundenOnce TR gununden geriye sayar ve gun sinirini TR saatine gore ge
 
 test('formatAralik ilk ve son TR gununu yil ile yazar', () => {
   expect(formatAralik('2026-08-25T08:00:00Z', '2026-09-10T08:00:00Z')).toBe('25 Ağu – 10 Eyl 2026');
+  // M1 (review bulgusu): yillar FARKLIYSA ("2027" yalnizca sonda yazilirsa ilk tarihin de 2027'de
+  // oldugu sanilir) ilk tarih de kendi yiliyla yazilir.
+  expect(formatAralik('2026-12-20T08:00:00Z', '2027-01-05T08:00:00Z')).toBe('20 Ara 2026 – 5 Oca 2027');
 });
 
 test('formatFark isaretli ve TR ondalikli yazar', () => {

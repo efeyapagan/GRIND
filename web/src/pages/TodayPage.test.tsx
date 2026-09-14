@@ -915,6 +915,9 @@ test('hareket kartina dokunmak hareketi secer ve set panelini acar', async () =>
 
   expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
   expect(screen.getByLabelText('Egzersiz')).toHaveValue('2');
+  // I2 (review bulgusu): karta dokunarak acilan panelde odak agirlik alanina TASINMAZ -- aksi
+  // halde telefon klavyesi acilir ve kartin az once ortaya cikardigi grafigi ortar.
+  expect(screen.getByLabelText('Ağırlık (kg)')).not.toHaveFocus();
 });
 
 test('set eklendikten sonra panel acik kalir', async () => {

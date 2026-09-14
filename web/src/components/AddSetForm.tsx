@@ -138,8 +138,14 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   const agirlikRef = useRef<HTMLInputElement>(null);
   const acmaDugmesiRef = useRef<HTMLButtonElement>(null);
 
+  // I2 (review bulgusu): panel "+ Set ekle" DUGMESIYLE acildiginda odak agirlik alanina tasinir,
+  // ama bir hareket kartina dokunarak acildiginda TASINMAZ -- aksi halde telefon klavyesi acilir ve
+  // kartin az once ortaya cikardigi grafigi ortar. Bu bayrak acma dugmesinin onClick'inde true'ya
+  // set edilir; asagidaki efekt onu TUKETIR (okuyup sifirlar).
+  const acButonuylaAcildiRef = useRef(false);
+
   // Odak yalnizca durum GERCEKTEN degistiginde tasinir (ilk render'da ve StrictMode'un cift efektinde
-  // calinmaz): acilinca agirlik alanina, kapaninca "Set ekle" dugmesine.
+  // calinmaz): acilinca (ve yalniz dugmeyle acildiysa) agirlik alanina, kapaninca "Set ekle" dugmesine.
   const oncekiAcik = useRef(acik);
   useEffect(() => {
     if (oncekiAcik.current === acik) {
@@ -147,7 +153,10 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     }
     oncekiAcik.current = acik;
     if (acik) {
-      agirlikRef.current?.focus();
+      if (acButonuylaAcildiRef.current) {
+        agirlikRef.current?.focus();
+      }
+      acButonuylaAcildiRef.current = false;
     } else {
       acmaDugmesiRef.current?.focus();
     }
@@ -247,14 +256,21 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
         if (acikOturum) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(acikOturum.id) });
         }
+        // M7 (review bulgusu): ayni sebeple secili hareketin grafigi de bayat kalabilir -- set
+        // gercekte kaydedilmisse grafikte gorunmeli. `egzersizId` burada `null` OLAMAZ, fonksiyonun
+        // basinda erken donus var.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(egzersizId) });
       }
       // Form icerigi BILEREK temizlenmiyor -- kullanici hatayi duzeltip tekrar denemeli.
     }
   }
 
   return (
-    // Alt alan sekme cubugunun HEMEN ustunde sabit: 4rem = sekme cubugu yuksekligi (h-16).
-    <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2">
+    // I1 (review bulgusu): `fixed` yerine `sticky` -- TodayPage'in koku bu bilesenin son cocugu
+    // ve `mt-auto` tasir; boylece bu alan kendi akis icinde gercek yukseklik kaplar (dinlenme
+    // sayaci acikken buyuyen satir dahil) ve altindaki listenin son satirini bir daha ORTMEZ.
+    // 4rem = sekme cubugu yuksekligi (App.tsx h-16); `px-4` YOK -- `main` zaten `px-4 max-w-md`.
+    <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl">
         <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
         {!acik && (
@@ -263,7 +279,11 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
             yukseklik="normal"
             aria-expanded={false}
             aria-controls={PANEL_ID}
-            onClick={() => onAcikDegis(true)}
+            onClick={() => {
+              // I2: yalniz bu dugmeyle acilinca odak agirlik alanina tasinsin (bkz. yukaridaki ref).
+              acButonuylaAcildiRef.current = true;
+              onAcikDegis(true);
+            }}
           >
             <Plus aria-hidden size={20} />
             Set ekle

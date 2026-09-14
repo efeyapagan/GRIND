@@ -6,7 +6,10 @@ export function eksenDegerleri(enKucuk: number, enBuyuk: number, adimSayisi = 4)
   const hamAdim =
     enBuyuk > enKucuk ? (enBuyuk - enKucuk) / adimSayisi : Math.max(Math.abs(enBuyuk), 1) / adimSayisi;
   const us = 10 ** Math.floor(Math.log10(hamAdim));
-  const adim = [1, 2, 2.5, 5, 10].map((carpan) => carpan * us).find((aday) => aday >= hamAdim) ?? 10 * us;
+  const adayAdim = [1, 2, 2.5, 5, 10].map((carpan) => carpan * us).find((aday) => aday >= hamAdim) ?? 10 * us;
+  // Cok yakin degerlerde (orn. 124.14 / 124.15) "guzel adim" secimi neredeyse 0'a duser ve
+  // bicimlenmis etiketler tekrar eder (review bulgusu M3) -- adim 0,5 kg altina inmez.
+  const adim = Math.max(adayAdim, 0.5);
   const alt = Math.floor(enKucuk / adim) * adim;
   const hamUst = Math.ceil(enBuyuk / adim) * adim;
   const ust = hamUst === alt ? alt + adim : hamUst;

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from './client';
 import { trBugundenOnce } from '../lib/format';
 import { ApiError } from './problem';
@@ -352,6 +352,18 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
 const ARALIK_GUNLERI: Record<IlerlemeAraligi, number | null> = { '1a': 30, '3a': 90, tum: null };
 
 /**
+ * `points` schema.d.ts'te optional (Swashbuckle bunu required isaretlemedi) ama sunucu HER ZAMAN
+ * doldurur -- diger `dogrulanmis*` fonksiyonlariyla ayni desen: eksik gelirse `?? []` ile sessizce
+ * yutmak yerine acikca hata firlatilir (review bulgusu M6).
+ */
+function dogrulanmisHareketIlerlemesi(yanit: ExerciseProgressResponse): IlerlemeNoktasi[] {
+  if (yanit.points === undefined || yanit.points === null) {
+    throw new Error('Sunucudan eksik hareket ilerlemesi yaniti alindi.');
+  }
+  return yanit.points.map(dogrulanmisIlerlemeNoktasi);
+}
+
+/**
  * Hareket ilerleme grafiginin verisi (dilim 3 spec Karar 2 ve 5), eskiden yeniye. En agir set, hacim
  * ve tahmini 1RM SUNUCUDAN gelir; istemci yalnizca araligin baslangic gununu (TR) hesaplar.
  */
@@ -362,8 +374,11 @@ export function useExerciseProgress(exerciseId: number, aralik: IlerlemeAraligi)
       const gun = ARALIK_GUNLERI[aralik];
       const sorgu = gun === null ? '' : `?From=${trBugundenOnce(gun)}`;
       const yanit = await request<ExerciseProgressResponse>(`/stats/exercises/${exerciseId}/progress${sorgu}`);
-      return (yanit.points ?? []).map(dogrulanmisIlerlemeNoktasi);
+      return dogrulanmisHareketIlerlemesi(yanit);
     },
+    // M5 (review bulgusu): aralik degisince (1 Ay -> 3 Ay gibi) onceki noktalar yeni veri gelene
+    // kadar EKRANDA KALIR -- aksi halde kisa bir "Yükleniyor..." yanip grafik cokup tekrar acilir.
+    placeholderData: keepPreviousData,
   });
 }
 

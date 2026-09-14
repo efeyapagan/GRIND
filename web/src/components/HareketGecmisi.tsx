@@ -33,6 +33,11 @@ const ARALIKLAR: { anahtar: IlerlemeAraligi; etiket: string }[] = [
 const DEGER_ETIKETI = 'text-label text-muted';
 const DEGER = 'text-metric tabular-nums';
 
+/** Sekme dugmesinin id'si -- tabpanel'in `aria-labelledby`si bunu hedef alir (M4). */
+function sekmeId(exerciseId: number, anahtar: SekmeAnahtari): string {
+  return `hareket-sekme-${exerciseId}-${anahtar}`;
+}
+
 interface Props {
   exerciseId: number;
   exerciseName: string;
@@ -114,6 +119,7 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
           return (
             <button
               key={aday.anahtar}
+              id={sekmeId(exerciseId, aday.anahtar)}
               type="button"
               role="tab"
               aria-selected={secili}
@@ -128,7 +134,10 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
           );
         })}
       </div>
-      <div id={panelId} role="tabpanel" aria-label={sekme.etiket} className="flex flex-col gap-2">
+      {/* M4 (review bulgusu): tabpanel'in erisilebilir adi artik SECILI sekmenin id'sine baglanir
+          (aria-labelledby) -- sabit bir aria-label yerine, hangi sekmenin acik oldugunu dogru
+          bildirir (WAI-ARIA tabs deseni). */}
+      <div id={panelId} role="tabpanel" aria-labelledby={sekmeId(exerciseId, sekmeAnahtari)} className="flex flex-col gap-2">
         {icerik}
       </div>
       <div className="flex gap-1 rounded-lg bg-surface-2 p-1">

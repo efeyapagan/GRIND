@@ -61,9 +61,17 @@ export function trBugundenOnce(gun: number, simdi: Date = new Date()): string {
   return `${yil}-${ay}-${ayinGunu}`;
 }
 
-/** Grafik araligi metni: "25 Ağu – 10 Eyl 2026" (yil, son tarihin TR yili). */
+/**
+ * Grafik araligi metni: "25 Ağu – 10 Eyl 2026". Ilk ve son tarih AYNI TR yilindaysa yil yalnizca
+ * sonda yazilir; FARKLI yillardaysa (ör. yil sonunu asan bir aralik) M1 (review bulgusu) geregi ilk
+ * tarihe de kendi yili eklenir -- aksi halde "20 Ara – 5 Oca 2027" okuyucuya iki tarihin de 2027'de
+ * oldugunu dusundurur.
+ */
 export function formatAralik(ilkIso: string, sonIso: string): string {
-  return `${formatKisaTarih(ilkIso)} – ${formatKisaTarih(sonIso)} ${tarihParcalariniAl(sonIso).yil}`;
+  const ilkYil = tarihParcalariniAl(ilkIso).yil;
+  const sonYil = tarihParcalariniAl(sonIso).yil;
+  const ilkMetin = ilkYil === sonYil ? formatKisaTarih(ilkIso) : `${formatKisaTarih(ilkIso)} ${ilkYil}`;
+  return `${ilkMetin} – ${formatKisaTarih(sonIso)} ${sonYil}`;
 }
 
 /** Isaretli fark: "+2,5", "−32,5" (U+2212 eksi isareti), "0". */

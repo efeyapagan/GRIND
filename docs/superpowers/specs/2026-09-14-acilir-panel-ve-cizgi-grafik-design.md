@@ -142,8 +142,10 @@ Izgara çizgileri, eksen metinleri, "Şu anki"/"Fark" etiketleri ve aralık seç
   dilim 1 Karar 6). Başarılı şablon başlatma paneli açmaz.
 - **Durum korunur:** panel kapanınca form DOM'dan kaldırılmaz, `hidden` ile gizlenir — yazılmış ağırlık,
   tekrar, RIR ve son eklenen durum satırı kaybolmaz.
-- **Odak:** açılınca ağırlık alanına; "Paneli kapat" ile kapanınca "+ Set ekle" düğmesine. İlk
-  render'da odak çalınmaz.
+- **Odak (final inceleme I2 ile güncellendi):** yalnızca **"+ Set ekle" düğmesiyle** açılınca ağırlık
+  alanına taşınır — bir hareket kartına dokunarak açılışta odak TAŞINMAZ (aksi halde telefon
+  klavyesi açılıp kartın az önce ortaya çıkardığı grafiği örter); "Paneli kapat" ile kapanınca odak
+  "+ Set ekle" düğmesine döner. İlk render'da odak çalınmaz.
 - **Dinlenme sayacı panel kapalıyken de görünür:** alt alanın tamamı (sayaç satırı + kapalı çubuk ya da
   açık panel) `AddSetForm`'dadır ve bileşen hiç unmount olmaz; sayaç durumu formda kalır (taşımaya gerek
   yok — KISS). Sayaç satırı alt alanın en üstünde, panel **açık da kapalı da** görünür; süre kuralı

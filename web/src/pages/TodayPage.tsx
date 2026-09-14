@@ -28,8 +28,10 @@ const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uy
  * sonrakine ATLAMAZ; sablonsuz bir oturum (bos durumdan ilk set ile acilan) secimi SIFIRLAMAZ --
  * kullanicinin panelde yaptigi secim korunur. Render sirasinda kosullu set (efekt yok).
  *
- * Alt bosluk panel durumuna gore: acikken `pb-72` (panel ~240 px), kapaliyken `pb-28` (dinlenme satiri
- * + 'Set ekle' dugmesi); son satir ortulmesin.
+ * Alt alan (AddSetForm) artik `fixed` DEGIL, kendi akis icinde `sticky` (review bulgusu I1 --
+ * `fixed` icerigin altini sabit bir yukseklikte ortuyordu, dinlenme sayaci acikken bu yukseklik
+ * degistigi icin liste kismen ortuluyordu). Kok `div`e minimum yukseklik verilir ki icerik kisa
+ * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
 export default function TodayPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
@@ -98,7 +100,10 @@ export default function TodayPage() {
   }
 
   return (
-    <div className={`flex flex-col gap-5 pt-2 ${panelAcik ? 'pb-72' : 'pb-28'}`}>
+    // 8rem = ust baslik + alt sekme cubugu yuksekligi (App.tsx'teki iki h-16); min-height sayesinde
+    // icerik kisa olsa da bu kok en az bastan-nav'a kadarki alani kaplar, boylece asagidaki AddSetForm
+    // (`mt-auto` + `sticky`) her zaman sekme cubugunun hemen ustunde kalir (review bulgusu I1).
+    <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-title">Bugün</h1>
