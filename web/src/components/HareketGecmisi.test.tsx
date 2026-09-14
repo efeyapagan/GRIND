@@ -7,6 +7,7 @@ import HareketGecmisi from './HareketGecmisi';
 import type { components } from '../api/schema';
 
 type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPointResponse'];
+type Kullanici = ReturnType<typeof userEvent.setup>;
 
 function gecmisiOlustur() {
   const istemci = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -15,6 +16,11 @@ function gecmisiOlustur() {
       <HareketGecmisi exerciseId={1} exerciseName="Bench Press" />
     </QueryClientProvider>,
   );
+}
+
+/** Grafik varsayilan olarak kapalidir (#50); testler once "Geçmiş" basligina dokunur. */
+async function grafigiAc(kullanici: Kullanici) {
+  await kullanici.click(screen.getByText('Geçmiş'));
 }
 
 function nokta(
@@ -69,9 +75,34 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+test('kapali baslar ve istek atmaz; basliga dokununca acilip ister, tekrar dokununca kapanir', async () => {
+  const aramalar = sunucuyuKur(NOKTALAR);
+  const kullanici = userEvent.setup();
+  gecmisiOlustur();
+
+  const baslik = screen.getByText('Geçmiş');
+  expect(baslik.closest('details')).not.toHaveAttribute('open');
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '1 Ay' })).not.toBeInTheDocument();
+  expect(aramalar).toHaveLength(0);
+
+  await grafigiAc(kullanici);
+
+  expect(await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' })).toBeInTheDocument();
+  expect(baslik.closest('details')).toHaveAttribute('open');
+  expect(aramalar).toHaveLength(1);
+
+  await kullanici.click(baslik);
+
+  expect(baslik.closest('details')).not.toHaveAttribute('open');
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+});
+
 test('varsayilan Agirlik sekmesi ve 1 Ay: From ile ister, en agir setleri cizer, Su anki ve Fark gosterir', async () => {
   const aramalar = sunucuyuKur(NOKTALAR);
+  const kullanici = userEvent.setup();
   gecmisiOlustur();
+  await grafigiAc(kullanici);
 
   expect(await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' })).toBeInTheDocument();
   expect(aramalar[0].pathname).toBe('/api/stats/exercises/1/progress');
@@ -88,6 +119,7 @@ test('Antrenman ve Tahmini 1RM sekmeleri sunucu degerlerine gecer; 1RM olmayan n
   sunucuyuKur(NOKTALAR);
   const kullanici = userEvent.setup();
   gecmisiOlustur();
+  await grafigiAc(kullanici);
 
   await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' });
   await kullanici.click(screen.getByRole('tab', { name: 'Antrenman' }));
@@ -105,6 +137,7 @@ test('Tum araliginda From gonderilmez; bos sonucta aralik ve ilk antrenman metin
   const aramalar = sunucuyuKur([]);
   const kullanici = userEvent.setup();
   gecmisiOlustur();
+  await grafigiAc(kullanici);
 
   expect(await screen.findByText('Bu aralıkta kayıt yok')).toBeInTheDocument();
 
@@ -118,6 +151,7 @@ test('hicbir noktada tahmini 1RM yoksa aciklama metni gorunur', async () => {
   sunucuyuKur([nokta(3, '2026-09-10T08:00:00Z', 0, 0, null)]);
   const kullanici = userEvent.setup();
   gecmisiOlustur();
+  await grafigiAc(kullanici);
 
   await screen.findByRole('img', { name: 'Bench Press ağırlık, 1 antrenman' });
   await kullanici.click(screen.getByRole('tab', { name: 'Tahmini 1RM' }));
@@ -132,7 +166,9 @@ test('istek basarisizsa hata duyurulur', async () => {
       HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 }),
     ),
   );
+  const kullanici = userEvent.setup();
   gecmisiOlustur();
+  await grafigiAc(kullanici);
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Geçmiş alınamadı.');
 });
