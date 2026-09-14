@@ -59,9 +59,9 @@ test('yeni sablon hareketleri sirayla plannedSets ve restSeconds ile gonderir; a
   await kullanici.click(ekle);
   await kullanici.click(ekle);
 
-  // Yeni satir henuz secilmemis ilk (alfabetik) egzersizi alir.
-  expect(screen.getByLabelText('1. hareket: Egzersiz')).toHaveValue('1');
-  expect(screen.getByLabelText('2. hareket: Egzersiz')).toHaveValue('3');
+  // Yeni satir henuz secilmemis ilk (alfabetik) egzersizi alir. Secici artik id degil AD gosterir.
+  expect(screen.getByLabelText('1. hareket: Egzersiz')).toHaveValue('Bench Press');
+  expect(screen.getByLabelText('2. hareket: Egzersiz')).toHaveValue('Deadlift');
 
   await kullanici.clear(screen.getByLabelText('1. hareket: Hedef set'));
   await kullanici.type(screen.getByLabelText('1. hareket: Hedef set'), '4');
@@ -88,11 +88,24 @@ test('ayni egzersiz ikinci satirda secilemez', async () => {
   await kullanici.click(ekle);
   await kullanici.click(ekle);
 
-  const ikinciSatir = screen.getByLabelText('2. hareket: Egzersiz');
-  expect(within(ikinciSatir).getByRole('option', { name: 'Bench Press' })).toBeDisabled();
-  expect(within(ikinciSatir).getByRole('option', { name: 'Squat' })).toBeEnabled();
-  const ilkSatir = screen.getByLabelText('1. hareket: Egzersiz');
-  expect(within(ilkSatir).getByRole('option', { name: 'Deadlift' })).toBeDisabled();
+  // Secenekler yalnizca secici ACIKKEN vardir; liste secicinin kendi `aria-controls`u ile bulunur.
+  await kullanici.click(screen.getByLabelText('2. hareket: Egzersiz'));
+  const ikinciListe = screen.getByRole('listbox');
+  expect(within(ikinciListe).getByRole('option', { name: 'Bench Press' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  expect(within(ikinciListe).getByRole('option', { name: 'Squat' })).toHaveAttribute(
+    'aria-disabled',
+    'false',
+  );
+
+  await kullanici.click(screen.getByLabelText('1. hareket: Egzersiz'));
+  const ilkListe = screen.getByRole('listbox');
+  expect(within(ilkListe).getByRole('option', { name: 'Deadlift' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
 });
 
 test('ayni adli sablon icin sunucunun 409 mesaji gosterilir', async () => {
@@ -172,7 +185,8 @@ test('mevcut sablon yuklenir: arsivli hareket hapi ve listede olmayan dinlenme d
 
   expect(await screen.findByDisplayValue('Push Day')).toBeInTheDocument();
   expect(screen.getByText('Artık kullanılmıyor')).toBeInTheDocument();
-  expect(screen.getByLabelText('1. hareket: Egzersiz')).toHaveValue('9');
+  // Arsivli hareket secim listesinde YOK ama satirda kalir: secicide adiyla gorunmeye devam eder.
+  expect(screen.getByLabelText('1. hareket: Egzersiz')).toHaveValue('Eski Hareket');
   expect(screen.getByLabelText('1. hareket: Dinlenme')).toHaveValue('45');
   expect(screen.getByLabelText('2. hareket: Dinlenme')).toHaveValue('120');
 
