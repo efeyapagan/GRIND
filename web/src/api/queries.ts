@@ -63,7 +63,8 @@ export const queryKeys = {
 export interface HareketIlerlemesi {
   exerciseId: number;
   exerciseName: string;
-  plannedSets: number;
+  // null = hedefsiz: antrenmana sonradan eklenen ya da sablon disi set girilen hareket (#62).
+  plannedSets: number | null;
   completedSets: number;
   restSeconds: number;
 }
@@ -114,6 +115,7 @@ function dogrulanmisIlerleme(yanit: SessionProgressResponse): HareketIlerlemesi 
   return {
     exerciseId: yanit.exerciseId,
     exerciseName: yanit.exerciseName,
+    // `undefined` eksik yanittir (yukarida reddedilir); `null` gecerlidir: hedefsiz hareket.
     plannedSets: yanit.plannedSets,
     completedSets: yanit.completedSets,
     restSeconds: yanit.restSeconds,
@@ -508,6 +510,38 @@ export function useFinishSession() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
     },
   });
+}
+
+/**
+ * `POST /api/sessions/{id}/exercises` (#62): hareketi antrenmanin sonuna hedefsiz ekler. Yanit guncel
+ * oturumdur; yeni kart beklemeden gorunsun diye acik oturum onbellege dogrudan yazilir, sonra yine
+ * sunucudan tazelenir.
+ */
+export function useAddSessionExercise() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sessionId, exerciseId }: { sessionId: number; exerciseId: number }): Promise<AcikOturum> => {
+      const yanit = await request<SessionResponse>(`/sessions/${sessionId}/exercises`, {
+        method: 'POST',
+        body: JSON.stringify({ exerciseId }),
+      });
+      return dogrulanmisOturum(yanit);
+    },
+    onSuccess: (oturum) => {
+      queryClient.setQueryData(queryKeys.openSession, oturum);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+/**
+ * `DELETE /api/sessions/{id}/exercises/{exerciseId}` (#60), govdesiz 204: hareket ve bu antrenmandaki
+ * setleri gider. Hook degil duz fonksiyon: geri alma penceresi acikken sayfadan cikilirsa bilesen
+ * kaldirildiktan sonra tamamlanir (bkz. `setiSil`). Sonrasinda `setDegistiTazele` yeterlidir.
+ */
+export async function hareketiKaldir(sessionId: number, exerciseId: number): Promise<void> {
+  await request<void>(`/sessions/${sessionId}/exercises/${exerciseId}`, { method: 'DELETE' });
 }
 
 /** `DELETE /api/sessions/{id}`. Oturumu ve setlerini siler (Faz 7), govdesiz 204 doner. */

@@ -17,6 +17,7 @@ public class WorkoutSession
 
     public User User { get; set; } = null!;
     public WorkoutTemplate? Template { get; set; }
+    public ICollection<SessionExercise> SessionExercises { get; set; } = [];
     public ICollection<SetEntry> SetEntries { get; set; } = [];
     public ICollection<AiInsight> AiInsights { get; set; } = [];
 }

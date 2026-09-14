@@ -2,8 +2,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, Dumbbell, X } from 'lucide-react';
 import {
+  hareketiKaldir,
   setDegistiTazele,
   setiSil,
+  useAddSessionExercise,
   useDeleteSession,
   useExercises,
   useFinishSession,
@@ -27,10 +29,17 @@ import TurEtiketi from '../ui/TurEtiketi';
 
 const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
+/** Geri alma penceresinde bekleyen hareket kaldirma (#60): hangi antrenmandan hangi hareket. */
+interface BekleyenHareket {
+  sessionId: number;
+  exerciseId: number;
+}
+
 /**
- * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablonluysa sablon adi ve hareket kartlari,
- * degilse gruplu set listesi; yoksa bos durum + "Sablonla basla". Set ekleme paneli HER DURUMDA
- * render edilir: ilk set sunucu tarafinda sablonsuz oturumu kendiliginden acar.
+ * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi
+ * bos eski bir oturumda gruplu set listesi; oturum yoksa bos durum + "Sablonla basla". Alt alan
+ * (AddSetForm) HER DURUMDA render edilir: antrenman yokken set paneli (ilk set sunucuda oturumu acar),
+ * acik antrenmanda "Hareket ekle" (#62).
  *
  * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
@@ -38,8 +47,10 @@ const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uy
  * gorununce (id, varsayilanin en son uygulandigi oturumdan FARKLIYSA) secim o oturumun varsayilanina
  * SIFIRLANIR -- aksi halde onceki oturumdan kalma bir secim (orn. Bench Press) yeni sablonda hic
  * olmayabilir (review bulgusu I1). Ayni oturum icinde ise hareket tamamlaninca secim kendiliginden
- * sonrakine ATLAMAZ; sablonsuz bir oturum (bos durumdan ilk set ile acilan) secimi SIFIRLAMAZ --
- * kullanicinin panelde yaptigi secim korunur. Render sirasinda kosullu set (efekt yok).
+ * sonrakine ATLAMAZ. Render sirasinda kosullu set (efekt yok).
+ *
+ * Set silme (#57) ve hareket kaldirma (#60) geri alinabilir ve GECIKMELIDIR (`lib/gecikmeliSilme`).
+ * Ekranda TEK geri alma seridi olur: biri baslayinca digerinin bekleyeni hemen tamamlanir.
  *
  * Alt alan (AddSetForm) artik `fixed` DEGIL, kendi akis icinde `sticky` (review bulgusu I1 --
  * `fixed` icerigin altini sabit bir yukseklikte ortuyordu, dinlenme sayaci acikken bu yukseklik
@@ -63,12 +74,12 @@ export default function TodayPage() {
   const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
   const iptalMutasyonu = useDeleteSession();
+  const hareketEkleMutasyonu = useAddSessionExercise();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
 
-  // Issue #57: set silme geri alinabilir ve GECIKMELIDIR (Gecmis ekraniyla ortak hook). Bekleyen set
-  // listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal et" karari ise sunucu verisinden
-  // gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz, DELETE sonrasi tazelemeyle guncellenir.
+  // Issue #57: set silme. Bekleyen set listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal
+  // et" karari sunucu verisinden gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz.
   const queryClient = useQueryClient();
   const setSilmeyiTamamla = useCallback(
     (kayit: SetKaydi) => {
@@ -82,21 +93,36 @@ export default function TodayPage() {
     [queryClient],
   );
   const setSilme = useGecikmeliSilme(setSilmeyiTamamla);
-  const gorunenSetler = (setler ?? []).filter((kayit) => kayit.id !== setSilme.bekleyen?.id);
 
+  // Issue #60: hareket kaldirma. Bekleyen hareketin karti ve setleri hemen gizlenir. Bekleyen oge
+  // antrenman id'sini de tasir ki tamamlayici kararli kalsin (bkz. useGecikmeliSilme).
+  const hareketKaldirmayiTamamla = useCallback(
+    ({ sessionId, exerciseId }: BekleyenHareket) => {
+      void hareketiKaldir(sessionId, exerciseId).then(
+        () => setDegistiTazele(queryClient, { sessionId, exerciseId }),
+        () => undefined,
+      );
+    },
+    [queryClient],
+  );
+  const hareketKaldirma = useGecikmeliSilme(hareketKaldirmayiTamamla);
+  const kaldirilanHareketId = hareketKaldirma.bekleyen?.exerciseId;
+
+  const gorunenSetler = (setler ?? []).filter(
+    (kayit) => kayit.id !== setSilme.bekleyen?.id && kayit.exerciseId !== kaldirilanHareketId,
+  );
   const ilerleme = gorunenOturum?.progress ?? [];
+  const gorunenIlerleme = ilerleme.filter((hareket) => hareket.exerciseId !== kaldirilanHareketId);
+
   // F1 (review bulgusu): `progress` arsivlenmis bir hareketi icerebilir ama GET /api/exercises
-  // onu DONDURMEZ -- varsayilan (ya da bir kart dokunusu) boyle bir id'ye SAPLANIRSA, AddSetForm'daki
-  // kontrollu <select>de karsilik gelen bir <option> olmaz ve secim gecersiz kalir. Bu yuzden
-  // secilebilirlik SADECE yuklenmis egzersiz listesine gore belirlenir.
+  // onu DONDURMEZ -- varsayilan (ya da bir kart dokunusu) boyle bir id'ye SAPLANIRSA panel gecersiz
+  // bir harekete kalir. Bu yuzden secilebilirlik SADECE yuklenmis egzersiz listesine gore belirlenir.
   const secilebilirIdler = useMemo(() => new Set((egzersizler ?? []).map((eg) => eg.id)), [egzersizler]);
-  // Egzersiz listesi henuz yuklenmediyse dogrulanamayan bir varsayilan SAPLANMAZ (asagidaki pinleme
-  // effekti egzersizler gelene kadar bekler).
-  const sablonVarsayilani = egzersizler ? varsayilanHareket(ilerleme, secilebilirIdler) : null;
+  // Egzersiz listesi henuz yuklenmediyse dogrulanamayan bir varsayilan SAPLANMAZ.
+  const sablonVarsayilani = egzersizler ? varsayilanHareket(gorunenIlerleme, secilebilirIdler) : null;
   const [secim, setSecim] = useState<number | null>(null);
-  // Sablonlu oturumun kimligi degisince (yeni bir sablonla baslatilinca) secim o oturumun
-  // varsayilanina sifirlanir; sablonsuz bir oturum (id null gibi degil, ilerleme BOS) bu
-  // sifirlamayi TETIKLEMEZ -- kullanicinin bos durumdan yaptigi panel secimi korunur (I1).
+  // Hareket listesi olan oturumun kimligi degisince (yeni bir sablonla baslatilinca) secim o oturumun
+  // varsayilanina sifirlanir (I1).
   const sablonluOturumId = gorunenOturum && ilerleme.length > 0 ? gorunenOturum.id : null;
   const [varsayilanUygulananOturum, setVarsayilanUygulananOturum] = useState<number | null>(null);
   if (egzersizler && sablonluOturumId !== null && sablonluOturumId !== varsayilanUygulananOturum) {
@@ -105,6 +131,11 @@ export default function TodayPage() {
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
   const seciliEgzersizAdi = egzersizler?.find((eg) => eg.id === etkinSecim)?.name ?? null;
+
+  // #62: "Hareket ekle" seçicisi yalnizca antrenmanda OLMAYAN hareketleri listeler. Kaldirilmayi bekleyen
+  // hareket de listede sayilir: DELETE gitmeden yeniden eklemek sunucuda 409 olurdu.
+  const antrenmandakiIdler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
+  const eklenebilirEgzersizler = adaGoreSirala(egzersizler ?? []).filter((eg) => !antrenmandakiIdler.has(eg.id));
 
   // Bir kart (ya da panel <select>'i) arsivlenmis/listede olmayan bir hareketi secmeye calisirsa
   // yoksayilir (F1) -- gecerli tek secim kaynagi yuklenmis egzersiz listesidir.
@@ -120,6 +151,35 @@ export default function TodayPage() {
   function kartSec(exerciseId: number) {
     if (secimYap(exerciseId)) {
       setPanelAcik(true);
+    }
+  }
+
+  function hareketEkle(exerciseId: number) {
+    if (!gorunenOturum) {
+      return;
+    }
+    hareketEkleMutasyonu.mutate(
+      { sessionId: gorunenOturum.id, exerciseId },
+      // Eklenen kart secili gelir; set eklemek icin ona dokunmak yeter.
+      { onSuccess: () => setSecim(exerciseId) },
+    );
+  }
+
+  function setiSilmeyeBasla(kayit: SetKaydi) {
+    hareketKaldirma.sureDoldu();
+    setSilme.baslat(kayit);
+  }
+
+  function hareketiKaldirmayaBasla(exerciseId: number) {
+    if (!gorunenOturum) {
+      return;
+    }
+    setSilme.sureDoldu();
+    hareketKaldirma.baslat({ sessionId: gorunenOturum.id, exerciseId });
+    // Kaldirilan hareket secili kalmasin: panel kapanir, secim kalan kartlarin varsayilanina duser.
+    if (etkinSecim === exerciseId) {
+      setSecim(null);
+      setPanelAcik(false);
     }
   }
 
@@ -201,6 +261,11 @@ export default function TodayPage() {
             Antrenman iptal edilemedi. Lütfen tekrar deneyin.
           </p>
         )}
+        {hareketEkleMutasyonu.isError && (
+          <p role="alert" className="text-label text-danger">
+            Hareket eklenemedi. Lütfen tekrar deneyin.
+          </p>
+        )}
         {/* F2 (review bulgusu): canli bolge HER ZAMAN monte edilir -- metniyle BIRLIKTE eklenirse
             bazi ekran okuyucular sonradan gelen bir canli bolgeyi atlar. Bos oldugunda gorsel olarak
             bos kalir. */}
@@ -229,20 +294,22 @@ export default function TodayPage() {
             !setlerHataliMi &&
             (ilerleme.length > 0 ? (
               <HareketKartlari
-                ilerleme={ilerleme}
+                ilerleme={gorunenIlerleme}
                 setler={gorunenSetler}
                 secilenId={etkinSecim}
                 onSec={kartSec}
-                onSetSil={setSilme.baslat}
+                onSetSil={setiSilmeyeBasla}
+                onHareketKaldir={hareketiKaldirmayaBasla}
               />
             ) : (
               <>
-                {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9).
-                    `key`: hareket degisince gecmis yeniden kapali baslar (#50). */}
+                {/* Hareket listesi bos eski bir oturumda (#60/#62 migration'indan once acilmis) panelde
+                    secili hareketin gecmisi, set listesinin USTUNDE (Karar 9). `key`: hareket degisince
+                    gecmis yeniden kapali baslar (#50). */}
                 {etkinSecim !== null && seciliEgzersizAdi && (
                   <HareketGecmisi key={etkinSecim} exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
                 )}
-                <SetList sets={gorunenSetler} onSetSil={setSilme.baslat} />
+                <SetList sets={gorunenSetler} onSetSil={setiSilmeyeBasla} />
               </>
             ))}
         </>
@@ -262,11 +329,20 @@ export default function TodayPage() {
       {setSilme.bekleyen && (
         <GeriAlSeridi
           // `key`: ard arda iki silmede serit YENIDEN monte olsun, pencere bastan baslasin.
-          key={setSilme.bekleyen.id}
+          key={`set-${setSilme.bekleyen.id}`}
           mesaj="Set silindi"
           sureMs={GERI_AL_MS}
           onGeriAl={setSilme.geriAl}
           onSureDoldu={setSilme.sureDoldu}
+        />
+      )}
+      {hareketKaldirma.bekleyen && (
+        <GeriAlSeridi
+          key={`hareket-${hareketKaldirma.bekleyen.exerciseId}`}
+          mesaj="Hareket kaldırıldı"
+          sureMs={GERI_AL_MS}
+          onGeriAl={hareketKaldirma.geriAl}
+          onSureDoldu={hareketKaldirma.sureDoldu}
         />
       )}
 
@@ -275,6 +351,9 @@ export default function TodayPage() {
         onEgzersizSec={secimYap}
         acik={panelAcik}
         onAcikDegis={setPanelAcik}
+        hareketEkleme={
+          gorunenOturum?.isOpen ? { egzersizler: eklenebilirEgzersizler, onEkle: hareketEkle } : undefined
+        }
       />
     </div>
   );

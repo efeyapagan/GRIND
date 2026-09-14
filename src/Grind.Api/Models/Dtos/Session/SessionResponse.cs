@@ -4,7 +4,7 @@ namespace Grind.Api.Models.Dtos.Session;
 /// <paramref name="IsOpen"/> türetilmiştir (<c>EndedAt is null</c>) — istemcinin null
 /// kontrolü yazmasına gerek kalmasın.
 /// <paramref name="Progress"/> BOŞ LİSTE iki farklı durumda gelir ve bunlar istemci için
-/// AYNI ŞEY DEĞİLDİR: (1) oturumun şablonu yok — karşılaştırılacak hedef zaten yok; (2)
+/// AYNI ŞEY DEĞİLDİR: (1) antrenmanın hareket listesi boş (şablonsuz ve setsiz); (2)
 /// bu yanıt <c>GET /api/sessions</c> (liste) ucundan geliyor — N+1'den kaçınmak için liste
 /// ucu şablonlu olsa bile ilerlemeyi HİÇ hesaplamaz, yalnızca <c>GET /api/sessions/{id}</c>
 /// ve <c>GET /api/sessions/open</c> gerçek ilerlemeyi doldurur. İstemci ikisini

@@ -44,8 +44,8 @@ public class WorkoutSessionServiceTests
         var recordService = new PersonalRecordService(setRepository, currentUser);
         var service = new WorkoutSessionService(
             new WorkoutSessionRepository(context), new WorkoutTemplateRepository(context),
-            setRepository, new UnitOfWork(context),
-            currentUser, saat, recordService);
+            setRepository, new SessionExerciseRepository(context), new ExerciseRepository(context),
+            new UnitOfWork(context), currentUser, saat, recordService);
 
         return (context, user, service, saat, transaction);
     }
@@ -673,6 +673,223 @@ public class WorkoutSessionServiceTests
             await service.DeleteAsync(acilan.Session.Id);
 
             Assert.Equal(0, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    // ---- #60/#62: antrenmanin hareket listesi ----
+
+    /// <summary>
+    /// Sablon hareketleri (sira, hedef, dinlenme) antrenman baslarken KOPYALANIR. Sablon sonradan
+    /// degisse de baslamis antrenmanin ilerlemesi degismez -- eskiden ilerleme sablondan canli
+    /// uretildigi icin degisirdi.
+    /// </summary>
+    [Fact]
+    public async Task Sablonla_baslayinca_hareketler_kopyalanir_ve_sablon_degisikligi_ilerlemeyi_etkilemez()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = new WorkoutTemplate
+            {
+                User = user,
+                Name = $"Sablon {Guid.NewGuid():N}",
+                CreatedAt = DateTime.UtcNow,
+                TemplateExercises =
+                {
+                    new TemplateExercise { ExerciseId = 1, OrderIndex = 0, PlannedSets = 4, RestSeconds = 120 },
+                    new TemplateExercise { ExerciseId = 2, OrderIndex = 1, PlannedSets = 3, RestSeconds = 60 }
+                }
+            };
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+
+            var sonuc = await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id });
+
+            sablon.TemplateExercises.Clear();
+            sablon.TemplateExercises.Add(new TemplateExercise { ExerciseId = 3, OrderIndex = 0, PlannedSets = 5 });
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var detay = await service.GetByIdAsync(sonuc.Session.Id);
+
+            Assert.Collection(
+                detay.Progress,
+                ilk =>
+                {
+                    Assert.Equal(1, ilk.ExerciseId);
+                    Assert.Equal(4, ilk.PlannedSets);
+                    Assert.Equal(120, ilk.RestSeconds);
+                },
+                ikinci =>
+                {
+                    Assert.Equal(2, ikinci.ExerciseId);
+                    Assert.Equal(3, ikinci.PlannedSets);
+                    Assert.Equal(60, ikinci.RestSeconds);
+                });
+        }
+    }
+
+    [Fact]
+    public async Task Eklenen_hareket_sona_hedefsiz_eklenir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = NewTemplate(user);
+            var yeni = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.AddRange(sablon, yeni);
+            await context.SaveChangesAsync();
+            var sonuc = await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id });
+
+            var guncel = await service.AddExerciseAsync(
+                sonuc.Session.Id, new AddSessionExerciseRequest { ExerciseId = yeni.Id });
+
+            Assert.Equal(2, guncel.Progress.Count);
+            var eklenen = guncel.Progress[1];
+            Assert.Equal(yeni.Id, eklenen.ExerciseId);
+            Assert.Null(eklenen.PlannedSets);
+            Assert.Equal(TemplateExercise.DefaultRestSeconds, eklenen.RestSeconds);
+            Assert.Equal(0, eklenen.CompletedSets);
+        }
+    }
+
+    [Fact]
+    public async Task Gecersiz_hareket_eklemeleri_reddedilir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = NewTemplate(user);   // ExerciseId = 1 zaten listede
+            var digerKullanici = TestDatabase.NewUser();
+            var yabanci = TestDatabase.NewExercise(digerKullanici, $"Egzersiz {Guid.NewGuid():N}");
+            var arsivli = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            arsivli.IsArchived = true;
+            context.AddRange(sablon, digerKullanici, yabanci, arsivli);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+
+            await Assert.ThrowsAsync<ConflictException>(
+                () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = 1 }));
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = yabanci.Id }));
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = arsivli.Id }));
+        }
+    }
+
+    /// <summary>Gecmis antrenmani duzenlemek kapsam disi: bitmis oturum 409.</summary>
+    [Fact]
+    public async Task Bitmis_oturuma_hareket_eklenemez_ve_kaldirilamaz_409_verir()
+    {
+        var (context, user, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = NewTemplate(user);
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+            saat.UtcNow = saat.UtcNow.AddHours(1);
+            await service.FinishAsync(id);
+
+            await Assert.ThrowsAsync<ConflictException>(
+                () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = 2 }));
+            await Assert.ThrowsAsync<ConflictException>(() => service.RemoveExerciseAsync(id, 1));
+        }
+    }
+
+    [Fact]
+    public async Task Baskasinin_oturumuna_hareket_eklenemez_ve_kaldirilamaz_404_verir()
+    {
+        var (context, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            var digerOturum = TestDatabase.NewSession(digerKullanici);
+            context.Add(digerOturum);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.AddExerciseAsync(digerOturum.Id, new AddSessionExerciseRequest { ExerciseId = 1 }));
+            await Assert.ThrowsAsync<NotFoundException>(() => service.RemoveExerciseAsync(digerOturum.Id, 1));
+        }
+    }
+
+    /// <summary>
+    /// Kaldirma: satir ve YALNIZCA o hareketin bu antrenmandaki setleri gider; digerinin seti kalir.
+    /// Silinen 100'luk rekor yuzunden baska bir antrenmandaki 90'lik set rekora terfi etmeli --
+    /// yeniden hesap hic calismazsa None kalir.
+    /// </summary>
+    [Fact]
+    public async Task Hareket_kaldirilinca_satiri_ve_yalnizca_onun_setleri_gider_rekorlar_yeniden_hesaplanir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var kaldirilacak = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var kalacak = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var sablon = new WorkoutTemplate
+            {
+                User = user,
+                Name = $"Sablon {Guid.NewGuid():N}",
+                CreatedAt = DateTime.UtcNow,
+                TemplateExercises =
+                {
+                    new TemplateExercise { Exercise = kaldirilacak, OrderIndex = 0, PlannedSets = 3 },
+                    new TemplateExercise { Exercise = kalacak, OrderIndex = 1, PlannedSets = 3 }
+                }
+            };
+            var baskaOturum = TestDatabase.NewSession(user);
+            context.AddRange(kaldirilacak, kalacak, sablon, baskaOturum);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+
+            var an = VarsayilanAn;
+            context.AddRange(
+                new SetEntry
+                {
+                    WorkoutSessionId = id, Exercise = kaldirilacak,
+                    Weight = 100m, Reps = 8, RecordType = RecordType.Weight, CreatedAt = an
+                },
+                new SetEntry
+                {
+                    WorkoutSessionId = id, Exercise = kalacak,
+                    Weight = 50m, Reps = 10, RecordType = RecordType.Weight, CreatedAt = an
+                });
+            var sonraki = new SetEntry
+            {
+                WorkoutSession = baskaOturum, Exercise = kaldirilacak,
+                Weight = 90m, Reps = 10, RecordType = RecordType.None, CreatedAt = an.AddHours(1)
+            };
+            context.Add(sonraki);
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            await service.RemoveExerciseAsync(id, kaldirilacak.Id);
+
+            context.ChangeTracker.Clear();
+            Assert.Equal(0, await context.Set<SetEntry>()
+                .CountAsync(s => s.WorkoutSessionId == id && s.ExerciseId == kaldirilacak.Id));
+            Assert.Equal(1, await context.Set<SetEntry>()
+                .CountAsync(s => s.WorkoutSessionId == id && s.ExerciseId == kalacak.Id));
+            Assert.Equal(RecordType.Weight, (await context.Set<SetEntry>().SingleAsync(s => s.Id == sonraki.Id)).RecordType);
+
+            var detay = await service.GetByIdAsync(id);
+            Assert.Equal(kalacak.Id, Assert.Single(detay.Progress).ExerciseId);
+        }
+    }
+
+    [Fact]
+    public async Task Antrenmanda_olmayan_hareketi_kaldirmak_404_verir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = NewTemplate(user);   // yalnizca ExerciseId = 1
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.RemoveExerciseAsync(id, 2));
         }
     }
 }

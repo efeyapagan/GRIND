@@ -85,6 +85,36 @@ public class SessionsController(IWorkoutSessionService sessionService) : Control
         long id, UpdateSessionNotesRequest request, CancellationToken cancellationToken)
         => Ok(await sessionService.UpdateNotesAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// Antrenmana hareket ekler (#62): sona, hedefsiz. Yanıt güncel ilerlemeyi taşır. Bitmiş antrenman
+    /// ya da zaten listede olan hareket 409; arşivlenmiş egzersiz 400.
+    /// </summary>
+    [HttpPost("{id:long}/exercises")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SessionResponse>> AddExercise(
+        long id, AddSessionExerciseRequest request, CancellationToken cancellationToken)
+    {
+        var session = await sessionService.AddExerciseAsync(id, request, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = session.Id }, session);
+    }
+
+    /// <summary>
+    /// Hareketi antrenmandan kaldırır (#60): o hareketin bu antrenmandaki setleri de silinir ve
+    /// rekorları yeniden hesaplanır. Listede olmayan hareket 404; bitmiş antrenman 409.
+    /// </summary>
+    [HttpDelete("{id:long}/exercises/{exerciseId:long}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RemoveExercise(long id, long exerciseId, CancellationToken cancellationToken)
+    {
+        await sessionService.RemoveExerciseAsync(id, exerciseId, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Siler; bağlı setler CASCADE ile gider.</summary>
     [HttpDelete("{id:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

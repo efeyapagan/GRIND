@@ -108,6 +108,10 @@ Object Reference) açığıdır.
 - **WorkoutSession**: `Id`, `UserId` (FK), `TemplateId` (FK, nullable — şablonsuz açılan
   session'lar için null), `StartedAt`, `EndedAt` (nullable — `null` = oturum hâlâ açık/devam
   ediyor), `Notes` (nullable — serbest metin, örn. "omuz sıkıştı, güçlü hissettim")
+- **SessionExercise** (#60/#62): `Id`, `WorkoutSessionId` (FK, CASCADE), `ExerciseId` (FK, RESTRICT),
+  `OrderIndex`, `PlannedSets` (nullable — `null` = hedefsiz, antrenmana sonradan eklenen hareket),
+  `RestSeconds` (0–900, varsayılan 90) — antrenmanın kendi hareket listesi; `(WorkoutSessionId, ExerciseId)`
+  benzersiz
 - **SetEntry**: `Id`, `WorkoutSessionId` (FK), `ExerciseId` (FK), `Weight`, `Reps`,
   `RecordType` (None / Weight / Reps), `Rir` (nullable — Reps in Reserve, ileride koçluk
   önerileri için veri toplamaya şimdiden başlıyoruz), `CreatedAt`
@@ -158,6 +162,16 @@ Object Reference) açığıdır.
 > var olan gerçek `SetEntry` sayısını `PlannedSets` ile karşılaştırarak hesaplanır — önceden
 > boş `SetEntry` satırları oluşturulmaz (bu, `Weight`/`Reps`'i nullable yapmayı gerektirirdi
 > ve "planlanan" ile "gerçekleşen" veriyi aynı tabloda karıştırırdı).
+
+> Karar (antrenmanın hareket listesi — #60/#62, 2026-09-14): antrenman şablonla başlarken şablonun
+> hareketleri (`OrderIndex`, `PlannedSets`, `RestSeconds`) `SessionExercise`'a **kopyalanır**; ilerleme
+> artık şablondan değil bu listeden hesaplanır. Kopya bilinçli bir anlık görüntüdür (`RecordType` notuyla
+> aynı gerekçe): şablon sonradan değişse de başlamış ve geçmiş antrenman değişmez. Antrenmana hareket
+> eklemek (`POST /api/sessions/{id}/exercises`) sona hedefsiz satır ekler; set girilen hareket listede
+> yoksa aynı commit'te hedefsiz girer ("Plan dışı" kavramı yok). Kaldırmak
+> (`DELETE /api/sessions/{id}/exercises/{exerciseId}`) satırı ve o hareketin bu antrenmandaki setlerini
+> siler, rekorları bir kez yeniden hesaplar — tek `SaveChangesAsync`. Yalnızca açık antrenman düzenlenir
+> (bitmişte 409). Migration veri taşımaz: migration'dan önce başlamış antrenmanların listesi boştur.
 
 > Karar: "AI'nin verdiği öneriler" için ayrı bir tablo açılmıyor — mevcut `AiInsight` tablosu
 > genişletiliyor: bir `Kind` alanı (`Insight` = genel yorum/rapor, `Suggestion` = session içi

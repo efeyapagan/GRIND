@@ -12,6 +12,8 @@ public class WorkoutSessionService(
     IWorkoutSessionRepository sessionRepository,
     IWorkoutTemplateRepository templateRepository,
     ISetEntryRepository setEntryRepository,
+    ISessionExerciseRepository sessionExerciseRepository,
+    IExerciseRepository exerciseRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider,
@@ -22,6 +24,9 @@ public class WorkoutSessionService(
 
     /// <summary>Şablon için ayrı ve id İÇERMEYEN metin — id söylemek tarama imkânı verirdi.</summary>
     private const string TemplateNotFound = "Seçilen şablon bulunamadı.";
+
+    /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
+    private const string ExerciseNotFound = "Egzersiz bulunamadı.";
 
     public async Task<IReadOnlyList<SessionResponse>> GetAllAsync(
         CancellationToken cancellationToken = default)
@@ -43,8 +48,8 @@ public class WorkoutSessionService(
     public async Task<SessionResponse> GetOpenAsync(CancellationToken cancellationToken = default)
     {
         // FindOpenTodayAsync bilerek yalın (Template Include'suz) — Faz 8 bunu her set
-        // eklemede çağıracak ve şablon grafiğini sürüklememeli. Yanıt için burada tam
-        // grafiği taşıyan sahiplik sorgusuyla yeniden okunuyor.
+        // eklemede çağıracak ve şablon grafiğini sürüklememeli. Yanıt için burada şablon
+        // adını taşıyan sahiplik sorgusuyla yeniden okunuyor.
         var found = await FindOpenTodayAsync(cancellationToken)
                     ?? throw new NotFoundException(OpenSessionNotFound);
         var session = await OwnedOrThrowAsync(found.Id, cancellationToken);
@@ -79,12 +84,101 @@ public class WorkoutSessionService(
             // ikinci bir gidiş-dönüşle yeniden okumanın önüne geçer (bkz. Faz 7 fix notu).
             Template = template,
             StartedAt = timeProvider.GetUtcNow().UtcDateTime,
-            Notes = notes
+            Notes = notes,
+            // #60/#62: şablonun hareketleri antrenmana KOPYALANIR (anlık görüntü). Şablon sonradan
+            // değişse de başlamış antrenmanın listesi ve ilerlemesi değişmez. Oturumla aynı commit.
+            SessionExercises = template is null
+                ? []
+                : template.TemplateExercises
+                    .OrderBy(te => te.OrderIndex)
+                    .Select(te => new SessionExercise
+                    {
+                        ExerciseId = te.ExerciseId,
+                        OrderIndex = te.OrderIndex,
+                        PlannedSets = te.PlannedSets,
+                        RestSeconds = te.RestSeconds
+                    })
+                    .ToList()
         };
 
         sessionRepository.Add(session);
         // SaveChangesAsync BİLEREK YOK — bkz. arayüzdeki seam notu.
         return (session, true);
+    }
+
+    public async Task EnsureExerciseAsync(
+        WorkoutSession session, long exerciseId, CancellationToken cancellationToken = default)
+    {
+        if (session.Id == 0)
+        {
+            // Henüz kaydedilmemiş (bu istekte açılan) oturum: listesi yalnızca bellekte.
+            if (session.SessionExercises.All(se => se.ExerciseId != exerciseId))
+            {
+                sessionExerciseRepository.Add(
+                    NewUnplanned(session, exerciseId, orderIndex: session.SessionExercises.Count));
+            }
+
+            return;
+        }
+
+        if (await sessionExerciseRepository.GetAsync(session.Id, exerciseId, cancellationToken) is null)
+        {
+            await AppendUnplannedAsync(session, exerciseId, cancellationToken);
+        }
+    }
+
+    public async Task<SessionResponse> AddExerciseAsync(
+        long id, AddSessionExerciseRequest request, CancellationToken cancellationToken = default)
+    {
+        // DataAnnotations [Required] MVC katmanında çalıştı; servis doğrudan çağrıldığında da aynı sözleşme.
+        var exerciseId = request.ExerciseId!.Value;
+
+        var session = await OpenOwnedOrThrowAsync(id, "Bitmiş bir antrenmana hareket eklenemez.", cancellationToken);
+
+        var exercise = await exerciseRepository.GetVisibleByIdAsync(
+                           exerciseId, currentUser.UserId, cancellationToken: cancellationToken)
+                       ?? throw new NotFoundException(ExerciseNotFound);
+
+        if (exercise.IsArchived)
+        {
+            // Set eklemedeki kuralla aynı: arşivlenmiş egzersizi seçmek yeni bir seçimdir.
+            throw new ValidationException(
+                "Arşivlenmiş bir egzersiz antrenmana eklenemez. Önce egzersizi arşivden çıkarın.");
+        }
+
+        if (await sessionExerciseRepository.GetAsync(session.Id, exercise.Id, cancellationToken) is not null)
+        {
+            throw new ConflictException("Bu hareket antrenmanda zaten var.");
+        }
+
+        await AppendUnplannedAsync(session, exercise.Id, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToResponse(session, await ProgressAsync(session, cancellationToken));
+    }
+
+    public async Task RemoveExerciseAsync(long id, long exerciseId, CancellationToken cancellationToken = default)
+    {
+        var session = await OpenOwnedOrThrowAsync(id, "Bitmiş bir antrenmandan hareket kaldırılamaz.", cancellationToken);
+
+        var row = await sessionExerciseRepository.GetAsync(session.Id, exerciseId, cancellationToken)
+                  ?? throw new NotFoundException("Hareket bu antrenmanda yok.");
+
+        var sets = await setEntryRepository.GetForSessionAndExerciseAsync(session.Id, exerciseId, cancellationToken);
+
+        sessionExerciseRepository.Remove(row);
+        foreach (var set in sets)
+        {
+            setEntryRepository.Remove(set);
+        }
+
+        // excludeSessionId ZORUNLU: silinen setler commit'e kadar sorguda hâlâ görünür. Hesap tek
+        // hareket üzerinden yapıldığı için yalnızca BU hareketin bu antrenmandaki setleri hariç kalır.
+        await recordService.RecalculateAsync(
+            exerciseId, excludeSessionId: session.Id, cancellationToken: cancellationToken);
+
+        // TEK commit: liste satırı + setler + kalan setlerin rekorları.
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<StartSessionResult> StartAsync(
@@ -98,8 +192,8 @@ public class WorkoutSessionService(
             // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
             // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
             // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
-            // FindOpenTodayAsync yalın (Template Include'suz) döndüğü için burada tam
-            // grafik için sahiplik sorgusuyla yeniden okunuyor.
+            // FindOpenTodayAsync yalın (Template Include'suz) döndüğü için burada şablon
+            // adı için sahiplik sorgusuyla yeniden okunuyor.
             var reloaded = await OwnedOrThrowAsync(session.Id, cancellationToken);
             return new StartSessionResult(
                 ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
@@ -160,7 +254,7 @@ public class WorkoutSessionService(
                 exerciseId, excludeSessionId: id, cancellationToken: cancellationToken);
         }
 
-        // TEK commit: oturumun silinmesi (SetEntry'ler CASCADE) + kalan setlerin rekorları.
+        // TEK commit: oturumun silinmesi (SetEntry ve SessionExercise'ler CASCADE) + kalan setlerin rekorları.
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -182,40 +276,57 @@ public class WorkoutSessionService(
            ?? throw new NotFoundException(SessionNotFound);
 
     /// <summary>
-    /// Hedef vs gerçekleşen. Şablonsuz oturumda karşılaştıracak hedef olmadığı için boş döner
-    /// ve sayım sorgusu hiç çalışmaz. DİKKAT: guard <c>TemplateId is null</c> üzerinden yapılır,
-    /// <c>Template is null</c> ÜZERİNDEN DEĞİL — ikincisi "şablonu yok" ile "şablon navigasyonu
-    /// Include edilmedi" durumlarını birbirine karıştırır ve çağıran, Include'suz bir sorgudan
-    /// (ör. eskiden <see cref="GetOpenAsync"/>) geldiğinde sessizce yanlış (boş) ilerleme üretirdi.
+    /// Hareket listesini değiştiren akışlar için: sahiplik ÖNCE (404), sonra bitmiş mi (409). Geçmiş
+    /// antrenmanı düzenlemek kapsam dışı.
+    /// </summary>
+    private async Task<WorkoutSession> OpenOwnedOrThrowAsync(
+        long id, string endedMessage, CancellationToken cancellationToken)
+    {
+        var session = await OwnedOrThrowAsync(id, cancellationToken);
+
+        return session.EndedAt is null ? session : throw new ConflictException(endedMessage);
+    }
+
+    /// <summary>Kaydedilmiş bir antrenmanın listesinin sonuna hedefsiz hareket ekler. Kaydetmez.</summary>
+    private async Task AppendUnplannedAsync(
+        WorkoutSession session, long exerciseId, CancellationToken cancellationToken)
+    {
+        var orderIndex = await sessionExerciseRepository.GetNextOrderIndexAsync(session.Id, cancellationToken);
+        sessionExerciseRepository.Add(NewUnplanned(session, exerciseId, orderIndex));
+    }
+
+    private static SessionExercise NewUnplanned(WorkoutSession session, long exerciseId, int orderIndex) => new()
+    {
+        WorkoutSession = session,
+        ExerciseId = exerciseId,
+        OrderIndex = orderIndex,
+        PlannedSets = null,
+        RestSeconds = TemplateExercise.DefaultRestSeconds
+    };
+
+    /// <summary>
+    /// Hedef vs gerçekleşen, antrenmanın KENDİ hareket listesinden (#60, #62) — şablondan değil. Liste
+    /// boşsa (şablonsuz ve setsiz) sayım sorgusu hiç çalışmaz.
     /// </summary>
     private async Task<IReadOnlyList<SessionProgressResponse>> ProgressAsync(
         WorkoutSession session, CancellationToken cancellationToken)
     {
-        if (session.TemplateId is null)
+        var exercises = await sessionExerciseRepository.GetForSessionAsync(session.Id, cancellationToken);
+
+        if (exercises.Count == 0)
         {
             return [];
         }
 
-        if (session.Template is null)
-        {
-            // Çağıran bu session'ı Template Include'suz bir sorgudan getirmiş demektir —
-            // bu bir "şablon yok" durumu değil, bir programlama hatası. Sessizce [] dönmek
-            // tam da bu fix dalgasının kapattığı hatayı yeniden açardı.
-            throw new InvalidOperationException(
-                $"WorkoutSession {session.Id} bir TemplateId ({session.TemplateId}) taşıyor ama " +
-                "Template navigasyonu yüklenmemiş. Çağıran taraf oturumu Include(Template) ile getirmeli.");
-        }
-
         var completed = await setEntryRepository.GetCompletedSetCountsAsync(session.Id, cancellationToken);
 
-        return session.Template.TemplateExercises
-            .OrderBy(te => te.OrderIndex)
-            .Select(te => new SessionProgressResponse(
-                te.ExerciseId,
-                te.Exercise.Name,
-                te.PlannedSets,
-                completed.GetValueOrDefault(te.ExerciseId),
-                te.RestSeconds))
+        return exercises
+            .Select(se => new SessionProgressResponse(
+                se.ExerciseId,
+                se.Exercise.Name,
+                se.PlannedSets,
+                completed.GetValueOrDefault(se.ExerciseId),
+                se.RestSeconds))
             .ToList();
     }
 
