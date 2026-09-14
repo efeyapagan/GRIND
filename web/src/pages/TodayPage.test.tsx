@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -117,6 +117,7 @@ function sahteSunucuyuKur(
   const baslatmaGovdeleri: unknown[] = [];
   const ilerlemeAramalari: string[] = [];
   const silinenOturumlar: number[] = [];
+  const silinenSetler: number[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -213,6 +214,29 @@ function sahteSunucuyuKur(
       setler = [];
       return new HttpResponse(null, { status: 204 });
     }),
+    // Gercek backend gibi: yalnizca gonderilen alanlari uygular, guncel seti doner (#57).
+    http.patch('/api/sets/:id', async ({ params, request }) => {
+      const govde = (await request.json()) as { weight?: number; reps?: number; rir?: number };
+      setler = setler.map((kayit) => (kayit.id === Number(params.id) ? { ...kayit, ...govde } : kayit));
+      return HttpResponse.json(setler.find((kayit) => kayit.id === Number(params.id)));
+    }),
+    // Gercek backend gibi 204: set gider, hareketin tamamlanan sayaci duser (#57).
+    http.delete('/api/sets/:id', ({ params }) => {
+      const silinen = setler.find((kayit) => kayit.id === Number(params.id));
+      silinenSetler.push(Number(params.id));
+      setler = setler.filter((kayit) => kayit.id !== Number(params.id));
+      if (oturum && silinen) {
+        oturum = {
+          ...oturum,
+          progress: (oturum.progress ?? []).map((hareket) =>
+            hareket.exerciseId === silinen.exerciseId
+              ? { ...hareket, completedSets: (hareket.completedSets ?? 1) - 1 }
+              : hareket,
+          ),
+        };
+      }
+      return new HttpResponse(null, { status: 204 });
+    }),
   );
 
   return {
@@ -220,6 +244,7 @@ function sahteSunucuyuKur(
     baslatmaGovdeleri: () => baslatmaGovdeleri,
     ilerlemeAramalari: () => ilerlemeAramalari,
     silinenOturumlar: () => silinenOturumlar,
+    silinenSetler: () => silinenSetler,
   };
 }
 
@@ -1046,6 +1071,88 @@ test('set eklendikten sonra panel acik kalir', async () => {
   expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
   expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Paneli kapat' })).toBeInTheDocument();
+});
+
+describe('set duzenleme ve silme (#57)', () => {
+  /** Tek seti (Bench Press 60 kg × 8, id 500) olan sablonsuz acik oturum. */
+  function setliOturumuKur() {
+    const acikOturum: SessionResponse = {
+      id: 40,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      isOpen: true,
+      templateId: null,
+      templateName: null,
+      notes: null,
+      progress: [],
+    };
+    return sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(40)] });
+  }
+
+  const SET_SATIRI = '1. set, 60 kg × 8, düzenle';
+
+  test('set satirina dokununca duzenleyici acilir; kaydedince liste sunucudan tazelenip yeni degeri gosterir', async () => {
+    setliOturumuKur();
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: SET_SATIRI }));
+    const form = screen.getByRole('form', { name: '1. seti düzenle' });
+    const tekrar = within(form).getByLabelText('Tekrar');
+    await kullanici.clear(tekrar);
+    await kullanici.type(tekrar, '10');
+    await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
+
+    expect(await screen.findByRole('button', { name: '1. set, 60 kg × 10, düzenle' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: '1. seti düzenle' })).not.toBeInTheDocument();
+  });
+
+  test('Seti sil: satir hemen kalkar ve geri al seridi cikar; geri alinca satir doner, DELETE hic gitmez', async () => {
+    const ortam = setliOturumuKur();
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: SET_SATIRI }));
+    await kullanici.click(screen.getByRole('button', { name: 'Seti sil' }));
+
+    expect(await screen.findByText('Set silindi')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: SET_SATIRI })).not.toBeInTheDocument();
+    // API silinen seti ayni zaman damgasi ve rekor sirasiyla geri getiremez: tek durust geri alma,
+    // silmeyi henuz YAPMAMIS olmaktir (#46 ile ayni gerekce).
+    expect(ortam.silinenSetler()).toEqual([]);
+
+    await kullanici.click(screen.getByRole('button', { name: 'Geri al' }));
+
+    expect(await screen.findByRole('button', { name: SET_SATIRI })).toBeInTheDocument();
+    expect(ortam.silinenSetler()).toEqual([]);
+  });
+
+  test('geri alma suresi dolunca DELETE gider; oturumun son seti silindiyse "Antrenmanı iptal et" doner', async () => {
+    // Yalnizca seridin saati (Date + setInterval) sahtelenir; MSW ve userEvent gercek setTimeout ile
+    // calismaya devam eder. Serit araligini monte olurken kurdugu icin sahte saat RENDER'DAN ONCE kurulur.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval'] });
+    try {
+      const ortam = setliOturumuKur();
+      const kullanici = userEvent.setup();
+      bugunSayfasiniOlustur();
+
+      await kullanici.click(await screen.findByRole('button', { name: SET_SATIRI }));
+      await kullanici.click(screen.getByRole('button', { name: 'Seti sil' }));
+      await screen.findByText('Set silindi');
+
+      act(() => {
+        vi.advanceTimersByTime(5100);
+      });
+      // Pencere kapandi, silme basladi. Gerisi (DELETE ve tazeleme) gercek zamanla ve act ile sarili
+      // bekleyicilerle izlenir; aksi halde tazelemenin guncellemesi act disinda kalir.
+      vi.useRealTimers();
+
+      await waitFor(() => expect(ortam.silinenSetler()).toEqual([500]));
+      expect(await screen.findByRole('button', { name: 'Antrenmanı iptal et' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('dinlenme sayaci', () => {

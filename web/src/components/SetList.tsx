@@ -7,14 +7,18 @@ import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import SetSatiri from './SetSatiri';
 
-interface Props {
+interface OrtakProps {
   sets: SetKaydi[];
   // Bos durumda gosterilecek metin cagiran tarafa birakilir (T5): TodayPage "bugun" baglaminda
   // (varsayilan), HistoryPage ise gecmis bir gunu gosterirken "Bugün..." metnini KULLANAMAZ.
   bosDurumMetni?: string;
-  // 'bugun': buyuk degerli kart satirlari (Bugun). 'gecmis': Gecmis kartinin icinde kompakt satirlar.
-  varyant?: 'bugun' | 'gecmis';
 }
+
+// 'bugun': buyuk degerli kart satirlari (Bugun); satira dokununca duzenlenir, silme `onSetSil` ile
+// sayfaya bildirilir (#57) -- bu yuzden o varyantta ZORUNLU. 'gecmis': Gecmis kartinin icinde kompakt,
+// salt okunur satirlar.
+type Props = OrtakProps &
+  ({ varyant?: 'bugun'; onSetSil: (kayit: SetKaydi) => void } | { varyant: 'gecmis' });
 
 interface EgzersizGrubu {
   exerciseId: number;
@@ -29,11 +33,8 @@ interface EgzersizGrubu {
  * Deger metni (`60 kg × 8`) bosluklari `{' '}` ile acikca tasir: textContent tek parca okunabilsin
  * (ekran okuyucu ve testler), gorsel olarak ise birim ve "×" soluk kalsin.
  */
-export default function SetList({
-  sets,
-  bosDurumMetni = 'Bugün henüz set eklenmedi.',
-  varyant = 'bugun',
-}: Props) {
+export default function SetList(props: Props) {
+  const { sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
     for (const kayit of sets) {
@@ -55,7 +56,7 @@ export default function SetList({
     return <p className="text-body text-muted">{bosDurumMetni}</p>;
   }
 
-  if (varyant === 'gecmis') {
+  if (props.varyant === 'gecmis') {
     return (
       <div className="flex flex-col gap-5">
         {gruplar.map((grup) => (
@@ -119,7 +120,7 @@ export default function SetList({
           </div>
           <ul className="flex flex-col gap-1">
             {grup.sets.map((kayit, setSirasi) => (
-              <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} />
+              <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onSil={props.onSetSil} />
             ))}
           </ul>
         </section>

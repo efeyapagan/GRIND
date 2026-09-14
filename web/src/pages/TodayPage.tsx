@@ -1,15 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, Dumbbell, X } from 'lucide-react';
 import {
+  setDegistiTazele,
+  setiSil,
   useDeleteSession,
   useExercises,
   useFinishSession,
   useOpenSession,
   useSessionSets,
   useStartSession,
+  type SetKaydi,
 } from '../api/queries';
 import { formatTrTime } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
+import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { varsayilanHareket } from '../lib/ilerleme';
 import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
@@ -17,6 +22,7 @@ import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import BosDurum from '../ui/BosDurum';
+import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
 
 const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
@@ -59,6 +65,24 @@ export default function TodayPage() {
   const iptalMutasyonu = useDeleteSession();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
+
+  // Issue #57: set silme geri alinabilir ve GECIKMELIDIR (Gecmis ekraniyla ortak hook). Bekleyen set
+  // listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal et" karari ise sunucu verisinden
+  // gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz, DELETE sonrasi tazelemeyle guncellenir.
+  const queryClient = useQueryClient();
+  const setSilmeyiTamamla = useCallback(
+    (kayit: SetKaydi) => {
+      void setiSil(kayit.id).then(
+        () => setDegistiTazele(queryClient, kayit),
+        // Gecikmis silme basarisiz olursa gosterilecek bir yer yok (serit kalkti). Set sunucu verisinden
+        // geldigi icin listede geri gorunur -- sessiz bir veri kaybi olusmaz.
+        () => undefined,
+      );
+    },
+    [queryClient],
+  );
+  const setSilme = useGecikmeliSilme(setSilmeyiTamamla);
+  const gorunenSetler = (setler ?? []).filter((kayit) => kayit.id !== setSilme.bekleyen?.id);
 
   const ilerleme = gorunenOturum?.progress ?? [];
   // F1 (review bulgusu): `progress` arsivlenmis bir hareketi icerebilir ama GET /api/exercises
@@ -206,9 +230,10 @@ export default function TodayPage() {
             (ilerleme.length > 0 ? (
               <HareketKartlari
                 ilerleme={ilerleme}
-                setler={setler ?? []}
+                setler={gorunenSetler}
                 secilenId={etkinSecim}
                 onSec={kartSec}
+                onSetSil={setSilme.baslat}
               />
             ) : (
               <>
@@ -217,7 +242,7 @@ export default function TodayPage() {
                 {etkinSecim !== null && seciliEgzersizAdi && (
                   <HareketGecmisi key={etkinSecim} exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
                 )}
-                <SetList sets={setler ?? []} />
+                <SetList sets={gorunenSetler} onSetSil={setSilme.baslat} />
               </>
             ))}
         </>
@@ -232,6 +257,17 @@ export default function TodayPage() {
           />
           <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
         </>
+      )}
+
+      {setSilme.bekleyen && (
+        <GeriAlSeridi
+          // `key`: ard arda iki silmede serit YENIDEN monte olsun, pencere bastan baslasin.
+          key={setSilme.bekleyen.id}
+          mesaj="Set silindi"
+          sureMs={GERI_AL_MS}
+          onGeriAl={setSilme.geriAl}
+          onSureDoldu={setSilme.sureDoldu}
+        />
       )}
 
       <AddSetForm
