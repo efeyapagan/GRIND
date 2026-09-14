@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { request } from './client';
 import { trBugundenOnce } from '../lib/format';
 import { ApiError } from './problem';
@@ -459,32 +465,40 @@ export function useFinishSession() {
   });
 }
 
+/** `DELETE /api/sessions/{id}`. Oturumu ve setlerini siler (Faz 7), govdesiz 204 doner. */
+export async function oturumuSil(sessionId: number): Promise<void> {
+  await request<void>(`/sessions/${sessionId}`, { method: 'DELETE' });
+}
+
 /**
- * `DELETE /api/sessions/{id}`. Oturumu ve setlerini siler; sunucu etkilenen hareketlerin
- * rekorlarini (`RecordType`) yeniden hesaplar (Faz 7). Bu yuzden `records` ve hareket ilerlemesi
- * de tazelenir -- silinen bir rekor seti, o hareketin "en iyi"sini ve grafigini degistirir.
+ * Bir oturum silindikten SONRA tazelenecekler. Sunucu, silinen oturumun hareketlerinde
+ * `RecordType`i yeniden hesaplar -- bu yuzden `records` ve hareket ilerlemesi de bayatlar.
  *
- * `exerciseProgressRoot` (tek bir hareket degil, KOK onek) invalidate edilir: yanit hangi
- * hareketlerin etkilendigini SOYLEMEZ (204), istemcide bunu bilmenin yolu yok. Silinen oturum
- * bugunun acik oturumuysa `openSession` da tazelenmeli -- cagiran taraf hangi durumda oldugunu
- * bilmek zorunda kalmasin diye ikisi de kosulsuz invalidate edilir (KISS).
+ * `exerciseProgressRoot` (tek bir hareket degil, KOK onek) invalidate edilir: 204 yaniti hangi
+ * hareketlerin etkilendigini SOYLEMEZ, istemcide bunu bilmenin yolu yok. Silinen oturum bugunun
+ * acik oturumuysa `openSession` da tazelenmeli -- cagiran taraf hangi durumda oldugunu bilmek
+ * zorunda kalmasin diye kosulsuz invalidate edilir (KISS).
+ *
+ * `useDeleteSession`in DISINA acilir: geri alma penceresi acikken sayfadan cikilirsa silme,
+ * bilesen kaldirildiktan sonra tamamlanir; o anda mutasyonun gozlemcisi artik yoktur ve
+ * `onSuccess` CALISMAZ, ama tazeleme yine de yapilmalidir.
  */
+export function oturumSilindiTazele(queryClient: QueryClient, sessionId: number): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.records });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressRoot });
+  // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
+  // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
+  queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
+}
+
 export function useDeleteSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (sessionId: number): Promise<void> => {
-      await request<void>(`/sessions/${sessionId}`, { method: 'DELETE' });
-    },
-    onSuccess: (_veri, sessionId) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.records });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressRoot });
-      // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
-      // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
-      queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
-    },
+    mutationFn: oturumuSil,
+    onSuccess: (_veri, sessionId) => oturumSilindiTazele(queryClient, sessionId),
   });
 }
 
