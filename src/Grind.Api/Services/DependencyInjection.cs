@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ISetEntryService, SetEntryService>();
         services.AddScoped<IWorkoutHistoryService, WorkoutHistoryService>();
         services.AddScoped<IStatsService, StatsService>();
+        services.AddScoped<IExerciseProgressService, ExerciseProgressService>();
         services.AddScoped<IBodyWeightLogService, BodyWeightLogService>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IAiInsightService, AiInsightService>();

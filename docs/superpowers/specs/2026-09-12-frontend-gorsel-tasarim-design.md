@@ -65,7 +65,11 @@ Stitch'in Material adları okunaksız ve yanıltıcı: `primary` somon (#ffb5a0)
 Renk kuralları:
 - `accent` yalnızca şurada kullanılır: birincil düğme dolgusu ("Set ekle", "Giriş yap", "Kayıt ol"),
   rekor rozeti dolgusu ("Ağırlık rekoru", "Tekrar rekoru", "En ağır set"), rekor kartı noktası, aktif
-  sekme, marka işareti (logo karosundaki ve PWA ikonundaki dambıl). Başka hiçbir yer — hesap düğmesi
+  sekme, marka işareti (logo karosundaki ve PWA ikonundaki dambıl); **dilim 3 genişlemesi (kullanıcı
+  kararı):** hareket çizgi grafiğinin çizgisi, noktaları, alan degradesi ve değer etiketleri (accent
+  dolgu + `on-accent` metin, opaklık yok) ile grafik sekmelerinde aktif sekmenin alt çizgisi — grafiğin
+  ızgarası, eksen metni, özet etiketleri ve aralık seçici nötr kalır (bkz.
+  `2026-09-14-acilir-panel-ve-cizgi-grafik-design.md` Karar 3). Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.
 - `accent` dolgu üstündeki metin her zaman `on-accent`. (Stitch'in Giriş düğmesindeki açık metin ~3:1

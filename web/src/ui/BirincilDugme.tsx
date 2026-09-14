@@ -1,10 +1,12 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, Ref } from 'react';
 
 // Stitch: "Set ekle" 56 px, giris/kayit dugmeleri 52 px.
 const YUKSEKLIK = { buyuk: 'h-14', normal: 'h-13' } as const;
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   yukseklik: keyof typeof YUKSEKLIK;
+  // React 19: ref normal bir prop olarak `...dugme` ile <button>'a iletilir (panel acma dugmesine odak).
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /** Accent dolgulu birincil eylem; ustundeki metin her zaman `on-accent` (spec Karar 2). */

@@ -2069,6 +2069,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/exercises/{exerciseId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    From?: string;
+                    To?: string;
+                };
+                header?: never;
+                path: {
+                    exerciseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ExerciseProgressResponse"];
+                        "application/json": components["schemas"]["ExerciseProgressResponse"];
+                        "text/json": components["schemas"]["ExerciseProgressResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/templates": {
         parameters: {
             query?: never;
@@ -2531,6 +2595,30 @@ export interface components {
             url?: string | null;
             /** Format: date-time */
             createdAt?: string;
+        };
+        ExerciseProgressPointResponse: {
+            /** Format: int64 */
+            sessionId?: number;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date */
+            date?: string;
+            /** Format: double */
+            topWeight?: number;
+            /** Format: int32 */
+            topWeightReps?: number;
+            /** Format: double */
+            volume?: number;
+            /** Format: int32 */
+            setCount?: number;
+            /** Format: double */
+            estimatedOneRepMax?: number | null;
+        };
+        ExerciseProgressResponse: {
+            /** Format: int64 */
+            exerciseId?: number;
+            exerciseName?: string | null;
+            points?: components["schemas"]["ExerciseProgressPointResponse"][] | null;
         };
         ExerciseRecordResponse: {
             /** Format: int64 */

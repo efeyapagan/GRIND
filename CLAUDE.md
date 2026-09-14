@@ -26,6 +26,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **Frontend dilim 2 tamamlandı (2026-09-13)** — şablon ekranları, şablonla başlatma ve hareket kartları,
   dinlenme sayacı, hareket geçmişi grafiği; ayrıntı ve devreden notlar PLAN.md'de. Takvim/seri ayrı bir
   dilim.
+- **Frontend dilim 3 tamamlandı (2026-09-14, issue #43)** — açılır set paneli, sekmeli turuncu çizgi
+  grafik (Ağırlık / Antrenman / Tahmini 1RM), hareket ilerleme ucu; ayrıntı PLAN.md'de. Bu dilimden
+  itibaren her iş GitHub issue ile başlar (CONTRIBUTING.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -258,6 +261,9 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
 5. Kişisel rekor (PR) hesaplama:
    - **Ağırlık rekoru**: yeni ağırlık, o egzersizdeki önceki maksimum ağırlığı geçerse
    - **Tekrar rekoru**: aynı ağırlıkta önceki maksimum tekrarı geçerse
+   - **Tahmini 1RM** (dilim 3): Brzycki `ağırlık × 36 / (37 − tekrar)`, tekrar tavanı 12, 0 kg setlerde
+     yok; `OneRepMaxEstimator` saf hesaplayıcısında, **sorgu anında hesaplanır, saklanmaz** (formül
+     değişirse migration gerekmez); rekor rozetlerini (`RecordType`) değiştirmez
    - Ek: "tüm zamanların rekorları" özet endpoint'i — her egzersiz için güncel en iyi
      ağırlık/tekrarı listeler (yeni veri gerektirmez, mevcut `SetEntry`'den sorgulanır)
 6. Antrenman geçmişi sorgulama — tarih aralığı ve/veya egzersize göre filtre

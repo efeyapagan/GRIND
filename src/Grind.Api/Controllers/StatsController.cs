@@ -8,7 +8,8 @@ namespace Grind.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/stats")]
-public class StatsController(IStatsService statsService) : ControllerBase
+public class StatsController(IStatsService statsService, IExerciseProgressService exerciseProgressService)
+    : ControllerBase
 {
     /// <summary>TR günü bazında hacim (ağırlık × tekrar), eskiden yeniye.</summary>
     [HttpGet("volume/daily")]
@@ -50,4 +51,16 @@ public class StatsController(IStatsService statsService) : ControllerBase
     public async Task<ActionResult<BodyWeightTrendResponse>> GetBodyWeightTrend(
         [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
         => Ok(await statsService.GetBodyWeightTrendAsync(query, cancellationToken));
+
+    /// <summary>
+    /// Bir hareketin oturum başına en ağır seti, hacmi ve tahmini 1RM'i, eskiden yeniye (dilim 3).
+    /// Egzersiz görünmüyorsa nötr 404.
+    /// </summary>
+    [HttpGet("exercises/{exerciseId:long}/progress")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ExerciseProgressResponse>> GetExerciseProgress(
+        long exerciseId, [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
+        => Ok(await exerciseProgressService.GetAsync(exerciseId, query, cancellationToken));
 }

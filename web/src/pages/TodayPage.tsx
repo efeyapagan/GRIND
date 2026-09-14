@@ -28,7 +28,10 @@ const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uy
  * sonrakine ATLAMAZ; sablonsuz bir oturum (bos durumdan ilk set ile acilan) secimi SIFIRLAMAZ --
  * kullanicinin panelde yaptigi secim korunur. Render sirasinda kosullu set (efekt yok).
  *
- * `pb-72` (18rem): sabit set ekle paneli listenin son satirini ortmesin.
+ * Alt alan (AddSetForm) artik `fixed` DEGIL, kendi akis icinde `sticky` (review bulgusu I1 --
+ * `fixed` icerigin altini sabit bir yukseklikte ortuyordu, dinlenme sayaci acikken bu yukseklik
+ * degistigi icin liste kismen ortuluyordu). Kok `div`e minimum yukseklik verilir ki icerik kisa
+ * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
 export default function TodayPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
@@ -42,6 +45,7 @@ export default function TodayPage() {
   const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
+  const [panelAcik, setPanelAcik] = useState(false);
 
   const ilerleme = gorunenOturum?.progress ?? [];
   // F1 (review bulgusu): `progress` arsivlenmis bir hareketi icerebilir ama GET /api/exercises
@@ -67,9 +71,18 @@ export default function TodayPage() {
 
   // Bir kart (ya da panel <select>'i) arsivlenmis/listede olmayan bir hareketi secmeye calisirsa
   // yoksayilir (F1) -- gecerli tek secim kaynagi yuklenmis egzersiz listesidir.
-  function secimYap(exerciseId: number) {
-    if (secilebilirIdler.has(exerciseId)) {
-      setSecim(exerciseId);
+  function secimYap(exerciseId: number): boolean {
+    if (!secilebilirIdler.has(exerciseId)) {
+      return false;
+    }
+    setSecim(exerciseId);
+    return true;
+  }
+
+  // Dilim 3 spec Karar 6: hareket kartina dokunmak hareketi secer VE set panelini acar.
+  function kartSec(exerciseId: number) {
+    if (secimYap(exerciseId)) {
+      setPanelAcik(true);
     }
   }
 
@@ -87,7 +100,10 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 pt-2 pb-72">
+    // 8rem = ust baslik + alt sekme cubugu yuksekligi (App.tsx'teki iki h-16); min-height sayesinde
+    // icerik kisa olsa da bu kok en az bastan-nav'a kadarki alani kaplar, boylece asagidaki AddSetForm
+    // (`mt-auto` + `sticky`) her zaman sekme cubugunun hemen ustunde kalir (review bulgusu I1).
+    <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-title">Bugün</h1>
@@ -156,18 +172,13 @@ export default function TodayPage() {
                 ilerleme={ilerleme}
                 setler={setler ?? []}
                 secilenId={etkinSecim}
-                onSec={secimYap}
-                bugunkuOturumId={gorunenOturum.id}
+                onSec={kartSec}
               />
             ) : (
               <>
                 {/* Sablonsuz antrenmanda panelde secili hareketin gecmisi, set listesinin USTUNDE (Karar 9). */}
                 {etkinSecim !== null && seciliEgzersizAdi && (
-                  <HareketGecmisi
-                    exerciseId={etkinSecim}
-                    exerciseName={seciliEgzersizAdi}
-                    bugunkuOturumId={gorunenOturum.id}
-                  />
+                  <HareketGecmisi exerciseId={etkinSecim} exerciseName={seciliEgzersizAdi} />
                 )}
                 <SetList sets={setler ?? []} />
               </>
@@ -186,7 +197,12 @@ export default function TodayPage() {
         </>
       )}
 
-      <AddSetForm egzersizId={etkinSecim} onEgzersizSec={secimYap} />
+      <AddSetForm
+        egzersizId={etkinSecim}
+        onEgzersizSec={secimYap}
+        acik={panelAcik}
+        onAcikDegis={setPanelAcik}
+      />
     </div>
   );
 }
