@@ -972,6 +972,35 @@ Devreden notlar (bilerek yapılmadı):
 - Geçmiş ekranındaki setler düzenlenemez; telefonu sallayarak set silmeyi geri alma yok.
 - Geri alma şeridi 5 sn boyunca alttaki set panelinin üstünü örter.
 
+### İstek #60 + #62 — Antrenmana hareket ekleme ve kaldırma (2026-09-14)
+
+Spec: [docs/superpowers/specs/2026-09-14-antrenman-hareketleri-design.md](docs/superpowers/specs/2026-09-14-antrenman-hareketleri-design.md)
+
+Şablondan gelen yanlış kartı kaldırmanın ve setsiz hareket eklemenin yeri yoktu: ilerleme her istekte şablonun
+güncel listesinden üretiliyordu. Kullanıcı "antrenmana kopyala" modelini seçti. İş akışı: spec → yalnızca
+gerekli testler → kullanıcıya sunuldu → onaydan sonra kod.
+- **Backend:** `SessionExercise` (migration `AntrenmanHareketListesi`, drift yok). Şablonla başlarken kopyalama;
+  set eklenince hareket listeye hedefsiz girer (`EnsureExerciseAsync` seam'i, tek commit); ilerleme listeden;
+  `POST /api/sessions/{id}/exercises` (201) ve `DELETE /api/sessions/{id}/exercises/{exerciseId}` (204, setler +
+  rekor yeniden hesabı). Bitmiş antrenman 409, başkasının antrenmanı 404, zaten var 409, arşivli 400.
+  `SessionProgressResponse.PlannedSets` → nullable.
+- **Arayüz:** her hareket bir kart ("Plan dışı" kalktı), hedefsiz kartta "2 set"; açık antrenmanda alt alan
+  "Hareket ekle" (`HareketEklePaneli`, #48'in `HareketSecici`'si, liste yukarı açılır, yalnızca antrenmanda
+  olmayan hareketler); panelde hareket seçimi yok, başlık "Yeni set: X"; seçili kartta "Hareketi kaldır"
+  (gecikmeli ve geri alınabilir, `lib/gecikmeliSilme`). Ekranda tek geri alma şeridi: biri başlayınca diğerinin
+  bekleyeni tamamlanır.
+- **Testler:** backend 9 yeni (komutla sayıldı), etkilenen üç sınıf 65/65; frontend 5 yeni, eski "Plan dışı"
+  testi silindi, açık antrenmanda paneldeki `<select>`'e dayanan 10 test karttaki seçime göre güncellendi;
+  değişen dosyalara bağlı 10 dosyada 90/90. `tsc -b` ve lint temiz. Görsel doğrulama 390×844 Playwright.
+
+Devreden notlar (bilerek yapılmadı):
+- Eklenen hareketin hedef seti ve dinlenme süresi düzenlenemez (hedefsiz, 90 sn); kart sırası değiştirilemez.
+- Migration'dan önce başlamış antrenmanlarda liste boş: set girilen hareketler listeye girer, şablon kartları gelmez.
+- Hareket listesi boş açık antrenmanda (yalnızca eski veri) panel açılamaz; "Hareket ekle" ile kart eklenmeli.
+- Antrenman yokken set paneli ve hareket `<select>`'i #61'e kadar aynen duruyor.
+- "Hareket ekle" listesi yukarı açıkken panelin "Hareket ekle" etiketini ve kapatma düğmesini örter; alana
+  dışından dokunmak ya da Escape listeyi kapatır.
+
 ---
 
 ## Çalışma Kuralı

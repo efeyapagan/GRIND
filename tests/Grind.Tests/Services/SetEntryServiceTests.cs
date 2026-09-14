@@ -50,6 +50,7 @@ public class SetEntryServiceTests
         var recordService = new PersonalRecordService(setRepository, currentUser);
         var sessionService = new WorkoutSessionService(
             sessionRepository, new WorkoutTemplateRepository(context), setRepository,
+            new SessionExerciseRepository(context), new ExerciseRepository(context),
             unitOfWork, currentUser, saat, recordService);
 
         var service = new SetEntryService(
@@ -105,6 +106,29 @@ public class SetEntryServiceTests
 
             Assert.Equal(birinci.SessionId, ikinci.SessionId);
             Assert.Equal(1, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    /// <summary>
+    /// #62: set girilen hareket antrenmanin listesinde yoksa sona HEDEFSIZ girer -- "Plan disi" diye
+    /// ayri bir kavram kalmaz. Ikinci set ikinci bir satir URETMEZ.
+    /// </summary>
+    [Fact]
+    public async Task Set_eklenen_hareket_antrenman_listesinde_yoksa_bir_kez_hedefsiz_eklenir()
+    {
+        var (context, _, exercise, service, sessionService, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var birinci = await service.CreateAsync(Yeni(exercise.Id, 100m, 8));
+            await service.CreateAsync(Yeni(exercise.Id, 100m, 9));
+            context.ChangeTracker.Clear();
+
+            var satir = await context.Set<SessionExercise>().SingleAsync(se => se.WorkoutSessionId == birinci.SessionId);
+            Assert.Equal(exercise.Id, satir.ExerciseId);
+            Assert.Null(satir.PlannedSets);
+
+            var ilerleme = Assert.Single((await sessionService.GetByIdAsync(birinci.SessionId)).Progress);
+            Assert.Equal(2, ilerleme.CompletedSets);
         }
     }
 

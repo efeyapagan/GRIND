@@ -214,4 +214,30 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
         Assert.Equal(HttpStatusCode.NoContent, silme.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, sonra.StatusCode);
     }
+
+    /// <summary>#60/#62: hareket ekleme 201 + guncel ilerleme, kaldirma 204; ikinci kaldirma 404.</summary>
+    [Fact]
+    public async Task Hareket_ekleme_201_kaldirma_204_ve_acik_oturum_ilerlemesi_guncellenir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var sablon = await CreateTemplateAsync(client);   // ExerciseId = 1
+        var baslatma = await client.PostAsJsonAsync("/api/sessions",
+            new StartSessionRequest { TemplateId = sablon.Id }, Json);
+        var oturum = (await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json))!;
+
+        var ekleme = await client.PostAsJsonAsync($"/api/sessions/{oturum.Id}/exercises", new { exerciseId = 2 }, Json);
+
+        Assert.Equal(HttpStatusCode.Created, ekleme.StatusCode);
+        var eklendi = (await ekleme.Content.ReadFromJsonAsync<SessionResponse>(Json))!;
+        Assert.Equal(2, eklendi.Progress.Count);
+        Assert.Null(eklendi.Progress[1].PlannedSets);
+
+        var kaldirma = await client.DeleteAsync($"/api/sessions/{oturum.Id}/exercises/1");
+        var ikinciKaldirma = await client.DeleteAsync($"/api/sessions/{oturum.Id}/exercises/1");
+
+        Assert.Equal(HttpStatusCode.NoContent, kaldirma.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ikinciKaldirma.StatusCode);
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+        Assert.Equal(2, Assert.Single(acik!.Progress).ExerciseId);
+    }
 }

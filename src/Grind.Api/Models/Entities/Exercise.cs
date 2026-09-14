@@ -16,5 +16,6 @@ public class Exercise
     public User? User { get; set; }
     public ICollection<ExerciseMedia> Media { get; set; } = [];
     public ICollection<TemplateExercise> TemplateExercises { get; set; } = [];
+    public ICollection<SessionExercise> SessionExercises { get; set; } = [];
     public ICollection<SetEntry> SetEntries { get; set; } = [];
 }

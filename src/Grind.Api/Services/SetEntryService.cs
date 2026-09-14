@@ -54,6 +54,10 @@ public class SetEntryService(
         var (session, _) = await sessionService.GetOrOpenTodayAsync(
             templateId: null, notes: null, cancellationToken);
 
+        // #62: hareket antrenmanın listesinde yoksa sona hedefsiz girer — "Plan dışı" diye ayrı bir
+        // kavram kalmaz. Seam kaydetmez; liste satırı set ile aynı commit'te gider.
+        await sessionService.EnsureExerciseAsync(session, exercise.Id, cancellationToken);
+
         var set = new SetEntry
         {
             WorkoutSession = session,

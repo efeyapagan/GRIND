@@ -50,6 +50,12 @@ public class SetEntryRepository(AppDbContext context)
             .Distinct()
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SetEntry>> GetForSessionAndExerciseAsync(
+        long sessionId, long exerciseId, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(s => s.WorkoutSessionId == sessionId && s.ExerciseId == exerciseId)
+            .ToListAsync(cancellationToken);
+
     // ToDictionaryAsync'in seçicileri Func'tur, Expression<Func> değil — aradaki Select
     // olmadan EF, GroupBy + Count'u sunucuya (GROUP BY / count(*)) çeviremez; tüm satırlar
     // istemciye çekilip sayım bellekte yapılırdı. Bu Select'i kaldırma.

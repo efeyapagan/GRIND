@@ -12,6 +12,10 @@ interface Props {
   /** Baska bir satirda zaten secilenler: gorunur ama secilemez. */
   devreDisiIdler?: ReadonlySet<number>;
   onSec: (exerciseId: number) => void;
+  /** Monte olunca odaklan (ve listeyi ac): yalnizca bir eylemle acilan secicilerde (#62 "Hareket ekle"). */
+  otomatikOdak?: boolean;
+  /** Liste alanin USTUNDE acilir: ekranin altindaki bir panelde asagi acilan liste sekme cubugunun altinda kalirdi. */
+  listeYukari?: boolean;
 }
 
 /** Devre disi secenekleri atlayarak sonraki secilebilir indeksi bulur; yoksa mevcut indeks kalir. */
@@ -48,6 +52,8 @@ export default function HareketSecici({
   secilenAd,
   devreDisiIdler,
   onSec,
+  otomatikOdak = false,
+  listeYukari = false,
 }: Props) {
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
@@ -122,6 +128,7 @@ export default function HareketSecici({
           aria-autocomplete="list"
           aria-activedescendant={acik && sonuclar[etkin] ? secenekId(sonuclar[etkin].id) : undefined}
           autoComplete="off"
+          autoFocus={otomatikOdak}
           value={acik ? sorgu : secilenAd}
           placeholder={acik ? secilenAd : undefined}
           onFocus={ac}
@@ -146,7 +153,9 @@ export default function HareketSecici({
         role="listbox"
         aria-label="Hareketler"
         hidden={!acik}
-        className="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-lg bg-surface-3 py-1"
+        className={`absolute inset-x-0 z-30 max-h-64 overflow-y-auto rounded-lg bg-surface-3 py-1 ${
+          listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'
+        }`}
       >
         {sonuclar.map((egzersiz, sira) => {
           const secili = egzersiz.id === secilenId;

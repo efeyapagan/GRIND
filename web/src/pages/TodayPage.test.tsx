@@ -82,14 +82,16 @@ function sablonluOturum(progress: SessionProgressResponse[]): SessionResponse {
 function ilerleme(
   exerciseId: number,
   exerciseName: string,
-  plannedSets: number,
+  // null = hedefsiz: antrenmana sonradan eklenen hareket (#62).
+  plannedSets: number | null,
   completedSets: number,
   restSeconds = 90,
 ): SessionProgressResponse {
   return { exerciseId, exerciseName, plannedSets, completedSets, restSeconds };
 }
 
-const HAREKET_KARTI_ADI = /, \d+ \/ \d+ set$/;
+// Hedefli ("2 / 4 set") ve hedefsiz ("2 set", #62) kartlar.
+const HAREKET_KARTI_ADI = /, \d+( \/ \d+)? set$/;
 
 /**
  * Bellek-ici sahte bir sunucu durumu kurar: acik oturum, o oturumun setleri, egzersiz listesi,
@@ -118,6 +120,8 @@ function sahteSunucuyuKur(
   const ilerlemeAramalari: string[] = [];
   const silinenOturumlar: number[] = [];
   const silinenSetler: number[] = [];
+  const eklenenHareketler: number[] = [];
+  const kaldirilanHareketler: number[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -190,14 +194,18 @@ function sahteSunucuyuKur(
         createdAt: new Date().toISOString(),
       };
       setler = [...setler, yeniSet];
-      // Sunucu ilerlemeyi gercek set sayisindan hesaplar; sahte sunucu da sayaci artirir.
+      // Sunucu ilerlemeyi gercek set sayisindan hesaplar; sahte sunucu da sayaci artirir. Hareket
+      // antrenmanin listesinde yoksa gercek backend gibi sona HEDEFSIZ ekler (#62).
+      const mevcutIlerleme = oturum.progress ?? [];
       oturum = {
         ...oturum,
-        progress: (oturum.progress ?? []).map((hareket) =>
-          hareket.exerciseId === govde.exerciseId
-            ? { ...hareket, completedSets: (hareket.completedSets ?? 0) + 1 }
-            : hareket,
-        ),
+        progress: mevcutIlerleme.some((hareket) => hareket.exerciseId === govde.exerciseId)
+          ? mevcutIlerleme.map((hareket) =>
+              hareket.exerciseId === govde.exerciseId
+                ? { ...hareket, completedSets: (hareket.completedSets ?? 0) + 1 }
+                : hareket,
+            )
+          : [...mevcutIlerleme, ilerleme(govde.exerciseId, egzersiz?.name ?? 'Bilinmeyen', null, 1)],
       };
       return HttpResponse.json(yeniSet);
     }),
@@ -237,6 +245,29 @@ function sahteSunucuyuKur(
       }
       return new HttpResponse(null, { status: 204 });
     }),
+    // Gercek backend gibi: hareket sona hedefsiz eklenir, guncel oturum 201 ile doner (#62).
+    http.post('/api/sessions/:id/exercises', async ({ request }) => {
+      const govde = (await request.json()) as { exerciseId: number };
+      eklenenHareketler.push(govde.exerciseId);
+      const egzersiz = EGZERSIZLER.find((e) => e.id === govde.exerciseId);
+      if (oturum) {
+        oturum = {
+          ...oturum,
+          progress: [...(oturum.progress ?? []), ilerleme(govde.exerciseId, egzersiz?.name ?? 'Bilinmeyen', null, 0)],
+        };
+      }
+      return HttpResponse.json(oturum, { status: 201 });
+    }),
+    // Gercek backend gibi 204: hareket ve bu antrenmandaki setleri gider (#60).
+    http.delete('/api/sessions/:id/exercises/:exerciseId', ({ params }) => {
+      const exerciseId = Number(params.exerciseId);
+      kaldirilanHareketler.push(exerciseId);
+      setler = setler.filter((kayit) => kayit.exerciseId !== exerciseId);
+      if (oturum) {
+        oturum = { ...oturum, progress: (oturum.progress ?? []).filter((h) => h.exerciseId !== exerciseId) };
+      }
+      return new HttpResponse(null, { status: 204 });
+    }),
   );
 
   return {
@@ -245,6 +276,8 @@ function sahteSunucuyuKur(
     ilerlemeAramalari: () => ilerlemeAramalari,
     silinenOturumlar: () => silinenOturumlar,
     silinenSetler: () => silinenSetler,
+    eklenenHareketler: () => eklenenHareketler,
+    kaldirilanHareketler: () => kaldirilanHareketler,
   };
 }
 
@@ -260,13 +293,28 @@ async function egzersizSecimineBekle() {
 }
 
 /**
+ * #62: acik antrenmanda panelde hareket secimi yoktur -- hareket karttan gelir. Set gondermeden once
+ * varsayilan secimin (adiyla verilen hareketin) kartinin secili oldugu beklenir.
+ */
+async function seciliKartaBekle(ad: string) {
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: new RegExp(`^${ad}, `), pressed: true })).toBeInTheDocument(),
+  );
+}
+
+/**
  * Dilim 3: set paneli kapali baslar. Form alanlariyla etkilesen her akis once paneli acar; panel zaten
- * aciksa (orn. hareket kartina dokunulduysa) bir sey yapmaz.
+ * aciksa (orn. hareket kartina dokunulduysa) bir sey yapmaz. Antrenman yokken "Set ekle" dugmesi acar;
+ * acik antrenmanda (#62) o dugme yoktur, panel secili karta dokununca acilir.
  */
 async function paneliAc(kullanici: ReturnType<typeof userEvent.setup>) {
   const acmaDugmesi = screen.queryByRole('button', { name: 'Set ekle', expanded: false });
   if (acmaDugmesi) {
     await kullanici.click(acmaDugmesi);
+    return;
+  }
+  if (document.getElementById('set-paneli')?.hidden) {
+    await kullanici.click(screen.getAllByRole('button', { name: HAREKET_KARTI_ADI, pressed: true })[0]);
   }
 }
 
@@ -621,24 +669,15 @@ test('setsiz acik oturumda bitir yerine iptal cikar ve DELETE ile bos duruma don
 });
 
 test('set girilince iptal dugmesi yerini bitir dugmesine birakir', async () => {
-  const acikOturum: SessionResponse = {
-    id: 1,
-    startedAt: new Date().toISOString(),
-    endedAt: null,
-    isOpen: true,
-    templateId: null,
-    templateName: null,
-    notes: null,
-    progress: [],
-  };
-  sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+  // #62: set, antrenmandaki bir hareketin kartindan girilir; setsiz sablonlu oturum.
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
   expect(await screen.findByRole('button', { name: 'Antrenmanı iptal et' })).toBeInTheDocument();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   // Artik silinecek gercek veri var: iptal kaybolur, yerine bitir gelir.
@@ -721,16 +760,7 @@ test('ag hatasi: set kaydedilmemis OLABILECEGINI soyleyen mesaj gosterilir ve fo
 });
 
 test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri gelince gercek durum gorunsun)', async () => {
-  const acikOturum: SessionResponse = {
-    id: 9,
-    startedAt: new Date().toISOString(),
-    endedAt: null,
-    isOpen: true,
-    templateId: null,
-    templateName: null,
-    notes: null,
-    progress: [],
-  };
+  const acikOturum = sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]);
   sahteSunucuyuKur({ baslangicOturumu: acikOturum });
   let acikOturumIstekSayisi = 0;
   server.use(
@@ -744,7 +774,7 @@ test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri g
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   const ilkIstekSayisi = acikOturumIstekSayisi;
   await setEkle(kullanici, '60', '8');
 
@@ -869,7 +899,6 @@ test('sablonlu oturumda kartlar sunucunun sirasiyla gorunur; varsayilan secim ta
   expect(kartlar[1]).toHaveAccessibleName('Bench Press, 1 / 4 set');
   expect(kartlar[0]).toHaveAttribute('aria-pressed', 'false');
   expect(kartlar[1]).toHaveAttribute('aria-pressed', 'true');
-  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
 });
 
 test('sablonun ilk tamamlanmamis hareketi arsivlenmisse (GET /api/exercises listede yok) varsayilan secim bir sonraki gecerli harekettir', async () => {
@@ -885,44 +914,27 @@ test('sablonun ilk tamamlanmamis hareketi arsivlenmisse (GET /api/exercises list
   bugunSayfasiniOlustur();
 
   await waitFor(() => expect(screen.getAllByRole('button', { name: HAREKET_KARTI_ADI })).toHaveLength(2));
-  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
-  expect(screen.getByRole('button', { name: 'Bench Press, 1 / 4 set' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await seciliKartaBekle('Bench Press');
 });
 
-test('karta dokunmak paneldeki egzersizi degistirir; hareket tamamlaninca secim sonrakine atlamaz', async () => {
+test('karta dokunmak paneldeki hareketi degistirir; hareket tamamlaninca secim sonrakine atlamaz', async () => {
   sahteSunucuyuKur({
     baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 1, 0), ilerleme(2, 'Squat', 3, 0)]),
   });
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   const bench = await screen.findByRole('button', { name: 'Bench Press, 1 / 1 set' });
   expect(bench).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByLabelText('Egzersiz')).toHaveValue('1');
+  expect(screen.getByRole('heading', { name: 'Yeni set: Bench Press' })).toBeInTheDocument();
 
   await kullanici.click(screen.getByRole('button', { name: 'Squat, 0 / 3 set' }));
 
-  expect(screen.getByLabelText('Egzersiz')).toHaveValue('2');
+  expect(screen.getByRole('heading', { name: 'Yeni set: Squat' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Squat, 0 / 3 set' })).toHaveAttribute('aria-pressed', 'true');
-});
-
-test('sablonda olmayan harekete girilen setler Plan disi grubunda gorunur', async () => {
-  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
-  const kullanici = userEvent.setup();
-  bugunSayfasiniOlustur();
-
-  await egzersizSecimineBekle();
-  await kullanici.selectOptions(screen.getByLabelText('Egzersiz'), '2');
-  await setEkle(kullanici, '70', '5');
-
-  const planDisi = await screen.findByRole('region', { name: 'Plan dışı' });
-  expect(within(planDisi).getByText(tamMetin('70 kg × 5'))).toBeInTheDocument();
 });
 
 test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', async () => {
@@ -970,7 +982,7 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
   bugunSayfasiniOlustur();
 
   // Ilk sablonlu oturumun varsayilani: tamamlanmamis ilk hareket, Bench Press.
-  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
+  await seciliKartaBekle('Bench Press');
 
   await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı iptal et' }));
   await waitFor(() =>
@@ -983,25 +995,14 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
     'aria-pressed',
     'true',
   );
-  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('2'));
 });
 
-test('sablonsuz oturumda gecmis acilinca istenir ve set eklenince yeniden istenir', async () => {
-  const acikOturum: SessionResponse = {
-    id: 40,
-    startedAt: new Date().toISOString(),
-    endedAt: null,
-    isOpen: true,
-    templateId: null,
-    templateName: null,
-    notes: null,
-    progress: [],
-  };
-  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum });
+test('secili kartta gecmis acilinca istenir ve set eklenince yeniden istenir', async () => {
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   // #50: grafik kapali baslar; acilmadan ilerleme istegi atilmaz.
   expect(ortam.ilerlemeAramalari()).toHaveLength(0);
   await kullanici.click(await screen.findByText('Geçmiş'));
@@ -1045,13 +1046,13 @@ test('hareket kartina dokunmak hareketi secer ve set panelini acar, grafigi acma
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
 
   await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
 
   expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
-  expect(screen.getByLabelText('Egzersiz')).toHaveValue('2');
+  expect(screen.getByRole('heading', { name: 'Yeni set: Squat' })).toBeInTheDocument();
   // I2 (review bulgusu): karta dokunarak acilan panelde odak agirlik alanina TASINMAZ -- aksi
   // halde telefon klavyesi acilir ve kartin az once ortaya cikardigi grafigi ortar.
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toHaveFocus();
@@ -1155,6 +1156,100 @@ describe('set duzenleme ve silme (#57)', () => {
   });
 });
 
+describe('antrenman hareketleri (#60, #62)', () => {
+  test('hedefsiz hareket karti "2 set" gosterir; Plan disi bolumu yoktur', async () => {
+    sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', null, 2)]),
+    });
+    bugunSayfasiniOlustur();
+
+    expect(await screen.findByRole('button', { name: 'Squat, 2 set' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Plan dışı' })).not.toBeInTheDocument();
+  });
+
+  test('acik antrenmanda panelde hareket secimi yoktur; set dokunulan kartin hareketine gider', async () => {
+    const ortam = sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+    });
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+
+    expect(screen.getByRole('heading', { name: 'Yeni set: Squat' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Egzersiz')).not.toBeInTheDocument();
+
+    await setEkle(kullanici, '70', '5');
+
+    await waitFor(() => expect(ortam.sonGonderilenGovde()).toMatchObject({ exerciseId: 2, weight: 70, reps: 5 }));
+  });
+
+  test('Hareket ekle secicisi yalnizca antrenmanda olmayan hareketleri listeler; secince eklenir ve kart secili gelir', async () => {
+    const ortam = sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Hareket ekle' }));
+
+    // Yalnizca hareketler: agirlik/tekrar alani yok, antrenmanda olan Bench Press listede yok.
+    const liste = await screen.findByRole('listbox', { name: 'Hareketler' });
+    expect(within(liste).getAllByRole('option').map((secenek) => secenek.textContent)).toEqual(['Squat']);
+    expect(screen.queryByLabelText('Ağırlık (kg)')).not.toBeVisible();
+
+    await kullanici.click(within(liste).getByRole('option', { name: 'Squat' }));
+
+    await waitFor(() => expect(ortam.eklenenHareketler()).toEqual([2]));
+    expect(await screen.findByRole('button', { name: 'Squat, 0 set' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('Hareketi kaldir: kart hemen gizlenir ve geri al seridi cikar; geri alinca kart doner, DELETE gitmez', async () => {
+    const ortam = sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+    });
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+    await kullanici.click(screen.getByRole('button', { name: 'Hareketi kaldır' }));
+
+    expect(await screen.findByText('Hareket kaldırıldı')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Squat, 0 / 3 set' })).not.toBeInTheDocument();
+    expect(ortam.kaldirilanHareketler()).toEqual([]);
+
+    await kullanici.click(screen.getByRole('button', { name: 'Geri al' }));
+
+    expect(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' })).toBeInTheDocument();
+    expect(ortam.kaldirilanHareketler()).toEqual([]);
+  });
+
+  test('geri alma suresi dolunca hareketi kaldirma istegi gider', async () => {
+    // #57 ile ayni: yalnizca seridin saati sahtelenir, render'dan once kurulur.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval'] });
+    try {
+      const ortam = sahteSunucuyuKur({
+        baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+      });
+      const kullanici = userEvent.setup();
+      bugunSayfasiniOlustur();
+
+      await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+      await kullanici.click(screen.getByRole('button', { name: 'Hareketi kaldır' }));
+      await screen.findByText('Hareket kaldırıldı');
+
+      act(() => {
+        vi.advanceTimersByTime(5100);
+      });
+      vi.useRealTimers();
+
+      await waitFor(() => expect(ortam.kaldirilanHareketler()).toEqual([2]));
+      expect(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('dinlenme sayaci', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -1170,7 +1265,7 @@ describe('dinlenme sayaci', () => {
     const kullanici = userEvent.setup();
     bugunSayfasiniOlustur();
 
-    await egzersizSecimineBekle();
+    await seciliKartaBekle('Bench Press');
     await setEkle(kullanici, '60', '8');
 
     expect(await screen.findByText('2:00')).toBeInTheDocument();
@@ -1183,7 +1278,7 @@ describe('dinlenme sayaci', () => {
     const kullanici = userEvent.setup();
     bugunSayfasiniOlustur();
 
-    await egzersizSecimineBekle();
+    await seciliKartaBekle('Bench Press');
     await setEkle(kullanici, '60', '8');
 
     expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
