@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -16,7 +16,7 @@ function testeOzelSorguIstemcisi(): QueryClient {
 }
 
 function gecmisSayfasiniOlustur() {
-  render(
+  return render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <HistoryPage />
     </QueryClientProvider>,
@@ -218,3 +218,120 @@ test('kart ozetinde sablon adi ya da Serbest gorunur', async () => {
   expect(satirlar[0]).toHaveTextContent('Push Day');
   expect(satirlar[1]).toHaveTextContent('Serbest');
 });
+
+// --- Silme akisi (issue #46) ---
+
+/**
+ * Silme GECIKMELIDIR: onaydan sonra DELETE hemen gitmez, geri alma penceresi kapaninca gider.
+ * Bu yuzden "istek gitti mi" sorusu her testte sahte sunucuya dusen cagrilarla dogrulanir.
+ */
+function silmeyiIzle(): { silinenler: number[] } {
+  const silinenler: number[] = [];
+  server.use(
+    http.delete('/api/sessions/:id', ({ params }) => {
+      silinenler.push(Number(params.id));
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  return { silinenler };
+}
+
+test('kart icindeki sil dugmesi once onay sorar, vazgecince hicbir sey silinmez', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum()]))));
+  const izleme = silmeyiIzle();
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  // Kart icindeki gorunur yol: kaydirma yapamayan herkes icin (klavye, ekran okuyucu).
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı sil' }));
+
+  expect(screen.getByText(/10.09.2026 tarihli antrenman ve 3 seti silinecek/)).toBeInTheDocument();
+  expect(screen.getByText(/rekorları yeniden hesaplanır/)).toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Vazgeç' }));
+
+  expect(screen.getByRole('button', { name: 'Antrenmanı sil' })).toBeInTheDocument();
+  expect(izleme.silinenler).toEqual([]);
+});
+
+test('onaylaninca kart kalkar, geri al seridi cikar ve DELETE henuz gitmez', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum()]))));
+  const izleme = silmeyiIzle();
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı sil' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
+
+  expect(await screen.findByText('Antrenman silindi')).toBeInTheDocument();
+  expect(screen.queryByText('10.09.2026')).not.toBeInTheDocument();
+  // Pencere acikken istek gitmez: API silinmis bir antrenmani geri getiremedigi icin tek
+  // durust geri alma, silmeyi henuz YAPMAMIS olmaktir.
+  expect(izleme.silinenler).toEqual([]);
+});
+
+test('geri al kartu listeye dondurur ve DELETE hic gitmez', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum()]))));
+  const izleme = silmeyiIzle();
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı sil' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
+  await kullanici.click(await screen.findByRole('button', { name: 'Geri al' }));
+
+  expect(await screen.findByText('10.09.2026')).toBeInTheDocument();
+  expect(screen.queryByText('Antrenman silindi')).not.toBeInTheDocument();
+  expect(izleme.silinenler).toEqual([]);
+});
+
+test('geri alma penceresi acikken sayfadan cikilirsa silme tamamlanir', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum()]))));
+  const izleme = silmeyiIzle();
+  const kullanici = userEvent.setup();
+  const { unmount } = gecmisSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı sil' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
+  expect(await screen.findByText('Antrenman silindi')).toBeInTheDocument();
+
+  // Kullanici "sildim" dedi ve geri ALMADI; baska bir sekmeye gecmek silmeyi iptal etmez.
+  unmount();
+
+  await waitFor(() => expect(izleme.silinenler).toEqual([1]));
+});
+
+test('telefonu sallamak silmeyi geri alir', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum()]))));
+  const izleme = silmeyiIzle();
+  // jsdom'da hareket sensoru yok; dinleyicinin baglanabilmesi icin varligi taklit edilir.
+  const oncekiOlay = window.DeviceMotionEvent;
+  Object.defineProperty(window, 'DeviceMotionEvent', { value: class {}, configurable: true });
+
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı sil' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
+  expect(await screen.findByText('Antrenman silindi')).toBeInTheDocument();
+
+  salla({ x: 0, y: 0, z: -9.8 });
+  // Iki olcum arasinda en az bir ornekleme araligi olmali (cihaz ~60 Hz orneklyor, her olcum
+  // islenmez); ilk olcum yalnizca kiyas noktasini kurar.
+  await new Promise((coz) => setTimeout(coz, 150));
+  salla({ x: 0, y: 0, z: 30 });
+
+  expect(await screen.findByText('10.09.2026')).toBeInTheDocument();
+  expect(izleme.silinenler).toEqual([]);
+
+  Object.defineProperty(window, 'DeviceMotionEvent', { value: oncekiOlay, configurable: true });
+});
+
+/** Gercek bir `DeviceMotionEvent` jsdom'da uretilemez; olay nesnesine olculen ivme eklenir. */
+function salla(ivme: { x: number; y: number; z: number }) {
+  const olay = new Event('devicemotion');
+  Object.defineProperty(olay, 'accelerationIncludingGravity', { value: ivme });
+  act(() => {
+    window.dispatchEvent(olay);
+  });
+}

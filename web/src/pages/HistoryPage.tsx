@@ -1,30 +1,98 @@
-import { useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
-import { useHistory } from '../api/queries';
-import { formatTrDate, formatWeight } from '../lib/format';
-import SetList from '../components/SetList';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { oturumSilindiTazele, oturumuSil, useHistory, type GecmisOturum } from '../api/queries';
+import { sallamaIzniIste, useSallama } from '../lib/sallama';
+import GecmisKarti from '../components/GecmisKarti';
 import BosDurum from '../ui/BosDurum';
-import TurEtiketi from '../ui/TurEtiketi';
+import GeriAlSeridi from '../ui/GeriAlSeridi';
 
 // Sayfalama dugmeleri (Stitch: 52 px).
 const SAYFA_DUGMESI =
   'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
 
+/** Geri alma penceresi. Fark edip tepki vermeye yeter, akisi bekletecek kadar uzun degil. */
+const GERI_AL_MS = 5000;
+
 /**
  * "Gecmis" ekrani -- sunucunun sayfali zarfini oldugu gibi gosterir. Sira, sayfa bilgisi, toplam
  * sayi ve hacim TAMAMEN sunucudan gelir (spec); istemci hicbir seyi yeniden HESAPLAMAZ veya
- * SIRALAMAZ.
+ * SIRALAMAZ. Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
  *
- * Bir oturumun setleri (R12) yerinde acilan native `<details>` ile gosterilir -- setler yanitin
- * ICINDE geldigi icin ekstra istek yok; native eleman klavye/ekran okuyucu erisilebilirligini
- * kendiliginden saglar. `group-open:` o eleman acikken ozeti ve gostergeyi degistirir.
- * `[&::-webkit-details-marker]:hidden` Safari'nin varsayilan ucgenini gizler (`list-none` digerleri icin).
+ * Silme (issue #46) GECIKMELIDIR: onaydan sonra kart listeden hemen kalkar ama DELETE istegi
+ * ancak geri alma penceresi kapaninca gider. Sebep teknik ve baglayici -- API silinmis bir
+ * antrenmani setleriyle birlikte GERI GETIREMEZ (`POST /api/sessions` yalnizca BUGUN icin bos
+ * bir oturum acar), yani "once sil, geri alinirsa yeniden olustur" mumkun degil. Tek durust
+ * geri alma, silmeyi henuz yapmamis olmaktir.
  *
- * Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
+ * Pencere acikken sayfadan cikilirsa silme IPTAL EDILMEZ, kaldirma (unmount) sirasinda
+ * tamamlanir: kullanici "sildim" dedi, geri almadi.
  */
 export default function HistoryPage() {
   const [sayfa, setSayfa] = useState(1);
   const { data, isLoading, isError } = useHistory(sayfa);
+  // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
+  // bagimlilik olarak kullanilabilir, ref'e kopyalanmasi gerekmez.
+  const queryClient = useQueryClient();
+  const [bekleyen, setBekleyen] = useState<GecmisOturum | null>(null);
+
+  // Kaldirma (unmount) sirasinda okunur. Efektin bagimligi OLAMAZ: bagimlilik olsaydi temizleyici
+  // her degisimde calisip silmeyi erken tetiklerdi. Ref render sirasinda degil efektte yazilir.
+  const bekleyenRef = useRef<GecmisOturum | null>(null);
+  useEffect(() => {
+    bekleyenRef.current = bekleyen;
+  }, [bekleyen]);
+
+  const silmeyiTamamla = useCallback(
+    (sessionId: number) => {
+      void oturumuSil(sessionId).then(
+        () => oturumSilindiTazele(queryClient, sessionId),
+        // Gecikmis silme basarisiz olursa gosterilecek bir yer yok (serit kalkti, sayfa degismis
+        // olabilir). Liste sunucu dogrulugundan beslendigi icin oturum bir sonraki ziyarette geri
+        // gorunur -- sessiz bir veri kaybi olusmaz.
+        () => undefined,
+      );
+    },
+    [queryClient],
+  );
+
+  useEffect(
+    () => () => {
+      const kalan = bekleyenRef.current;
+      if (kalan) {
+        silmeyiTamamla(kalan.sessionId);
+      }
+    },
+    [silmeyiTamamla],
+  );
+
+  function silmeyiBaslat(oturum: GecmisOturum) {
+    // Onceki bekleyen silme varsa once o tamamlanir: ayni anda tek bir geri alma penceresi olur.
+    if (bekleyen) {
+      silmeyiTamamla(bekleyen.sessionId);
+    }
+    setBekleyen(oturum);
+    // iOS hareket sensoru ACIK izin ister ve izin ancak bir kullanici hareketinden istenebilir --
+    // buradaki silme onayi o hareketin ta kendisi. Sonuc beklenmez: izin verilmese de (ya da API
+    // hic yoksa) seritteki "Geri al" dugmesi calismaya devam eder.
+    void sallamaIzniIste();
+  }
+
+  const geriAl = useCallback(() => setBekleyen(null), []);
+
+  const sureDoldu = useCallback(() => {
+    setBekleyen((mevcut) => {
+      if (mevcut) {
+        silmeyiTamamla(mevcut.sessionId);
+      }
+      return null;
+    });
+  }, [silmeyiTamamla]);
+
+  useSallama(bekleyen !== null, geriAl);
+
+  // Bekleyen silme listeden hemen kalkar; geri alinirsa sunucudan silinmedigi icin oldugu gibi doner.
+  const gorunenler = data?.items.filter((o) => o.sessionId !== bekleyen?.sessionId) ?? [];
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
@@ -38,61 +106,20 @@ export default function HistoryPage() {
         </p>
       )}
 
-      {!isLoading && !isError && data && data.items.length === 0 && (
+      {!isLoading && !isError && data && gorunenler.length === 0 && (
         <BosDurum ikon={CalendarDays} baslik="Henüz antrenman geçmişi yok" />
       )}
 
-      {!isLoading && !isError && data && data.items.length > 0 && (
+      {!isLoading && !isError && data && gorunenler.length > 0 && (
         <>
           <ul className="flex flex-col gap-4">
-            {data.items.map((oturum) => {
-              const bos = oturum.setCount === 0;
-              return (
-                <li
-                  key={oturum.sessionId}
-                  className={`overflow-hidden rounded-xl bg-surface-2 ${bos ? 'opacity-80' : ''}`}
-                >
-                  <details className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 group-open:bg-surface-3 focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <span className="flex flex-wrap items-center gap-2 text-label">
-                          <span className="flex items-center gap-1">
-                            <CalendarDays aria-hidden size={18} className="text-muted" />
-                            {formatTrDate(oturum.startedAt)}
-                          </span>
-                          {/* Spec Karar 7: sablon adi ya da "Serbest"; notr hap, accent yok. */}
-                          <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
-                        </span>
-                        <span className="flex items-baseline gap-4">
-                          <span className="flex items-baseline gap-1">
-                            <span className={`text-metric tabular-nums ${bos ? 'text-muted' : ''}`}>
-                              {oturum.setCount}
-                            </span>{' '}
-                            <span className="text-label-xs text-muted uppercase">set</span>
-                          </span>
-                          <span className="flex items-baseline gap-1">
-                            <span className={`text-metric tabular-nums ${bos ? 'text-muted' : ''}`}>
-                              {formatWeight(oturum.totalVolume)}
-                            </span>{' '}
-                            <span className="text-label-xs text-muted uppercase">kg</span>
-                          </span>
-                        </span>
-                      </div>
-                      <span
-                        aria-hidden
-                        className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted group-open:bg-surface-4 group-open:text-fg"
-                      >
-                        <ChevronDown size={20} className="group-open:hidden" />
-                        <ChevronUp size={20} className="hidden group-open:block" />
-                      </span>
-                    </summary>
-                    <div className="p-4">
-                      <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni="Bu antrenmanda set yok." />
-                    </div>
-                  </details>
-                </li>
-              );
-            })}
+            {gorunenler.map((oturum) => (
+              <GecmisKarti
+                key={oturum.sessionId}
+                oturum={oturum}
+                onSil={() => silmeyiBaslat(oturum)}
+              />
+            ))}
           </ul>
           <div className="mt-3 flex items-center justify-between gap-4">
             <button
@@ -121,6 +148,17 @@ export default function HistoryPage() {
             </button>
           </div>
         </>
+      )}
+
+      {bekleyen && (
+        <GeriAlSeridi
+          // `key`: ard arda iki silmede serit YENIDEN monte olsun, pencere bastan baslasin.
+          key={bekleyen.sessionId}
+          mesaj="Antrenman silindi"
+          sureMs={GERI_AL_MS}
+          onGeriAl={geriAl}
+          onSureDoldu={sureDoldu}
+        />
       )}
     </div>
   );
