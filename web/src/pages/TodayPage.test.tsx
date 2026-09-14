@@ -207,11 +207,23 @@ async function egzersizSecimineBekle() {
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
 }
 
+/**
+ * Dilim 3: set paneli kapali baslar. Form alanlariyla etkilesen her akis once paneli acar; panel zaten
+ * aciksa (orn. hareket kartina dokunulduysa) bir sey yapmaz.
+ */
+async function paneliAc(kullanici: ReturnType<typeof userEvent.setup>) {
+  const acmaDugmesi = screen.queryByRole('button', { name: 'Set ekle', expanded: false });
+  if (acmaDugmesi) {
+    await kullanici.click(acmaDugmesi);
+  }
+}
+
 async function setEkle(
   kullanici: ReturnType<typeof userEvent.setup>,
   agirlik: string,
   tekrar: string,
 ) {
+  await paneliAc(kullanici);
   await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
   await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), agirlik);
   await kullanici.clear(screen.getByLabelText('Tekrar'));
@@ -324,6 +336,7 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
   bugunSayfasiniOlustur();
 
   await egzersizSecimineBekle();
+  await paneliAc(kullanici);
   // Agirlik alani BILEREK bos birakiliyor -- "0" (barfiks/dips) gecerli bir deger olsa da,
   // hic girilmemis bir alan "0" degil "girilmedi" demektir (review bulgusu).
   await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
@@ -444,6 +457,7 @@ test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek
   bugunSayfasiniOlustur();
 
   await egzersizSecimineBekle();
+  await paneliAc(kullanici);
   await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
   await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
   await kullanici.clear(screen.getByLabelText('Tekrar'));
@@ -863,6 +877,59 @@ test('sablonsuz oturumda secili hareketin gecmisi istenir ve set eklenince yenid
   await waitFor(() => expect(ortam.ilerlemeAramalari().length).toBeGreaterThan(ilkSayi));
 });
 
+test('set paneli kapali baslar; Set ekle acar, Paneli kapat kapatir, yazilan deger korunur ve odak geri doner', async () => {
+  sahteSunucuyuKur();
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Paneli kapat' })).not.toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Set ekle', expanded: false }));
+
+  expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
+  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveFocus();
+  await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
+
+  await kullanici.click(screen.getByRole('button', { name: 'Paneli kapat' }));
+
+  expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
+  expect(screen.getByRole('button', { name: 'Set ekle', expanded: false })).toHaveFocus();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Set ekle', expanded: false }));
+  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
+});
+
+test('hareket kartina dokunmak hareketi secer ve set panelini acar', async () => {
+  sahteSunucuyuKur({
+    baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+  });
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+
+  expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
+  expect(screen.getByLabelText('Egzersiz')).toHaveValue('2');
+});
+
+test('set eklendikten sonra panel acik kalir', async () => {
+  sahteSunucuyuKur();
+  const kullanici = userEvent.setup();
+  bugunSayfasiniOlustur();
+
+  await egzersizSecimineBekle();
+  await setEkle(kullanici, '60', '8');
+
+  expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
+  expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Paneli kapat' })).toBeInTheDocument();
+});
+
 describe('dinlenme sayaci', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -907,5 +974,20 @@ describe('dinlenme sayaci', () => {
     await setEkle(kullanici, '60', '8');
 
     expect(await screen.findByText('1:30')).toBeInTheDocument();
+  });
+
+  test('dinlenme sayaci panel kapaliyken de gorunur', async () => {
+    sahteSunucuyuKur();
+    const kullanici = userEvent.setup();
+    bugunSayfasiniOlustur();
+
+    await egzersizSecimineBekle();
+    await setEkle(kullanici, '60', '8');
+    expect(await screen.findByText('1:30')).toBeInTheDocument();
+
+    await kullanici.click(screen.getByRole('button', { name: 'Paneli kapat' }));
+
+    expect(screen.getByText('1:30')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Atla' })).toBeInTheDocument();
   });
 });

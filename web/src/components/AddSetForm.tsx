@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type FormEvent, type Ref } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type Ref } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
@@ -9,6 +9,7 @@ import { formatWeight } from '../lib/format';
 import { dinlenmeBaslat, dinlenmeSuresi, type Dinlenme } from '../lib/dinlenme';
 import { sesiHazirla } from '../lib/uyari';
 import BirincilDugme from '../ui/BirincilDugme';
+import IkonDugmesi from '../ui/IkonDugmesi';
 import SecimKutusu from '../ui/SecimKutusu';
 import DinlenmeSayaci from './DinlenmeSayaci';
 
@@ -30,6 +31,8 @@ const BAGLANTI_HATASI_MESAJI =
 // `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
 // kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
 const BILINEN_ALANLAR = ['weight', 'reps', 'rir'];
+
+const PANEL_ID = 'set-paneli';
 
 interface SayiAlaniProps {
   id: string;
@@ -98,15 +101,20 @@ interface Props {
   // egzersiz listesi henuz yuklenmedi.
   egzersizId: number | null;
   onEgzersizSec: (exerciseId: number) => void;
+  // Panel acik mi -- TodayPage'de tutulur, cunku hareket karti dokunusu da acar (dilim 3 spec Karar 6).
+  acik: boolean;
+  onAcikDegis: (acik: boolean) => void;
 }
 
 /**
  * Set ekleme formu -- bos durumda da (henuz acik oturum yokken) kullanilabilir olmasi gerekir,
  * cunku ilk set eklendiginde oturum sunucu tarafinda kendiliginden acilir (spec). Bu yuzden
  * TodayPage'in acik oturum olup olmadigina bakmadan hep render edilir. Secilen egzersiz disaridan
- * gelir (kontrollu).
+ * gelir (kontrollu). Alt alanin tamami bu bilesendedir: dinlenme sayaci + kapaliyken 'Set ekle'
+ * dugmesi, acikken form. Bilesen hic unmount olmaz; panel kapaliyken form `hidden` ile gizlenir,
+ * boylece yazilanlar ve dinlenme sayaci korunur (dilim 3 spec Karar 6).
  */
-export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
+export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum } = useOpenSession();
@@ -128,6 +136,22 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
   const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
 
   const agirlikRef = useRef<HTMLInputElement>(null);
+  const acmaDugmesiRef = useRef<HTMLButtonElement>(null);
+
+  // Odak yalnizca durum GERCEKTEN degistiginde tasinir (ilk render'da ve StrictMode'un cift efektinde
+  // calinmaz): acilinca agirlik alanina, kapaninca "Set ekle" dugmesine.
+  const oncekiAcik = useRef(acik);
+  useEffect(() => {
+    if (oncekiAcik.current === acik) {
+      return;
+    }
+    oncekiAcik.current = acik;
+    if (acik) {
+      agirlikRef.current?.focus();
+    } else {
+      acmaDugmesiRef.current?.focus();
+    }
+  }, [acik]);
 
   /**
    * Bos (ya da sadece bosluk) birakilmis bir agirlik/tekrar alani "girilmedi" demektir,
@@ -229,73 +253,90 @@ export default function AddSetForm({ egzersizId, onEgzersizSec }: Props) {
   }
 
   return (
-    // Panel sekme cubugunun HEMEN ustunde sabit (spec): 4rem = sekme cubugu yuksekligi (h-16).
-    <form
-      onSubmit={gonder}
-      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2"
-    >
-      <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-4 shadow-2xl">
+    // Alt alan sekme cubugunun HEMEN ustunde sabit: 4rem = sekme cubugu yuksekligi (h-16).
+    <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 pb-2">
+      <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl">
         <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
-        {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
-        <div>
-          <label htmlFor="set-egzersiz" className="sr-only">
-            Egzersiz
-          </label>
-          <SecimKutusu
-            id="set-egzersiz"
-            value={egzersizId ?? ''}
-            onChange={(e) => onEgzersizSec(Number(e.target.value))}
+        {!acik && (
+          <BirincilDugme
+            ref={acmaDugmesiRef}
+            yukseklik="normal"
+            aria-expanded={false}
+            aria-controls={PANEL_ID}
+            onClick={() => onAcikDegis(true)}
           >
-            {siraliEgzersizler.map((eg) => (
-              <option key={eg.id} value={eg.id}>
-                {eg.name}
-              </option>
-            ))}
-          </SecimKutusu>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <SayiAlani
-            id="set-agirlik"
-            etiket="Ağırlık"
-            ekranOkuyucuEki=" (kg)"
-            birim="kg"
-            inputMode="decimal"
-            placeholder="0"
-            value={agirlik}
-            onChange={setAgirlik}
-            hata={alanHatalari.weight}
-            girdiRef={agirlikRef}
-          />
-          <SayiAlani
-            id="set-tekrar"
-            etiket="Tekrar"
-            birim="tekrar"
-            inputMode="numeric"
-            placeholder="0"
-            value={tekrar}
-            onChange={setTekrar}
-            hata={alanHatalari.reps}
-          />
-          <SayiAlani
-            id="set-rir"
-            etiket="RIR"
-            ekranOkuyucuEki=" (opsiyonel)"
-            birim="kalan"
-            inputMode="numeric"
-            placeholder="—"
-            value={rir}
-            onChange={setRir}
-            hata={alanHatalari.rir}
-          />
-        </div>
-        <p role="status" className="min-h-4 text-label text-muted">
-          {sonEklenen}
-        </p>
-        <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
-          <Plus aria-hidden size={24} />
-          Set ekle
-        </BirincilDugme>
+            <Plus aria-hidden size={20} />
+            Set ekle
+          </BirincilDugme>
+        )}
+        <form id={PANEL_ID} hidden={!acik} onSubmit={gonder} className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="pl-1 text-label text-muted uppercase">Yeni set</span>
+            <IkonDugmesi etiket="Paneli kapat" onClick={() => onAcikDegis(false)}>
+              <X aria-hidden size={20} />
+            </IkonDugmesi>
+          </div>
+          {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
+          <div>
+            <label htmlFor="set-egzersiz" className="sr-only">
+              Egzersiz
+            </label>
+            <SecimKutusu
+              id="set-egzersiz"
+              value={egzersizId ?? ''}
+              onChange={(e) => onEgzersizSec(Number(e.target.value))}
+            >
+              {siraliEgzersizler.map((eg) => (
+                <option key={eg.id} value={eg.id}>
+                  {eg.name}
+                </option>
+              ))}
+            </SecimKutusu>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <SayiAlani
+              id="set-agirlik"
+              etiket="Ağırlık"
+              ekranOkuyucuEki=" (kg)"
+              birim="kg"
+              inputMode="decimal"
+              placeholder="0"
+              value={agirlik}
+              onChange={setAgirlik}
+              hata={alanHatalari.weight}
+              girdiRef={agirlikRef}
+            />
+            <SayiAlani
+              id="set-tekrar"
+              etiket="Tekrar"
+              birim="tekrar"
+              inputMode="numeric"
+              placeholder="0"
+              value={tekrar}
+              onChange={setTekrar}
+              hata={alanHatalari.reps}
+            />
+            <SayiAlani
+              id="set-rir"
+              etiket="RIR"
+              ekranOkuyucuEki=" (opsiyonel)"
+              birim="kalan"
+              inputMode="numeric"
+              placeholder="—"
+              value={rir}
+              onChange={setRir}
+              hata={alanHatalari.rir}
+            />
+          </div>
+          <p role="status" className="min-h-4 text-label text-muted">
+            {sonEklenen}
+          </p>
+          <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
+            <Plus aria-hidden size={24} />
+            Set ekle
+          </BirincilDugme>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

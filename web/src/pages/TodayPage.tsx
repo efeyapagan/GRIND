@@ -28,7 +28,8 @@ const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uy
  * sonrakine ATLAMAZ; sablonsuz bir oturum (bos durumdan ilk set ile acilan) secimi SIFIRLAMAZ --
  * kullanicinin panelde yaptigi secim korunur. Render sirasinda kosullu set (efekt yok).
  *
- * `pb-72` (18rem): sabit set ekle paneli listenin son satirini ortmesin.
+ * Alt bosluk panel durumuna gore: acikken `pb-72` (panel ~240 px), kapaliyken `pb-28` (dinlenme satiri
+ * + 'Set ekle' dugmesi); son satir ortulmesin.
  */
 export default function TodayPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
@@ -42,6 +43,7 @@ export default function TodayPage() {
   const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
+  const [panelAcik, setPanelAcik] = useState(false);
 
   const ilerleme = gorunenOturum?.progress ?? [];
   // F1 (review bulgusu): `progress` arsivlenmis bir hareketi icerebilir ama GET /api/exercises
@@ -67,9 +69,18 @@ export default function TodayPage() {
 
   // Bir kart (ya da panel <select>'i) arsivlenmis/listede olmayan bir hareketi secmeye calisirsa
   // yoksayilir (F1) -- gecerli tek secim kaynagi yuklenmis egzersiz listesidir.
-  function secimYap(exerciseId: number) {
-    if (secilebilirIdler.has(exerciseId)) {
-      setSecim(exerciseId);
+  function secimYap(exerciseId: number): boolean {
+    if (!secilebilirIdler.has(exerciseId)) {
+      return false;
+    }
+    setSecim(exerciseId);
+    return true;
+  }
+
+  // Dilim 3 spec Karar 6: hareket kartina dokunmak hareketi secer VE set panelini acar.
+  function kartSec(exerciseId: number) {
+    if (secimYap(exerciseId)) {
+      setPanelAcik(true);
     }
   }
 
@@ -87,7 +98,7 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 pt-2 pb-72">
+    <div className={`flex flex-col gap-5 pt-2 ${panelAcik ? 'pb-72' : 'pb-28'}`}>
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-title">Bugün</h1>
@@ -156,7 +167,7 @@ export default function TodayPage() {
                 ilerleme={ilerleme}
                 setler={setler ?? []}
                 secilenId={etkinSecim}
-                onSec={secimYap}
+                onSec={kartSec}
               />
             ) : (
               <>
@@ -181,7 +192,12 @@ export default function TodayPage() {
         </>
       )}
 
-      <AddSetForm egzersizId={etkinSecim} onEgzersizSec={secimYap} />
+      <AddSetForm
+        egzersizId={etkinSecim}
+        onEgzersizSec={secimYap}
+        acik={panelAcik}
+        onAcikDegis={setPanelAcik}
+      />
     </div>
   );
 }
