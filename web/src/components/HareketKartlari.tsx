@@ -9,6 +9,8 @@ interface Props {
   setler: SetKaydi[];
   secilenId: number | null;
   onSec: (exerciseId: number) => void;
+  // Bir setin duzenleyicisinde "Seti sil" (#57); geri alinabilir silmeyi sayfa yurutur.
+  onSetSil: (kayit: SetKaydi) => void;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * (dugme icinde liste, erisilebilir adi setlerle sisirirdi). Secim `aria-pressed` ile ve accent
  * KULLANMADAN (notr halka) gosterilir.
  */
-export default function HareketKartlari({ ilerleme, setler, secilenId, onSec }: Props) {
+export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, onSetSil }: Props) {
   const planliIdler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
   const planDisiSetler = setler.filter((kayit) => !planliIdler.has(kayit.exerciseId));
 
@@ -59,7 +61,7 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec }: 
               {hareketSetleri.length > 0 && (
                 <ul className="flex flex-col gap-1">
                   {hareketSetleri.map((kayit, setSirasi) => (
-                    <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} />
+                    <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onSil={onSetSil} />
                   ))}
                 </ul>
               )}
@@ -76,7 +78,7 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec }: 
           <h2 id="plan-disi-basligi" className="text-heading">
             Plan dışı
           </h2>
-          <SetList sets={planDisiSetler} />
+          <SetList sets={planDisiSetler} onSetSil={onSetSil} />
         </section>
       )}
     </div>

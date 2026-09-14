@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { oturumSilindiTazele, oturumuSil, useHistory, type GecmisOturum } from '../api/queries';
+import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { sallamaIzniIste, useSallama } from '../lib/sallama';
 import GecmisKarti from '../components/GecmisKarti';
 import BosDurum from '../ui/BosDurum';
@@ -10,9 +11,6 @@ import GeriAlSeridi from '../ui/GeriAlSeridi';
 // Sayfalama dugmeleri (Stitch: 52 px).
 const SAYFA_DUGMESI =
   'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
-
-/** Geri alma penceresi. Fark edip tepki vermeye yeter, akisi bekletecek kadar uzun degil. */
-const GERI_AL_MS = 5000;
 
 /**
  * "Gecmis" ekrani -- sunucunun sayfali zarfini oldugu gibi gosterir. Sira, sayfa bilgisi, toplam
@@ -34,19 +32,10 @@ export default function HistoryPage() {
   // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
   // bagimlilik olarak kullanilabilir, ref'e kopyalanmasi gerekmez.
   const queryClient = useQueryClient();
-  const [bekleyen, setBekleyen] = useState<GecmisOturum | null>(null);
-
-  // Kaldirma (unmount) sirasinda okunur. Efektin bagimligi OLAMAZ: bagimlilik olsaydi temizleyici
-  // her degisimde calisip silmeyi erken tetiklerdi. Ref render sirasinda degil efektte yazilir.
-  const bekleyenRef = useRef<GecmisOturum | null>(null);
-  useEffect(() => {
-    bekleyenRef.current = bekleyen;
-  }, [bekleyen]);
-
   const silmeyiTamamla = useCallback(
-    (sessionId: number) => {
-      void oturumuSil(sessionId).then(
-        () => oturumSilindiTazele(queryClient, sessionId),
+    (oturum: GecmisOturum) => {
+      void oturumuSil(oturum.sessionId).then(
+        () => oturumSilindiTazele(queryClient, oturum.sessionId),
         // Gecikmis silme basarisiz olursa gosterilecek bir yer yok (serit kalkti, sayfa degismis
         // olabilir). Liste sunucu dogrulugundan beslendigi icin oturum bir sonraki ziyarette geri
         // gorunur -- sessiz bir veri kaybi olusmaz.
@@ -55,39 +44,16 @@ export default function HistoryPage() {
     },
     [queryClient],
   );
-
-  useEffect(
-    () => () => {
-      const kalan = bekleyenRef.current;
-      if (kalan) {
-        silmeyiTamamla(kalan.sessionId);
-      }
-    },
-    [silmeyiTamamla],
-  );
+  // Bekleyen oge, geri alma penceresi ve kaldirilinca tamamlama Bugun ekraninin set silmesiyle ORTAK (#57).
+  const { bekleyen, baslat, geriAl, sureDoldu } = useGecikmeliSilme(silmeyiTamamla);
 
   function silmeyiBaslat(oturum: GecmisOturum) {
-    // Onceki bekleyen silme varsa once o tamamlanir: ayni anda tek bir geri alma penceresi olur.
-    if (bekleyen) {
-      silmeyiTamamla(bekleyen.sessionId);
-    }
-    setBekleyen(oturum);
+    baslat(oturum);
     // iOS hareket sensoru ACIK izin ister ve izin ancak bir kullanici hareketinden istenebilir --
     // buradaki silme onayi o hareketin ta kendisi. Sonuc beklenmez: izin verilmese de (ya da API
     // hic yoksa) seritteki "Geri al" dugmesi calismaya devam eder.
     void sallamaIzniIste();
   }
-
-  const geriAl = useCallback(() => setBekleyen(null), []);
-
-  const sureDoldu = useCallback(() => {
-    setBekleyen((mevcut) => {
-      if (mevcut) {
-        silmeyiTamamla(mevcut.sessionId);
-      }
-      return null;
-    });
-  }, [silmeyiTamamla]);
 
   useSallama(bekleyen !== null, geriAl);
 

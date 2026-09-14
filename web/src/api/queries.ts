@@ -14,6 +14,7 @@ type SessionResponse = components['schemas']['SessionResponse'];
 type SetEntryResponse = components['schemas']['SetEntryResponse'];
 type ExerciseResponse = components['schemas']['ExerciseResponse'];
 type CreateSetRequest = components['schemas']['CreateSetRequest'];
+type PatchSetRequest = components['schemas']['PatchSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
@@ -437,19 +438,63 @@ export function useAddSet() {
       });
       return dogrulanmisSet(yanit);
     },
-    onSuccess: (set) => {
-      // Set hangi oturuma dustu yanittaki sessionId'den bilinir -- acik oturum, o oturumun
-      // setleri ve rekorlar (Task 5'te kullanilacak) invalidate edilir (spec).
-      void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(set.sessionId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.records });
-      // Yeni set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
-      // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
-      // Grafigin bugunku noktasi guncellensin (dilim 3): eklenen setin hareketinin TUM araliklari.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(set.exerciseId) });
-    },
+    onSuccess: (set) => setDegistiTazele(queryClient, set),
   });
+}
+
+/**
+ * Bir set eklendikten, duzeltildikten ya da silindikten SONRA tazelenecekler (#57 ile uc akista
+ * ortak). Sunucu her ucta o hareketin rekorlarini yeniden hesaplar.
+ */
+export function setDegistiTazele(
+  queryClient: QueryClient,
+  set: { sessionId: number; exerciseId: number },
+): void {
+  // Set hangi oturuma ait yanittaki/kayittaki sessionId'den bilinir -- acik oturum (ilerleme), o
+  // oturumun setleri ve rekorlar invalidate edilir (spec).
+  void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(set.sessionId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.records });
+  // Set gecmisteki set sayisini/hacmini ve sayfa 1'in icerigini de degistirebilir
+  // (review bulgusu M1) -- `historyAll` ONEKI ile invalidate etmek TUM sayfalari kapsar.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+  // Grafigin bugunku noktasi guncellensin (dilim 3): setin hareketinin TUM araliklari.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(set.exerciseId) });
+}
+
+export interface SetDuzeltmesi {
+  id: number;
+  weight: number;
+  reps: number;
+  rir: number | null;
+}
+
+/**
+ * `PATCH /api/sets/{id}` (#57). Uc alan da gonderilir. DIKKAT: sunucuda `null` "degistirme" demektir,
+ * yani RIR bu uc ile BOSALTILAMAZ.
+ */
+export function useUpdateSet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...alanlar }: SetDuzeltmesi): Promise<SetKaydi> => {
+      const govde: PatchSetRequest = alanlar;
+      const yanit = await request<SetEntryResponse>(`/sets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(govde),
+      });
+      return dogrulanmisSet(yanit);
+    },
+    onSuccess: (set) => setDegistiTazele(queryClient, set),
+  });
+}
+
+/**
+ * `DELETE /api/sets/{id}` (#57), govdesiz 204. Hook degil duz fonksiyon: geri alma penceresi acikken
+ * sayfadan cikilirsa silme bilesen kaldirildiktan sonra tamamlanir (bkz. `oturumuSil`).
+ */
+export async function setiSil(id: number): Promise<void> {
+  await request<void>(`/sets/${id}`, { method: 'DELETE' });
 }
 
 export function useFinishSession() {
