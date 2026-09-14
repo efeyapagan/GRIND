@@ -14,6 +14,9 @@ master  ──●─────────────────────
 dev     ────────●────────────────┴──────────●──
 ```
 
+0. **Önce GitHub'da bir issue açılır.** Branch adı issue numarasını taşır
+   (`feature/<no>-kisa-ad`) ve PR'lar issue'ya bağlanır (`Refs #<no>`, master PR'ında `Closes #<no>`).
+   Projede birden fazla kişi çalıştığı için iş, kod yazılmadan önce görünür olmalı.
 1. Feature branch'i **`master`'dan** açılır.
 2. İş bitince **`dev`'e PR** açılır. dev'de ayağa kaldırılıp test edilir.
 3. Kabul edilirse **aynı branch'ten `master`'a ikinci PR** açılır.
