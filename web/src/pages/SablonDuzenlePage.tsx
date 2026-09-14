@@ -20,6 +20,7 @@ import Hap from '../ui/Hap';
 import HataKutusu from '../ui/HataKutusu';
 import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
+import HareketSecici from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
 
 const DINLENME_SECENEKLERI = [
@@ -381,9 +382,6 @@ function HareketSatiri({
 }: HareketSatiriProps) {
   const onEk = `${sira}. hareket`;
   const idOnEki = `hareket-${satir.anahtar}`;
-  // Arsivlenmis egzersiz secim listesinde yok (GET /api/exercises arsivlileri dondurmez) ama sablonda
-  // kalabilir: kendi adiyla ayrica secenek olarak gosterilir, veri kaybolmaz.
-  const listedeYok = !egzersizler.some((eg) => eg.id === satir.exerciseId);
   const dinlenmeSecenekleri = DINLENME_SECENEKLERI.some((secenek) => secenek.deger === satir.restSeconds)
     ? DINLENME_SECENEKLERI
     : [...DINLENME_SECENEKLERI, { deger: satir.restSeconds, etiket: `${satir.restSeconds} sn` }].sort(
@@ -420,18 +418,17 @@ function HareketSatiri({
           <span className="sr-only">{onEk}: </span>
           Egzersiz
         </label>
-        <SecimKutusu
+        {/* Issue #48: yerel <select> yerine yazarak arama. Arsivlenmis hareket listede YOKTUR
+            (GET /api/exercises arsivlileri dondurmez) ama satirda kalir: adi secicide gorunmeye
+            devam eder, veri kaybolmaz. */}
+        <HareketSecici
           id={`${idOnEki}-egzersiz`}
-          value={satir.exerciseId}
-          onChange={(e) => onEgzersiz(Number(e.target.value))}
-        >
-          {listedeYok && <option value={satir.exerciseId}>{satir.exerciseName}</option>}
-          {egzersizler.map((eg) => (
-            <option key={eg.id} value={eg.id} disabled={baskaSatirdaSecilenler.has(eg.id)}>
-              {eg.name}
-            </option>
-          ))}
-        </SecimKutusu>
+          egzersizler={egzersizler}
+          secilenId={satir.exerciseId}
+          secilenAd={satir.exerciseName}
+          devreDisiIdler={baskaSatirdaSecilenler}
+          onSec={onEgzersiz}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
