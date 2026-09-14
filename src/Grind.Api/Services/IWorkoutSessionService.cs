@@ -35,6 +35,30 @@ public interface IWorkoutSessionService
         long? templateId, string? notes, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// SERVİS-İÇİ SEAM — controller'dan ÇAĞRILMAZ, <c>SaveChangesAsync</c> ÇAĞIRMAZ (#62).
+    /// Hareket antrenmanın listesinde yoksa sona HEDEFSİZ ekler; varsa hiçbir şey yapmaz. Set ekleme
+    /// akışı bunu seti yazmadan önce çağırır ki set ve liste satırı TEK commit'te gitsin. Henüz
+    /// kaydedilmemiş (yeni açılmış) bir oturumla da çalışır.
+    /// </summary>
+    Task EnsureExerciseAsync(
+        WorkoutSession session, long exerciseId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Antrenmana hareket ekler (#62): sona, hedefsiz. Başkasının/olmayan antrenman ve görünmeyen
+    /// egzersiz NotFoundException (404); bitmiş antrenman ya da zaten listede ConflictException (409);
+    /// arşivlenmiş egzersiz ValidationException (400).
+    /// </summary>
+    Task<SessionResponse> AddExerciseAsync(
+        long id, AddSessionExerciseRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Hareketi antrenmandan kaldırır (#60): liste satırı ve o hareketin bu antrenmandaki BÜTÜN
+    /// setleri silinir, hareketin rekorları BİR KEZ yeniden hesaplanır — tek commit. Başkasının
+    /// antrenmanı ya da listede olmayan hareket 404; bitmiş antrenman 409.
+    /// </summary>
+    Task RemoveExerciseAsync(long id, long exerciseId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Bugüne ait açık oturum varsa onu döndürür (<c>Created = false</c>), yoksa yeni açar.
     /// İdempotent: iki kez tıklanan "Antrenmana Başla" hata üretmez.
     /// </summary>

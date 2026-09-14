@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WorkoutTemplate> WorkoutTemplates => Set<WorkoutTemplate>();
     public DbSet<TemplateExercise> TemplateExercises => Set<TemplateExercise>();
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
+    public DbSet<SessionExercise> SessionExercises => Set<SessionExercise>();
     public DbSet<SetEntry> SetEntries => Set<SetEntry>();
     public DbSet<BodyWeightLog> BodyWeightLogs => Set<BodyWeightLog>();
     public DbSet<ExerciseMedia> ExerciseMedia => Set<ExerciseMedia>();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
-import { queryKeys, useAddSet, useExercises, useOpenSession } from '../api/queries';
+import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { ApiError } from '../api/problem';
@@ -14,6 +14,7 @@ import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
 import SecimKutusu from '../ui/SecimKutusu';
 import DinlenmeSayaci from './DinlenmeSayaci';
+import HareketEklePaneli from './HareketEklePaneli';
 
 /**
  * Spec Karar 8 (cevrimdisi kuyruk YOK): fetch'in kendisi reddederse (ag yok) `request()`
@@ -40,6 +41,15 @@ interface Props {
   // Panel acik mi -- TodayPage'de tutulur, cunku hareket karti dokunusu da acar (dilim 3 spec Karar 6).
   acik: boolean;
   onAcikDegis: (acik: boolean) => void;
+  /**
+   * Acik antrenmanda verilir (#62). Verildiginde kapali alan "Hareket ekle"dir ve paneldeki hareket
+   * secimi KALKAR: hareket karttan gelir, panel basligi onu gosterir. Verilmezse (antrenman yokken)
+   * bugunku davranis (#61'e kadar) korunur.
+   */
+  hareketEkleme?: {
+    egzersizler: readonly Egzersiz[];
+    onEkle: (exerciseId: number) => void;
+  };
 }
 
 /**
@@ -50,13 +60,15 @@ interface Props {
  * dugmesi, acikken form. Bilesen hic unmount olmaz; panel kapaliyken form `hidden` ile gizlenir,
  * boylece yazilanlar ve dinlenme sayaci korunur (dilim 3 spec Karar 6).
  */
-export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis }: Props) {
+export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
+  const seciliEgzersizAdi = siraliEgzersizler.find((eg) => eg.id === egzersizId)?.name ?? '';
+  const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -171,46 +183,75 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl">
         <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
-        {!acik && (
-          <BirincilDugme
-            ref={acmaDugmesiRef}
-            yukseklik="normal"
-            aria-expanded={false}
-            aria-controls={PANEL_ID}
-            onClick={() => {
-              // I2: yalniz bu dugmeyle acilinca odak agirlik alanina tasinsin (bkz. yukaridaki ref).
-              acButonuylaAcildiRef.current = true;
-              onAcikDegis(true);
-            }}
-          >
-            <Plus aria-hidden size={20} />
-            Set ekle
-          </BirincilDugme>
-        )}
+        {!acik &&
+          (hareketEkleme ? (
+            // #62: acik antrenmanda alt alan "Hareket ekle"dir; set ekleme karta dokununca acilir.
+            hareketEkleAcik ? (
+              <HareketEklePaneli
+                egzersizler={hareketEkleme.egzersizler}
+                onSec={(exerciseId) => {
+                  setHareketEkleAcik(false);
+                  hareketEkleme.onEkle(exerciseId);
+                }}
+                onKapat={() => setHareketEkleAcik(false)}
+              />
+            ) : (
+              <BirincilDugme
+                ref={acmaDugmesiRef}
+                yukseklik="normal"
+                aria-expanded={false}
+                onClick={() => setHareketEkleAcik(true)}
+              >
+                <Plus aria-hidden size={20} />
+                Hareket ekle
+              </BirincilDugme>
+            )
+          ) : (
+            <BirincilDugme
+              ref={acmaDugmesiRef}
+              yukseklik="normal"
+              aria-expanded={false}
+              aria-controls={PANEL_ID}
+              onClick={() => {
+                // I2: yalniz bu dugmeyle acilinca odak agirlik alanina tasinsin (bkz. yukaridaki ref).
+                acButonuylaAcildiRef.current = true;
+                onAcikDegis(true);
+              }}
+            >
+              <Plus aria-hidden size={20} />
+              Set ekle
+            </BirincilDugme>
+          ))}
         <form id={PANEL_ID} hidden={!acik} onSubmit={gonder} className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="pl-1 text-label text-muted uppercase">Yeni set</span>
+            {hareketEkleme ? (
+              <h2 className="pl-1 text-label text-muted uppercase">Yeni set: {seciliEgzersizAdi}</h2>
+            ) : (
+              <span className="pl-1 text-label text-muted uppercase">Yeni set</span>
+            )}
             <IkonDugmesi etiket="Paneli kapat" onClick={() => onAcikDegis(false)}>
               <X aria-hidden size={20} />
             </IkonDugmesi>
           </div>
           {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
-          <div>
-            <label htmlFor="set-egzersiz" className="sr-only">
-              Egzersiz
-            </label>
-            <SecimKutusu
-              id="set-egzersiz"
-              value={egzersizId ?? ''}
-              onChange={(e) => onEgzersizSec(Number(e.target.value))}
-            >
-              {siraliEgzersizler.map((eg) => (
-                <option key={eg.id} value={eg.id}>
-                  {eg.name}
-                </option>
-              ))}
-            </SecimKutusu>
-          </div>
+          {!hareketEkleme && (
+            <div>
+              <label htmlFor="set-egzersiz" className="sr-only">
+                Egzersiz
+              </label>
+              <SecimKutusu
+                id="set-egzersiz"
+                value={egzersizId ?? ''}
+                onChange={(e) => onEgzersizSec(Number(e.target.value))}
+              >
+                {siraliEgzersizler.map((eg) => (
+                  <option key={eg.id} value={eg.id}>
+                    {eg.name}
+                  </option>
+                ))}
+              </SecimKutusu>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             <SayiAlani
               id="set-agirlik"

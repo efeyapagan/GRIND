@@ -22,6 +22,13 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         long sessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Bir antrenmanda bir hareketin setleri, izlenerek (silinmek uzere). Hareket antrenmandan
+    /// kaldirilinca kullanilir (#60). Sahiplik kontrolu YAPMAZ -- cagiran antrenmani once dogrulamali.
+    /// </summary>
+    Task<IReadOnlyList<SetEntry>> GetForSessionAndExerciseAsync(
+        long sessionId, long exerciseId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Başkasının setinde null döner (IDOR koruması). Sahiplik SetEntry'nin kendi
     /// sütununda değil, WorkoutSession.UserId üzerindedir. <c>Exercise</c> yüklenir —
     /// yanıt DTO'su egzersiz adını taşıyor.
