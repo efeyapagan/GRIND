@@ -961,7 +961,7 @@ test('yeni sablonlu oturum gorununce secim o oturumun varsayilanina doner', asyn
   await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('2'));
 });
 
-test('sablonsuz oturumda secili hareketin gecmisi istenir ve set eklenince yeniden istenir', async () => {
+test('sablonsuz oturumda gecmis acilinca istenir ve set eklenince yeniden istenir', async () => {
   const acikOturum: SessionResponse = {
     id: 40,
     startedAt: new Date().toISOString(),
@@ -977,6 +977,9 @@ test('sablonsuz oturumda secili hareketin gecmisi istenir ve set eklenince yenid
   bugunSayfasiniOlustur();
 
   await egzersizSecimineBekle();
+  // #50: grafik kapali baslar; acilmadan ilerleme istegi atilmaz.
+  expect(ortam.ilerlemeAramalari()).toHaveLength(0);
+  await kullanici.click(await screen.findByText('Geçmiş'));
   await waitFor(() => expect(ortam.ilerlemeAramalari().length).toBeGreaterThan(0));
   expect(ortam.ilerlemeAramalari()[0]).toBe('/api/stats/exercises/1/progress');
   const ilkSayi = ortam.ilerlemeAramalari().length;
@@ -1010,8 +1013,8 @@ test('set paneli kapali baslar; Set ekle acar, Paneli kapat kapatir, yazilan deg
   expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
 });
 
-test('hareket kartina dokunmak hareketi secer ve set panelini acar', async () => {
-  sahteSunucuyuKur({
+test('hareket kartina dokunmak hareketi secer ve set panelini acar, grafigi acmaz', async () => {
+  const ortam = sahteSunucuyuKur({
     baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
   });
   const kullanici = userEvent.setup();
@@ -1027,6 +1030,9 @@ test('hareket kartina dokunmak hareketi secer ve set panelini acar', async () =>
   // I2 (review bulgusu): karta dokunarak acilan panelde odak agirlik alanina TASINMAZ -- aksi
   // halde telefon klavyesi acilir ve kartin az once ortaya cikardigi grafigi ortar.
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toHaveFocus();
+  // #50: secim ve grafik ayri eylemler -- secili kartin gecmisi kapali kalir, istek atilmaz.
+  expect(screen.getByText('Geçmiş').closest('details')).not.toHaveAttribute('open');
+  expect(ortam.ilerlemeAramalari()).toHaveLength(0);
 });
 
 test('set eklendikten sonra panel acik kalir', async () => {

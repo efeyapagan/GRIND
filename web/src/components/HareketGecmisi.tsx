@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
@@ -44,16 +45,35 @@ interface Props {
 }
 
 /**
- * Secili hareketin ilerleme grafigi (dilim 3 spec Karar 5): sekmeler (en agir set / hacim / tahmini
- * 1RM), "Şu anki" ve "Fark", turuncu cizgi grafik, aralik secimi. Degerler sunucudan gelir; "Fark"
- * yalnizca iki sunucu degerinin farkidir (sunum). Aktif sekmenin alt cizgisi `accent` (spec Karar 3);
- * aralik secici notr.
+ * Secili hareketin "Geçmiş" bolumu (#50): varsayilan KAPALI bir native `<details>` (Gecmis
+ * ekraniyla ayni desen -- acik/kapali durumu tarayici duyurur). Grafik yalnizca acikken MONTE
+ * edilir; boylece kapaliyken ilerleme istegi hic atilmaz ve sekmeler erisilebilirlik agacinda
+ * durmaz. Durum hatirlanmaz: her montajda kapali baslar.
  */
 export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
+  const [acik, setAcik] = useState(false);
+
+  return (
+    <details className="group pt-2" onToggle={(olay) => setAcik(olay.currentTarget.open)}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-label text-muted uppercase [&::-webkit-details-marker]:hidden">
+        Geçmiş
+        <ChevronDown aria-hidden size={18} className="group-open:rotate-180" />
+      </summary>
+      {acik && <HareketGrafigi exerciseId={exerciseId} exerciseName={exerciseName} />}
+    </details>
+  );
+}
+
+/**
+ * Ilerleme grafigi (dilim 3 spec Karar 5): sekmeler (en agir set / hacim / tahmini 1RM), "Şu anki"
+ * ve "Fark", turuncu cizgi grafik, aralik secimi. Degerler sunucudan gelir; "Fark" yalnizca iki
+ * sunucu degerinin farkidir (sunum). Aktif sekmenin alt cizgisi `accent` (spec Karar 3); aralik
+ * secici notr.
+ */
+function HareketGrafigi({ exerciseId, exerciseName }: Props) {
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
   const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
-  const baslikId = `hareket-gecmisi-${exerciseId}`;
   const panelId = `hareket-grafigi-${exerciseId}`;
   const sekme = SEKMELER.find((aday) => aday.anahtar === sekmeAnahtari) ?? SEKMELER[0];
 
@@ -109,10 +129,7 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
   }
 
   return (
-    <section aria-labelledby={baslikId} className="flex flex-col gap-3 pt-2">
-      <h3 id={baslikId} className="text-label text-muted uppercase">
-        Geçmiş
-      </h3>
+    <div className="flex flex-col gap-3 pt-1">
       <div role="tablist" aria-label={`${exerciseName} grafiği`} className="flex border-b border-surface-3">
         {SEKMELER.map((aday) => {
           const secili = aday.anahtar === sekmeAnahtari;
@@ -156,6 +173,6 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

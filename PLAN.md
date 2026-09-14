@@ -930,10 +930,24 @@ Devreden notlar (bilerek yapılmadı):
 - Vücut ağırlığı hareketlerinde (0 kg) üç sekme de anlamsız; "tekrar" metriği sonraki dilim.
 - Aralık değişirken önceki aralığın değerleri yükleme işareti olmadan kısa süre görünür (`isFetching`
   işareti eklenebilir).
-- Şablonsuz oturumda seçili hareket değişince sekme/aralık seçimi korunuyor (şablonlu kartlarda sıfırlanır).
+- ~~Şablonsuz oturumda seçili hareket değişince sekme/aralık seçimi korunuyor~~ → #50'de kapandı
+  (`key` ile hareket değişince geçmiş kapalı ve sıfırdan başlar).
 - Çift sayıda noktada x ekseni tarih etiketleri (ilk/orta/son) eşit aralıklı dağılmıyor.
 - Antrenman bitince panel açık kalabilir; arşivli kart dokunuşunun paneli açmadığı ayrıca test edilmedi.
 - Kart dokunuşunda odak davranışı gerçek telefonda denenmeli.
+
+### İstek #50 — Hareket grafiği varsayılan kapalı (2026-09-14)
+
+Telefonda grafik seçili kartta sürekli açık durup ekranı kaplıyordu. Bounded iş; spec dosyası yazılmadı,
+tasarım issue'da ve sohbette onaylandı.
+- `HareketGecmisi` artık native `<details>` (Geçmiş ekranıyla aynı desen): "Geçmiş" başlığına dokununca
+  açılır/kapanır, açık/kapalı durumu tarayıcı duyurur. Grafik (`HareketGrafigi`, aynı dosyada iç bileşen)
+  yalnızca açıkken monte edilir → kapalıyken `/progress` isteği atılmaz, sekmeler erişilebilirlik
+  ağacında durmaz.
+- Durum hatırlanmaz (`localStorage` yok): her montajda kapalı başlar; şablonsuz oturumda `key={etkinSecim}`.
+- Kart dokunuşu (seçim + set paneli) grafiği açmaz; bu testle sabitlendi.
+- Kapalı başlıkta "Şu anki" özeti bilerek yok: özet için isteği yine atmak gerekirdi.
+- Backend değişmedi; yalnızca `HareketGecmisi` ve `TodayPage` testleri, `tsc -b` ve lint koşturuldu.
 
 ---
 
