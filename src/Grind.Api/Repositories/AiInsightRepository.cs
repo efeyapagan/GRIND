@@ -50,4 +50,13 @@ public class AiInsightRepository(AppDbContext context)
 
         return (items, totalCount);
     }
+
+    public async Task<IReadOnlyList<DateTime>> GetRecentInsightTimestampsAsync(
+        long userId, DateTime sinceUtc, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(a => a.UserId == userId && a.Kind == AiInsightKind.Insight && a.CreatedAt >= sinceUtc)
+            .AsNoTracking()
+            .OrderBy(a => a.CreatedAt)
+            .Select(a => a.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

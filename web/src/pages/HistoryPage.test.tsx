@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
@@ -17,12 +18,18 @@ function testeOzelSorguIstemcisi(): QueryClient {
 }
 
 // `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
-// saglar, testte de aynisi sarilmali.
+// saglar, testte de aynisi sarilmali. `MemoryRouter` issue #76'nin "AI yorumu" baglantisi icin
+// (bir <Link>, Router baglami ister).
 function gecmisSayfasiniOlustur() {
   return render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <PageTitleProvider>
-        <HistoryPage />
+        <MemoryRouter initialEntries={['/history']}>
+          <Routes>
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/insights" element={<p>AI yorumu sayfasi</p>} />
+          </Routes>
+        </MemoryRouter>
       </PageTitleProvider>
     </QueryClientProvider>,
   );
@@ -340,3 +347,13 @@ function salla(ivme: { x: number; y: number; z: number }) {
     window.dispatchEvent(olay);
   });
 }
+
+test('AI yorumu baglantisi /insights\'a gider (issue #76)', async () => {
+  server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([]))));
+  const kullanici = userEvent.setup();
+  gecmisSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('link', { name: 'AI yorumu' }));
+
+  expect(await screen.findByText('AI yorumu sayfasi')).toBeInTheDocument();
+});

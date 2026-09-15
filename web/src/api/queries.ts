@@ -27,6 +27,8 @@ type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'
 type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPointResponse'];
 type CalendarResponse = components['schemas']['CalendarResponse'];
 type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
+type AiInsightResponse = components['schemas']['AiInsightResponse'];
+type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -65,6 +67,10 @@ export const queryKeys = {
   // Onek: set eklenince/silinince gezinilmis TUM ay ve haftalar tazelensin (#81).
   calendarAll: ['calendar'] as const,
   calendar: (from: string, to: string) => [...queryKeys.calendarAll, from, to] as const,
+  // Onek: yeni bir yorum uretilince (ya da silinince) TUM sayfalar tazelensin (issue #76) --
+  // `historyAll` ile ayni gerekce.
+  insightsAll: ['insights'] as const,
+  insights: (page: number) => [...queryKeys.insightsAll, page] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -799,6 +805,96 @@ export function useDeleteTemplate() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+export interface Yorum {
+  id: number;
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * `AiInsightResponse`'un cogu alani (workoutSessionId, setEntryId, model, tokensUsed,
+ * estimatedCostUsd) BILEREK burada YOK -- issue #76 Karar 4: maliyet bilgisi kullaniciya
+ * gosterilmez, oturum/set bazli kapsam bu dilimde uretilmiyor (yalnizca tarih araligi).
+ * Ihtiyac dogunca genisletilir.
+ */
+function dogrulanmisYorum(yanit: AiInsightResponse): Yorum {
+  if (yanit.id === undefined || !yanit.content || !yanit.createdAt) {
+    throw new Error('Sunucudan eksik yorum yaniti alindi.');
+  }
+  return { id: yanit.id, content: yanit.content, createdAt: yanit.createdAt };
+}
+
+export interface YorumSayfasi {
+  items: Yorum[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+function dogrulanmisYorumSayfasi(yanit: AiInsightResponsePagedResponse): YorumSayfasi {
+  if (
+    yanit.page === undefined ||
+    yanit.pageSize === undefined ||
+    yanit.totalCount === undefined ||
+    yanit.totalPages === undefined
+  ) {
+    throw new Error('Sunucudan eksik yorum sayfasi yaniti alindi.');
+  }
+  return {
+    items: (yanit.items ?? []).map(dogrulanmisYorum),
+    page: yanit.page,
+    pageSize: yanit.pageSize,
+    totalCount: yanit.totalCount,
+    totalPages: yanit.totalPages,
+  };
+}
+
+/** Sayfalama TAMAMEN sunucunun zarfindan surulur -- `useHistory` ile ayni desen (KISS). */
+export function useInsights(page: number) {
+  return useQuery({
+    queryKey: queryKeys.insights(page),
+    queryFn: async (): Promise<YorumSayfasi> => {
+      const yanit = await request<AiInsightResponsePagedResponse>(`/insights?Page=${page}`);
+      return dogrulanmisYorumSayfasi(yanit);
+    },
+  });
+}
+
+/**
+ * `POST /api/insights`. Govde BILEREK gonderilmez: backend govdesiz istekte kendi varsayilanini
+ * (son 30 gun) uygular (issue #76 Karar) -- istemci bu kurali TEKRARLAMAZ.
+ *
+ * `signal` cagiran tarafin AbortController'indan gelir (issue #76 Karar 3: "iptal edilebilir
+ * bekleme"). DIKKAT -- bu SADECE istemcinin beklemeyi birakmasidir: backend, para harcanan LLM
+ * cagrisini istemci koptugunda BILEREK durdurmaz (AiInsightService.GenerateAsync, saglayiciyi
+ * `CancellationToken.None` ile cagirir) -- odenen bir yanit bosa gitmesin diye. Yani iptal
+ * edilen bir istek bile YORUM ureterek gecmise eklenmis olabilir; arayuz bunu acikca soylemeli,
+ * "iptal ettim, hicbir sey olmadi" izlenimi vermemeli.
+ */
+export function useGenerateInsight() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (signal: AbortSignal): Promise<Yorum> =>
+      dogrulanmisYorum(await request<AiInsightResponse>('/insights', { method: 'POST', signal })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.insightsAll });
+    },
+  });
+}
+
+export function useDeleteInsight() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await request<void>(`/insights/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.insightsAll });
     },
   });
 }

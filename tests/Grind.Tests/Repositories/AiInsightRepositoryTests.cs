@@ -178,4 +178,80 @@ public class AiInsightRepositoryTests
         Assert.Equal(new DateOnly(2026, 2, 11), okunan!.RangeFrom);
         Assert.Equal(new DateOnly(2026, 3, 12), okunan.RangeTo);
     }
+
+    // --- GetRecentInsightTimestampsAsync (issue #76 haftalik sinir) ---
+
+    [Fact]
+    public async Task GetRecentInsightTimestampsAsync_sinirdan_eski_kayitlari_saymaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var sinirdanOnce = An - TimeSpan.FromDays(8);
+        var sinirdanSonra = An - TimeSpan.FromDays(6);
+        context.AddRange(user, NewInsight(user, sinirdanOnce), NewInsight(user, sinirdanSonra));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var sonuc = await new AiInsightRepository(context)
+            .GetRecentInsightTimestampsAsync(user.Id, An - TimeSpan.FromDays(7));
+
+        Assert.Equal([sinirdanSonra], sonuc);
+    }
+
+    [Fact]
+    public async Task GetRecentInsightTimestampsAsync_eskiden_yeniye_siralar()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var yeni = An;
+        var eski = An - TimeSpan.FromDays(1);
+        context.AddRange(user, NewInsight(user, yeni), NewInsight(user, eski));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var sonuc = await new AiInsightRepository(context)
+            .GetRecentInsightTimestampsAsync(user.Id, An - TimeSpan.FromDays(7));
+
+        Assert.Equal([eski, yeni], sonuc);
+    }
+
+    [Fact]
+    public async Task GetRecentInsightTimestampsAsync_suggestion_turunu_saymaz()
+    {
+        // Suggestion (henuz kurulmamis, ayri bir uretim akisi) bu sinira DAHIL DEGIL.
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        context.AddRange(user, NewInsight(user, An, AiInsightKind.Suggestion));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var sonuc = await new AiInsightRepository(context)
+            .GetRecentInsightTimestampsAsync(user.Id, An - TimeSpan.FromDays(7));
+
+        Assert.Empty(sonuc);
+    }
+
+    [Fact]
+    public async Task GetRecentInsightTimestampsAsync_baskasinin_kaydini_saymaz()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var sahip = TestDatabase.NewUser();
+        var baskasi = TestDatabase.NewUser();
+        context.AddRange(sahip, baskasi, NewInsight(baskasi, An));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var sonuc = await new AiInsightRepository(context)
+            .GetRecentInsightTimestampsAsync(sahip.Id, An - TimeSpan.FromDays(7));
+
+        Assert.Empty(sonuc);
+    }
 }
