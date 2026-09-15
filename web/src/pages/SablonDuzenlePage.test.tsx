@@ -5,22 +5,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import SablonDuzenlePage from './SablonDuzenlePage';
+import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 
 type ExerciseResponse = components['schemas']['ExerciseResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 
+// `usePageTitle` (issue #65, `SayfaBasligi` icinde cagrilir) bir `PageTitleProvider` ister --
+// App.tsx'in gercek kabugu bunu saglar, testte de aynisi sarilmali.
 function duzenleyiciyiOlustur(yol: string) {
   const istemci = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={istemci}>
-      <MemoryRouter initialEntries={[yol]}>
-        <Routes>
-          <Route path="/templates" element={<p>Sablon listesi</p>} />
-          <Route path="/templates/new" element={<SablonDuzenlePage />} />
-          <Route path="/templates/:id" element={<SablonDuzenlePage />} />
-        </Routes>
-      </MemoryRouter>
+      <PageTitleProvider>
+        <MemoryRouter initialEntries={[yol]}>
+          <Routes>
+            <Route path="/templates" element={<p>Sablon listesi</p>} />
+            <Route path="/templates/new" element={<SablonDuzenlePage />} />
+            <Route path="/templates/:id" element={<SablonDuzenlePage />} />
+          </Routes>
+        </MemoryRouter>
+      </PageTitleProvider>
     </QueryClientProvider>,
   );
 }

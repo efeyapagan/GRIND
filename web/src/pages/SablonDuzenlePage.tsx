@@ -22,6 +22,7 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import HareketSecici from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
+import { usePageTitle } from '../ui/PageTitleContext';
 
 const DINLENME_SECENEKLERI = [
   { deger: 0, etiket: 'Yok' },
@@ -47,15 +48,19 @@ interface Satir {
   restSeconds: number;
 }
 
+/**
+ * Baslik artik ust kabukta (issue #65) -- burada ayrica bir `<h1>` YAZILMAZ, yalnizca geri
+ * baglantisi kalir. `usePageTitle` burada, TEK yerde cagrilir: bu bilesenin uc cagiri yeri de
+ * (yukleniyor/hata/yuklendi) zaten dogru baslik metnini geciyor, ayri ayri cagirmaya gerek yok.
+ */
 function SayfaBasligi({ baslik }: { baslik: string }) {
+  usePageTitle(baslik);
+
   return (
-    <header className="flex flex-col gap-1">
-      <Link to="/templates" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
-        <ChevronLeft aria-hidden size={18} />
-        Şablonlar
-      </Link>
-      <h1 className="text-title">{baslik}</h1>
-    </header>
+    <Link to="/templates" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
+      <ChevronLeft aria-hidden size={18} />
+      Şablonlar
+    </Link>
   );
 }
 

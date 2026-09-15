@@ -7,6 +7,7 @@ import { sallamaIzniIste, useSallama } from '../lib/sallama';
 import GecmisKarti from '../components/GecmisKarti';
 import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
+import { usePageTitle } from '../ui/PageTitleContext';
 
 // Sayfalama dugmeleri (Stitch: 52 px).
 const SAYFA_DUGMESI =
@@ -27,6 +28,7 @@ const SAYFA_DUGMESI =
  * tamamlanir: kullanici "sildim" dedi, geri almadi.
  */
 export default function HistoryPage() {
+  usePageTitle('Geçmiş');
   const [sayfa, setSayfa] = useState(1);
   const { data, isLoading, isError } = useHistory(sayfa);
   // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
@@ -62,8 +64,6 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      <h1 className="text-title">Geçmiş</h1>
-
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 
       {isError && (

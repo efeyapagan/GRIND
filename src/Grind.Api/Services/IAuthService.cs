@@ -19,4 +19,14 @@ public interface IAuthService
     /// satıra karşılık gelmiyorsa (örn. hesap bir şekilde silinmişse) da AYNI UnauthorizedException.
     /// </summary>
     Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kullanıcı adı ve/veya şifre değiştirir (issue #65). <see cref="UpdateProfileRequest.CurrentPassword"/>
+    /// HER ZAMAN doğrulanır; yanlışsa UnauthorizedException. Yeni kullanıcı adı başkasına aitse
+    /// ConflictException. En az biri (yeni ad ya da yeni şifre) verilmemişse ValidationException.
+    /// Başarılı değişiklik sonrası YENİ bir token döner (register/login ile aynı şekilde) — kullanıcı
+    /// adı değişince eski token'ın içindeki isim bayatlar, kullanıcı yeniden giriş yapmak zorunda
+    /// kalmamalı.
+    /// </summary>
+    Task<AuthResponse> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
 }

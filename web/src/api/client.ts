@@ -17,9 +17,9 @@ export function setUnauthorizedHandler(fn: () => void): void {
 
 export async function request<T>(
   path: string,
-  init: RequestInit & { auth?: boolean } = {},
+  init: RequestInit & { auth?: boolean; sifreTeyidi401?: boolean } = {},
 ): Promise<T> {
-  const { auth = true, headers, ...rest } = init;
+  const { auth = true, sifreTeyidi401 = false, headers, ...rest } = init;
 
   const basliklar: Record<string, string> = { ...(headers as Record<string, string> | undefined) };
 
@@ -42,7 +42,11 @@ export async function request<T>(
   if (!yanit.ok) {
     const govde = await govdeyiGuvenliOku(yanit);
 
-    if (yanit.status === 401) {
+    // `sifreTeyidi401`: profil guncelleme (issue #65) gibi "mevcut sifreni dogrula" uclarinda
+    // 401, oturumun GECERSIZ oldugu anlamina gelmez -- kullanici sadece sifresini yanlis yazmistir.
+    // Bunu genel oturum-dusurme isleyicisine (token suresi doldu/hesap pasif) karistirmak, bir
+    // yazim hatasi icin kullaniciyi giris ekranina firlatirdi.
+    if (yanit.status === 401 && !sifreTeyidi401) {
       // Once oturumu dusur, sonra hatayi firlat -- cagiran taraf hata yakalamayi unutsa bile
       // oturum durumu tutarli kalsin.
       oturumDusurIsleyici();

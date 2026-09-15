@@ -7,6 +7,7 @@ import { server } from '../test/msw';
 import { AuthProvider } from '../auth/AuthContext';
 import { session } from '../auth/session';
 import TodayPage from './TodayPage';
+import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 import { tamMetin } from '../test/metin';
 
@@ -22,15 +23,19 @@ function testeOzelSorguIstemcisi(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 }
 
+// `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
+// saglar, testte de aynisi sarilmali.
 function bugunSayfasiniOlustur() {
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path="/" element={<TodayPage />} />
-          </Routes>
-        </MemoryRouter>
+        <PageTitleProvider>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<TodayPage />} />
+            </Routes>
+          </MemoryRouter>
+        </PageTitleProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );
