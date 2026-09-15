@@ -20,6 +20,17 @@ interface AuthContextValue {
   login: (kullaniciAdi: string, sifre: string) => Promise<void>;
   register: (kullaniciAdi: string, sifre: string) => Promise<void>;
   logout: () => void;
+  /**
+   * Profilde kullanici adi ve/veya sifre degistirir (issue #65). `mevcutSifre` HER ZAMAN
+   * gonderilir (backend'in guvenlik kurali); `yeniKullaniciAdi`/`yeniSifre` opsiyoneldir ama
+   * en az biri dolu olmali -- bu kontrol cagiran formda yapilir, burada tekrarlanmaz.
+   * Basarili olursa oturum YENI token/kullanici adiyla GUNCELLENIR, cikis yapilmaz.
+   */
+  updateProfile: (
+    mevcutSifre: string,
+    yeniKullaniciAdi?: string,
+    yeniSifre?: string,
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -96,9 +107,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsername(dogrulanmis.username);
   }, []);
 
+  const updateProfile = useCallback(
+    async (mevcutSifre: string, yeniKullaniciAdi?: string, yeniSifre?: string) => {
+      const govde: Record<string, string> = { currentPassword: mevcutSifre };
+      if (yeniKullaniciAdi !== undefined) {
+        govde.newUsername = yeniKullaniciAdi;
+      }
+      if (yeniSifre !== undefined) {
+        govde.newPassword = yeniSifre;
+      }
+
+      // `sifreTeyidi401`: burada 401, "mevcut sifreni yanlis yazdin" demektir -- oturumun
+      // GECERSIZ oldugu anlamina gelmez, kullaniciyi giris ekranina firlatmamali (client.ts).
+      const yanit = await request<AuthResponse>('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(govde),
+        sifreTeyidi401: true,
+      });
+      const dogrulanmis = dogrulanmisKimlikYaniti(yanit);
+      session.write(dogrulanmis.token, dogrulanmis.expiresAtUtc, dogrulanmis.username);
+      setUsername(dogrulanmis.username);
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
-    () => ({ username, isAuthenticated: username !== null, login, register, logout }),
-    [username, login, register, logout],
+    () => ({ username, isAuthenticated: username !== null, login, register, logout, updateProfile }),
+    [username, login, register, logout, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

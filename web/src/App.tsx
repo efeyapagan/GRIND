@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Calendar, History, Trophy, type LucideIcon } from 'lucide-react';
 import HesapMenusu from './ui/HesapMenusu';
+import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 
 interface Sekme {
   to: string;
@@ -16,20 +17,37 @@ const SEKMELER: Sekme[] = [
 ];
 
 /**
- * Korumali alanin ortak kabugu (spec Karar 8): ustte GRIND + hesap menusu, altta sekme cubugu,
- * aradaki icerik `Outlet`ten gelir. `NavLink` aktif baglantiya `aria-current="page"`yi KENDISI
- * koyar. Cikis artik hesap menusunde; cikistan sonra `ProtectedRoute` zaten `/login`e yonlendirir.
+ * Korumali alanin ortak kabugu (spec Karar 8, issue #65 ile yeniden duzenlendi): ustte sol tarafta
+ * o an hangi ekrandaysak onun basligi, sag tarafta GRIND kucuk yazisi + hesap menusu; altta sekme
+ * cubugu, aradaki icerik `Outlet`ten gelir. `NavLink` aktif baglantiya `aria-current="page"`yi
+ * KENDISI koyar. Cikis hesap menusunde; cikistan sonra `ProtectedRoute` zaten `/login`e yonlendirir.
+ *
+ * Baslik `PageTitleProvider` icinden okunur (`useHeaderTitle`) -- her sayfa kendi basligini
+ * `usePageTitle` ile bildirir, kendi govdesinde ayrica bir `<h1>` YAZMAZ (tek dogruluk kaynagi).
  *
  * `env(safe-area-inset-*)` hesaplari keyfi deger olarak yazilir: Tailwind'de guvenli alan tokeni
  * yok. 4rem = baslik ve sekme cubugu yuksekligi (h-16).
  */
 export default function App() {
   return (
+    <PageTitleProvider>
+      <Kabuk />
+    </PageTitleProvider>
+  );
+}
+
+function Kabuk() {
+  const baslik = useHeaderTitle();
+
+  return (
     <div className="min-h-dvh bg-bg text-fg">
       <header className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-md items-center justify-between px-4">
-          <span className="text-heading uppercase">GRIND</span>
-          <HesapMenusu />
+          <h1 className="truncate text-heading">{baslik}</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-label text-muted uppercase">GRIND</span>
+            <HesapMenusu />
+          </div>
         </div>
       </header>
 

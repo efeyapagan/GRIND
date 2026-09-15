@@ -89,6 +89,27 @@ test('401 gelince kayitli oturum dusurme isleyicisi cagrilir ve ApiError firlati
   expect(isleyici).toHaveBeenCalledTimes(1);
 });
 
+test('sifreTeyidi401 ile 401 gelince oturum dusurulmez, hata yine firlar', async () => {
+  // Issue #65: profil guncellerken yanlis mevcut sifre 401 doner ama bu "oturum gecersiz"
+  // demek DEGILDIR -- kullaniciyi giris ekranina firlatmamali.
+  const isleyici = vi.fn();
+  setUnauthorizedHandler(isleyici);
+  session.write('gecerli-token', ileriTarih(60_000), 'efe');
+
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ title: 'Yetkisiz', status: 401 }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(request('/auth/me', { sifreTeyidi401: true })).rejects.toMatchObject({ status: 401 });
+  expect(isleyici).not.toHaveBeenCalled();
+  // Oturum bilgisi hala yerinde: yanlis sifre denemesi mevcut oturumu SILMEZ.
+  expect(session.read()?.token).toBe('gecerli-token');
+});
+
 test('204 yanitta govde JSON olarak ayristirilmaya calisilmaz', async () => {
   const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal('fetch', fetchMock);

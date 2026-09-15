@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -39,9 +40,12 @@ function VeriEkrani() {
 }
 
 function TestUygulamasi() {
-  const { isAuthenticated, logout, login } = useAuth();
+  const { isAuthenticated, username, logout, login, updateProfile } = useAuth();
+  const [profilHatasi, setProfilHatasi] = useState<string | null>(null);
+
   return (
     <div>
+      <p>Kullanıcı: {username ?? 'yok'}</p>
       <button type="button" onClick={() => logout()}>
         Çıkış
       </button>
@@ -53,6 +57,18 @@ function TestUygulamasi() {
       >
         Giriş B
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          setProfilHatasi(null);
+          updateProfile('eski-sifre', 'yeni-ad').catch((hata: unknown) => {
+            setProfilHatasi(hata instanceof Error ? hata.message : 'hata');
+          });
+        }}
+      >
+        Kullanıcı adını değiştir
+      </button>
+      {profilHatasi && <p role="alert">{profilHatasi}</p>}
       {isAuthenticated && <VeriEkrani />}
     </div>
   );
@@ -142,4 +158,55 @@ test('cikis yapinca sorgu onbellegi temizlenir: B girisinde A nin verisi hic gor
 
   expect(aKaydiGoruldu).toBe(false);
   expect(screen.queryByText('A Kaydı')).not.toBeInTheDocument();
+});
+
+// --- updateProfile (issue #65) ---
+
+test('updateProfile basarili olunca oturum yeni token ve kullanici adiyla guncellenir', async () => {
+  session.write('eski-token', new Date(Date.now() + 3_600_000).toISOString(), 'eskiad');
+  server.use(
+    http.patch('/api/auth/me', () =>
+      HttpResponse.json({
+        token: 'yeni-token',
+        expiresAtUtc: new Date(Date.now() + 3_600_000).toISOString(),
+        username: 'yeniad',
+      }),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  testUygulamasiniOlustur(
+    new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }),
+  );
+
+  expect(await screen.findByText('Kullanıcı: eskiad')).toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Kullanıcı adını değiştir' }));
+
+  expect(await screen.findByText('Kullanıcı: yeniad')).toBeInTheDocument();
+  expect(session.read()).toMatchObject({ token: 'yeni-token', username: 'yeniad' });
+});
+
+test('updateProfile 401 (yanlis mevcut sifre) donerse oturum DUSMEZ, hata firlar', async () => {
+  // Issue #65: bu 401 "oturum gecersiz" degil "sifreni yanlis yazdin" demektir -- kullaniciyi
+  // giris ekranina firlatmamali (client.ts'teki sifreTeyidi401 ile ayni gerekce).
+  session.write('gecerli-token', new Date(Date.now() + 3_600_000).toISOString(), 'benimadim');
+  server.use(
+    http.patch('/api/auth/me', () =>
+      HttpResponse.json({ title: 'Yetkisiz', status: 401, detail: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 }),
+    ),
+  );
+
+  const kullanici = userEvent.setup();
+  testUygulamasiniOlustur(
+    new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }),
+  );
+
+  await screen.findByText('Kullanıcı: benimadim');
+  await kullanici.click(screen.getByRole('button', { name: 'Kullanıcı adını değiştir' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Kullanıcı adı veya şifre hatalı.');
+  // Oturum hala yerinde: kullanici adi degismedi, cikis yapilmadi.
+  expect(screen.getByText('Kullanıcı: benimadim')).toBeInTheDocument();
+  expect(session.read()?.token).toBe('gecerli-token');
 });

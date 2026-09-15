@@ -5,21 +5,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import SablonlarPage from './SablonlarPage';
+import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 
 type TemplateResponse = components['schemas']['TemplateResponse'];
 
+// `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
+// saglar, testte de aynisi sarilmali.
 function listeyiOlustur() {
   const istemci = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={istemci}>
-      <MemoryRouter initialEntries={['/templates']}>
-        <Routes>
-          <Route path="/templates" element={<SablonlarPage />} />
-          <Route path="/templates/new" element={<p>Yeni sablon formu</p>} />
-          <Route path="/templates/:id" element={<p>Duzenleyici</p>} />
-        </Routes>
-      </MemoryRouter>
+      <PageTitleProvider>
+        <MemoryRouter initialEntries={['/templates']}>
+          <Routes>
+            <Route path="/templates" element={<SablonlarPage />} />
+            <Route path="/templates/new" element={<p>Yeni sablon formu</p>} />
+            <Route path="/templates/:id" element={<p>Duzenleyici</p>} />
+          </Routes>
+        </MemoryRouter>
+      </PageTitleProvider>
     </QueryClientProvider>,
   );
 }

@@ -6,6 +6,13 @@ import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { session } from './auth/session';
+import { usePageTitle } from './ui/PageTitleContext';
+
+/** Gercek bir sayfa gibi kendi basligini bildirir (issue #65) -- placeholder `<p>`lerden farkli. */
+function SayfaGovdesi({ baslik, metin }: { baslik: string; metin: string }) {
+  usePageTitle(baslik);
+  return <p>{metin}</p>;
+}
 
 /**
  * `AuthProvider` artik (I1 fix) `useQueryClient()` kullaniyor (cikista onbellegi temizlemek
@@ -33,10 +40,10 @@ function testRouterOlustur() {
           </ProtectedRoute>
         ),
         children: [
-          { index: true, element: <p>Ic sayfa icerigi</p> },
-          { path: 'history', element: <p>Gecmis sayfasi</p> },
-          { path: 'records', element: <p>Rekorlar sayfasi</p> },
-          { path: 'templates', element: <p>Sablonlar sayfasi</p> },
+          { index: true, element: <SayfaGovdesi baslik="Bugün" metin="Ic sayfa icerigi" /> },
+          { path: 'history', element: <SayfaGovdesi baslik="Geçmiş" metin="Gecmis sayfasi" /> },
+          { path: 'records', element: <SayfaGovdesi baslik="Rekorlar" metin="Rekorlar sayfasi" /> },
+          { path: 'templates', element: <SayfaGovdesi baslik="Şablonlar" metin="Sablonlar sayfasi" /> },
         ],
       },
       { path: '/login', element: <h1>Giriş Yap</h1> },
@@ -162,4 +169,80 @@ test('hesap menusundeki Sablonlar baglantisi sablon listesine gider', async () =
   await kullanici.click(screen.getByRole('link', { name: 'Şablonlar', hidden: true }));
 
   expect(await screen.findByText('Sablonlar sayfasi')).toBeInTheDocument();
+});
+
+test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince gunceller (issue #65)', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bugün');
+
+  await kullanici.click(screen.getByRole('link', { name: 'Geçmiş' }));
+  await screen.findByText('Gecmis sayfasi');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Geçmiş');
+});
+
+test('GRIND yazisi hesap menusu dugmesiyle ayni tarafta (sag ustte) durur', async () => {
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+
+  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
+  // Issue #65 Karar 2: "GRIND" yazisi artik solda baslik degil, hesap ikonunun YANINDA durur --
+  // ikisi ayni kapsayicinin (ust bilgi satirinin sag yarisi) icinde olmali.
+  expect(tetikleyici.parentElement).toHaveTextContent('GRIND');
+  // Sol tarafta artik "GRIND" DEGIL, sayfa basligi var.
+  expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('GRIND');
+});
+
+test('hesap menusunde kullanici adi gorunur ve profile gider', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider
+          router={createMemoryRouter(
+            [
+              {
+                path: '/',
+                element: (
+                  <ProtectedRoute>
+                    <App />
+                  </ProtectedRoute>
+                ),
+                children: [
+                  { index: true, element: <p>Ic sayfa icerigi</p> },
+                  { path: 'profile', element: <p>Profil sayfasi</p> },
+                ],
+              },
+              { path: '/login', element: <h1>Giriş Yap</h1> },
+            ],
+            { initialEntries: ['/'] },
+          )}
+        />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  // jsdom kapali popover'i gizler (bkz. yukaridaki cikis testleri) -- { hidden: true }.
+  const kullaniciAdiBaglantisi = screen.getByRole('link', { name: /efe/, hidden: true });
+  expect(kullaniciAdiBaglantisi).toHaveAttribute('href', '/profile');
+
+  await kullanici.click(kullaniciAdiBaglantisi);
+
+  expect(await screen.findByText('Profil sayfasi')).toBeInTheDocument();
 });
