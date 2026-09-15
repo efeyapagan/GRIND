@@ -1023,6 +1023,12 @@ Devreden notlar (bilerek yapılmadı):
 - Görünüm seçimi hatırlanmaz; sayfa her açılışta Aylık başlar.
 - Kademe eşikleri sabit; kullanıcının kendi dağılımına göre ayarlanmıyor.
 
+### İstek #84 — Takvimi küçült (2026-09-15)
+
+Telefonda Takvim çok yer kaplıyordu. Izgara en fazla 256 px genişlikte ve ortalı; hücreler ~47 px'ten ~33 px'e
+indi (`min-h-0` ile base katmanındaki 44 px düğme alt sınırı bu hücrelerde kaldırıldı — küçük ızgara dokunma
+hedefinin önüne alındı). Davranış değişmedi, yeni test yok; görsel doğrulama 390×844 Playwright.
+
 ---
 
 ## Çalışma Kuralı
