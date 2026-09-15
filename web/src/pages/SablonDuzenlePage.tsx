@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react';
 import {
   useCreateTemplate,
@@ -99,6 +99,11 @@ export default function SablonDuzenlePage() {
 
 function SablonFormu({ sablon }: { sablon: Sablon | null }) {
   const navigate = useNavigate();
+  // Issue #61 Karar 3: Bugun'un "+ Sablon oluştur" dugmesi buraya `state: { donus: '/' }` ile
+  // gelir -- BURADAN olusturulan sablon kaydedilince Bugun'e doner. Sablonlar listesindeki "Yeni
+  // sablon" dugmesi state VERMEZ, yani `donus` `undefined` kalir ve varsayilan (/templates)
+  // korunur -- iki giris noktasi ayni bileseni farkli bir kayit sonrasi hedefle kullanir.
+  const donusYolu = (useLocation().state as { donus?: string } | null)?.donus ?? '/templates';
   const { data: egzersizler } = useExercises();
   const olusturMutasyonu = useCreateTemplate();
   const guncelleMutasyonu = useUpdateTemplate();
@@ -227,7 +232,7 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
       } else {
         await olusturMutasyonu.mutateAsync(girdi);
       }
-      navigate('/templates');
+      navigate(donusYolu);
     } catch (hata) {
       // Ad alanina ait DataAnnotations hatasi alanin altina; digerleri (409, ic eleman hatalari)
       // genel hata kutusuna -- sessiz kalinmaz (apiHatasiniAyir I3).

@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
@@ -21,6 +21,13 @@ type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 function testeOzelSorguIstemcisi(): QueryClient {
   // Retry kapali -- basarisiz bir istek test zaman asimina kadar yeniden denenmesin (Task 3 kurali).
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
+/** SablonOlusturCagrisi'nin (issue #61) `state.donus`unu ekrana yazar -- gercek SablonDuzenlePage
+ * yerine sahte bir hedef, sadece navigasyonun DOGRU state'i tasidigini dogrulamak icin. */
+function AlinanRota() {
+  const donus = (useLocation().state as { donus?: string } | null)?.donus;
+  return <p>{`donus=${donus}`}</p>;
 }
 
 // `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
@@ -287,17 +294,6 @@ function sahteSunucuyuKur(
 }
 
 /**
- * `AddSetForm` bos durumda bile render edilir (spec) -- yani `<select>` ve `<label>` egzersiz
- * listesi gelmeden de DOM'dadir. Sadece etiketin varligini beklemek (`findByLabelText`) bir yaris
- * durumu yaratir: gonderim, ilk (varsayilan) egzersiz henuz secilmeden yapilabilir. Bu yuzden
- * her gonderimden once `<select>`in gercekten dolmus (varsayilan olarak "Bench Press" = id 1
- * secilmis) olmasini bekliyoruz.
- */
-async function egzersizSecimineBekle() {
-  await waitFor(() => expect(screen.getByLabelText('Egzersiz')).toHaveValue('1'));
-}
-
-/**
  * #62: acik antrenmanda panelde hareket secimi yoktur -- hareket karttan gelir. Set gondermeden once
  * varsayilan secimin (adiyla verilen hareketin) kartinin secili oldugu beklenir.
  */
@@ -340,25 +336,31 @@ beforeEach(() => {
   session.clear();
 });
 
-test('acik oturum yokken (404) bos durum gorunur ve set ekleme formu kullanilabilir', async () => {
+test('acik oturum yokken (404) bos durum gorunur; set ekleme formu degil sablon olustur dugmesi cikar', async () => {
+  // Issue #61: serbest antrenman arayuzden artik baslatilamaz -- set ekleme formu (Egzersiz/Agirlik/
+  // Tekrar alanlari) acik antrenman OLMADAN hic render edilmez, yerine "+ Sablon oluştur" durur.
   sahteSunucuyuKur();
 
   bugunSayfasiniOlustur();
 
   expect(await screen.findByText('Bugün henüz antrenman yok')).toBeInTheDocument();
-  expect(screen.getByLabelText('Egzersiz')).toBeInTheDocument();
-  expect(screen.getByLabelText('Ağırlık (kg)')).toBeInTheDocument();
-  expect(screen.getByLabelText('Tekrar')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Set ekle' })).toBeInTheDocument();
+  expect(screen.getByText('Bir şablonla başlayın ya da yeni şablon oluşturun.')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Egzersiz')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Ağırlık (kg)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Tekrar')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Set ekle' })).not.toBeInTheDocument();
+
+  const dugme = screen.getByRole('button', { name: 'Şablon oluştur' });
+  expect(dugme).toBeInTheDocument();
 });
 
 test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tasir', async () => {
-  const ortam = sahteSunucuyuKur();
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
@@ -369,36 +371,36 @@ test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tas
 });
 
 test('recordType Weight donen set icin rekor rozeti gorunur', async () => {
-  sahteSunucuyuKur({ recordTypeUret: () => 'Weight' });
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]), recordTypeUret: () => 'Weight' });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '70', '5');
 
   expect(await screen.findByText(/ağırlık rekoru/i)).toBeInTheDocument();
 });
 
 test('recordType Reps donen set icin rekor rozeti gorunur', async () => {
-  sahteSunucuyuKur({ recordTypeUret: () => 'Reps' });
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]), recordTypeUret: () => 'Reps' });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '70', '5');
 
   expect(await screen.findByText(/tekrar rekoru/i)).toBeInTheDocument();
 });
 
 test('recordType None donen set icin rekor rozeti gorunmez', async () => {
-  sahteSunucuyuKur({ recordTypeUret: () => 'None' });
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]), recordTypeUret: () => 'None' });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '70', '5');
 
   await screen.findByText(tamMetin('70 kg × 5'));
@@ -406,12 +408,12 @@ test('recordType None donen set icin rekor rozeti gorunmez', async () => {
 });
 
 test('agirlik 0 ile set eklenebilir', async () => {
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '0', '12');
 
   expect(await screen.findByText(tamMetin('0 kg × 12'))).toBeInTheDocument();
@@ -419,7 +421,7 @@ test('agirlik 0 ile set eklenebilir', async () => {
 
 test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir', async () => {
   let istekYapildiMi = false;
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () => {
       istekYapildiMi = true;
@@ -440,7 +442,7 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await paneliAc(kullanici);
   // Agirlik alani BILEREK bos birakiliyor -- "0" (barfiks/dips) gecerli bir deger olsa da,
   // hic girilmemis bir alan "0" degil "girilmedi" demektir (review bulgusu).
@@ -457,7 +459,7 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
 test('sunucu 400 alan hatasini PascalCase Weight ile donerse agirlik alaninin altinda gosterilir', async () => {
   // Anahtar karsilastirmasi case-insensitive olmali: backend ValidationProblemDetails.Errors
   // CLR property adini ("Weight") tasir, form kucuk harfli "weight" id'si kullanir (I3).
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () =>
       HttpResponse.json(
@@ -474,7 +476,7 @@ test('sunucu 400 alan hatasini PascalCase Weight ile donerse agirlik alaninin al
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '600', '8');
 
   const agirlikAlani = screen.getByLabelText('Ağırlık (kg)');
@@ -484,7 +486,7 @@ test('sunucu 400 alan hatasini PascalCase Weight ile donerse agirlik alaninin al
 test('sunucu 400 alan hatasi hicbir render edilen alanla eslesmezse genel uyari gosterilir', async () => {
   // ASP.NET deserializasyon hatasi $.reps gibi anahtarlar donebilir -- bunlar formun render
   // ettigi hicbir alanla eslesmez, sessiz kalinmamali (I3).
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () =>
       HttpResponse.json(
@@ -502,7 +504,7 @@ test('sunucu 400 alan hatasi hicbir render edilen alanla eslesmezse genel uyari 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('İstek gövdesi ayrıştırılamadı.');
@@ -510,7 +512,7 @@ test('sunucu 400 alan hatasi hicbir render edilen alanla eslesmezse genel uyari 
 
 test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez', async () => {
   let istekYapildiMi = false;
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () => {
       istekYapildiMi = true;
@@ -531,7 +533,7 @@ test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez',
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8.5');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Tekrar sayısı tam sayı olmalı.');
@@ -540,7 +542,7 @@ test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez',
 
 test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek gonderilmez', async () => {
   let istekYapildiMi = false;
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () => {
       istekYapildiMi = true;
@@ -561,7 +563,7 @@ test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await paneliAc(kullanici);
   await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
   await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
@@ -722,7 +724,7 @@ test('iptal basarisiz olursa hata gosterilir ve dugme yerinde kalir', async () =
 });
 
 test('sunucu 400 donerse detay gosterilir ve form icerigi kaybolmaz', async () => {
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(
     http.post('/api/sets', () =>
       HttpResponse.json(
@@ -735,7 +737,7 @@ test('sunucu 400 donerse detay gosterilir ve form icerigi kaybolmaz', async () =
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Bu egzersiz artık kullanılamıyor.');
@@ -747,13 +749,13 @@ test('ag hatasi: set kaydedilmemis OLABILECEGINI soyleyen mesaj gosterilir ve fo
   // R15: mesaj artik "kaydedilmedi" diye KESIN bir iddiada bulunmuyor -- istemci fetch
   // reddettiginde istegin sunucuya ulasip ulasmadigini bilemez; yanlis "kaydedilmedi" iddiasi
   // kullaniciyi tekrar denemeye ve YINELENEN bir set olusturmaya iter.
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   server.use(http.post('/api/sets', () => HttpResponse.error()));
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -792,12 +794,12 @@ test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri g
 test('set eklenince durum satiri eklenen seti duyurur', async () => {
   // Spec davranis 5: sabit panel listeyi kismen ortebilir; eklenen set hem gorunur hem ekran
   // okuyucuya (role=status, polite) duyurulur. Dugmenin adi DEGISMEZ.
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '82,5', '5');
 
   expect(await screen.findByText('Eklendi: 82,5 kg × 5')).toHaveAttribute('role', 'status');
@@ -883,13 +885,47 @@ test('baslatma var olan sablonsuz oturumu donerse sablon uygulanmadi bilgisi gor
   expect(screen.queryByRole('button', { name: HAREKET_KARTI_ADI })).not.toBeInTheDocument();
 });
 
-test('hic sablon yokken bos durumda Sablon olustur baglantisi gorunur', async () => {
+test('hic sablon yokken bos durumda metin ici baglanti YOKTUR (issue #61 Karar 2)', async () => {
+  // Ayni is artik alt alandaki "+ Sablon oluştur" dugmesinde -- iki kez durmaz.
   sahteSunucuyuKur({ sablonlar: [] });
   bugunSayfasiniOlustur();
 
-  const baglanti = await screen.findByRole('link', { name: 'Şablon oluştur' });
-  expect(baglanti).toHaveAttribute('href', '/templates/new');
-  expect(screen.getByText(/Henüz şablon yok/)).toBeInTheDocument();
+  expect(await screen.findByText('Henüz şablon yok.')).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Şablon oluştur/ })).not.toBeInTheDocument();
+});
+
+test('sablon varken de metin ici baglanti yoktur, Şablonları yönet baglantisi kalir', async () => {
+  sahteSunucuyuKur({ sablonlar: [PUSH_DAY] });
+  bugunSayfasiniOlustur();
+
+  await screen.findByRole('button', { name: /Push Day/ });
+  expect(screen.queryByRole('link', { name: /Şablon oluştur/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Şablonları yönet' })).toHaveAttribute('href', '/templates');
+});
+
+test('bos durumda alt alandaki Sablon oluştur dugmesi /templates/new\'e donus state\'iyle gider', async () => {
+  // Issue #61 Karar 3: BURADAN olusturulan sablon kaydedilince Bugun'e donsun diye state tasinir.
+  sahteSunucuyuKur();
+  const kullanici = userEvent.setup();
+
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <PageTitleProvider>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<TodayPage />} />
+              <Route path="/templates/new" element={<AlinanRota />} />
+            </Routes>
+          </MemoryRouter>
+        </PageTitleProvider>
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Şablon oluştur' }));
+
+  expect(await screen.findByText('donus=/')).toBeInTheDocument();
 });
 
 test('sablonlu oturumda kartlar sunucunun sirasiyla gorunur; varsayilan secim tamamlanmamis ilk harekettir', async () => {
@@ -1020,27 +1056,30 @@ test('secili kartta gecmis acilinca istenir ve set eklenince yeniden istenir', a
   await waitFor(() => expect(ortam.ilerlemeAramalari().length).toBeGreaterThan(ilkSayi));
 });
 
-test('set paneli kapali baslar; Set ekle acar, Paneli kapat kapatir, yazilan deger korunur ve odak geri doner', async () => {
-  sahteSunucuyuKur();
+test('set paneli kapali baslar; karta dokunmak acar, Paneli kapat kapatir, yazilan deger korunur ve odak geri doner', async () => {
+  // Issue #61 ile bos-durumdaki "Set ekle" acma dugmesi kalkti; acik antrenmanda panel karta
+  // dokunarak acilir (#62). Odagin kapaninca DOGRU acma dugmesine ("Hareket ekle") donmesi hic
+  // sinanmamisti -- I2 bulgusunun "acilista TASINMAZ" tarafi ayri testte, "kapaninca doner" tarafi
+  // burada.
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
   expect(screen.queryByRole('button', { name: 'Paneli kapat' })).not.toBeInTheDocument();
 
-  await kullanici.click(screen.getByRole('button', { name: 'Set ekle', expanded: false }));
+  await kullanici.click(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' }));
 
   expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
-  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveFocus();
   await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
 
   await kullanici.click(screen.getByRole('button', { name: 'Paneli kapat' }));
 
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
-  expect(screen.getByRole('button', { name: 'Set ekle', expanded: false })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Hareket ekle' })).toHaveFocus();
 
-  await kullanici.click(screen.getByRole('button', { name: 'Set ekle', expanded: false }));
+  await kullanici.click(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' }));
   expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
 });
 
@@ -1067,11 +1106,11 @@ test('hareket kartina dokunmak hareketi secer ve set panelini acar, grafigi acma
 });
 
 test('set eklendikten sonra panel acik kalir', async () => {
-  sahteSunucuyuKur();
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   const kullanici = userEvent.setup();
   bugunSayfasiniOlustur();
 
-  await egzersizSecimineBekle();
+  await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
   expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
@@ -1291,22 +1330,38 @@ describe('dinlenme sayaci', () => {
   });
 
   test('sablonsuz antrenmanda sayac varsayilan 90 sn ile baslar', async () => {
-    sahteSunucuyuKur();
+    // Sablonsuz (templateId null) acik oturum, plan disi eklenen bir hareket icin restSeconds
+    // gelmez -- #62'nin "Hareket ekle" akisiyla eklenen Bench Press bu yuzden varsayilani (90) alir.
+    const acikSablonsuzOturum: SessionResponse = {
+      id: 40,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      isOpen: true,
+      templateId: null,
+      templateName: null,
+      notes: null,
+      progress: [],
+    };
+    const ortam = sahteSunucuyuKur({ baslangicOturumu: acikSablonsuzOturum });
     const kullanici = userEvent.setup();
     bugunSayfasiniOlustur();
 
-    await egzersizSecimineBekle();
+    await kullanici.click(await screen.findByRole('button', { name: 'Hareket ekle' }));
+    const liste = await screen.findByRole('listbox', { name: 'Hareketler' });
+    await kullanici.click(within(liste).getByRole('option', { name: 'Bench Press' }));
+    await waitFor(() => expect(ortam.eklenenHareketler()).toEqual([1]));
+
     await setEkle(kullanici, '60', '8');
 
     expect(await screen.findByText('1:30')).toBeInTheDocument();
   });
 
   test('dinlenme sayaci panel kapaliyken de gorunur', async () => {
-    sahteSunucuyuKur();
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
     const kullanici = userEvent.setup();
     bugunSayfasiniOlustur();
 
-    await egzersizSecimineBekle();
+    await seciliKartaBekle('Bench Press');
     await setEkle(kullanici, '60', '8');
     expect(await screen.findByText('1:30')).toBeInTheDocument();
 

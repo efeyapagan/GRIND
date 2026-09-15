@@ -23,6 +23,7 @@ import AddSetForm from '../components/AddSetForm';
 import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
+import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
@@ -39,8 +40,10 @@ interface BekleyenHareket {
 /**
  * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi
  * bos eski bir oturumda gruplu set listesi; oturum yoksa bos durum + "Sablonla basla". Alt alan
- * (AddSetForm) HER DURUMDA render edilir: antrenman yokken set paneli (ilk set sunucuda oturumu acar),
- * acik antrenmanda "Hareket ekle" (#62).
+ * oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
+ * SablonOlusturCagrisi ("+ Sablon olustur", #61) -- serbest antrenman artik arayuzden
+ * BASLATILAMAZ, her antrenman bir sablonla baslar. Backend'e dokunulmadi: POST /api/sets'in
+ * oturumu kendiliginden acmasi API'de duruyor, arayuz artik KULLANMIYOR.
  *
  * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
@@ -321,7 +324,7 @@ export default function TodayPage() {
           <BosDurum
             ikon={Dumbbell}
             baslik="Bugün henüz antrenman yok"
-            aciklama="İlk seti ekleyerek antrenmanı başlatın."
+            aciklama="Bir şablonla başlayın ya da yeni şablon oluşturun."
           />
           <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
         </>
@@ -347,15 +350,17 @@ export default function TodayPage() {
         />
       )}
 
-      <AddSetForm
-        egzersizId={etkinSecim}
-        onEgzersizSec={secimYap}
-        acik={panelAcik}
-        onAcikDegis={setPanelAcik}
-        hareketEkleme={
-          gorunenOturum?.isOpen ? { egzersizler: eklenebilirEgzersizler, onEkle: hareketEkle } : undefined
-        }
-      />
+      {gorunenOturum ? (
+        <AddSetForm
+          egzersizId={etkinSecim}
+          onEgzersizSec={secimYap}
+          acik={panelAcik}
+          onAcikDegis={setPanelAcik}
+          hareketEkleme={{ egzersizler: eklenebilirEgzersizler, onEkle: hareketEkle }}
+        />
+      ) : (
+        <SablonOlusturCagrisi />
+      )}
     </div>
   );
 }
