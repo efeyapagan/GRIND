@@ -9,8 +9,9 @@ public class UserRepository(AppDbContext context) : Repository<User>(context), I
     public Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         => Set.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
 
-    public Task<bool> UsernameExistsAsync(string username, CancellationToken cancellationToken = default)
-        => Set.AnyAsync(u => u.Username == username, cancellationToken);
+    public Task<bool> UsernameExistsAsync(
+        string username, long? excludeId = null, CancellationToken cancellationToken = default)
+        => Set.AnyAsync(u => u.Username == username && (excludeId == null || u.Id != excludeId), cancellationToken);
 
     public Task<bool> ExistsActiveAsync(long id, CancellationToken cancellationToken = default)
         => Set.AnyAsync(u => u.Id == id && u.DeletedAt == null, cancellationToken);

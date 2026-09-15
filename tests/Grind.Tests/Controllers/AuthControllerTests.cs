@@ -13,6 +13,7 @@ public class AuthControllerTests
     {
         public RegisterRequest? SeenRegister { get; private set; }
         public LoginRequest? SeenLogin { get; private set; }
+        public UpdateProfileRequest? SeenUpdateProfile { get; private set; }
 
         private static AuthResponse Response(string username) =>
             new("token", new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc), username);
@@ -33,6 +34,13 @@ public class AuthControllerTests
         // ama arabirim üyesi olduğu için sahte sınıf derlenebilmesi adına burada yer almalı.
         public Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<AuthResponse> UpdateProfileAsync(
+            UpdateProfileRequest request, CancellationToken cancellationToken = default)
+        {
+            SeenUpdateProfile = request;
+            return Task.FromResult(Response(request.NewUsername ?? "degismeyen-ad"));
+        }
     }
 
     [Fact]
@@ -61,6 +69,20 @@ public class AuthControllerTests
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal("efe", Assert.IsType<AuthResponse>(ok.Value).Username);
         Assert.Same(request, service.SeenLogin);
+    }
+
+    [Fact]
+    public async Task UpdateMe_istegi_servise_iletilir_ve_200_doner()
+    {
+        var service = new StubAuthService();
+        var controller = new AuthController(service);
+        var request = new UpdateProfileRequest { CurrentPassword = "yeterince-uzun-sifre", NewUsername = "efe2" };
+
+        var result = await controller.UpdateMe(request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("efe2", Assert.IsType<AuthResponse>(ok.Value).Username);
+        Assert.Same(request, service.SeenUpdateProfile);
     }
 
     /// <summary>

@@ -35,7 +35,7 @@ public class AuthService(
     {
         var username = Normalize(request.Username);
 
-        if (await userRepository.UsernameExistsAsync(username, cancellationToken))
+        if (await userRepository.UsernameExistsAsync(username, excludeId: null, cancellationToken))
         {
             throw new ConflictException($"'{username}' kullanıcı adı zaten alınmış.");
         }
@@ -95,6 +95,46 @@ public class AuthService(
         // Yalnızca damga: oturumlar, setler, rekorlar, tartılar ve yorumlar olduğu gibi kalır.
         user.DeletedAt = Now();
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<AuthResponse> UpdateProfileAsync(
+        UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.NewUsername is null && request.NewPassword is null)
+        {
+            // Bos govde DTO dogrulamasini gecer (ikisi de opsiyonel). Sessizce 200 donmek
+            // cagiranin isteginin uygulandigini sanmasina yol acardi (SetEntryService.PatchAsync
+            // ile ayni gerekce).
+            throw new ValidationException("En az kullanıcı adı ya da şifreden biri gönderilmeli.");
+        }
+
+        // Kimlik token'dan gelir, govdeden degil: degistirilecek hesap her zaman cagiranin kendisi.
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+                   ?? throw new UnauthorizedException(InvalidCredentials);
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        {
+            throw new UnauthorizedException(InvalidCredentials);
+        }
+
+        if (request.NewUsername is { } yeniAd)
+        {
+            var normalized = Normalize(yeniAd);
+            if (await userRepository.UsernameExistsAsync(normalized, user.Id, cancellationToken))
+            {
+                throw new ConflictException($"'{normalized}' kullanıcı adı zaten alınmış.");
+            }
+            user.Username = normalized;
+        }
+
+        if (request.NewPassword is { } yeniSifre)
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(yeniSifre, WorkFactor);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Respond(user);
     }
 
     /// <summary>

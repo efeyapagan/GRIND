@@ -49,4 +49,19 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Kullanıcı adı ve/veya şifre değiştirir (issue #65). [Authorize] BİLEREK bu action'a ayrı
+    /// eklenir, sınıf seviyesine DEĞİL -- bkz. Register/Login'deki [AllowAnonymous] yorumu: sınıf
+    /// seviyesindeki bir öznitelik, ileride eklenecek her yeni action'ı sessizce ezerdi.
+    /// </summary>
+    [HttpPatch("me")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AuthResponse>> UpdateMe(
+        UpdateProfileRequest request, CancellationToken cancellationToken)
+        => Ok(await authService.UpdateProfileAsync(request, cancellationToken));
 }
