@@ -36,11 +36,34 @@ function takvimiOlustur() {
 
 test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, seriler API degerini gosterir', async () => {
   const araliklar = takvimSunucusu({
-    days: [{ date: '2026-09-14', sessionCount: 1, setCount: 18, volume: 4200 }],
+    days: [{ date: '2026-09-14', sessionCount: 2, setCount: 18, volume: 4200 }],
     trainedDayCount: 1,
     currentStreak: 2,
     longestStreak: 12,
   });
+  // #90: gunun sablon adlari gecmis ucundan. Gecmis ucu seti olmayan oturumu da dondurur (Pull Day) --
+  // takvim onu saymadigi icin ozette gorunmez. Sunucu yeniden eskiye siralar; ozet eskiden yeniye yazar.
+  const gecmisAraliklari: string[] = [];
+  server.use(
+    http.get('/api/history', ({ request }) => {
+      const url = new URL(request.url);
+      gecmisAraliklari.push(`${url.searchParams.get('From')}..${url.searchParams.get('To')}`);
+      const oturum = (sessionId: number, startedAt: string, templateName: string | null, setCount: number) => ({
+        sessionId, startedAt, endedAt: null, templateName, notes: null, totalVolume: 0, setCount, sets: [],
+      });
+      return HttpResponse.json({
+        items: [
+          oturum(3, '2026-09-14T17:00:00Z', 'Pull Day', 0),
+          oturum(2, '2026-09-14T15:00:00Z', null, 8),
+          oturum(1, '2026-09-14T06:00:00Z', 'Push Day', 10),
+        ],
+        page: 1,
+        pageSize: 20,
+        totalCount: 3,
+        totalPages: 1,
+      });
+    }),
+  );
   takvimiOlustur();
 
   expect(screen.getByRole('heading', { name: 'Takvim' })).toBeInTheDocument();
@@ -56,7 +79,13 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
   expect(screen.getByText('1 gün')).toBeInTheDocument();
 
   await userEvent.click(antrenmanliGun);
-  expect(screen.getByText('14 Eylül · 1 antrenman · 18 set')).toBeInTheDocument();
+  expect(await screen.findByText('14 Eylül · Push Day, Şablonsuz · 18 set')).toBeInTheDocument();
+  expect(gecmisAraliklari).toEqual(['2026-09-14..2026-09-14']);
+
+  // Antrenmansiz gun: gecmis istegi GITMEZ.
+  await userEvent.click(screen.getByRole('button', { name: '13 Eylül: antrenman yok' }));
+  expect(screen.getByText('13 Eylül · antrenman yok')).toBeInTheDocument();
+  expect(gecmisAraliklari).toHaveLength(1);
 });
 
 test('Onceki bir onceki ayi ister; Haftalik bugunun haftasina doner, sonraki bugunde kapalidir', async () => {

@@ -1037,6 +1037,16 @@ Oturum sorgusu hata verirse bu ekranın gösterilmemesi kuralı aynen korunuyor.
 dayanan 4 `TodayPage` kontrolü Takvim / "Şablonla başla" başlıklarına taşındı, boş durum testi metnin
 YOKLUĞUNU da sabitliyor. `BosDurum` bileşeni Geçmiş, Rekorlar ve Şablonlar'da kullanılmaya devam ediyor.
 
+### İstek #90 — Takvimde günün şablon adı (2026-09-15)
+
+Takvimde antrenmanlı bir güne dokununca özet artık o günün şablonlarını da yazar: "14 Eylül · Push Day · 26 set";
+birden fazla antrenmanda adlar eskiden yeniye virgülle, şablonsuz antrenman "Şablonsuz". Backend değişmedi: ad
+`GET /api/history?From=<gün>&To=<gün>`'den (`useGunGecmisi`, anahtarı `historyAll` önekinde) ve yalnızca antrenmanlı
+güne dokununca istenir. Geçmiş ucu takvimden farklı olarak setsiz oturumu da döndürdüğü için sunucunun `setCount`
+değeri 0 olanlar özete girmez. Yüklenirken "…", istek başarısızsa eskisi gibi antrenman sayısı. Testler: yeni test
+yok; `Takvim` testinin gün özeti kontrolü genişletildi (tek gün aralığı, iki şablon + şablonsuz + setsiz oturum,
+antrenmansız günde istek gitmemesi).
+
 ---
 
 ## Çalışma Kuralı

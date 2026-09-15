@@ -46,6 +46,8 @@ export const queryKeys = {
   records: ['records'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
+  // Takvimde secilen gunun oturumlari (#90); `historyAll` oneki altinda, set degisince o da tazelenir.
+  historyDay: (gun: string | null) => [...queryKeys.historyAll, 'gun', gun] as const,
   templates: ['templates'] as const,
   // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
   // cekilmesin (silmeden hemen sonra 404'e dusmesin).
@@ -329,6 +331,22 @@ export function useHistory(page: number) {
       const yanit = await request<HistorySessionResponsePagedResponse>(`/history?Page=${page}`);
       return dogrulanmisGecmisSayfasi(yanit);
     },
+  });
+}
+
+/**
+ * Takvimde secilen tek TR gununun oturumlari (#90), sablon adlari icin. `null` gun istek atmaz. DIKKAT:
+ * gecmis ucu seti olmayan oturumu da dondurur; takvimle tutarli kalmak cagiranin isidir (`setCount`).
+ * Bir gunde sunucunun varsayilan sayfa boyutundan (20) fazla oturum beklenmez.
+ */
+export function useGunGecmisi(gun: string | null) {
+  return useQuery({
+    queryKey: queryKeys.historyDay(gun),
+    queryFn: async (): Promise<GecmisOturum[]> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>(`/history?From=${gun}&To=${gun}`);
+      return dogrulanmisGecmisSayfasi(yanit).items;
+    },
+    enabled: gun !== null,
   });
 }
 

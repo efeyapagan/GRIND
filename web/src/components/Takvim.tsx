@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCalendar, type TakvimGunu } from '../api/queries';
+import { useCalendar, useGunGecmisi, type GecmisOturum, type TakvimGunu } from '../api/queries';
 import { formatAralik, trBugundenOnce } from '../lib/format';
 import {
   ayBasligi,
@@ -40,10 +40,31 @@ function sekmeId(anahtar: TakvimGorunumu): string {
   return `takvim-sekme-${anahtar}`;
 }
 
-function gunOzeti(gun: string, kayit: TakvimGunu | undefined): string {
-  return kayit
-    ? `${gunBasligi(gun)} · ${kayit.sessionCount} antrenman · ${kayit.setCount} set`
-    : `${gunBasligi(gun)} · antrenman yok`;
+/**
+ * Secili gunun ozeti (#90): "14 Eylül · Push Day, Şablonsuz · 26 set". Sablon adlari eskiden yeniye;
+ * seti olmayan oturum takvim gibi atlanir. Adlar yuklenirken "…", alinamazsa antrenman sayisi yazar.
+ */
+function gunOzeti(
+  gun: string,
+  kayit: TakvimGunu | undefined,
+  oturumlar: GecmisOturum[] | undefined,
+  gecmisHatali: boolean,
+): string {
+  if (!kayit) {
+    return `${gunBasligi(gun)} · antrenman yok`;
+  }
+  const setliOturumlar = (oturumlar ?? [])
+    .filter((oturum) => oturum.setCount > 0)
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  let sablonlar: string;
+  if (gecmisHatali || (oturumlar && setliOturumlar.length === 0)) {
+    sablonlar = `${kayit.sessionCount} antrenman`;
+  } else if (!oturumlar) {
+    sablonlar = '…';
+  } else {
+    sablonlar = setliOturumlar.map((oturum) => oturum.templateName ?? 'Şablonsuz').join(', ');
+  }
+  return `${gunBasligi(gun)} · ${sablonlar} · ${kayit.setCount} set`;
 }
 
 interface Props {
@@ -65,6 +86,9 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const { data: ozet, isLoading, isError, isPlaceholderData } = useCalendar(from, to);
 
   const gunler = new Map((ozet?.days ?? []).map((kayit) => [kayit.date, kayit]));
+  const seciliKayit = secili ? gunler.get(secili) : undefined;
+  // #90: sablon adlari yalnizca ANTRENMANLI bir gun secilince istenir.
+  const { data: gunOturumlari, isError: gunGecmisiHatali } = useGunGecmisi(seciliKayit ? secili : null);
   const satirlar = gorunum === 'ay' ? ayIzgarasi(gosterilen) : [haftaGunleri(gosterilen)];
   const sonrakiKapali = gorunumAraligi(gorunum, kaydir(gorunum, gosterilen, 1)).from > bugun;
   const donemBasligi =
@@ -148,7 +172,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
         </div>
 
         <p aria-live="polite" className="min-h-5 text-body text-muted tabular-nums">
-          {secili ? gunOzeti(secili, gunler.get(secili)) : ''}
+          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali) : ''}
         </p>
 
         {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
