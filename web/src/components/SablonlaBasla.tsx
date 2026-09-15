@@ -10,6 +10,10 @@ interface Props {
 /**
  * Bugun'un bos durumundaki "Sablonla basla" bolumu (spec Karar 2 ve 4). Baslatma mutasyonu ve
  * "sablon uygulanmadi" bilgisi TodayPage'dedir: oturum acilinca bu bolum kaybolur, bilgi kaybolmamali.
+ *
+ * Sablon YOKKEN metin ici "Sablon oluştur" baglantisi BILEREK YOK (issue #61 Karar 2): ayni is
+ * artik alt alandaki "+ Sablon oluştur" dugmesinde (SablonOlusturCagrisi) duruyor -- ayni eylem
+ * ekranda iki kez durmasin.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
   const { data: sablonlar, isLoading, isError } = useTemplates();
@@ -27,14 +31,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
         </p>
       )}
 
-      {sablonlar && sablonlar.length === 0 && (
-        <p className="text-body text-muted">
-          Henüz şablon yok.{' '}
-          <Link to="/templates/new" className="text-fg underline">
-            Şablon oluştur
-          </Link>
-        </p>
-      )}
+      {sablonlar && sablonlar.length === 0 && <p className="text-body text-muted">Henüz şablon yok.</p>}
 
       {sablonlar && sablonlar.length > 0 && (
         <>

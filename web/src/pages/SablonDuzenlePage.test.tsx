@@ -13,13 +13,15 @@ type TemplateResponse = components['schemas']['TemplateResponse'];
 
 // `usePageTitle` (issue #65, `SayfaBasligi` icinde cagrilir) bir `PageTitleProvider` ister --
 // App.tsx'in gercek kabugu bunu saglar, testte de aynisi sarilmali.
-function duzenleyiciyiOlustur(yol: string) {
+function duzenleyiciyiOlustur(giris: string | { pathname: string; state?: unknown }) {
   const istemci = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={istemci}>
       <PageTitleProvider>
-        <MemoryRouter initialEntries={[yol]}>
+        <MemoryRouter initialEntries={[giris]}>
           <Routes>
+            {/* Issue #61 Karar 3: Bugun'den `state: { donus: '/' }` ile gelinirse kaydedince buraya donulur. */}
+            <Route path="/" element={<p>Bugün ekranı</p>} />
             <Route path="/templates" element={<p>Sablon listesi</p>} />
             <Route path="/templates/new" element={<SablonDuzenlePage />} />
             <Route path="/templates/:id" element={<SablonDuzenlePage />} />
@@ -205,4 +207,39 @@ test('mevcut sablon yuklenir: arsivli hareket hapi ve listede olmayan dinlenme d
       { exerciseId: 1, plannedSets: 4, restSeconds: 120 },
     ],
   });
+});
+
+test('Bugun\'un "+ Sablon oluştur" dugmesinden gelen state ile kaydedince Bugun\'e donulur (issue #61 Karar 3)', async () => {
+  server.use(
+    http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
+    http.post('/api/templates', () => HttpResponse.json(ornekSablon(), { status: 201 })),
+  );
+  const kullanici = userEvent.setup();
+  duzenleyiciyiOlustur({ pathname: '/templates/new', state: { donus: '/' } });
+
+  await kullanici.type(screen.getByLabelText('Şablon adı'), 'Push Day');
+  const ekle = await hareketEkleHazir();
+  await kullanici.click(ekle);
+  await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+  // Normalde /templates'e doner (bkz. yukaridaki testler); burada state'teki hedefe gider.
+  expect(await screen.findByText('Bugün ekranı')).toBeInTheDocument();
+  expect(screen.queryByText('Sablon listesi')).not.toBeInTheDocument();
+});
+
+test('Sablonlar listesinden acilan yeni sablon state tasimaz, kaydedince /templates\'e doner', async () => {
+  server.use(
+    http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
+    http.post('/api/templates', () => HttpResponse.json(ornekSablon(), { status: 201 })),
+  );
+  const kullanici = userEvent.setup();
+  // Sablonlar listesindeki "Yeni sablon" dugmesi state VERMEDEN navigate eder (SablonlarPage).
+  duzenleyiciyiOlustur('/templates/new');
+
+  await kullanici.type(screen.getByLabelText('Şablon adı'), 'Push Day');
+  const ekle = await hareketEkleHazir();
+  await kullanici.click(ekle);
+  await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+  expect(await screen.findByText('Sablon listesi')).toBeInTheDocument();
 });
