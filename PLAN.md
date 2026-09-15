@@ -1054,6 +1054,33 @@ Antrenman yokken "+ Şablon oluştur" (#61) ekranın altına yapışıktı; Bug�
 şablon listesinin altında durur, aşağı kaydırınca görünür. Açık antrenmandaki set/hareket paneli (`AddSetForm`)
 yapışık kalır. Davranış (dönüş bilgisiyle `/templates/new`) değişmedi; yeni test yok.
 
+### İstek #96 + #97 — Haftalık seri ve haftalık hedef (2026-09-16)
+
+Günlük seri dinlenme günlerinde sıfırlanıp düzenliliği yansıtmıyordu (#96); kullanıcı ayrıca haftalık bir gün
+hedefi ve onu tutturduğu haftaların serisini istedi (#97). İş akışı: issue → gerekli testler → kullanıcıya sunuldu →
+onaydan sonra kod.
+- **Seri kuralı:** hafta TR günleriyle Pazartesi–Pazar. Seri, en az bir antrenman günü olan ardışık haftalar; içinde
+  bulunulan hafta henüz şartı sağlamıyorsa geçen haftadan sayılır (hafta bitmedi). Hedef serisi AYNI hesap, bir haftanın
+  sayılması için gereken farklı gün sayısı hedeftir (`StreakCalculator.Calculate(..., minDaysPerWeek)`, DRY). Aynı gün
+  iki oturum tek gün.
+- **Backend:** `User.WeeklyTargetDays` (nullable, CHECK 1–7; migration `HaftalikHedef`, drift yok). `PUT
+  /api/settings/weekly-target` (`SettingsController` → `SettingsService`, 204; şifre istemez, `null` hedefi kaldırır,
+  [Range] 1–7). `CalendarResponse`: `CurrentStreak`/`LongestStreak` anlam değiştirdiği için
+  `CurrentWeekStreak`/`LongestWeekStreak` olarak yeniden adlandırıldı; yeni `ThisWeekTrainedDays`, `WeeklyTargetDays`,
+  `CurrentTargetStreak`. Hedef JWT'de değil, takvim sorgusunda kullanıcının güncel kaydından okunur. Export özeti ve
+  metni "hafta" der.
+- **Arayüz:** Takvim özeti "Seri N hafta", "En uzun seri N hafta", hedef varken "Bu hafta X / N gün" ve "Hedef serisi N
+  hafta"; altında "Haftalık hedef" seçicisi (Hedef yok, 1–7 gün), seçim hemen kaydedilir ve takvim tazelenir.
+- **Testler:** `StreakCalculatorTests` haftalık kurallarla yeniden yazıldı (9 günlük test → 8 haftalık test);
+  `CheckConstraintTests` +1, `StatsServiceTests` +1 (4 güncellendi), yeni `SettingsEndpointsTests` 3 durum; Takvim +1
+  (2 güncellendi); export, sorgu ve `TodayPage` testleri yalnızca yeni alan adlarına geçti. Backend etkilenen sınıflar
+  + `Grind.Tests.Data` 160/160, web 198/198, `tsc -b` ve lint temiz. Görsel doğrulama 390×844 Playwright.
+
+Devreden notlar (bilerek yapılmadı):
+- Hedef geriye dönük uygulanır: hedef değişince geçmiş haftalar yeni hedefe göre sayılır (hedef geçmişi saklanmıyor).
+- En uzun hedef serisi hesaplanmıyor; yalnızca mevcut hedef serisi gösteriliyor.
+- Export ve AI yorumu hedef bilgisini içermiyor.
+
 ---
 
 ## Çalışma Kuralı

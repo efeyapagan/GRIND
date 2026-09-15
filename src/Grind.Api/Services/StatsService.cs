@@ -9,6 +9,7 @@ public class StatsService(
     IWorkoutSessionRepository sessionRepository,
     ISetEntryRepository setEntryRepository,
     IBodyWeightLogRepository bodyWeightRepository,
+    IUserRepository userRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IStatsService
 {
@@ -55,9 +56,15 @@ public class StatsService(
         var starts = await sessionRepository.GetTrainedSessionStartsAsync(
             currentUser.UserId, cancellationToken);
 
+        var trainedDays = starts.Select(TurkeyDay.LocalDateOf).ToList();
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
-        var (current, longest) = StreakCalculator.Calculate(
-            starts.Select(TurkeyDay.LocalDateOf), today);
+        var (current, longest) = StreakCalculator.Calculate(trainedDays, today);
+
+        // #97: hedef JWT'de değil, kullanıcının GÜNCEL kaydında (CLAUDE.md JWT kararı).
+        var target = (await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken))?.WeeklyTargetDays;
+        int? targetStreak = target is { } targetDays
+            ? StreakCalculator.Calculate(trainedDays, today, targetDays).Current
+            : null;
 
         return new CalendarResponse(
             query.From,
@@ -65,7 +72,10 @@ public class StatsService(
             days.Select(d => new CalendarDayResponse(d.Date, d.SessionCount, d.SetCount, d.Volume)).ToList(),
             days.Count,
             current,
-            longest);
+            longest,
+            StreakCalculator.TrainedDaysInWeekOf(trainedDays, today),
+            target,
+            targetStreak);
     }
 
     public async Task<BodyWeightTrendResponse> GetBodyWeightTrendAsync(
