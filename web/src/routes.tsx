@@ -8,6 +8,7 @@ import HistoryPage from './pages/HistoryPage';
 import RecordsPage from './pages/RecordsPage';
 import SablonlarPage from './pages/SablonlarPage';
 import SablonDuzenlePage from './pages/SablonDuzenlePage';
+import ProfilePage from './pages/ProfilePage';
 
 /**
  * `/`, `/history`, `/records` ve şablon rotaları TEK bir `ProtectedRoute` altında (DRY) -- ayrı
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'templates', element: <SablonlarPage /> },
       { path: 'templates/new', element: <SablonDuzenlePage /> },
       { path: 'templates/:id', element: <SablonDuzenlePage /> },
+      { path: 'profile', element: <ProfilePage /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

@@ -406,4 +406,172 @@ public class AuthServiceTests
             Assert.Equal(globalSayisi, await context.Set<Exercise>().CountAsync(e => e.UserId == null));
         }
     }
+
+    // --- UpdateProfileAsync (issue #65) ---
+
+    [Fact]
+    public async Task UpdateProfile_kullanici_adini_kucuk_harfle_kaydeder_ve_yeni_token_doner()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var eskiAd = UniqueUsername();
+            await kayit.RegisterAsync(Register(eskiAd));
+            var user = (await repository.GetByUsernameAsync(eskiAd))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+            var yeniAd = UniqueUsername().ToUpperInvariant();
+
+            var yanit = await service.UpdateProfileAsync(
+                new UpdateProfileRequest { CurrentPassword = Password, NewUsername = yeniAd });
+
+            Assert.Equal(yeniAd.ToLowerInvariant(), yanit.Username);
+            Assert.NotEmpty(yanit.Token);
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Equal(yeniAd.ToLowerInvariant(), satir.Username);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfile_sifreyi_degistirir_yeni_sifreyle_giris_yapilabilir_eskisiyle_yapilamaz()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var username = UniqueUsername();
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+            const string yeniSifre = "yepyeni-bir-sifre-123";
+
+            await service.UpdateProfileAsync(
+                new UpdateProfileRequest { CurrentPassword = Password, NewPassword = yeniSifre });
+
+            await Assert.ThrowsAsync<UnauthorizedException>(
+                () => kayit.LoginAsync(new LoginRequest { Username = username, Password = Password }));
+            var girisYaniti = await kayit.LoginAsync(new LoginRequest { Username = username, Password = yeniSifre });
+            Assert.Equal(username, girisYaniti.Username);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfile_yanlis_mevcut_sifreyle_reddedilir_hicbir_alan_degismez()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var username = UniqueUsername();
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+            var eskiHash = user.PasswordHash;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            await Assert.ThrowsAsync<UnauthorizedException>(() => service.UpdateProfileAsync(
+                new UpdateProfileRequest { CurrentPassword = "bambaska-bir-sifre", NewUsername = UniqueUsername() }));
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<User>().SingleAsync(u => u.Id == user.Id);
+            Assert.Equal(username, satir.Username);
+            Assert.Equal(eskiHash, satir.PasswordHash);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfile_baskasinin_kullaniciAdini_almaya_calisirsa_409_doner()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var alinmisAd = UniqueUsername();
+            var kendiAdi = UniqueUsername();
+            await kayit.RegisterAsync(Register(alinmisAd));
+            await kayit.RegisterAsync(Register(kendiAdi));
+            var user = (await repository.GetByUsernameAsync(kendiAdi))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            await Assert.ThrowsAsync<ConflictException>(() => service.UpdateProfileAsync(
+                new UpdateProfileRequest { CurrentPassword = Password, NewUsername = alinmisAd }));
+        }
+    }
+
+    /// <summary>
+    /// `excludeId` olmasaydı bu istek kendi kaydıyla "çakışır" ve sahte bir 409 üretirdi (issue #65) --
+    /// kullanıcı adını hiç değiştirmeden (yalnızca büyük/küçük harfini normalize ederek) göndermek de
+    /// gerçek bir kullanım: form her zaman mevcut adı önceden doldurur.
+    /// </summary>
+    [Fact]
+    public async Task UpdateProfile_kendi_mevcut_adini_farkli_harf_buyuklugunde_gondermek_catisma_saymaz()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var username = UniqueUsername();
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            var yanit = await service.UpdateProfileAsync(
+                new UpdateProfileRequest { CurrentPassword = Password, NewUsername = username.ToUpperInvariant() });
+
+            Assert.Equal(username, yanit.Username);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfile_ikisi_de_bos_gelirse_ValidationException_firlatir()
+    {
+        var (_, context, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var repository = new UserRepository(context);
+            var kayit = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(0), new SahteSaat(An));
+            var username = UniqueUsername();
+            await kayit.RegisterAsync(Register(username));
+            var user = (await repository.GetByUsernameAsync(username))!;
+
+            var service = new AuthService(
+                repository, new UnitOfWork(context), new TokenService(Settings),
+                new StubCurrentUser(user.Id), new SahteSaat(An));
+
+            await Assert.ThrowsAsync<Grind.Api.Common.Exceptions.ValidationException>(
+                () => service.UpdateProfileAsync(new UpdateProfileRequest { CurrentPassword = Password }));
+        }
+    }
 }

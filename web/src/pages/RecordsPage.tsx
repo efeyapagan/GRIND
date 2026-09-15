@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react';
 import { useRecords } from '../api/queries';
 import { formatTrDate, formatWeight } from '../lib/format';
+import { usePageTitle } from '../ui/PageTitleContext';
 import BosDurum from '../ui/BosDurum';
 import Rozet from '../ui/Rozet';
 
@@ -8,16 +9,17 @@ import Rozet from '../ui/Rozet';
  * "Rekorlar" ekrani -- her egzersiz icin en agir seti ve en cok tekrari AYRI AYRI gosterir
  * (spec): bunlar cogu zaman farkli setlerdir. Sunucunun dondugu degerler oldugu gibi gosterilir,
  * istemci hicbir rekoru YENIDEN HESAPLAMAZ. Kartlar etkilesimsizdir.
+ *
+ * Baslik artik ust kabukta (issue #65) -- `usePageTitle` ile bildirilir, burada ayrica bir
+ * `<h1>` YAZILMAZ. Alt aciklama ("Kişisel en iyiler") baslik degil, kalir.
  */
 export default function RecordsPage() {
+  usePageTitle('Rekorlar');
   const { data, isLoading, isError } = useRecords();
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      <header className="flex flex-col gap-0.5">
-        <h1 className="text-title">Rekorlar</h1>
-        <p className="text-body text-muted">Kişisel en iyiler</p>
-      </header>
+      <p className="text-body text-muted">Kişisel en iyiler</p>
 
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import RecordsPage from './RecordsPage';
+import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
@@ -11,10 +12,14 @@ function testeOzelSorguIstemcisi(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 }
 
+// `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
+// saglar, testte de aynisi sarilmali (aksi halde hook context bulunamadi diye firlar).
 function rekorlarSayfasiniOlustur() {
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <RecordsPage />
+      <PageTitleProvider>
+        <RecordsPage />
+      </PageTitleProvider>
     </QueryClientProvider>,
   );
 }

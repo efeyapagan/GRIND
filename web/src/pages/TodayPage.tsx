@@ -26,6 +26,7 @@ import SablonlaBasla from '../components/SablonlaBasla';
 import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
+import { usePageTitle } from '../ui/PageTitleContext';
 
 const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
@@ -58,6 +59,7 @@ interface BekleyenHareket {
  * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
 export default function TodayPage() {
+  usePageTitle('Bugün');
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
   const {
@@ -202,8 +204,7 @@ export default function TodayPage() {
     // (`mt-auto` + `sticky`) her zaman sekme cubugunun hemen ustunde kalir (review bulgusu I1).
     <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-title">Bugün</h1>
+        <div className="flex items-center justify-end gap-2">
           {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
               dokunulan bir sablon kartinin geri alinmasi budur. "Bitir" bu durumda gecmise BOS bir
               antrenman birakirdi (sorunun ta kendisi). Set girilince iptal kaybolur, "bitir" doner:

@@ -9,16 +9,14 @@ interface Props {
 }
 
 /**
- * Giris ve Kayit'in TEK ortak duzeni (spec): ustte logo karosu (PWA ikonuyla ayni motif) + GRIND +
- * slogan, ortada kart, altta gecis baglantisi. Bu ekranlarda kabuk (baslik/sekme cubugu) yok.
+ * Giris ve Kayit'in TEK ortak duzeni (spec): ustte dumbbell ikonu (kutusuz, issue #65 Karar 1) +
+ * GRIND + slogan, ortada kart, altta gecis baglantisi. Bu ekranlarda kabuk (baslik/sekme cubugu) yok.
  */
 export default function AuthLayout({ baslik, aciklama, children, altBaglanti }: Props) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
       <div className="mb-5 flex flex-col items-center text-center">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-surface-3 text-accent">
-          <Dumbbell aria-hidden size={28} />
-        </div>
+        <Dumbbell aria-hidden size={32} className="mb-2 text-accent" />
         <span className="text-title uppercase">GRIND</span>
         <p className="mt-1 text-body text-muted">Güç antrenmanı günlüğü</p>
       </div>

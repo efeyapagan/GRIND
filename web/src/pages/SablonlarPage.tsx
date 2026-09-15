@@ -1,22 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus } from 'lucide-react';
 import { useTemplates } from '../api/queries';
+import { usePageTitle } from '../ui/PageTitleContext';
 import BosDurum from '../ui/BosDurum';
 import BirincilDugme from '../ui/BirincilDugme';
 import SablonKarti from '../ui/SablonKarti';
 
 /**
  * Sablon listesi (spec Karar 3). Sekme degil: hesap menusunden ve Bugun'un bos durumundan acilir
- * (Karar 2). Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
+ * (Karar 2). Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir. Baslik ust kabukta (issue #65).
  */
 export default function SablonlarPage() {
+  usePageTitle('Şablonlar');
   const navigate = useNavigate();
   const { data: sablonlar, isLoading, isError } = useTemplates();
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      <h1 className="text-title">Şablonlar</h1>
-
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 
       {isError && (

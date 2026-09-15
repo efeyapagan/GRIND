@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import HistoryPage from './HistoryPage';
+import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 import { tamMetin } from '../test/metin';
 
@@ -15,10 +16,14 @@ function testeOzelSorguIstemcisi(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 }
 
+// `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
+// saglar, testte de aynisi sarilmali.
 function gecmisSayfasiniOlustur() {
   return render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <HistoryPage />
+      <PageTitleProvider>
+        <HistoryPage />
+      </PageTitleProvider>
     </QueryClientProvider>,
   );
 }
