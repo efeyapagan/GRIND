@@ -1029,6 +1029,14 @@ Telefonda Takvim çok yer kaplıyordu. Izgara en fazla 256 px genişlikte ve ort
 indi (`min-h-0` ile base katmanındaki 44 px düğme alt sınırı bu hücrelerde kaldırıldı — küçük ızgara dokunma
 hedefinin önüne alındı). Davranış değişmedi, yeni test yok; görsel doğrulama 390×844 Playwright.
 
+### İstek #87 — Bugün'de boş durum kaldırıldı (2026-09-15)
+
+Kullanıcı Bugün sayfasını bir ana sayfa gibi kullanıyor: antrenman yokken en üstteki "Bugün henüz antrenman yok"
+bloğu (dambıl ikonu + açıklama) gereksizdi. Kaldırıldı; sayfa doğrudan Takvim, altında "Şablonla başla" ile açılır.
+Oturum sorgusu hata verirse bu ekranın gösterilmemesi kuralı aynen korunuyor. Testler: yeni test yok; bu metne
+dayanan 4 `TodayPage` kontrolü Takvim / "Şablonla başla" başlıklarına taşındı, boş durum testi metnin
+YOKLUĞUNU da sabitliyor. `BosDurum` bileşeni Geçmiş, Rekorlar ve Şablonlar'da kullanılmaya devam ediyor.
+
 ---
 
 ## Çalışma Kuralı
