@@ -29,6 +29,8 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **Frontend dilim 3 tamamlandı (2026-09-14, issue #43)** — açılır set paneli, sekmeli turuncu çizgi
   grafik (Ağırlık / Antrenman / Tahmini 1RM), hareket ilerleme ucu; ayrıntı PLAN.md'de. Bu dilimden
   itibaren her iş GitHub issue ile başlar (CONTRIBUTING.md).
+- **Takvim (2026-09-15, issue #81)** — Bugün sayfasında antrenman yokken "Şablonla başla"nın üstünde
+  Aylık/Haftalık ısı haritası; veri `GET /api/stats/calendar`, backend değişmedi. Ayrıntı PLAN.md'de.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

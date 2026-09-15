@@ -24,6 +24,7 @@ import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
+import Takvim from '../components/Takvim';
 import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
@@ -326,6 +327,8 @@ export default function TodayPage() {
             baslik="Bugün henüz antrenman yok"
             aciklama="Bir şablonla başlayın ya da yeni şablon oluşturun."
           />
+          {/* #81: Takvim "Şablonla başla"nın hemen üstünde; antrenman açılınca ikisi birlikte kaybolur. */}
+          <Takvim />
           <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
         </>
       )}

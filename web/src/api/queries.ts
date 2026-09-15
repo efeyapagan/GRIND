@@ -25,6 +25,8 @@ type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
 type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPointResponse'];
+type CalendarResponse = components['schemas']['CalendarResponse'];
+type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -58,6 +60,9 @@ export const queryKeys = {
     [...queryKeys.exerciseProgressRoot, exerciseId] as const,
   exerciseProgress: (exerciseId: number, aralik: IlerlemeAraligi) =>
     [...queryKeys.exerciseProgressAll(exerciseId), aralik] as const,
+  // Onek: set eklenince/silinince gezinilmis TUM ay ve haftalar tazelensin (#81).
+  calendarAll: ['calendar'] as const,
+  calendar: (from: string, to: string) => [...queryKeys.calendarAll, from, to] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -397,6 +402,58 @@ export function useExerciseProgress(exerciseId: number, aralik: IlerlemeAraligi)
   });
 }
 
+export interface TakvimGunu {
+  date: string;
+  sessionCount: number;
+  setCount: number;
+}
+
+export interface TakvimOzeti {
+  // Yalnizca antrenman yapilmis gunler (seti olmayan oturum sayilmaz), eskiden yeniye.
+  days: TakvimGunu[];
+  trainedDayCount: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+function dogrulanmisTakvimGunu(yanit: CalendarDayResponse): TakvimGunu {
+  if (!yanit.date || yanit.sessionCount === undefined || yanit.setCount === undefined) {
+    throw new Error('Sunucudan eksik takvim gunu alindi.');
+  }
+  return { date: yanit.date, sessionCount: yanit.sessionCount, setCount: yanit.setCount };
+}
+
+function dogrulanmisTakvim(yanit: CalendarResponse): TakvimOzeti {
+  if (
+    !yanit.days ||
+    yanit.trainedDayCount === undefined ||
+    yanit.currentStreak === undefined ||
+    yanit.longestStreak === undefined
+  ) {
+    throw new Error('Sunucudan eksik takvim yaniti alindi.');
+  }
+  return {
+    days: yanit.days.map(dogrulanmisTakvimGunu),
+    trainedDayCount: yanit.trainedDayCount,
+    currentStreak: yanit.currentStreak,
+    longestStreak: yanit.longestStreak,
+  };
+}
+
+/**
+ * Takvim (#81): `from`-`to` araligindaki antrenman gunleri ve seriler. Seriler araliktan bagimsiz, tum
+ * gecmisten sunucuda hesaplanir; istemci yeniden saymaz.
+ */
+export function useCalendar(from: string, to: string) {
+  return useQuery({
+    queryKey: queryKeys.calendar(from, to),
+    queryFn: async (): Promise<TakvimOzeti> =>
+      dogrulanmisTakvim(await request<CalendarResponse>(`/stats/calendar?From=${from}&To=${to}`)),
+    // Ay/hafta degisince onceki izgara yeni veri gelene kadar yerinde kalir (useExerciseProgress ile ayni).
+    placeholderData: keepPreviousData,
+  });
+}
+
 /**
  * Polling YOK (spec) -- yalnizca `useAddSet`in basarili olunca invalidate ettigi `records`
  * anahtari araciligiyla tazelenir.
@@ -462,6 +519,8 @@ export function setDegistiTazele(
   void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
   // Grafigin bugunku noktasi guncellensin (dilim 3): setin hareketinin TUM araliklari.
   void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(set.exerciseId) });
+  // Takvim yalnizca seti olan gunleri sayar: ilk set gunu takvime sokar, son setin silinmesi cikarir (#81).
+  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
 }
 
 export interface SetDuzeltmesi {
@@ -567,6 +626,7 @@ export function oturumSilindiTazele(queryClient: QueryClient, sessionId: number)
   void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
   void queryClient.invalidateQueries({ queryKey: queryKeys.records });
   void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressRoot });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
   // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
   // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
   queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
