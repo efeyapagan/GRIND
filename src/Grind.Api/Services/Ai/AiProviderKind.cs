@@ -7,5 +7,11 @@ namespace Grind.Api.Services.Ai;
 public enum AiProviderKind
 {
     None,
-    Anthropic
+    Anthropic,
+
+    /// <summary>
+    /// GEÇİCİ/test amaçlı ikinci sağlayıcı (issue #99): gerçek bir Anthropic anahtarı olmadan
+    /// uçtan uca test için, OpenRouter'ın ücretsiz (":free" ekli) modelleri.
+    /// </summary>
+    OpenRouter
 }
