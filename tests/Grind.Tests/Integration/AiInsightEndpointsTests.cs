@@ -130,6 +130,26 @@ public class AiInsightEndpointsTests(GrindApiFactory kapali, SahteAiApiFactory s
         Assert.Equal(29, yorum.RangeTo!.Value.DayNumber - yorum.RangeFrom!.Value.DayNumber);
     }
 
+    /// <summary>Haftalik uretim siniri (issue #76): ucuncu deneme 429, ilk iki satir olduğu gibi kalir.</summary>
+    [Fact]
+    public async Task Bir_haftada_iki_uretimden_sonra_ucuncusu_429_verir()
+    {
+        var client = await AuthenticatedClientAsync(sahte);
+        await PostSetAsync(client);
+
+        (await client.PostAsJsonAsync("/api/insights", new GenerateInsightRequest(), Json)).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/insights", new GenerateInsightRequest(), Json)).EnsureSuccessStatusCode();
+
+        var ucuncu = await client.PostAsJsonAsync("/api/insights", new GenerateInsightRequest(), Json);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, ucuncu.StatusCode);
+        Assert.Equal("application/problem+json", ucuncu.Content.Headers.ContentType?.MediaType);
+        var govde = await ucuncu.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains("en fazla 2 yorum", govde.GetProperty("detail").GetString());
+        var liste = await client.GetFromJsonAsync<PagedResponse<AiInsightResponse>>("/api/insights", Json);
+        Assert.Equal(2, liste!.TotalCount);
+    }
+
     [Fact]
     public async Task Yorum_listelenir_getirilir_ve_silinir()
     {

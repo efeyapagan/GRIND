@@ -339,4 +339,117 @@ public class AiInsightServiceTests
             Assert.Equal(0, (await service.GetPageAsync(new AiInsightQuery())).TotalCount);
         }
     }
+
+    // --- Haftalik uretim siniri (issue #76) ---
+
+    [Fact]
+    public async Task Pencerede_iki_yorum_varken_ucuncu_uretim_reddedilir_saglayici_HIC_CAGRILMAZ()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            context.AddRange(
+                NewInsight(user, Simdi.AddDays(-6)),
+                NewInsight(user, Simdi.AddDays(-2)));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            var service = CreateService(context, user.Id, saglayici);
+
+            var hata = await Assert.ThrowsAsync<RateLimitExceededException>(
+                () => service.GenerateAsync(new GenerateInsightRequest()));
+
+            // Ucretli cagri HIC yapilmadi -- sinir kontrolu export okumadan ve saglayicidan ONCE.
+            Assert.Equal(0, saglayici.CagriSayisi);
+            // En eski kayit (6 gun once) pencereden 7 gun sonra cikar -- yani (Simdi - 6) + 7 = Simdi + 1 gun.
+            Assert.Contains("Sonraki hakkın 13.03.2026 20:00", hata.Message);
+            // DB'de hala sadece 2 satir var -- basarisiz deneme yeni bir satir YAZMADI.
+            Assert.Equal(2, await SatirSayisiAsync(context, user.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Pencerede_bir_yorum_varken_ikinci_uretim_izin_verilir()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            context.Add(NewInsight(user, Simdi.AddDays(-3)));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
+
+            Assert.Equal(1, saglayici.CagriSayisi);
+            Assert.Equal(2, await SatirSayisiAsync(context, user.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Pencere_disindaki_yedi_gunden_eski_yorumlar_sinira_dahil_edilmez()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            // Ikisi de pencerenin (son 7 gun) DISINDA -- sinir sifirlanmis olmali.
+            context.AddRange(
+                NewInsight(user, Simdi.AddDays(-10)),
+                NewInsight(user, Simdi.AddDays(-8)));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
+
+            Assert.Equal(1, saglayici.CagriSayisi);
+        }
+    }
+
+    [Fact]
+    public async Task Suggestion_turu_haftalik_sinira_dahil_edilmez()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            // Ikisi de Suggestion (henuz kurulmamis, ayri bir uretim akisi) -- Insight sinirini doldurmaz.
+            context.AddRange(
+                NewInsight(user, Simdi.AddDays(-1), AiInsightKind.Suggestion),
+                NewInsight(user, Simdi.AddDays(-2), AiInsightKind.Suggestion));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
+
+            Assert.Equal(1, saglayici.CagriSayisi);
+        }
+    }
+
+    [Fact]
+    public async Task Baskasinin_yorumlari_kendi_sinirini_etkilemez()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            var digerKullanici = TestDatabase.NewUser();
+            context.AddRange(
+                digerKullanici,
+                NewInsight(digerKullanici, Simdi.AddDays(-1)),
+                NewInsight(digerKullanici, Simdi.AddDays(-2)));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
+
+            Assert.Equal(1, saglayici.CagriSayisi);
+        }
+    }
 }

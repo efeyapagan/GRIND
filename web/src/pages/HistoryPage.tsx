@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Brain, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { oturumSilindiTazele, oturumuSil, useHistory, type GecmisOturum } from '../api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { sallamaIzniIste, useSallama } from '../lib/sallama';
@@ -64,6 +65,18 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
+      {/* Issue #76: POST /api/insights bir oturuma degil TARIH ARALIGINA gore calisir -- bu
+          yuzden bir sablon/hesap ayari degil, Gecmis'in kendi bir uzantisidir. Tam genislikte,
+          IkincilDugme ile AYNI sinif kumesi (o bir <button>, bu bir <Link> oldugu icin dogrudan
+          bilesen kullanilamiyor -- gorunum birebir kopyalanir). */}
+      <Link
+        to="/insights"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-3 px-4 text-label text-fg"
+      >
+        <Brain aria-hidden size={18} />
+        AI yorumu
+      </Link>
+
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 
       {isError && (
