@@ -340,15 +340,16 @@ beforeEach(() => {
   session.clear();
 });
 
-test('acik oturum yokken (404) bos durum gorunur; set ekleme formu degil sablon olustur dugmesi cikar', async () => {
+test('acik oturum yokken (404) Takvim en ustte, "antrenman yok" metni yok; set formu degil sablon olustur dugmesi cikar', async () => {
   // Issue #61: serbest antrenman arayuzden artik baslatilamaz -- set ekleme formu (Egzersiz/Agirlik/
   // Tekrar alanlari) acik antrenman OLMADAN hic render edilmez, yerine "+ Sablon oluştur" durur.
+  // Issue #87: Bugun bir ana sayfa gibi; "Bugün henüz antrenman yok" bos durumu kaldirildi.
   sahteSunucuyuKur();
 
   bugunSayfasiniOlustur();
 
-  expect(await screen.findByText('Bugün henüz antrenman yok')).toBeInTheDocument();
-  expect(screen.getByText('Bir şablonla başlayın ya da yeni şablon oluşturun.')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Takvim' })).toBeInTheDocument();
+  expect(screen.queryByText('Bugün henüz antrenman yok')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Egzersiz')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Ağırlık (kg)')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Tekrar')).not.toBeInTheDocument();
@@ -603,10 +604,10 @@ test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ'
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.',
   );
-  // KRITIK: bir sunucu hatasi, "bugun henuz antrenman yok" bos durumuyla KARISTIRILMAMALI --
-  // aksi halde kullanici gercekte var olabilecek bir oturumu goremeden yeni bir set eklemeye
-  // kalkisir (review bulgusu).
-  expect(screen.queryByText('Bugün henüz antrenman yok')).not.toBeInTheDocument();
+  // KRITIK: bir sunucu hatasi, antrenman yokken gorunen ekranla (#87'den beri Takvim + Sablonla basla)
+  // KARISTIRILMAMALI -- aksi halde kullanici gercekte var olabilecek bir oturumu goremeden yeni bir
+  // antrenman baslatmaya kalkisir (review bulgusu).
+  expect(screen.queryByRole('heading', { name: 'Şablonla başla' })).not.toBeInTheDocument();
 });
 
 test('setler sorgusu 500 donerse hata gosterilir, "henuz set eklenmedi" bos durum metni GORUNMEZ', async () => {
@@ -685,7 +686,7 @@ test('setsiz acik oturumda bitir yerine iptal cikar ve DELETE ile bos duruma don
 
   await kullanici.click(iptal);
 
-  expect(await screen.findByText('Bugün henüz antrenman yok')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Şablonla başla' })).toBeInTheDocument();
   expect(ortam.silinenOturumlar()).toEqual([7]);
 });
 
@@ -863,7 +864,7 @@ test('bos durumda sablon kartina dokunmak templateId ile oturum baslatir ve hare
   expect(ortam.baslatmaGovdeleri()).toEqual([{ templateId: 10 }]);
   // Baslikta sablon adi notr hap olarak (buyuk harf CSS ile).
   expect(screen.getByText('Push Day')).toBeInTheDocument();
-  expect(screen.queryByText('Bugün henüz antrenman yok')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Şablonla başla' })).not.toBeInTheDocument();
 });
 
 test('baslatma var olan sablonsuz oturumu donerse sablon uygulanmadi bilgisi gorunur', async () => {

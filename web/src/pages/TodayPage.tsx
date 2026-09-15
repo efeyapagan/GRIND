@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, Dumbbell, X } from 'lucide-react';
+import { CircleCheck, X } from 'lucide-react';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -25,7 +25,6 @@ import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import Takvim from '../components/Takvim';
-import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
 import { usePageTitle } from '../ui/PageTitleContext';
@@ -40,7 +39,7 @@ interface BekleyenHareket {
 
 /**
  * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi
- * bos eski bir oturumda gruplu set listesi; oturum yoksa bos durum + "Sablonla basla". Alt alan
+ * bos eski bir oturumda gruplu set listesi; oturum yoksa Takvim + "Sablonla basla" (#81, #87). Alt alan
  * oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
  * SablonOlusturCagrisi ("+ Sablon olustur", #61) -- serbest antrenman artik arayuzden
  * BASLATILAMAZ, her antrenman bir sablonla baslar. Backend'e dokunulmadi: POST /api/sets'in
@@ -322,12 +321,8 @@ export default function TodayPage() {
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
         <>
-          <BosDurum
-            ikon={Dumbbell}
-            baslik="Bugün henüz antrenman yok"
-            aciklama="Bir şablonla başlayın ya da yeni şablon oluşturun."
-          />
-          {/* #81: Takvim "Şablonla başla"nın hemen üstünde; antrenman açılınca ikisi birlikte kaybolur. */}
+          {/* #81: Takvim "Şablonla başla"nın hemen üstünde; antrenman açılınca ikisi birlikte kaybolur.
+              #87: "Bugün henüz antrenman yok" boş durumu kaldırıldı, Bugün bir ana sayfa gibi Takvimle açılır. */}
           <Takvim />
           <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
         </>
