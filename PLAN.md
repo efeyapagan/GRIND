@@ -1047,6 +1047,13 @@ değeri 0 olanlar özete girmez. Yüklenirken "…", istek başarısızsa eskisi
 yok; `Takvim` testinin gün özeti kontrolü genişletildi (tek gün aralığı, iki şablon + şablonsuz + setsiz oturum,
 antrenmansız günde istek gitmemesi).
 
+### İstek #93 — "Şablon oluştur" sayfanın akışında (2026-09-15)
+
+Antrenman yokken "+ Şablon oluştur" (#61) ekranın altına yapışıktı; Bugün Takvimle ana sayfaya dönünce sayfa en
+üstteyken de görünüp "Şablonla başla" kartlarını örtüyordu. Artık yapışık değil ve yüzen kutusu yok: sayfanın akışında,
+şablon listesinin altında durur, aşağı kaydırınca görünür. Açık antrenmandaki set/hareket paneli (`AddSetForm`)
+yapışık kalır. Davranış (dönüş bilgisiyle `/templates/new`) değişmedi; yeni test yok.
+
 ---
 
 ## Çalışma Kuralı
