@@ -239,8 +239,10 @@ Her ekran için Stitch dosyası görsel referanstır; burada yazan düzeltmeler 
 
 ### Bugün — boş durum (`bugun-bos.html`)
 
-- Ortada: `surface-2` daire içinde `Dumbbell` (`muted`), "Bugün henüz antrenman yok" (`heading`), "İlk
-  seti ekleyerek antrenmanı başlatın." (`body`, `muted`). Durum hapı ve "Antrenmanı bitir" YOK.
+- ~~Ortada: `surface-2` daire içinde `Dumbbell` (`muted`), "Bugün henüz antrenman yok" (`heading`), "İlk
+  seti ekleyerek antrenmanı başlatın." (`body`, `muted`).~~ **#87 (kullanıcı kararı, 2026-09-15):** bu
+  boş durum kaldırıldı; Bugün bir ana sayfa gibi en üstte Takvim (#81), altında "Şablonla başla" ile açılır.
+  Durum hapı ve "Antrenmanı bitir" YOK.
 - Set ekle paneli aynen. Alanlar BOŞ gelir; "0", "0", "—" yalnızca soluk yer tutucudur, değer değil —
   dolu bir "0" ile yanlışlıkla 0 kg'lık set kaydedilirdi (0 kg geçerli bir değer).
 
