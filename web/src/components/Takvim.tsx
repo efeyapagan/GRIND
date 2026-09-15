@@ -113,7 +113,8 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
           </IkonDugmesi>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        {/* #84: izgara tam genislik degil, en fazla 256 px -- telefonda hucre ~33 px, ekrani kaplamasin. */}
+        <div className="mx-auto grid w-full max-w-64 grid-cols-7 gap-1">
           {GUN_KISALTMALARI.map((kisaltma) => (
             <span key={kisaltma} aria-hidden className="text-center text-label-xs text-muted uppercase">
               {kisaltma}
@@ -134,7 +135,9 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
                 aria-pressed={seciliMi}
                 aria-current={gun === bugun ? 'date' : undefined}
                 onClick={() => setSecili(gun)}
-                className={`flex aspect-square w-full items-center justify-center rounded-lg text-label tabular-nums ${
+                // min-h-0: base katmanindaki 44 px dugme alt siniri kare hucreyi uzatmasin (#84; kullanici
+                // kucuk izgarayi dokunma hedefinden one aldi).
+                className={`flex aspect-square min-h-0 w-full items-center justify-center rounded-md text-label tabular-nums ${
                   KADEME_SINIFI[setKademesi(kayit?.setCount ?? 0)]
                 } ${vurgu}`}
               >
