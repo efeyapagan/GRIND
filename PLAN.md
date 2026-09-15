@@ -1001,6 +1001,28 @@ Devreden notlar (bilerek yapılmadı):
 - "Hareket ekle" listesi yukarı açıkken panelin "Hareket ekle" etiketini ve kapatma düğmesini örter; alana
   dışından dokunmak ya da Escape listeyi kapatır.
 
+### İstek #81 — Takvim (2026-09-15)
+
+GitHub katkı grafiği tarzında antrenman günleri. Kullanıcının belirledikleri: başlık "Takvim", Bugün sayfasında
+"Şablonla başla"nın üstü, Aylık/Haftalık seçimi, her hücrede ayın günü. İş akışı: issue → gerekli testler → kod;
+backend'e dokunulmadı (`GET /api/stats/calendar` Faz 9'dan beri vardı).
+- **Arayüz:** `components/Takvim.tsx`; Aylık ızgara ve tek satır Haftalık görünüm, Pazartesi başlar; önceki/sonraki
+  gezinmesi, gelecek ay/haftaya gidilmez; görünüm değişince bugüne dönülür. Hücre rengi set sayısına göre dört
+  kademe (1–8, 9–16, 17–24, 25+); dokunulan günün özeti ve seri / en uzun seri / antrenman günü API'den aynen.
+  Saf tarih hesapları `lib/takvim.ts` (UTC gece yarısı aritmetiği, cihaz saat diliminden bağımsız); sorgu
+  `useCalendar` (`calendar` öneki set değişince ve oturum silinince tazelenir). Sekme düğmesi hareket grafiğiyle
+  ortak `ui/SekmeDugmesi`'ne çıktı.
+- **Tasarım:** görsel spec Karar 2'ye #81 istisnası yazıldı — kademeler `accent` opaklığı (/20, /40, /60 üstünde
+  `fg`; tam `accent` üstünde `on-accent`), ölçülen kontrast 11.2 / 7.7 / 5.2 / 4.54.
+- **Testler:** frontend 7 yeni (komutla sayıldı): `lib/takvim` 3 (ay ızgarası, hafta ve 31 → 1, kademe eşikleri),
+  `Takvim` 3 (aralık + hücre + seriler + gün özeti, gezinme ve Haftalık, boş durum), `TodayPage` 1 (yerleşim).
+  `tsc -b` ve lint temiz. Görsel doğrulama 390×844 Playwright (API sahte yanıtla).
+
+Devreden notlar (bilerek yapılmadı):
+- Antrenman açıkken Takvim görünmez ("Şablonla başla" ile birlikte kaybolur).
+- Görünüm seçimi hatırlanmaz; sayfa her açılışta Aylık başlar.
+- Kademe eşikleri sabit; kullanıcının kendi dağılımına göre ayarlanmıyor.
+
 ---
 
 ## Çalışma Kuralı
