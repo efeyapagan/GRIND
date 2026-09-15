@@ -69,7 +69,11 @@ Renk kuralları:
   kararı):** hareket çizgi grafiğinin çizgisi, noktaları, alan degradesi ve değer etiketleri (accent
   dolgu + `on-accent` metin, opaklık yok) ile grafik sekmelerinde aktif sekmenin alt çizgisi — grafiğin
   ızgarası, eksen metni, özet etiketleri ve aralık seçici nötr kalır (bkz.
-  `2026-09-14-acilir-panel-ve-cizgi-grafik-design.md` Karar 3). Başka hiçbir yer — hesap düğmesi
+  `2026-09-14-acilir-panel-ve-cizgi-grafik-design.md` Karar 3); **#81 genişlemesi (kullanıcının turuncu
+  ısı haritası referansı):** Takvim hücrelerinin set kademesi tonları — `bg-accent/20`, `/40`, `/60` üstünde
+  gün numarası `fg` (ölçülen 11.2 / 7.7 / 5.2:1), tam `accent` üstünde `on-accent` (4.54:1) — ve Takvim
+  görünüm sekmelerinin aktif alt çizgisi; boş hücre (`surface-2`), bugün ve seçili gün halkaları nötr.
+  Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.
 - `accent` dolgu üstündeki metin her zaman `on-accent`. (Stitch'in Giriş düğmesindeki açık metin ~3:1

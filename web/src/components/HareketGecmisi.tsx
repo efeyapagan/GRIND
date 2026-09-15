@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
+import SekmeDugmesi from '../ui/SekmeDugmesi';
 
 type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar';
 
@@ -131,25 +132,17 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
   return (
     <div className="flex flex-col gap-3 pt-1">
       <div role="tablist" aria-label={`${exerciseName} grafiği`} className="flex border-b border-surface-3">
-        {SEKMELER.map((aday) => {
-          const secili = aday.anahtar === sekmeAnahtari;
-          return (
-            <button
-              key={aday.anahtar}
-              id={sekmeId(exerciseId, aday.anahtar)}
-              type="button"
-              role="tab"
-              aria-selected={secili}
-              aria-controls={panelId}
-              onClick={() => setSekmeAnahtari(aday.anahtar)}
-              className={`min-h-11 flex-1 border-b-2 px-2 text-label ${
-                secili ? 'border-accent text-fg' : 'border-transparent text-muted'
-              }`}
-            >
-              {aday.etiket}
-            </button>
-          );
-        })}
+        {SEKMELER.map((aday) => (
+          <SekmeDugmesi
+            key={aday.anahtar}
+            id={sekmeId(exerciseId, aday.anahtar)}
+            secili={aday.anahtar === sekmeAnahtari}
+            aria-controls={panelId}
+            onClick={() => setSekmeAnahtari(aday.anahtar)}
+          >
+            {aday.etiket}
+          </SekmeDugmesi>
+        ))}
       </div>
       {/* M4 (review bulgusu): tabpanel'in erisilebilir adi artik SECILI sekmenin id'sine baglanir
           (aria-labelledby) -- sabit bir aria-label yerine, hangi sekmenin acik oldugunu dogru

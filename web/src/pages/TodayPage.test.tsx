@@ -145,6 +145,10 @@ function sahteSunucuyuKur(
     }),
     http.get('/api/sessions/:id/sets', () => HttpResponse.json(setler)),
     http.get('/api/templates', () => HttpResponse.json(opsiyonlar.sablonlar ?? [])),
+    // Antrenman yokken Takvim (#81) gorunen ayi ister.
+    http.get('/api/stats/calendar', () =>
+      HttpResponse.json({ days: [], trainedDayCount: 0, currentStreak: 0, longestStreak: 0 }),
+    ),
     http.get('/api/stats/exercises/:id/progress', ({ request, params }) => {
       ilerlemeAramalari.push(new URL(request.url).pathname);
       return HttpResponse.json({ exerciseId: Number(params.id), exerciseName: '', points: [] });
@@ -352,6 +356,16 @@ test('acik oturum yokken (404) bos durum gorunur; set ekleme formu degil sablon 
 
   const dugme = screen.getByRole('button', { name: 'Şablon oluştur' });
   expect(dugme).toBeInTheDocument();
+});
+
+test('antrenman yokken Takvim, Şablonla başla bolumunun ustunde durur (#81)', async () => {
+  sahteSunucuyuKur();
+
+  bugunSayfasiniOlustur();
+
+  const takvim = await screen.findByRole('heading', { name: 'Takvim' });
+  const sablonlaBasla = screen.getByRole('heading', { name: 'Şablonla başla' });
+  expect(takvim.compareDocumentPosition(sablonlaBasla) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tasir', async () => {
