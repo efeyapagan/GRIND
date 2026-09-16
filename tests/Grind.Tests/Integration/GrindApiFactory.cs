@@ -35,6 +35,19 @@ namespace Grind.Tests.Integration;
 /// </summary>
 public class GrindApiFactory : WebApplicationFactory<Program>
 {
+    /// <summary>
+    /// TEST İZOLASYONU GÜVENCESİ (issue #74): mevcut test mimarisi her testin kendi kullanıcısını
+    /// KAYDETMESİNE dayanır (bkz. <c>TestDatabase.NewUser</c>) -- üretimin gerçek 5/saat register
+    /// sınırıyla, paylaşılan bir <c>IClassFixture</c> içindeki onlarca test (en yoğun sınıfta
+    /// ~18 kayıt) birbirini kilitlerdi. Bu değer TÜM test sınıfları için AYNIDIR (hiçbir sınıf
+    /// farklı bir değer set etmez) -- ortam değişkenleri process genelinde paylaşıldığı için,
+    /// sınıflar arası farklı değerler xUnit'in varsayılan paralel çalıştırmasında yarış koşulu
+    /// yaratırdı. <see cref="AuthRateLimitingEndpointsTests"/> gerçek 429 mekanizmasını bu AYNI
+    /// (ama hâlâ sonlu) değerle uçtan uca sınar; ondalık limit sayılarının (10/5dk, 5/1sa) bizzat
+    /// doğru olduğu ayrı, HTTP'siz bir birim testiyle (<c>AuthRateLimiterPartitionsTests</c>) kilitlenir.
+    /// </summary>
+    public const int RelaxedRateLimit = 30;
+
     public GrindApiFactory()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", TestDatabase.ConnectionString);
@@ -42,5 +55,7 @@ public class GrindApiFactory : WebApplicationFactory<Program>
             "Jwt__Key", "test-ortaminin-kendi-jwt-anahtari-en-az-otuz-iki-bayt-uzunlugunda");
         Environment.SetEnvironmentVariable("Ai__Provider", "None");
         Environment.SetEnvironmentVariable("Ai__ApiKey", string.Empty);
+        Environment.SetEnvironmentVariable("RateLimiting__LoginPermitLimit", RelaxedRateLimit.ToString());
+        Environment.SetEnvironmentVariable("RateLimiting__RegisterPermitLimit", RelaxedRateLimit.ToString());
     }
 }
