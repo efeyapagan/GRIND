@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Anthropic;
 
 namespace Grind.Api.Services.Ai;
@@ -32,6 +33,17 @@ public static class DependencyInjection
                     MaxRetries = 1
                 });
                 services.AddSingleton<IAiInsightProvider, AnthropicAiInsightProvider>();
+                break;
+
+            case AiProviderKind.OpenRouter:
+                EnsureValid(settings);
+                services.AddHttpClient<IAiInsightProvider, OpenRouterAiInsightProvider>(http =>
+                {
+                    http.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+                    http.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+                    http.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+                });
                 break;
 
             default:
