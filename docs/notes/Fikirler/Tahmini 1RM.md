@@ -1,6 +1,12 @@
+# NOT (2026-09-15): Bu fikir zaten uygulanmıştı
+
+`Common/Records/OneRepMaxEstimator.cs` — Brzycki formülüyle, sorgu anında hesaplanıyor (saklanmıyor), tam bu nottaki tasarımın aynısı. `/api/stats/exercises/{id}/progress` yanıtında `EstimatedOneRepMax` olarak dönüyor (frontend dilim 3'te gelmiş). GitHub'da issue #70 olarak açılmış ama kontrolsüz açıldığı fark edilince kapatılmıştı — kayıt burada dursun.
+
+---
+
 ---
 tarih: 2026-09-11
-durum: kabul edildi — uygulanmadı
+durum: zaten uygulanmış (kontrol: 2026-09-15)
 kapsam: backend / PR motoru
 ---
 
