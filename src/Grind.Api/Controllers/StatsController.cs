@@ -52,6 +52,14 @@ public class StatsController(IStatsService statsService, IExerciseProgressServic
         [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
         => Ok(await statsService.GetBodyWeightTrendAsync(query, cancellationToken));
 
+    /// <summary>Antrenman süresi özeti — medyan/toplam, açık oturumlar hariç (issue #73).</summary>
+    [HttpGet("duration")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DurationSummaryResponse>> GetDurationSummary(
+        [FromQuery] StatsRangeQuery query, CancellationToken cancellationToken)
+        => Ok(await statsService.GetDurationSummaryAsync(query, cancellationToken));
+
     /// <summary>
     /// Bir hareketin oturum başına en ağır seti, hacmi ve tahmini 1RM'i, eskiden yeniye (dilim 3).
     /// Egzersiz görünmüyorsa nötr 404.

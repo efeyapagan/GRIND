@@ -17,6 +17,8 @@ namespace Grind.Api.Models.Dtos.History;
 /// GÜNLÜĞÜdür (oturumun kendisi olay), istatistikler bir ANTRENMAN günlüğüdür (yalnızca
 /// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
 ///
+/// <see cref="DurationSeconds"/> açık oturumda (issue #73) null — bkz. <see cref="Grind.Api.Common.Time.DurationCalculator"/>.
+///
 /// <see cref="MedianRestSeconds"/> (#71): <see cref="Sets"/>'teki dinlenmelerin medyanı — filtreliyken de
 /// listeyle tutarlı. Setlerin dinlenmesi ise filtreden BAĞIMSIZDIR (oturumun tüm setlerinden hesaplanır).
 /// Hiç dinlenme yoksa <c>null</c>.
@@ -25,6 +27,7 @@ public record HistorySessionResponse(
     long SessionId,
     DateTime StartedAt,
     DateTime? EndedAt,
+    long? DurationSeconds,
     string? TemplateName,
     string? Notes,
     decimal TotalVolume,

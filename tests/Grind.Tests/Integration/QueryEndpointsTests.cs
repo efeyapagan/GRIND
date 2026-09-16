@@ -7,6 +7,7 @@ using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.Common;
 using Grind.Api.Models.Dtos.Exercise;
 using Grind.Api.Models.Dtos.History;
+using Grind.Api.Models.Dtos.Session;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Dtos.Stats;
 using Grind.Api.Models.Enums;
@@ -62,6 +63,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
     [InlineData("/api/stats/volume/daily")]
     [InlineData("/api/stats/volume/by-exercise")]
     [InlineData("/api/stats/calendar")]
+    [InlineData("/api/stats/duration")]
     [InlineData("/api/stats/exercises/1/progress")]
     public async Task Tokensiz_istekler_401_verir(string path)
     {
@@ -182,6 +184,37 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         Assert.Equal(1, takvim.CurrentWeekStreak);
         Assert.Equal(1, takvim.LongestWeekStreak);
         Assert.Single(takvim.Days);
+    }
+
+    /// <summary>Issue #73: kapanmış oturumun süresi hem /sessions/open hem stats/duration'da tutarlı.</summary>
+    [Fact]
+    public async Task Sure_ozeti_kapanmis_oturumu_sayar()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        await PostSetAsync(client, exerciseId, 100m, 8);
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+        (await client.PostAsync($"/api/sessions/{acik!.Id}/finish", null)).EnsureSuccessStatusCode();
+
+        var ozet = await client.GetFromJsonAsync<DurationSummaryResponse>("/api/stats/duration", Json);
+
+        Assert.Equal(1, ozet!.SessionCount);
+        Assert.NotNull(ozet.MedianSeconds);
+        Assert.Equal(ozet.MedianSeconds, ozet.TotalSeconds);
+    }
+
+    /// <summary>Issue #73 Karar 1: hâlâ açık oturum süre özetine hiç girmez.</summary>
+    [Fact]
+    public async Task Sure_ozeti_acik_oturumu_saymaz()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        await PostSetAsync(client, exerciseId, 100m, 8);
+
+        var ozet = await client.GetFromJsonAsync<DurationSummaryResponse>("/api/stats/duration", Json);
+
+        Assert.Equal(0, ozet!.SessionCount);
+        Assert.Null(ozet.MedianSeconds);
     }
 
     /// <summary>Hiç antrenmanı olmayan kullanıcı boş özet alır — 404 değil.</summary>
