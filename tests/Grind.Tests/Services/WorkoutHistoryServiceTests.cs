@@ -337,4 +337,60 @@ public class WorkoutHistoryServiceTests
             Assert.Equal(1, sayfa.TotalCount);
         }
     }
+
+    /// <summary>Verilen oturuma, başlangıcından verilen saniye sonra kaydedilmiş setler ekler.</summary>
+    private static void SeedTimed(
+        AppDbContext context, WorkoutSession session, params (Exercise Exercise, int SaniyeSonra)[] sets)
+    {
+        foreach (var (exercise, saniyeSonra) in sets)
+        {
+            context.Add(new SetEntry
+            {
+                WorkoutSession = session, Exercise = exercise, Weight = 60m, Reps = 8,
+                RecordType = RecordType.None, CreatedAt = session.StartedAt.AddSeconds(saniyeSonra)
+            });
+        }
+    }
+
+    /// <summary>#71: oturum özeti dinlenmelerin medyanını taşır; telefona dalınan 1200 sn özeti bozmaz.</summary>
+    [Fact]
+    public async Task Gecmis_oturumu_medyan_dinlenmeyi_tasir()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var session = Seed(context, user, exercise, An);
+            // Dinlenmeler sırasıyla 60, 1200, 90, 120 -> medyan 105.
+            SeedTimed(context, session,
+                (exercise, 0), (exercise, 60), (exercise, 1260), (exercise, 1350), (exercise, 1470));
+            await context.SaveChangesAsync();
+
+            var oturum = Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
+
+            Assert.Equal([null, 60, 1200, 90, 120], oturum.Sets.Select(s => s.RestSeconds));
+            Assert.Equal(105, oturum.MedianRestSeconds);
+        }
+    }
+
+    /// <summary>
+    /// #71: hareket filtresi dinlenmeyi DEĞİŞTİRMEZ. Bench → Curl → Bench, Bench'e filtrelense de 2. Bench
+    /// 90 sn dinlenmiştir (Curl'e göre); filtrelenmiş listeden hesaplamak 150 verirdi.
+    /// </summary>
+    [Fact]
+    public async Task Hareket_filtresi_dinlenmeyi_degistirmez()
+    {
+        var (context, user, bench, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var curl = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var session = Seed(context, user, bench, An);
+            SeedTimed(context, session, (bench, 0), (curl, 60), (bench, 150));
+            await context.SaveChangesAsync();
+
+            var oturum = Assert.Single(
+                (await service.GetAsync(new HistoryQuery { ExerciseId = bench.Id })).Items);
+
+            Assert.Equal([null, 90], oturum.Sets.Select(s => s.RestSeconds));
+        }
+    }
 }

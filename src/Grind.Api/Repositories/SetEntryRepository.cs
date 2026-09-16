@@ -93,7 +93,6 @@ public class SetEntryRepository(AppDbContext context)
     public async Task<IReadOnlyList<SetEntry>> GetForSessionsAsync(
         IReadOnlyCollection<long> sessionIds,
         long userId,
-        long? exerciseId,
         CancellationToken cancellationToken = default)
     {
         if (sessionIds.Count == 0)
@@ -102,16 +101,9 @@ public class SetEntryRepository(AppDbContext context)
             return [];
         }
 
-        var query = Set
+        return await Set
             .Include(s => s.Exercise)
-            .Where(s => sessionIds.Contains(s.WorkoutSessionId) && s.WorkoutSession.UserId == userId);
-
-        if (exerciseId is { } id)
-        {
-            query = query.Where(s => s.ExerciseId == id);
-        }
-
-        return await query
+            .Where(s => sessionIds.Contains(s.WorkoutSessionId) && s.WorkoutSession.UserId == userId)
             .OrderBy(s => s.CreatedAt)
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken);

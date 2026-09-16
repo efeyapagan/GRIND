@@ -376,6 +376,29 @@ public class SetEntryServiceTests
         }
     }
 
+    /// <summary>#71: set listesi her setin gerçek dinlenmesini (oturumdaki bir önceki sete göre) taşır.</summary>
+    [Fact]
+    public async Task Oturumun_setleri_gercek_dinlenme_suresini_tasir()
+    {
+        var (context, user, bench, service, _, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var curl = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.Add(curl);
+            await context.SaveChangesAsync();
+
+            var ilk = await service.CreateAsync(Yeni(bench.Id, 60m, 8));
+            saat.UtcNow = saat.UtcNow.AddSeconds(60);
+            await service.CreateAsync(Yeni(curl.Id, 30m, 10));
+            saat.UtcNow = saat.UtcNow.AddSeconds(90);
+            await service.CreateAsync(Yeni(bench.Id, 60m, 8));
+
+            var setler = await service.GetForSessionAsync(ilk.SessionId);
+
+            Assert.Equal([null, 60, 90], setler.Select(s => s.RestSeconds));
+        }
+    }
+
     [Fact]
     public async Task Baskasinin_oturumunun_setleri_okunamaz()
     {

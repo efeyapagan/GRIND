@@ -5,6 +5,7 @@ import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
+import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
 
 interface OrtakProps {
@@ -83,7 +84,10 @@ export default function SetList(props: Props) {
                           <span className="font-light text-muted">×</span> {kayit.reps}
                         </span>
                       </div>
-                      {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+                      <div className="flex items-center gap-2">
+                        <DinlenmeHapi saniye={kayit.restSeconds} />
+                        {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+                      </div>
                     </div>
                     {rozet && (
                       <div>

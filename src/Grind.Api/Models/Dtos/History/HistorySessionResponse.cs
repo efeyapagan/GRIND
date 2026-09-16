@@ -18,6 +18,10 @@ namespace Grind.Api.Models.Dtos.History;
 /// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
 ///
 /// <see cref="DurationSeconds"/> açık oturumda (issue #73) null — bkz. <see cref="Grind.Api.Common.Time.DurationCalculator"/>.
+///
+/// <see cref="MedianRestSeconds"/> (#71): <see cref="Sets"/>'teki dinlenmelerin medyanı — filtreliyken de
+/// listeyle tutarlı. Setlerin dinlenmesi ise filtreden BAĞIMSIZDIR (oturumun tüm setlerinden hesaplanır).
+/// Hiç dinlenme yoksa <c>null</c>.
 /// </summary>
 public record HistorySessionResponse(
     long SessionId,
@@ -28,4 +32,5 @@ public record HistorySessionResponse(
     string? Notes,
     decimal TotalVolume,
     int SetCount,
+    int? MedianRestSeconds,
     IReadOnlyList<SetEntryResponse> Sets);

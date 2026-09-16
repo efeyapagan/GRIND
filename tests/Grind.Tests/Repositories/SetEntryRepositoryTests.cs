@@ -429,36 +429,11 @@ public class SetEntryRepositoryTests
         context.ChangeTracker.Clear();
 
         var repository = new SetEntryRepository(context);
-        var setler = await repository.GetForSessionsAsync([birinci.Id, ikinci.Id], user.Id, null);
+        var setler = await repository.GetForSessionsAsync([birinci.Id, ikinci.Id], user.Id);
 
         Assert.Equal(2, setler.Count);
         // Yanıt DTO'su egzersiz adını taşıyor; Include yoksa burada NullReferenceException olurdu.
         Assert.All(setler, s => Assert.NotNull(s.Exercise));
-    }
-
-    [Fact]
-    public async Task Oturum_kumesinin_setleri_egzersize_gore_filtrelenebilir()
-    {
-        await using var context = TestDatabase.CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync();
-
-        var user = TestDatabase.NewUser();
-        var aranan = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
-        var diger = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
-        var session = TestDatabase.NewSession(user);
-        context.AddRange(user, aranan, diger, session);
-        await context.SaveChangesAsync();
-
-        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
-        context.Add(new SetEntry { WorkoutSession = session, Exercise = aranan, Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = an });
-        context.Add(new SetEntry { WorkoutSession = session, Exercise = diger, Weight = 60m, Reps = 10, RecordType = RecordType.None, CreatedAt = an });
-        await context.SaveChangesAsync();
-        context.ChangeTracker.Clear();
-
-        var repository = new SetEntryRepository(context);
-        var setler = await repository.GetForSessionsAsync([session.Id], user.Id, aranan.Id);
-
-        Assert.Equal(aranan.Id, Assert.Single(setler).ExerciseId);
     }
 
     [Fact]
@@ -481,7 +456,7 @@ public class SetEntryRepositoryTests
         var repository = new SetEntryRepository(context);
 
         // Oturum id'si bilinse bile başkasının setleri gelmez (sahiplik yüklemi her sorguda).
-        Assert.Empty(await repository.GetForSessionsAsync([session.Id], davetsiz.Id, null));
+        Assert.Empty(await repository.GetForSessionsAsync([session.Id], davetsiz.Id));
     }
 
     /// <summary>
@@ -496,7 +471,7 @@ public class SetEntryRepositoryTests
 
         var repository = new SetEntryRepository(context);
 
-        Assert.Empty(await repository.GetForSessionsAsync([], userId: 1, exerciseId: null));
+        Assert.Empty(await repository.GetForSessionsAsync([], userId: 1));
     }
 
     // ---- Faz 11: export aralık sorgusu ----

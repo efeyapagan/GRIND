@@ -16,6 +16,7 @@ const KAYIT: SetKaydi = {
   recordType: 'None',
   rir: 2,
   createdAt: '2026-09-14T17:10:00Z',
+  restSeconds: null,
 };
 
 interface Istek {

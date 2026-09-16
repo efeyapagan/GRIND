@@ -5,6 +5,8 @@ namespace Grind.Api.Models.Dtos.Set;
 /// <summary>
 /// <c>SessionId</c> yanıtta yer alıyor çünkü set ekleme oturumu KENDİSİ açmış olabilir —
 /// istemci hangi oturuma düştüğünü ancak buradan öğrenir.
+/// <paramref name="RestSeconds"/> (#71): oturumdaki bir önceki setten bu yana geçen GERÇEK süre, sorgu
+/// anında hesaplanır; oturumun ilk setinde <c>null</c>. Bkz. <c>RestIntervalCalculator</c>.
 /// </summary>
 public record SetEntryResponse(
     long Id,
@@ -15,4 +17,5 @@ public record SetEntryResponse(
     int Reps,
     RecordType RecordType,
     int? Rir,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int? RestSeconds);

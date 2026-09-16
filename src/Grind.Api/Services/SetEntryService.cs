@@ -1,4 +1,5 @@
 using Grind.Api.Common.Exceptions;
+using Grind.Api.Common.Rest;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Validation;
 using Grind.Api.Data;
@@ -72,7 +73,7 @@ public class SetEntryService(
         setEntryRepository.Add(set);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(set, exercise.Name);
+        return await ToResponseAsync(set, cancellationToken);
     }
 
     public async Task<IReadOnlyList<SetEntryResponse>> GetForSessionAsync(
@@ -87,7 +88,7 @@ public class SetEntryService(
         var sets = await setEntryRepository.GetForSessionAsync(
             sessionId, currentUser.UserId, cancellationToken);
 
-        return sets.Select(s => ToResponse(s, s.Exercise.Name)).ToList();
+        return HistoryMapping.ToSetResponses(sets, RestIntervalCalculator.ForSession(sets));
     }
 
     public async Task<SetEntryResponse> PatchAsync(
@@ -126,7 +127,7 @@ public class SetEntryService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(set, set.Exercise.Name);
+        return await ToResponseAsync(set, cancellationToken);
     }
 
     public async Task DeleteAsync(long id, CancellationToken cancellationToken = default)
@@ -150,14 +151,17 @@ public class SetEntryService(
         => await setEntryRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(SetNotFound);
 
-    private static SetEntryResponse ToResponse(SetEntry set, string exerciseName) => new(
-        set.Id,
-        set.WorkoutSessionId,
-        set.ExerciseId,
-        exerciseName,
-        set.Weight,
-        set.Reps,
-        set.RecordType,
-        set.Rir,
-        set.CreatedAt);
+    /// <summary>
+    /// Kaydedilmiş tek setin yanıtı. Dinlenme (#71) oturumdaki bir önceki sete bağlı olduğu için oturumun
+    /// setleri okunur; liste ucuyla aynı eşleme kullanılır (DRY). Değiştirilmiş set change tracker'da olduğundan
+    /// sorgu onu güncel değerleriyle döndürür.
+    /// </summary>
+    private async Task<SetEntryResponse> ToResponseAsync(SetEntry set, CancellationToken cancellationToken)
+    {
+        var sessionSets = await setEntryRepository.GetForSessionAsync(
+            set.WorkoutSessionId, currentUser.UserId, cancellationToken);
+
+        return HistoryMapping.ToSetResponses(sessionSets, RestIntervalCalculator.ForSession(sessionSets))
+            .Single(s => s.Id == set.Id);
+    }
 }

@@ -324,6 +324,8 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
   geri-merge edilir**. Bu son adım atlanırsa iki branch aynı feature'ın kopya merge commit'lerini
   taşır, GitHub PR'lar için merge commit üretemez ve `pull_request` workflow'ları **sessizce hiç
   çalışmaz** (kırmızı değil, hiç yok). Squash/rebase merge repo ayarlarında kapalıdır.
+  **Bir issue'yu üstüne almaktan geri-merge'e kadar her git adımında `git-flow` skill'i
+  ([git-flow/SKILL.md](git-flow/SKILL.md)) devreye girmeli** — komutlar ve dur-bildir durumları orada.
 - **Seed data**: varsayılan/global egzersizler (`Exercise.UserId = null` olanlar — Bench Press,
   Squat vb.) EF Core migration'ında `HasData` ile seed edilir, elle INSERT atılmaz.
 - **Şifre hashleme**: kendi hash fonksiyonu yazılmaz; ASP.NET Core Identity'nin
