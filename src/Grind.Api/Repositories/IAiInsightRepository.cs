@@ -25,4 +25,13 @@ public interface IAiInsightRepository : IRepository<AiInsight>
         int skip,
         int take,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Haftalık üretim sınırı için (issue #76): kullanıcının <c>sinceUtc</c>'den bu yana ürettiği
+    /// <see cref="AiInsightKind.Insight"/> türü yorumların oluşturulma zamanları, eskiden yeniye.
+    /// Yalnızca <c>Insight</c> sayılır -- <c>Suggestion</c> (henüz kurulmamış, ayrı bir üretim
+    /// akışı) bu sınıra dahil değildir. İzlemesiz.
+    /// </summary>
+    Task<IReadOnlyList<DateTime>> GetRecentInsightTimestampsAsync(
+        long userId, DateTime sinceUtc, CancellationToken cancellationToken = default);
 }
