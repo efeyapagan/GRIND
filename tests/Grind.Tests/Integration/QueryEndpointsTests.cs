@@ -179,8 +179,8 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         var takvim = await client.GetFromJsonAsync<CalendarResponse>("/api/stats/calendar", Json);
 
         Assert.Equal(1, takvim!.TrainedDayCount);
-        Assert.Equal(1, takvim.CurrentStreak);
-        Assert.Equal(1, takvim.LongestStreak);
+        Assert.Equal(1, takvim.CurrentWeekStreak);
+        Assert.Equal(1, takvim.LongestWeekStreak);
         Assert.Single(takvim.Days);
     }
 
@@ -195,7 +195,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
             "/api/history", Json);
 
         Assert.Empty(takvim!.Days);
-        Assert.Equal(0, takvim.CurrentStreak);
+        Assert.Equal(0, takvim.CurrentWeekStreak);
         Assert.Empty(sayfa!.Items);
         Assert.Equal(0, sayfa.TotalPages);
     }

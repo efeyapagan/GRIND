@@ -56,7 +56,7 @@ public class ExportServiceTests
             sessions,
             sets,
             bodyWeights,
-            new StatsService(sessions, sets, bodyWeights, currentUser, saat),
+            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), currentUser, saat),
             new PersonalRecordService(sets, currentUser),
             currentUser,
             saat);
@@ -64,7 +64,8 @@ public class ExportServiceTests
 
     private static StatsService CreateStats(AppDbContext context, long userId) => new(
         new WorkoutSessionRepository(context), new SetEntryRepository(context),
-        new BodyWeightLogRepository(context), new StubCurrentUser(userId), new SahteSaat(Simdi));
+        new BodyWeightLogRepository(context), new UserRepository(context), new StubCurrentUser(userId),
+        new SahteSaat(Simdi));
 
     /// <summary>
     /// Verilen UTC anında başlayan bir oturum. Setlerin CreatedAt'i dakika dakika artar: sıra
@@ -153,8 +154,8 @@ public class ExportServiceTests
             Assert.Equal(takvim.Days.Sum(d => d.SessionCount), export.Summary.SessionCount);
             Assert.Equal(takvim.Days.Sum(d => d.SetCount), export.Summary.SetCount);
             Assert.Equal(gunluk.TotalVolume, export.Summary.TotalVolume);
-            Assert.Equal(takvim.CurrentStreak, export.Summary.CurrentStreak);
-            Assert.Equal(takvim.LongestStreak, export.Summary.LongestStreak);
+            Assert.Equal(takvim.CurrentWeekStreak, export.Summary.CurrentWeekStreak);
+            Assert.Equal(takvim.LongestWeekStreak, export.Summary.LongestWeekStreak);
             Assert.Equal(egzersizBazli.Items, export.Summary.VolumeByExercise);
 
             // Sabit değerler de: "ikisi aynı" demek, ikisinin BİRLİKTE yanlış olmasını yakalamaz.
@@ -265,8 +266,8 @@ public class ExportServiceTests
             Assert.Equal(0, export.Summary.TrainedDayCount);
             Assert.Equal(0, export.Summary.SessionCount);
             Assert.Equal(0m, export.Summary.TotalVolume);
-            Assert.Equal(0, export.Summary.CurrentStreak);
-            Assert.Equal(0, export.Summary.LongestStreak);
+            Assert.Equal(0, export.Summary.CurrentWeekStreak);
+            Assert.Equal(0, export.Summary.LongestWeekStreak);
         }
     }
 

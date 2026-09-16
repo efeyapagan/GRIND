@@ -27,6 +27,7 @@ type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'
 type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPointResponse'];
 type CalendarResponse = components['schemas']['CalendarResponse'];
 type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
+type UpdateWeeklyTargetRequest = components['schemas']['UpdateWeeklyTargetRequest'];
 type AiInsightResponse = components['schemas']['AiInsightResponse'];
 type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
 
@@ -436,8 +437,13 @@ export interface TakvimOzeti {
   // Yalnizca antrenman yapilmis gunler (seti olmayan oturum sayilmaz), eskiden yeniye.
   days: TakvimGunu[];
   trainedDayCount: number;
-  currentStreak: number;
-  longestStreak: number;
+  // #96: seriler HAFTA sayar; tum gecmisten, araliktan bagimsiz.
+  currentWeekStreak: number;
+  longestWeekStreak: number;
+  thisWeekTrainedDays: number;
+  // #97: null = hedef yok; o zaman hedef serisi de null.
+  weeklyTargetDays: number | null;
+  currentTargetStreak: number | null;
 }
 
 function dogrulanmisTakvimGunu(yanit: CalendarDayResponse): TakvimGunu {
@@ -448,19 +454,26 @@ function dogrulanmisTakvimGunu(yanit: CalendarDayResponse): TakvimGunu {
 }
 
 function dogrulanmisTakvim(yanit: CalendarResponse): TakvimOzeti {
+  // `null` gecerli (hedef yok); yalnizca `undefined` eksik yanittir.
   if (
     !yanit.days ||
     yanit.trainedDayCount === undefined ||
-    yanit.currentStreak === undefined ||
-    yanit.longestStreak === undefined
+    yanit.currentWeekStreak === undefined ||
+    yanit.longestWeekStreak === undefined ||
+    yanit.thisWeekTrainedDays === undefined ||
+    yanit.weeklyTargetDays === undefined ||
+    yanit.currentTargetStreak === undefined
   ) {
     throw new Error('Sunucudan eksik takvim yaniti alindi.');
   }
   return {
     days: yanit.days.map(dogrulanmisTakvimGunu),
     trainedDayCount: yanit.trainedDayCount,
-    currentStreak: yanit.currentStreak,
-    longestStreak: yanit.longestStreak,
+    currentWeekStreak: yanit.currentWeekStreak,
+    longestWeekStreak: yanit.longestWeekStreak,
+    thisWeekTrainedDays: yanit.thisWeekTrainedDays,
+    weeklyTargetDays: yanit.weeklyTargetDays,
+    currentTargetStreak: yanit.currentTargetStreak,
   };
 }
 
@@ -475,6 +488,24 @@ export function useCalendar(from: string, to: string) {
       dogrulanmisTakvim(await request<CalendarResponse>(`/stats/calendar?From=${from}&To=${to}`)),
     // Ay/hafta degisince onceki izgara yeni veri gelene kadar yerinde kalir (useExerciseProgress ile ayni).
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * `PUT /api/settings/weekly-target` (#97), govdesiz 204. `null` hedefi kaldirir. Hedef ve hedef serisi
+ * takvim yanitinda geldigi icin basarida TUM takvim araliklari tazelenir.
+ */
+export function useSetWeeklyTarget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (weeklyTargetDays: number | null): Promise<void> => {
+      const govde: UpdateWeeklyTargetRequest = { weeklyTargetDays };
+      await request<void>('/settings/weekly-target', { method: 'PUT', body: JSON.stringify(govde) });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
+    },
   });
 }
 
