@@ -498,6 +498,15 @@ export function useCalendar(from: string, to: string) {
 }
 
 /**
+ * Takvim disindaki ekranlar (#117: Rekorlar'da en uzun seri, Profil'de haftalik hedef) yalnizca aralıktan
+ * bagimsiz alanlari okur; bu yuzden ayni uc bugunun tek gunluk araligiyla istenir.
+ */
+export function useGuncelTakvimOzeti() {
+  const bugun = trBugundenOnce(0);
+  return useCalendar(bugun, bugun);
+}
+
+/**
  * `PUT /api/settings/weekly-target` (#97), govdesiz 204. `null` hedefi kaldirir. Hedef ve hedef serisi
  * takvim yanitinda geldigi icin basarida TUM takvim araliklari tazelenir.
  */

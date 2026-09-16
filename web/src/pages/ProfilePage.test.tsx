@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -32,8 +32,34 @@ function sifreFormu() {
   return screen.getByRole('heading', { name: 'Şifre değiştir' }).closest('section')!;
 }
 
+/** #117: haftalik hedefin guncel degeri takvim ucundan gelir; istenen araliklar sirasiyla kaydedilir. */
+function takvimSunucusu(weeklyTargetDays: number | null) {
+  const araliklar: string[] = [];
+  server.use(
+    http.get('/api/stats/calendar', ({ request }) => {
+      const url = new URL(request.url);
+      const from = url.searchParams.get('From');
+      const to = url.searchParams.get('To');
+      araliklar.push(`${from}..${to}`);
+      return HttpResponse.json({
+        from,
+        to,
+        days: [],
+        trainedDayCount: 0,
+        currentWeekStreak: 0,
+        longestWeekStreak: 0,
+        thisWeekTrainedDays: 0,
+        weeklyTargetDays,
+        currentTargetStreak: weeklyTargetDays === null ? null : 0,
+      });
+    }),
+  );
+  return araliklar;
+}
+
 beforeEach(() => {
   session.write('gecerli-token', new Date(Date.now() + 3_600_000).toISOString(), 'benimadim');
+  takvimSunucusu(null);
 });
 
 afterEach(() => {
@@ -258,4 +284,24 @@ test('iki form birbirinden bagimsizdir: biri gonderilirken digeri etkilenmez', a
   // adi alani mevcut adiyla ayni kaldi.
   expect(govdeler).toEqual([{ currentPassword: 'eski-sifrem-123', newPassword: 'yeni-sifrem-456' }]);
   expect(within(kullaniciAdiFormu()).getByLabelText('Kullanıcı adı')).toHaveValue('benimadim');
+});
+
+test('haftalik hedef sunucunun degeriyle gelir; secim PUT gonderir ve deger yeniden istenir (#97, #117)', async () => {
+  const araliklar = takvimSunucusu(4);
+  const govdeler: unknown[] = [];
+  server.use(
+    http.put('/api/settings/weekly-target', async ({ request }) => {
+      govdeler.push(await request.json());
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  profilSayfasiniOlustur();
+
+  const secici = await screen.findByLabelText('Haftalık hedef');
+  await waitFor(() => expect(secici).toHaveValue('4'));
+
+  await userEvent.selectOptions(secici, '');
+
+  await waitFor(() => expect(govdeler).toEqual([{ weeklyTargetDays: null }]));
+  await waitFor(() => expect(araliklar).toHaveLength(2));
 });
