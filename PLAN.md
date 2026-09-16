@@ -1103,6 +1103,20 @@ Devreden notlar (bilerek yapılmadı):
 - AI koçluk önerisi ve export METNİNDE dinlenme yok (yalnızca export JSON'unda set bazında var).
 - Bugün ekranında oturum medyanı yok (açık oturum yanıtı setleri taşımıyor); medyan Geçmiş kartında.
 
+### İstek #117 — Bugün sayfası sadeleştirme (2026-09-16)
+
+Bugün'deki takvim bölümü kalabalıktı. İş akışı: issue → gerekli testler → kullanıcıya sunuldu → onaydan sonra kod.
+Yalnızca web; backend değişmedi.
+- **Takvim:** görünür "Takvim" başlığı kalktı, bölge adı `aria-label="Takvim"`. "En uzun seri" satırı ve haftalık hedef
+  seçicisi çıktı; Seri, Antrenman günü, Bu hafta ve Hedef serisi kaldı.
+- **Rekorlar:** "Kişisel en iyiler" altında "En uzun seri N hafta" kartı (rekor olmasa da).
+- **Profil:** "Antrenman hedefi" kartında `HaftalikHedefSecici` (Takvim'den ayrı bileşene çıktı; değer gelene kadar kapalı).
+  Profil sayfası #65'ten beri var, #119'u beklemedi.
+- **Veri:** ikisi de `GET /api/stats/calendar`'ı bugünün tek günlük aralığıyla ister (`useGuncelTakvimOzeti`) — seriler ve
+  hedef aralıktan bağımsız. Hedef kaydı `calendarAll`'u tazelediği için Bugün'deki hedef satırları da güncellenir.
+- **Testler:** Takvim 1 güncellendi, hedef testi Profil'e taşındı; Rekorlar +1, Profil +1; `TodayPage` 2 test başlık yerine
+  bölge arar. Web 214/214, `tsc -b` ve lint temiz. Görsel (Playwright) doğrulama yapılmadı.
+
 ---
 
 ## Çalışma Kuralı

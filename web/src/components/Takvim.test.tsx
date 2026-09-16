@@ -80,7 +80,9 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
   );
   takvimiOlustur();
 
-  expect(screen.getByRole('heading', { name: 'Takvim' })).toBeInTheDocument();
+  // #117: gorunur "Takvim" basligi yok; bolge adini aria-label'dan alir.
+  expect(screen.getByRole('region', { name: 'Takvim' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Takvim' })).not.toBeInTheDocument();
   expect(screen.getByText('Eylül 2026')).toBeInTheDocument();
 
   const antrenmanliGun = await screen.findByRole('button', { name: '14 Eylül: 18 set' });
@@ -88,13 +90,14 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
   expect(screen.getByRole('button', { name: '13 Eylül: antrenman yok' })).toHaveTextContent(/^13$/);
   expect(araliklar).toEqual(['2026-09-01..2026-09-30']);
 
-  // #96: seriler HAFTA; #97: hedef, bu haftanin ilerlemesi ve hedef serisi -- hepsi API degeri.
+  // #96: seriler HAFTA; #97: bu haftanin ilerlemesi ve hedef serisi -- hepsi API degeri.
   expect(screen.getByText('2 hafta')).toBeInTheDocument();
-  expect(screen.getByText('12 hafta')).toBeInTheDocument();
   expect(screen.getByText('1 gün')).toBeInTheDocument();
   expect(screen.getByText('1 / 4 gün')).toBeInTheDocument();
   expect(screen.getByText('3 hafta')).toBeInTheDocument();
-  expect(screen.getByLabelText('Haftalık hedef')).toHaveValue('4');
+  // #117: en uzun seri Rekorlar'a, haftalik hedef secicisi Profil'e tasindi.
+  expect(screen.queryByText('En uzun seri')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Haftalık hedef')).not.toBeInTheDocument();
 
   await userEvent.click(antrenmanliGun);
   expect(await screen.findByText('14 Eylül · Push Day, Şablonsuz · 18 set')).toBeInTheDocument();
@@ -126,28 +129,9 @@ test('Onceki bir onceki ayi ister; Haftalik bugunun haftasina doner, sonraki bug
 });
 
 test('aralikta antrenman yoksa bos durum metni gorunur; hedef yokken hedef satirlari gorunmez', async () => {
-  takvimSunucusu({ ...BOS_OZET, longestWeekStreak: 3 });
+  takvimSunucusu(BOS_OZET);
   takvimiOlustur();
 
   expect(await screen.findByText('Bu ay antrenman yok.')).toBeInTheDocument();
   expect(screen.queryByText('Hedef serisi')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Haftalık hedef')).toHaveValue('');
-});
-
-test('haftalik hedef secilince PUT gider ve takvim yeniden istenir (#97)', async () => {
-  const araliklar = takvimSunucusu(BOS_OZET);
-  const govdeler: unknown[] = [];
-  server.use(
-    http.put('/api/settings/weekly-target', async ({ request }) => {
-      govdeler.push(await request.json());
-      return new HttpResponse(null, { status: 204 });
-    }),
-  );
-  takvimiOlustur();
-  await waitFor(() => expect(araliklar).toHaveLength(1));
-
-  await userEvent.selectOptions(screen.getByLabelText('Haftalık hedef'), '4');
-
-  await waitFor(() => expect(govdeler).toEqual([{ weeklyTargetDays: 4 }]));
-  await waitFor(() => expect(araliklar).toHaveLength(2));
 });

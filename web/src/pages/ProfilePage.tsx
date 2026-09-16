@@ -7,6 +7,7 @@ import Alan from '../ui/Alan';
 import SifreAlani from '../ui/SifreAlani';
 import HataKutusu from '../ui/HataKutusu';
 import BirincilDugme from '../ui/BirincilDugme';
+import HaftalikHedefSecici from '../components/HaftalikHedefSecici';
 
 // Sunucudaki DataAnnotations kurallarinin AYNISI (Grind.Api UpdateProfileRequest / RegisterRequest
 // ile birebir) -- istemci tarafi yalnizca hizli geri bildirim icindir, belirleyici olan her zaman
@@ -46,6 +47,13 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-6 pt-2 pb-4">
       <KullaniciAdiFormu mevcutAd={username ?? ''} updateProfile={updateProfile} />
       <SifreFormu updateProfile={updateProfile} />
+      {/* #117: haftalik hedef Bugun'den buraya tasindi. */}
+      <section aria-labelledby="antrenman-hedefi-basligi" className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
+        <h2 id="antrenman-hedefi-basligi" className="text-heading">
+          Antrenman hedefi
+        </h2>
+        <HaftalikHedefSecici />
+      </section>
     </div>
   );
 }

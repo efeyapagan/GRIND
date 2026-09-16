@@ -1,5 +1,5 @@
 import { Trophy } from 'lucide-react';
-import { useRecords } from '../api/queries';
+import { useGuncelTakvimOzeti, useRecords } from '../api/queries';
 import { formatTrDate, formatWeight } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BosDurum from '../ui/BosDurum';
@@ -16,10 +16,21 @@ import Rozet from '../ui/Rozet';
 export default function RecordsPage() {
   usePageTitle('Rekorlar');
   const { data, isLoading, isError } = useRecords();
+  // #117: en uzun seri Bugun'den buraya tasindi; tum gecmisten, sunucunun degeri.
+  const { data: takvimOzeti } = useGuncelTakvimOzeti();
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
       <p className="text-body text-muted">Kişisel en iyiler</p>
+
+      {takvimOzeti && (
+        <dl className="rounded-xl bg-surface-2 p-4">
+          <div className="flex flex-col gap-1">
+            <dt className="text-label text-muted">En uzun seri</dt>
+            <dd className="text-metric tabular-nums">{`${takvimOzeti.longestWeekStreak} hafta`}</dd>
+          </div>
+        </dl>
+      )}
 
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 
