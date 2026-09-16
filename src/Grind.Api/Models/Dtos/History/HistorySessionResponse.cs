@@ -16,11 +16,14 @@ namespace Grind.Api.Models.Dtos.History;
 /// uçlarında hiç görünmez (spec Karar 3). Bu bir tutarsızlık değil: geçmiş bir oturum
 /// GÜNLÜĞÜdür (oturumun kendisi olay), istatistikler bir ANTRENMAN günlüğüdür (yalnızca
 /// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
+///
+/// <see cref="DurationSeconds"/> açık oturumda (issue #73) null — bkz. <see cref="Grind.Api.Common.Time.DurationCalculator"/>.
 /// </summary>
 public record HistorySessionResponse(
     long SessionId,
     DateTime StartedAt,
     DateTime? EndedAt,
+    long? DurationSeconds,
     string? TemplateName,
     string? Notes,
     decimal TotalVolume,

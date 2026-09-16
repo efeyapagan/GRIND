@@ -336,6 +336,7 @@ public class WorkoutSessionService(
         session.StartedAt,
         session.EndedAt,
         IsOpen: session.EndedAt is null,
+        DurationCalculator.SecondsBetween(session.StartedAt, session.EndedAt),
         session.TemplateId,
         session.Template?.Name,
         session.Notes,

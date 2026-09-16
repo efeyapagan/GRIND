@@ -77,6 +77,39 @@ public class WorkoutHistoryServiceTests
         }
     }
 
+    /// <summary>Issue #73: kapanmış oturumda süre saniye cinsinden hesaplanır.</summary>
+    [Fact]
+    public async Task Kapanmis_oturumun_suresi_hesaplanir()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = Seed(context, user, exercise, An, (100m, 8));
+            oturum.EndedAt = An.AddMinutes(45);
+            await context.SaveChangesAsync();
+
+            var sonuc = Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
+
+            Assert.Equal(45 * 60, sonuc.DurationSeconds);
+        }
+    }
+
+    /// <summary>Issue #73 Karar 1: açık oturumda (EndedAt null) süre hesaplanamaz -- null döner.</summary>
+    [Fact]
+    public async Task Acik_oturumun_suresi_nulldur()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An, (100m, 8));
+            await context.SaveChangesAsync();
+
+            var sonuc = Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
+
+            Assert.Null(sonuc.DurationSeconds);
+        }
+    }
+
     [Fact]
     public async Task Oturum_toplam_hacmi_setlerden_hesaplanir()
     {
