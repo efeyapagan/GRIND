@@ -53,8 +53,8 @@ public class ExportService(
             calendar.Days.Sum(d => d.SessionCount),
             calendar.Days.Sum(d => d.SetCount),
             calendar.Days.Sum(d => d.Volume),
-            calendar.CurrentStreak,
-            calendar.LongestStreak,
+            calendar.CurrentWeekStreak,
+            calendar.LongestWeekStreak,
             volumeByExercise.Items);
 
         return new ExportResponse(

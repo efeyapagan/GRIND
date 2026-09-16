@@ -147,7 +147,15 @@ function sahteSunucuyuKur(
     http.get('/api/templates', () => HttpResponse.json(opsiyonlar.sablonlar ?? [])),
     // Antrenman yokken Takvim (#81) gorunen ayi ister.
     http.get('/api/stats/calendar', () =>
-      HttpResponse.json({ days: [], trainedDayCount: 0, currentStreak: 0, longestStreak: 0 }),
+      HttpResponse.json({
+        days: [],
+        trainedDayCount: 0,
+        currentWeekStreak: 0,
+        longestWeekStreak: 0,
+        thisWeekTrainedDays: 0,
+        weeklyTargetDays: null,
+        currentTargetStreak: null,
+      }),
     ),
     http.get('/api/stats/exercises/:id/progress', ({ request, params }) => {
       ilerlemeAramalari.push(new URL(request.url).pathname);
