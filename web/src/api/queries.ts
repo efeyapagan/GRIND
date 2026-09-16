@@ -107,9 +107,13 @@ export interface SetKaydi {
   restSeconds: number | null;
 }
 
+export type EgzersizKategorisi = components['schemas']['ExerciseCategory'];
+
 export interface Egzersiz {
   id: number;
   name: string;
+  // #77: hareket secicideki kategori filtresi icin.
+  category: EgzersizKategorisi;
 }
 
 /**
@@ -180,10 +184,10 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
 }
 
 function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
-  if (yanit.id === undefined || !yanit.name) {
+  if (yanit.id === undefined || !yanit.name || !yanit.category) {
     throw new Error('Sunucudan eksik egzersiz yaniti alindi.');
   }
-  return { id: yanit.id, name: yanit.name };
+  return { id: yanit.id, name: yanit.name, category: yanit.category };
 }
 
 export interface GecmisOturum {

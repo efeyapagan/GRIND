@@ -2,10 +2,10 @@ import { adaGoreSirala, aramaIcinSadelestir, egzersizAra } from './egzersizler';
 import type { Egzersiz } from '../api/queries';
 
 const HAVUZ: Egzersiz[] = [
-  { id: 1, name: 'Bench Press' },
-  { id: 2, name: 'Incline Dumbbell Press' },
-  { id: 3, name: 'Sırt Çekişi' },
-  { id: 4, name: 'Göğüs Fly' },
+  { id: 1, name: 'Bench Press', category: 'Push' },
+  { id: 2, name: 'Incline Dumbbell Press', category: 'Push' },
+  { id: 3, name: 'Sırt Çekişi', category: 'Pull' },
+  { id: 4, name: 'Göğüs Fly', category: 'Push' },
 ];
 
 test('Turkce harfler ASCII karsiliklarina indirgenir', () => {
@@ -30,6 +30,13 @@ test('isim ICINDE gecen eslesir, bos sorgu listenin tamamini dondurur', () => {
   expect(egzersizAra(HAVUZ, 'press').map((eg) => eg.id)).toEqual([1, 2]);
   expect(egzersizAra(HAVUZ, '   ')).toHaveLength(4);
   expect(egzersizAra(HAVUZ, 'yok')).toHaveLength(0);
+});
+
+test('kategori verilince yalnizca o kategori kalir, arama ile birlikte uygulanir (#77)', () => {
+  expect(egzersizAra(HAVUZ, '', 'Pull').map((eg) => eg.id)).toEqual([3]);
+  expect(egzersizAra(HAVUZ, 'press', 'Push').map((eg) => eg.id)).toEqual([1, 2]);
+  expect(egzersizAra(HAVUZ, 'sirt', 'Push')).toHaveLength(0);
+  expect(egzersizAra(HAVUZ, '', 'Legs')).toHaveLength(0);
 });
 
 test('siralama Turkce alfabetik kalir', () => {
