@@ -1,7 +1,9 @@
+using Grind.Api.Common;
 using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Grind.Api.Controllers;
 
@@ -16,18 +18,22 @@ public class AuthController(IAuthService authService) : ControllerBase
     /// <summary>Yeni kullanıcı oluşturur ve doğrudan giriş yapmış sayar (token döner).</summary>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponse>> Register(
         RegisterRequest request, CancellationToken cancellationToken)
         => Ok(await authService.RegisterAsync(request, cancellationToken));
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponse>> Login(
         LoginRequest request, CancellationToken cancellationToken)
         => Ok(await authService.LoginAsync(request, cancellationToken));
