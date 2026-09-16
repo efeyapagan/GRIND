@@ -39,11 +39,12 @@ public class WorkoutHistoryService(
             take: query.PageSize,
             cancellationToken);
 
-        // Setler oturum başına değil, sayfanın tamamı için TEK sorguda çekilir (N+1 yok).
+        // Setler oturum başına değil, sayfanın tamamı için TEK sorguda çekilir (N+1 yok). Hareket filtresi
+        // BİLEREK sorguda değil eşlemede uygulanır: dinlenme (#71) oturumun tüm setlerinden hesaplanmalı.
         var sets = await setEntryRepository.GetForSessionsAsync(
-            sessions.Select(s => s.Id).ToList(), currentUser.UserId, query.ExerciseId, cancellationToken);
+            sessions.Select(s => s.Id).ToList(), currentUser.UserId, cancellationToken);
 
-        var items = HistoryMapping.ToSessionResponses(sessions, sets);
+        var items = HistoryMapping.ToSessionResponses(sessions, sets, query.ExerciseId);
 
         return new PagedResponse<HistorySessionResponse>(
             items, query.Page, query.PageSize, totalCount);

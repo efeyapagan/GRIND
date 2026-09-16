@@ -3,6 +3,7 @@ import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { GecmisOturum } from '../api/queries';
 import { useKaydirma } from '../lib/kaydirma';
 import { formatTrDate, formatWeight } from '../lib/format';
+import { kalanSureMetni } from '../lib/dinlenme';
 import SetList from './SetList';
 import IkincilDugme from '../ui/IkincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
@@ -110,6 +111,15 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
                   </span>{' '}
                   <span className="text-label-xs text-muted uppercase">kg</span>
                 </span>
+                {/* #71: medyan -- telefona dalinan tek uzun ara ozeti bozmaz. Hic dinlenme yoksa yok. */}
+                {oturum.medianRestSeconds !== null && (
+                  <span className="flex items-baseline gap-1">
+                    <span className="text-metric tabular-nums">
+                      {kalanSureMetni(oturum.medianRestSeconds * 1000)}
+                    </span>{' '}
+                    <span className="text-label-xs text-muted uppercase">dinlenme</span>
+                  </span>
+                )}
               </span>
             </div>
             <span

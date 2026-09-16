@@ -4,6 +4,8 @@ import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
+import DinlenmeHapi from '../ui/DinlenmeHapi';
+import { kalanSureMetni } from '../lib/dinlenme';
 import SetDuzenleyici from './SetDuzenleyici';
 
 interface Props {
@@ -49,6 +51,8 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
     `${formatWeight(kayit.weight)} kg × ${kayit.reps}`,
     rozet,
     kayit.rir !== null ? `RIR ${kayit.rir}` : null,
+    // aria-label icerigi ezdigi icin dinlenme de burada ayrica soylenir (#71).
+    kayit.restSeconds !== null ? `dinlenme ${kalanSureMetni(kayit.restSeconds * 1000)}` : null,
     'düzenle',
   ]
     .filter(Boolean)
@@ -73,7 +77,10 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
             {rozet && <Rozet>{rozet}</Rozet>}
           </span>
         </span>
-        {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+        <span className="flex shrink-0 items-center gap-2">
+          <DinlenmeHapi saniye={kayit.restSeconds} />
+          {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+        </span>
       </button>
     </li>
   );

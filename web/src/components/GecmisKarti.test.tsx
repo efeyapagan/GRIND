@@ -8,6 +8,7 @@ const OTURUM: GecmisOturum = {
   templateName: 'Push Day',
   totalVolume: 1000,
   setCount: 3,
+  medianRestSeconds: null,
   sets: [],
 };
 
@@ -60,4 +61,15 @@ test('kart icindeki silme yolu once onay sorar, onay onSil cagirir', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Evet, sil' }));
   expect(onSil).toHaveBeenCalledTimes(1);
+});
+
+test('kart ozeti sunucudan gelen medyan dinlenmeyi gosterir (#71)', () => {
+  render(
+    <ul>
+      <GecmisKarti oturum={{ ...OTURUM, medianRestSeconds: 105 }} onSil={vi.fn()} />
+    </ul>,
+  );
+  const ozet = screen.getByText('10.09.2026').closest('summary');
+
+  expect(ozet).toHaveTextContent('1:45');
 });
