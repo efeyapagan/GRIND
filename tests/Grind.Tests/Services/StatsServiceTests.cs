@@ -41,7 +41,7 @@ public class StatsServiceTests
         var saat = new SahteSaat(Bugun);
         var service = new StatsService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
-            new BodyWeightLogRepository(context), new StubCurrentUser(user.Id), saat);
+            new BodyWeightLogRepository(context), new UserRepository(context), new StubCurrentUser(user.Id), saat);
 
         return (context, user, exercise, service, saat, transaction);
     }
@@ -264,8 +264,40 @@ public class StatsServiceTests
 
             Assert.Equal(2, takvim.Days.Count);
             Assert.Equal(2, takvim.TrainedDayCount);
-            Assert.Equal(2, takvim.CurrentStreak);
-            Assert.Equal(2, takvim.LongestStreak);
+            // #96: iki gün de bu haftada (Pazartesi 9 – Pazar 15 Mart) -> seri 1 HAFTA.
+            Assert.Equal(1, takvim.CurrentWeekStreak);
+            Assert.Equal(1, takvim.LongestWeekStreak);
+            Assert.Equal(2, takvim.ThisWeekTrainedDays);
+            // #97: hedef koymamış kullanıcıda hedef alanları boş.
+            Assert.Null(takvim.WeeklyTargetDays);
+            Assert.Null(takvim.CurrentTargetStreak);
+        }
+    }
+
+    /// <summary>
+    /// #97: hedef serisi kullanıcının KAYDINDAKİ güncel hedefle hesaplanır (JWT'de değil — CLAUDE.md).
+    /// Hedef 2: bu hafta 2 gün (tuttu), geçen hafta 1 gün (tutmadı) -> hedef serisi 1; haftalık seri 3.
+    /// </summary>
+    [Fact]
+    public async Task Hedef_serisi_kullanicinin_haftalik_hedefiyle_hesaplanir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            user.WeeklyTargetDays = 2;
+            Seed(context, user, exercise, Bugun, (100m, 8));                 // 12 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-1), (100m, 8));     // 11 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));     // 5 Mart, geçen hafta
+            Seed(context, user, exercise, Bugun.AddDays(-14), (100m, 8));    // 26 Şubat
+            Seed(context, user, exercise, Bugun.AddDays(-15), (100m, 8));    // 25 Şubat
+            await context.SaveChangesAsync();
+
+            var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
+
+            Assert.Equal(2, takvim.WeeklyTargetDays);
+            Assert.Equal(2, takvim.ThisWeekTrainedDays);
+            Assert.Equal(1, takvim.CurrentTargetStreak);
+            Assert.Equal(3, takvim.CurrentWeekStreak);
         }
     }
 
@@ -284,14 +316,14 @@ public class StatsServiceTests
             var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
 
             Assert.Empty(takvim.Days);
-            Assert.Equal(0, takvim.CurrentStreak);
+            Assert.Equal(0, takvim.CurrentWeekStreak);
         }
     }
 
     /// <summary>
     /// LOAD-BEARING (spec Karar 5): seri ARALIKTAN BAĞIMSIZ, tüm geçmişten hesaplanır.
     /// Dar bir aralık sorulduğunda seri kırılmış görünmemeli — kullanıcı "bu ay" filtresinde
-    /// 40 günlük serisini 1 olarak görmesin.
+    /// 10 haftalık serisini 1 olarak görmesin.
     /// </summary>
     [Fact]
     public async Task Dar_aralik_seriyi_kirmaz()
@@ -300,8 +332,8 @@ public class StatsServiceTests
         await using (transaction)
         {
             Seed(context, user, exercise, Bugun, (100m, 8));
-            Seed(context, user, exercise, Bugun.AddDays(-1), (100m, 8));
-            Seed(context, user, exercise, Bugun.AddDays(-2), (100m, 8));
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));
+            Seed(context, user, exercise, Bugun.AddDays(-14), (100m, 8));
             await context.SaveChangesAsync();
 
             var takvim = await service.GetCalendarAsync(new StatsRangeQuery
@@ -311,27 +343,27 @@ public class StatsServiceTests
 
             Assert.Single(takvim.Days);          // aralık yalnızca bugünü kapsıyor
             Assert.Equal(1, takvim.TrainedDayCount);
-            Assert.Equal(3, takvim.CurrentStreak);   // ama seri tüm geçmişten
+            Assert.Equal(3, takvim.CurrentWeekStreak);   // ama seri tüm geçmişten, 3 hafta
         }
     }
 
     /// <summary>
-    /// Bugün henüz antrenman yokken seri korunur (spec Karar 3) — saat bu yüzden enjekte
+    /// Bu hafta henüz antrenman yokken seri korunur (#96: hafta bitmedi) — saat bu yüzden enjekte
     /// ediliyor: gerçek saatle bu test yazılamazdı.
     /// </summary>
     [Fact]
-    public async Task Bugun_antrenman_yokken_seri_korunur()
+    public async Task Bu_hafta_antrenman_yokken_seri_korunur()
     {
         var (context, user, exercise, service, _, transaction) = await CreateAsync();
         await using (transaction)
         {
-            Seed(context, user, exercise, Bugun.AddDays(-1), (100m, 8));
-            Seed(context, user, exercise, Bugun.AddDays(-2), (100m, 8));
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));     // geçen hafta
+            Seed(context, user, exercise, Bugun.AddDays(-14), (100m, 8));    // iki hafta önce
             await context.SaveChangesAsync();
 
             var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
 
-            Assert.Equal(2, takvim.CurrentStreak);
+            Assert.Equal(2, takvim.CurrentWeekStreak);
         }
     }
 

@@ -74,7 +74,7 @@ public static class ExportTextFormatter
         Line(text, Inv($"- Set: {summary.SetCount}"));
         Line(text, Inv($"- Toplam hacim: {summary.TotalVolume:0.##} kg"));
         Line(text, Inv(
-            $"- Seri (tüm geçmişten): mevcut {summary.CurrentStreak} gün, en uzun {summary.LongestStreak} gün"));
+            $"- Seri (tüm geçmişten): mevcut {summary.CurrentWeekStreak} hafta, en uzun {summary.LongestWeekStreak} hafta"));
     }
 
     private static void AppendVolumeByExercise(
