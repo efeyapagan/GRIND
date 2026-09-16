@@ -30,11 +30,25 @@ public class AiInsightService(
 
     private const string NothingToInterpret = "Bu aralıkta yorumlanacak kayıt yok.";
 
+    /// <summary>Haftalık üretim sınırı (issue #76) — maliyet kontrolü: her üretim gerçek para harcar.</summary>
+    private const int MaxInsightsPerWindow = 2;
+
+    /// <summary>
+    /// SABİT (takvim haftası, ör. Pazartesi-Pazar) DEĞİL, KAYAN 7 gün. Sabit hafta sınırda (Pazar
+    /// gece yarısı) art arda 4 üretime izin verirdi -- sınırın amacı (harcama kontrolü) tam da bunu
+    /// engellemek.
+    /// </summary>
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromDays(7);
+
     public async Task<AiInsightResponse> GenerateAsync(
         GenerateInsightRequest request, CancellationToken cancellationToken = default)
     {
         // Aralık hataları HİÇBİR IO'dan önce 400 verir.
         var (from, to) = AiInsightRange.Resolve(request.From, request.To, TurkeyDay.LocalDateOf(Now()));
+
+        // Sinir kontrolu EN ONCE: export'u okumak (potansiyel olarak cok satir) ve ozellikle
+        // ucretli saglayici cagrisi, kullanici zaten sinirdaysa hic yapilmamali.
+        await EnsureWithinRateLimitAsync(cancellationToken);
 
         var export = await exportService.GetAsync(new StatsRangeQuery { From = from, To = to }, cancellationToken);
 
@@ -90,6 +104,29 @@ public class AiInsightService(
 
         repository.Remove(insight);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Kayan pencerede zaten <see cref="MaxInsightsPerWindow"/> yorum varsa <see cref="RateLimitExceededException"/>
+    /// fırlatır. Mesaj, EN ESKİ üretimin pencereden ÇIKACAĞI anı (o an + <see cref="RateLimitWindow"/>) TR
+    /// saatiyle söyler -- "tekrar dene" demek, kullanıcıyı hemen tekrar deneyip aynı hatayı almaya iter.
+    /// </summary>
+    private async Task EnsureWithinRateLimitAsync(CancellationToken cancellationToken)
+    {
+        var simdi = Now();
+        var son = await repository.GetRecentInsightTimestampsAsync(
+            currentUser.UserId, simdi - RateLimitWindow, cancellationToken);
+
+        if (son.Count < MaxInsightsPerWindow)
+        {
+            return;
+        }
+
+        var tekrarDenenebilirTarih = son[0] + RateLimitWindow;
+        var trTarih = TurkeyDay.ToLocal(tekrarDenenebilirTarih);
+        throw new RateLimitExceededException(
+            $"Bir haftada en fazla {MaxInsightsPerWindow} yorum alabilirsin. " +
+            $"Sonraki hakkın {trTarih:dd.MM.yyyy HH:mm} tarihinde açılıyor.");
     }
 
     private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;

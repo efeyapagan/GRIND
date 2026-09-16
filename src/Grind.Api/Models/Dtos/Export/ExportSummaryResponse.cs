@@ -15,6 +15,6 @@ public record ExportSummaryResponse(
     int SessionCount,
     int SetCount,
     decimal TotalVolume,
-    int CurrentStreak,
-    int LongestStreak,
+    int CurrentWeekStreak,
+    int LongestWeekStreak,
     IReadOnlyList<ExerciseVolumeResponse> VolumeByExercise);

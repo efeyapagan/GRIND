@@ -10,6 +10,17 @@ type CalendarResponse = components['schemas']['CalendarResponse'];
 
 const BUGUN = '2026-09-15';
 
+/** Antrenmani ve hedefi olmayan kullanicinin takvim ozeti. */
+const BOS_OZET: Omit<CalendarResponse, 'from' | 'to'> = {
+  days: [],
+  trainedDayCount: 0,
+  currentWeekStreak: 0,
+  longestWeekStreak: 0,
+  thisWeekTrainedDays: 0,
+  weeklyTargetDays: null,
+  currentTargetStreak: null,
+};
+
 /** Istenen araliklari ("2026-09-01..2026-09-30") sirasiyla kaydeder, verilen yaniti doner. */
 function takvimSunucusu(yanit: Omit<CalendarResponse, 'from' | 'to'>) {
   const araliklar: string[] = [];
@@ -38,8 +49,11 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
   const araliklar = takvimSunucusu({
     days: [{ date: '2026-09-14', sessionCount: 2, setCount: 18, volume: 4200 }],
     trainedDayCount: 1,
-    currentStreak: 2,
-    longestStreak: 12,
+    currentWeekStreak: 2,
+    longestWeekStreak: 12,
+    thisWeekTrainedDays: 1,
+    weeklyTargetDays: 4,
+    currentTargetStreak: 3,
   });
   // #90: gunun sablon adlari gecmis ucundan. Gecmis ucu seti olmayan oturumu da dondurur (Pull Day) --
   // takvim onu saymadigi icin ozette gorunmez. Sunucu yeniden eskiye siralar; ozet eskiden yeniye yazar.
@@ -74,9 +88,13 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
   expect(screen.getByRole('button', { name: '13 Eylül: antrenman yok' })).toHaveTextContent(/^13$/);
   expect(araliklar).toEqual(['2026-09-01..2026-09-30']);
 
-  expect(screen.getByText('2 gün')).toBeInTheDocument();
-  expect(screen.getByText('12 gün')).toBeInTheDocument();
+  // #96: seriler HAFTA; #97: hedef, bu haftanin ilerlemesi ve hedef serisi -- hepsi API degeri.
+  expect(screen.getByText('2 hafta')).toBeInTheDocument();
+  expect(screen.getByText('12 hafta')).toBeInTheDocument();
   expect(screen.getByText('1 gün')).toBeInTheDocument();
+  expect(screen.getByText('1 / 4 gün')).toBeInTheDocument();
+  expect(screen.getByText('3 hafta')).toBeInTheDocument();
+  expect(screen.getByLabelText('Haftalık hedef')).toHaveValue('4');
 
   await userEvent.click(antrenmanliGun);
   expect(await screen.findByText('14 Eylül · Push Day, Şablonsuz · 18 set')).toBeInTheDocument();
@@ -89,7 +107,7 @@ test('aylik gorunum bu ayi ister; gun hucresi numarasini ve set sayisini, serile
 });
 
 test('Onceki bir onceki ayi ister; Haftalik bugunun haftasina doner, sonraki bugunde kapalidir', async () => {
-  const araliklar = takvimSunucusu({ days: [], trainedDayCount: 0, currentStreak: 0, longestStreak: 0 });
+  const araliklar = takvimSunucusu(BOS_OZET);
   takvimiOlustur();
   await waitFor(() => expect(araliklar).toEqual(['2026-09-01..2026-09-30']));
   expect(screen.getByRole('button', { name: 'Sonraki' })).toBeDisabled();
@@ -107,9 +125,29 @@ test('Onceki bir onceki ayi ister; Haftalik bugunun haftasina doner, sonraki bug
   expect(screen.getByRole('button', { name: 'Sonraki' })).toBeEnabled();
 });
 
-test('aralikta antrenman yoksa bos durum metni gorunur', async () => {
-  takvimSunucusu({ days: [], trainedDayCount: 0, currentStreak: 0, longestStreak: 3 });
+test('aralikta antrenman yoksa bos durum metni gorunur; hedef yokken hedef satirlari gorunmez', async () => {
+  takvimSunucusu({ ...BOS_OZET, longestWeekStreak: 3 });
   takvimiOlustur();
 
   expect(await screen.findByText('Bu ay antrenman yok.')).toBeInTheDocument();
+  expect(screen.queryByText('Hedef serisi')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Haftalık hedef')).toHaveValue('');
+});
+
+test('haftalik hedef secilince PUT gider ve takvim yeniden istenir (#97)', async () => {
+  const araliklar = takvimSunucusu(BOS_OZET);
+  const govdeler: unknown[] = [];
+  server.use(
+    http.put('/api/settings/weekly-target', async ({ request }) => {
+      govdeler.push(await request.json());
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  takvimiOlustur();
+  await waitFor(() => expect(araliklar).toHaveLength(1));
+
+  await userEvent.selectOptions(screen.getByLabelText('Haftalık hedef'), '4');
+
+  await waitFor(() => expect(govdeler).toEqual([{ weeklyTargetDays: 4 }]));
+  await waitFor(() => expect(araliklar).toHaveLength(2));
 });

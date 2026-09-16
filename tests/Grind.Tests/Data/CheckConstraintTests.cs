@@ -64,4 +64,14 @@ public class CheckConstraintTests
     {
         Assert.Contains("> 0", SqlOf<BodyWeightLog>("CK_BodyWeightLog_Weight_Positive"));
     }
+
+    /// <summary>#97: null = hedef yok; hafta 7 gündür.</summary>
+    [Fact]
+    public void Haftalik_hedef_bos_ya_da_bir_ile_yedi_arasindadir()
+    {
+        var sql = SqlOf<User>("CK_User_WeeklyTargetDays_Range");
+        Assert.Contains("\"WeeklyTargetDays\" IS NULL", sql);
+        Assert.Contains("\"WeeklyTargetDays\" >= 1", sql);
+        Assert.Contains("\"WeeklyTargetDays\" <= 7", sql);
+    }
 }

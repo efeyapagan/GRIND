@@ -1,8 +1,11 @@
+using System.Globalization;
+using System.Threading.RateLimiting;
 using Grind.Api.Common;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Services;
 using Grind.Api.Services.Ai;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using System.Text.Json.Serialization;
 
@@ -34,6 +37,40 @@ builder.Services.AddApplicationServices();
 // tanınmayan bir sağlayıcı adı zaten Get<AiSettings>() bağlamasında patlar.
 builder.Services.AddAiInsightProvider(
     builder.Configuration.GetSection("Ai").Get<AiSettings>() ?? new AiSettings());
+
+// Kaba kuvvet / DoS koruması (issue #74): sabit pencere, IP bazlı, KUYRUKSUZ. Kuyruğa almak
+// DoS'u kötüleştirir -- pahalı olan zaten BCrypt'in kendisi (work factor 12, deneme başına
+// ~220ms CPU); fazlası ANINDA 429 ile reddedilir. Bölümleme mantığı (IP anahtarı dahil)
+// AuthRateLimiterPartitions'ta -- ASP.NET Core pipeline'ı kurmadan birim testiyle sınanabilsin
+// diye buradan BİLEREK ayrı, saf bir fonksiyon.
+var rateLimitSettings =
+    builder.Configuration.GetSection("RateLimiting").Get<AuthRateLimitSettings>() ?? new AuthRateLimitSettings();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy(RateLimitPolicies.Login,
+        httpContext => AuthRateLimiterPartitions.Login(httpContext, rateLimitSettings));
+
+    options.AddPolicy(RateLimitPolicies.Register,
+        httpContext => AuthRateLimiterPartitions.Register(httpContext, rateLimitSettings));
+
+    // Govde YAZILMAZ: AddProblemDetails() + UseStatusCodePages() zaten boş govdeli her hata
+    // durumunu (bu da dahil) tutarlı bir RFC 7807 govdesine cevirir -- GlobalExceptionHandler'in
+    // urettigi diger hatalarla ayni sekil (DRY, iki ayri JSON yazma yolu yok). Burada SADECE
+    // Retry-After eklenir, cunku o standart govdenin parcasi degil, bir HTTP basligidir.
+    options.OnRejected = (context, _) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        return ValueTask.CompletedTask;
+    };
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -78,6 +115,7 @@ app.UseHttpsRedirection();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

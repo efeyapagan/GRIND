@@ -53,6 +53,7 @@ public class GlobalExceptionHandlerTests
     [InlineData(typeof(UnauthorizedException), 401)]
     [InlineData(typeof(ForbiddenException), 403)]
     [InlineData(typeof(ConflictException), 409)]
+    [InlineData(typeof(RateLimitExceededException), 429)]
     [InlineData(typeof(ServiceUnavailableException), 503)]
     public async Task Domain_exceptionlari_dogru_duruma_eslenir(Type exceptionType, int expected)
     {

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCalendar, useGunGecmisi, type GecmisOturum, type TakvimGunu } from '../api/queries';
+import {
+  useCalendar,
+  useGunGecmisi,
+  useSetWeeklyTarget,
+  type GecmisOturum,
+  type TakvimGunu,
+} from '../api/queries';
 import { formatAralik, trBugundenOnce } from '../lib/format';
 import {
   ayBasligi,
@@ -16,6 +22,9 @@ import {
 } from '../lib/takvim';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
+import SecimKutusu from '../ui/SecimKutusu';
+
+const HEDEF_GUNLERI = [1, 2, 3, 4, 5, 6, 7];
 
 const GORUNUMLER: { anahtar: TakvimGorunumu; etiket: string; bosMetin: string }[] = [
   { anahtar: 'ay', etiket: 'Aylık', bosMetin: 'Bu ay antrenman yok.' },
@@ -186,22 +195,64 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
         )}
 
         {ozet && (
-          <dl className="flex flex-wrap gap-6">
-            <OzetDegeri etiket="Seri" gun={ozet.currentStreak} />
-            <OzetDegeri etiket="En uzun seri" gun={ozet.longestStreak} />
-            <OzetDegeri etiket="Antrenman günü" gun={ozet.trainedDayCount} />
+          <dl className="flex flex-wrap gap-x-6 gap-y-3">
+            {/* #96: seriler hafta; #97: hedef satirlari yalnizca hedef varken. Hepsi API degeri. */}
+            <OzetDegeri etiket="Seri" deger={`${ozet.currentWeekStreak} hafta`} />
+            <OzetDegeri etiket="En uzun seri" deger={`${ozet.longestWeekStreak} hafta`} />
+            <OzetDegeri etiket="Antrenman günü" deger={`${ozet.trainedDayCount} gün`} />
+            {ozet.weeklyTargetDays !== null && (
+              <>
+                <OzetDegeri etiket="Bu hafta" deger={`${ozet.thisWeekTrainedDays} / ${ozet.weeklyTargetDays} gün`} />
+                <OzetDegeri etiket="Hedef serisi" deger={`${ozet.currentTargetStreak ?? 0} hafta`} />
+              </>
+            )}
           </dl>
         )}
+        {ozet && <HaftalikHedefSecici hedef={ozet.weeklyTargetDays} />}
       </div>
     </section>
   );
 }
 
-function OzetDegeri({ etiket, gun }: { etiket: string; gun: number }) {
+function OzetDegeri({ etiket, deger }: { etiket: string; deger: string }) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-label text-muted">{etiket}</dt>
-      <dd className="text-body-lg tabular-nums">{`${gun} gün`}</dd>
+      <dd className="text-body-lg tabular-nums">{deger}</dd>
+    </div>
+  );
+}
+
+/**
+ * Haftalik antrenman hedefi (#97). Secim hemen kaydedilir; gorunen deger sunucunun takvim yanitindan gelir
+ * (istemci kendi kopyasini tutmaz), kayit sonrasi takvim tazelenince guncellenir.
+ */
+function HaftalikHedefSecici({ hedef }: { hedef: number | null }) {
+  const hedefAyarla = useSetWeeklyTarget();
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor="haftalik-hedef" className="text-label text-muted">
+        Haftalık hedef
+      </label>
+      <SecimKutusu
+        id="haftalik-hedef"
+        value={hedef === null ? '' : String(hedef)}
+        disabled={hedefAyarla.isPending}
+        onChange={(olay) => hedefAyarla.mutate(olay.target.value === '' ? null : Number(olay.target.value))}
+      >
+        <option value="">Hedef yok</option>
+        {HEDEF_GUNLERI.map((gun) => (
+          <option key={gun} value={gun}>
+            {`Haftada ${gun} gün`}
+          </option>
+        ))}
+      </SecimKutusu>
+      {hedefAyarla.isError && (
+        <p role="alert" className="text-label text-danger">
+          Hedef kaydedilemedi.
+        </p>
+      )}
     </div>
   );
 }

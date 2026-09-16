@@ -2061,6 +2061,67 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/settings/weekly-target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateWeeklyTargetRequest"];
+                    "text/json": components["schemas"]["UpdateWeeklyTargetRequest"];
+                    "application/*+json": components["schemas"]["UpdateWeeklyTargetRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/volume/daily": {
         parameters: {
             query?: never;
@@ -2728,9 +2789,15 @@ export interface components {
             /** Format: int32 */
             trainedDayCount?: number;
             /** Format: int32 */
-            currentStreak?: number;
+            currentWeekStreak?: number;
             /** Format: int32 */
-            longestStreak?: number;
+            longestWeekStreak?: number;
+            /** Format: int32 */
+            thisWeekTrainedDays?: number;
+            /** Format: int32 */
+            weeklyTargetDays?: number | null;
+            /** Format: int32 */
+            currentTargetStreak?: number | null;
         };
         CreateBodyWeightRequest: {
             /** Format: double */
@@ -2887,9 +2954,9 @@ export interface components {
             /** Format: double */
             totalVolume?: number;
             /** Format: int32 */
-            currentStreak?: number;
+            currentWeekStreak?: number;
             /** Format: int32 */
-            longestStreak?: number;
+            longestWeekStreak?: number;
             volumeByExercise?: components["schemas"]["ExerciseVolumeResponse"][] | null;
         };
         GenerateInsightRequest: {
@@ -3062,6 +3129,10 @@ export interface components {
         UpdateTemplateRequest: {
             name: string;
             exercises: components["schemas"]["TemplateExerciseRequest"][];
+        };
+        UpdateWeeklyTargetRequest: {
+            /** Format: int32 */
+            weeklyTargetDays?: number | null;
         };
     };
     responses: never;

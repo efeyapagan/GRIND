@@ -98,7 +98,8 @@ Object Reference) açığıdır.
 
 ## Domain Modeli
 - **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`, `DeletedAt` (nullable — `null` ise hesap
-  aktif; dolu ise hesap pasifleştirilmiş demektir, verisi durur)
+  aktif; dolu ise hesap pasifleştirilmiş demektir, verisi durur), `WeeklyTargetDays` (nullable, 1–7 —
+  haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`)
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
   `Category` (Push / Pull / Legs / Other), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
@@ -284,7 +285,8 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
      ağırlık/tekrarı listeler (yeni veri gerektirmez, mevcut `SetEntry`'den sorgulanır)
 6. Antrenman geçmişi sorgulama — tarih aralığı ve/veya egzersize göre filtre
 7. Antrenman takvimi / katılım istatistiği — hangi günlerde antrenman yapıldığı, toplam gün
-   sayısı, seri (streak) gibi bilgiler; **yeni bir tablo açılmadan**, mevcut
+   sayısı, seri (streak) gibi bilgiler (seri #96'dan beri HAFTA sayar: en az bir antrenman günü olan
+   ardışık Pazartesi–Pazar haftaları; #97 hedef serisi aynı hesap); **yeni bir tablo açılmadan**, mevcut
    `WorkoutSession.StartedAt` üzerinden (gün bazında gruplanarak) sorgulanır (bkz. Veritabanı
    Tasarım Kuralları)
 8. Hacim hesaplama — set, oturum ve egzersiz bazında (ağırlık × tekrar toplamı)

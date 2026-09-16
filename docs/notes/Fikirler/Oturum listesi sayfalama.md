@@ -1,6 +1,12 @@
+# NOT (2026-09-15): Bu fikir artık geçersiz
+
+Bu not `GET /api/sessions` (sayfalanmayan, tüm geçmişi dönen uç) hakkındaydı. Frontend bu ucu hiç KULLANMIYOR — Geçmiş ekranı zaten sayfalı `GET /api/history`'yi kullanıyor (Faz 9'dan beri). Yani asıl sorun (sayfalanmayan liste) frontend'in bakış açısından hiç yaşanmadı; not kapatılabilir.
+
+---
+
 ---
 tarih: 2026-09-11
-durum: kabul edildi — uygulanmadı
+durum: artık geçersiz (kontrol: 2026-09-15)
 kapsam: backend / sorgu
 ---
 

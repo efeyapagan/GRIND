@@ -101,7 +101,7 @@ public class ExportTextFormatterTests
             - Oturum (en az bir seti olan): 1
             - Set: 6
             - Toplam hacim: 2785 kg
-            - Seri (tüm geçmişten): mevcut 0 gün, en uzun 1 gün
+            - Seri (tüm geçmişten): mevcut 0 hafta, en uzun 1 hafta
 
             ## Egzersiz bazında hacim
             - Bench Press: 1625 kg (3 set)
