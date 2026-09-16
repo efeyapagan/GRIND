@@ -1,4 +1,4 @@
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Plus, Trash2 } from 'lucide-react';
 import type { HareketIlerlemesi, SetKaydi } from '../api/queries';
 import HareketGecmisi from './HareketGecmisi';
 import SetSatiri from './SetSatiri';
@@ -60,7 +60,11 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, on
                 </span>
                 <span className="truncate text-heading">{hareket.exerciseName}</span>
               </span>
-              <span className="shrink-0 text-label-xs text-muted uppercase tabular-nums">{sayac}</span>
+              {/* "+" yalnizca ipucu (#126): karta dokununca set eklenebilecegini gosterir; adi degistirmez. */}
+              <span className="flex shrink-0 items-center gap-1 text-label-xs text-muted uppercase tabular-nums">
+                {sayac}
+                <Plus aria-hidden size={14} />
+              </span>
             </button>
             {hareketSetleri.length > 0 && (
               <ul className="flex flex-col gap-1">
