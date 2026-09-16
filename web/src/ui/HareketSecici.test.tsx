@@ -5,10 +5,10 @@ import HareketSecici from './HareketSecici';
 import type { Egzersiz } from '../api/queries';
 
 const EGZERSIZLER: Egzersiz[] = [
-  { id: 1, name: 'Bench Press' },
-  { id: 2, name: 'Incline Dumbbell Press' },
-  { id: 3, name: 'Squat' },
-  { id: 4, name: 'Sırt Çekişi' },
+  { id: 1, name: 'Bench Press', category: 'Push' },
+  { id: 2, name: 'Incline Dumbbell Press', category: 'Push' },
+  { id: 3, name: 'Squat', category: 'Legs' },
+  { id: 4, name: 'Sırt Çekişi', category: 'Pull' },
 ];
 
 function seciciyiOlustur(
@@ -104,6 +104,23 @@ test('baska satirda secilmis hareket secilemez ve ok tuslari onu atlar', async (
   // Ok tusu da uzerinden atlar: Bench Press -> (Incline atlanir) -> Squat.
   await kullanici.keyboard('{ArrowDown}{Enter}');
   expect(alan).toHaveValue('Squat');
+});
+
+test('kategori hapi listeyi daraltir, liste acik kalir ve Tumu geri getirir (#77)', async () => {
+  const { alan, kullanici } = seciciyiOlustur();
+
+  await kullanici.click(alan);
+  await kullanici.click(screen.getByRole('button', { name: 'Push' }));
+
+  // Hapa basmak odagi metin alanindan almamali: liste kapanirsa filtre ise yaramaz.
+  expect(alan).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'Push' })).toHaveAttribute('aria-pressed', 'true');
+  const secenekler = within(screen.getByRole('listbox')).getAllByRole('option');
+  expect(secenekler.map((s) => s.textContent)).toEqual(['Bench Press', 'Incline Dumbbell Press']);
+  expect(screen.getByRole('status')).toHaveTextContent('2 hareket bulundu');
+
+  await kullanici.click(screen.getByRole('button', { name: 'Tümü' }));
+  expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(4);
 });
 
 test('eslesme yoksa acik bir bos durum gosterilir', async () => {
