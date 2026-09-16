@@ -1,4 +1,4 @@
-import type { Egzersiz } from '../api/queries';
+import type { Egzersiz, EgzersizKategorisi } from '../api/queries';
 
 /** Egzersiz secim listeleri Turkce alfabetik siradadir (Bugun paneli, sablon duzenleyici). */
 export function adaGoreSirala(egzersizler: readonly Egzersiz[]): Egzersiz[] {
@@ -40,12 +40,18 @@ export function aramaIcinSadelestir(metin: string): string {
  * Arama ISTEMCIDE yapilir: havuz birkac duzine satir (15 global + kullanicinin kendi hareketleri,
  * #49 ile ~65), tamami zaten TEK bir istekle cekiliyor. Sunucuya gitmek her tus vurusunda bir
  * istek demekti ve liste yuzlerce satira cikmadan bunun karsiligi yok (PLAN.md, "Gercek
- * Kullanimdan Gelen Istekler").
+ * Kullanimdan Gelen Istekler"). Kategori (#77) verilirse ayni gerekceyle istemcide, aramayla
+ * birlikte (VE) uygulanir; `null` tum kategorilerdir.
  */
-export function egzersizAra(egzersizler: readonly Egzersiz[], sorgu: string): Egzersiz[] {
+export function egzersizAra(
+  egzersizler: readonly Egzersiz[],
+  sorgu: string,
+  kategori: EgzersizKategorisi | null = null,
+): Egzersiz[] {
   const aranan = aramaIcinSadelestir(sorgu.trim());
-  if (aranan === '') {
-    return [...egzersizler];
-  }
-  return egzersizler.filter((eg) => aramaIcinSadelestir(eg.name).includes(aranan));
+  return egzersizler.filter(
+    (eg) =>
+      (kategori === null || eg.category === kategori) &&
+      (aranan === '' || aramaIcinSadelestir(eg.name).includes(aranan)),
+  );
 }

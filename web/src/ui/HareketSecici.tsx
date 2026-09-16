@@ -1,7 +1,16 @@
 import { useRef, useState } from 'react';
 import { Check, Search } from 'lucide-react';
-import type { Egzersiz } from '../api/queries';
+import type { Egzersiz, EgzersizKategorisi } from '../api/queries';
 import { egzersizAra } from '../lib/egzersizler';
+
+/** Kategori hapları (#77): `null` = Tümü. Push/Pull/Legs uygulamanın kendi terimleri, çevrilmez. */
+const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
+  { deger: null, etiket: 'Tümü' },
+  { deger: 'Push', etiket: 'Push' },
+  { deger: 'Pull', etiket: 'Pull' },
+  { deger: 'Legs', etiket: 'Legs' },
+  { deger: 'Other', etiket: 'Diğer' },
+];
 
 interface Props {
   id: string;
@@ -57,11 +66,12 @@ export default function HareketSecici({
 }: Props) {
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
+  const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
   const [etkin, setEtkin] = useState(0);
   const alanRef = useRef<HTMLInputElement>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
 
-  const sonuclar = acik ? egzersizAra(egzersizler, sorgu) : [];
+  const sonuclar = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
   const listeId = `${id}-liste`;
   const secenekId = (exerciseId: number) => `${id}-secenek-${exerciseId}`;
 
@@ -79,6 +89,7 @@ export default function HareketSecici({
   function kapat() {
     setAcik(false);
     setSorgu('');
+    setKategori(null);
   }
 
   function sec(egzersiz: Egzersiz) {
@@ -148,44 +159,70 @@ export default function HareketSecici({
         {acik ? `${sonuclar.length} hareket bulundu` : ''}
       </p>
 
-      <ul
-        id={listeId}
-        role="listbox"
-        aria-label="Hareketler"
+      <div
         hidden={!acik}
-        className={`absolute inset-x-0 z-30 max-h-64 overflow-y-auto rounded-lg bg-surface-3 py-1 ${
+        className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${
           listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'
         }`}
       >
-        {sonuclar.map((egzersiz, sira) => {
-          const secili = egzersiz.id === secilenId;
-          const kapali = devreDisi.has(egzersiz.id);
-          return (
-            <li
-              key={egzersiz.id}
-              id={secenekId(egzersiz.id)}
-              role="option"
-              aria-selected={secili}
-              aria-disabled={kapali}
-              // Dokunus/tiklama alani odagi metin alanindan ALMAMALI: blur once calisirsa
-              // liste kapanir ve tiklama hicbir zaman secenege ulasmaz.
+        {/* Kategori haplari (#77). Odak metin alaninda kalir (secenekler gibi pointerdown bastirilir):
+            blur listeyi kapatirdi. Klavye kullanicisi zaten yazarak arar; haplar Tab sirasina girmez. */}
+        <div className="flex flex-wrap gap-1 border-b border-surface-4 p-1">
+          {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
+            <button
+              key={etiket}
+              type="button"
+              tabIndex={-1}
+              aria-pressed={kategori === deger}
               onPointerDown={(e) => e.preventDefault()}
-              onClick={() => sec(egzersiz)}
-              className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 text-body ${
-                sira === etkin ? 'bg-surface-4' : ''
-              } ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}
+              onClick={() => {
+                setKategori(deger);
+                setEtkin(0);
+              }}
+              className={`min-h-11 rounded-full px-3 text-label ${
+                kategori === deger ? 'bg-surface-4 text-fg' : 'text-muted'
+              }`}
             >
-              {egzersiz.name}
-              {secili && <Check aria-hidden size={18} className="shrink-0 text-accent" />}
+              {etiket}
+            </button>
+          ))}
+        </div>
+        <ul
+          id={listeId}
+          role="listbox"
+          aria-label="Hareketler"
+          className="max-h-64 overflow-y-auto py-1"
+        >
+          {sonuclar.map((egzersiz, sira) => {
+            const secili = egzersiz.id === secilenId;
+            const kapali = devreDisi.has(egzersiz.id);
+            return (
+              <li
+                key={egzersiz.id}
+                id={secenekId(egzersiz.id)}
+                role="option"
+                aria-selected={secili}
+                aria-disabled={kapali}
+                // Dokunus/tiklama alani odagi metin alanindan ALMAMALI: blur once calisirsa
+                // liste kapanir ve tiklama hicbir zaman secenege ulasmaz.
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => sec(egzersiz)}
+                className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 text-body ${
+                  sira === etkin ? 'bg-surface-4' : ''
+                } ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}
+              >
+                {egzersiz.name}
+                {secili && <Check aria-hidden size={18} className="shrink-0 text-accent" />}
+              </li>
+            );
+          })}
+          {acik && sonuclar.length === 0 && (
+            <li role="presentation" className="px-4 py-3 text-body text-muted">
+              Eşleşen hareket yok.
             </li>
-          );
-        })}
-        {acik && sonuclar.length === 0 && (
-          <li role="presentation" className="px-4 py-3 text-body text-muted">
-            Eşleşen hareket yok.
-          </li>
-        )}
-      </ul>
+          )}
+        </ul>
+      </div>
     </div>
   );
 }
