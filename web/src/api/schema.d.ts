@@ -61,6 +61,17 @@ export interface paths {
                         "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -117,6 +128,17 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2978,6 +3000,8 @@ export interface components {
             totalVolume?: number;
             /** Format: int32 */
             setCount?: number;
+            /** Format: int32 */
+            medianRestSeconds?: number | null;
             sets?: components["schemas"]["SetEntryResponse"][] | null;
         };
         HistorySessionResponsePagedResponse: {
@@ -3077,6 +3101,8 @@ export interface components {
             rir?: number | null;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: int32 */
+            restSeconds?: number | null;
         };
         StartSessionRequest: {
             /** Format: int64 */

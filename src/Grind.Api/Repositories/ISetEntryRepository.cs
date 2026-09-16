@@ -77,13 +77,12 @@ public interface ISetEntryRepository : IRepository<SetEntry>
     /// <summary>
     /// Verilen oturumların setleri TEK sorguda, <c>Exercise</c> ile birlikte, kronolojik
     /// (CreatedAt, eşitlikte Id). Geçmiş sayfası bunu kullanır: oturum başına ayrı sorgu N+1 olurdu.
-    /// <paramref name="exerciseId"/> verilirse yalnızca o egzersizin setleri döner.
+    /// Egzersiz filtresi BİLEREK yok: dinlenme (#71) oturumun tüm setlerinden hesaplanır, filtre eşlemede uygulanır.
     /// Sahiplik yüklemi burada da taşınır — oturumlar zaten doğrulanmış olsa bile (CLAUDE.md).
     /// </summary>
     Task<IReadOnlyList<SetEntry>> GetForSessionsAsync(
         IReadOnlyCollection<long> sessionIds,
         long userId,
-        long? exerciseId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

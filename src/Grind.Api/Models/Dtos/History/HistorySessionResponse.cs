@@ -16,6 +16,10 @@ namespace Grind.Api.Models.Dtos.History;
 /// uçlarında hiç görünmez (spec Karar 3). Bu bir tutarsızlık değil: geçmiş bir oturum
 /// GÜNLÜĞÜdür (oturumun kendisi olay), istatistikler bir ANTRENMAN günlüğüdür (yalnızca
 /// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
+///
+/// <see cref="MedianRestSeconds"/> (#71): <see cref="Sets"/>'teki dinlenmelerin medyanı — filtreliyken de
+/// listeyle tutarlı. Setlerin dinlenmesi ise filtreden BAĞIMSIZDIR (oturumun tüm setlerinden hesaplanır).
+/// Hiç dinlenme yoksa <c>null</c>.
 /// </summary>
 public record HistorySessionResponse(
     long SessionId,
@@ -25,4 +29,5 @@ public record HistorySessionResponse(
     string? Notes,
     decimal TotalVolume,
     int SetCount,
+    int? MedianRestSeconds,
     IReadOnlyList<SetEntryResponse> Sets);
