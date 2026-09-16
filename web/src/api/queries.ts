@@ -103,6 +103,8 @@ export interface SetKaydi {
   recordType: components['schemas']['RecordType'];
   rir: number | null;
   createdAt: string;
+  // #71: oturumdaki bir onceki setten bu yana gecen GERCEK sure (sn), sunucudan; ilk sette null.
+  restSeconds: number | null;
 }
 
 export interface Egzersiz {
@@ -173,6 +175,7 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     recordType: yanit.recordType,
     rir: yanit.rir ?? null,
     createdAt: yanit.createdAt,
+    restSeconds: yanit.restSeconds ?? null,
   };
 }
 
@@ -189,6 +192,8 @@ export interface GecmisOturum {
   templateName: string | null;
   totalVolume: number;
   setCount: number;
+  // #71: gosterilen setlerin dinlenme medyani (sn), sunucudan; hic dinlenme yoksa null.
+  medianRestSeconds: number | null;
   sets: SetKaydi[];
 }
 
@@ -220,6 +225,7 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
     templateName: yanit.templateName ?? null,
     totalVolume: yanit.totalVolume,
     setCount: yanit.setCount,
+    medianRestSeconds: yanit.medianRestSeconds ?? null,
     sets: (yanit.sets ?? []).map(dogrulanmisSet),
   };
 }

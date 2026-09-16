@@ -1081,6 +1081,28 @@ Devreden notlar (bilerek yapılmadı):
 - En uzun hedef serisi hesaplanmıyor; yalnızca mevcut hedef serisi gösteriliyor.
 - Export ve AI yorumu hedef bilgisini içermiyor.
 
+### İstek #71 — Setler arası gerçek dinlenme (2026-09-16)
+
+Geri sayım sayacı hedef süreyi gösteriyordu; kullanıcı GERÇEKTE ne kadar dinlendiğini de görmek istedi. İş akışı: issue →
+gerekli testler → kullanıcıya sunuldu → onaydan sonra kod.
+- **Kural:** dinlenme = setin `CreatedAt`'i − oturumdaki BİR ÖNCEKİ setin `CreatedAt`'i (aynı hareketin önceki seti değil:
+  superset'te gerçek boşluk budur). İlk set `null`. Eşik yok (topluca girilen setler de olduğu gibi); özet ortalama değil
+  medyan — telefon/sohbet gibi uzun aralar özeti bozmaz. `RestIntervalCalculator` (saf), sorgu anında hesaplanır,
+  saklanmaz, migration yok.
+- **Backend:** `SetEntryResponse.RestSeconds` (set listesi, ekleme, düzeltme, geçmiş, export JSON);
+  `HistorySessionResponse.MedianRestSeconds` (gösterilen setlerin medyanı). Geçmiş ucunun hareket filtresi sorgudan
+  `HistoryMapping`'e taşındı (`GetForSessionsAsync`'in `exerciseId` parametresi kaldırıldı): filtrelenmiş setlerden
+  hesaplamak Bench → Curl → Bench'te 90 yerine 150 verirdi.
+- **Arayüz:** set satırlarında (Bugün ve Geçmiş) `DinlenmeHapi` — saat ikonu + `m:ss`, ilk sette hiçbir şey; Geçmiş kartı
+  özetinde "set / kg" yanında medyan "dinlenme".
+- **Testler:** `RestIntervalCalculatorTests` 4, `SetEntryServiceTests` +1, `WorkoutHistoryServiceTests` +2,
+  `SetEntryRepositoryTests` −1 (filtre testi taşındı); web `DinlenmeHapi` 2, `GecmisKarti` +1. Backend tamamı 733/733, web
+  213/213, `tsc -b` ve lint temiz. Görsel (Playwright) doğrulama yapılmadı.
+
+Devreden notlar (bilerek yapılmadı):
+- AI koçluk önerisi ve export METNİNDE dinlenme yok (yalnızca export JSON'unda set bazında var).
+- Bugün ekranında oturum medyanı yok (açık oturum yanıtı setleri taşımıyor); medyan Geçmiş kartında.
+
 ---
 
 ## Çalışma Kuralı
