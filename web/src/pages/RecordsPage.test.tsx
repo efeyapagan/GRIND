@@ -24,6 +24,39 @@ function rekorlarSayfasiniOlustur() {
   );
 }
 
+/** #117: sayfa en uzun seriyi takvim ucundan alir; seri aralıktan bagimsiz, tum gecmisten. */
+function takvimSunucusu(longestWeekStreak: number) {
+  server.use(
+    http.get('/api/stats/calendar', ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json({
+        from: url.searchParams.get('From'),
+        to: url.searchParams.get('To'),
+        days: [],
+        trainedDayCount: 0,
+        currentWeekStreak: 0,
+        longestWeekStreak,
+        thisWeekTrainedDays: 0,
+        weeklyTargetDays: null,
+        currentTargetStreak: null,
+      });
+    }),
+  );
+}
+
+beforeEach(() => takvimSunucusu(0));
+
+test('en uzun seri API degeriyle gosterilir, rekor olmasa da (#117)', async () => {
+  takvimSunucusu(12);
+  server.use(http.get('/api/records', () => HttpResponse.json([])));
+
+  rekorlarSayfasiniOlustur();
+
+  const seri = (await screen.findByText('En uzun seri')).parentElement as HTMLElement;
+  expect(await within(seri).findByText('12 hafta')).toBeInTheDocument();
+  expect(await screen.findByText('Henüz rekor yok')).toBeInTheDocument();
+});
+
 test('rekorlar listesi egzersiz basina en agir seti ve en cok tekrari AYRI AYRI gosterir', async () => {
   const rekorlar: ExerciseRecordResponse[] = [
     {

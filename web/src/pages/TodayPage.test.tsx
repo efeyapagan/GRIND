@@ -356,7 +356,7 @@ test('acik oturum yokken (404) Takvim en ustte, "antrenman yok" metni yok; set f
 
   bugunSayfasiniOlustur();
 
-  expect(await screen.findByRole('heading', { name: 'Takvim' })).toBeInTheDocument();
+  expect(await screen.findByRole('region', { name: 'Takvim' })).toBeInTheDocument();
   expect(screen.queryByText('Bugün henüz antrenman yok')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Egzersiz')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Ağırlık (kg)')).not.toBeInTheDocument();
@@ -372,7 +372,7 @@ test('antrenman yokken Takvim, Şablonla başla bolumunun ustunde durur (#81)', 
 
   bugunSayfasiniOlustur();
 
-  const takvim = await screen.findByRole('heading', { name: 'Takvim' });
+  const takvim = await screen.findByRole('region', { name: 'Takvim' });
   const sablonlaBasla = screen.getByRole('heading', { name: 'Şablonla başla' });
   expect(takvim.compareDocumentPosition(sablonlaBasla) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
