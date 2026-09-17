@@ -1,8 +1,12 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Dtos.Session;
 
 /// <summary>
 /// <paramref name="IsOpen"/> türetilmiştir (<c>EndedAt is null</c>) — istemcinin null
 /// kontrolü yazmasına gerek kalmasın.
+/// <paramref name="Difficulty"/> null ise kullanıcı bitirirken zorluk seçmedi/atladı; oturum hâlâ
+/// açıksa da null'dır (yalnızca <c>finish</c> gövdesinde belirlenir, sonradan değiştirilemez).
 /// <paramref name="Progress"/> BOŞ LİSTE iki farklı durumda gelir ve bunlar istemci için
 /// AYNI ŞEY DEĞİLDİR: (1) antrenmanın hareket listesi boş (şablonsuz ve setsiz); (2)
 /// bu yanıt <c>GET /api/sessions</c> (liste) ucundan geliyor — N+1'den kaçınmak için liste
@@ -19,4 +23,5 @@ public record SessionResponse(
     long? TemplateId,
     string? TemplateName,
     string? Notes,
+    SessionDifficulty? Difficulty,
     IReadOnlyList<SessionProgressResponse> Progress);

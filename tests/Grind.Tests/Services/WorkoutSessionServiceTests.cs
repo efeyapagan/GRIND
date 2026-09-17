@@ -119,7 +119,7 @@ public class WorkoutSessionServiceTests
         {
             var ilk = await service.StartAsync(new StartSessionRequest());
             saat.UtcNow = saat.UtcNow.AddHours(1);
-            await service.FinishAsync(ilk.Session.Id);
+            await service.FinishAsync(ilk.Session.Id, new FinishSessionRequest());
             saat.UtcNow = saat.UtcNow.AddHours(1);
 
             var ikinci = await service.StartAsync(new StartSessionRequest());
@@ -289,7 +289,7 @@ public class WorkoutSessionServiceTests
             var sonuc = await service.StartAsync(new StartSessionRequest());
             saat.UtcNow = saat.UtcNow.AddHours(1);
 
-            var bitmis = await service.FinishAsync(sonuc.Session.Id);
+            var bitmis = await service.FinishAsync(sonuc.Session.Id, new FinishSessionRequest());
 
             Assert.False(bitmis.IsOpen);
             Assert.Equal(saat.UtcNow, bitmis.EndedAt);
@@ -304,9 +304,9 @@ public class WorkoutSessionServiceTests
         {
             var sonuc = await service.StartAsync(new StartSessionRequest());
             saat.UtcNow = saat.UtcNow.AddHours(1);
-            await service.FinishAsync(sonuc.Session.Id);
+            await service.FinishAsync(sonuc.Session.Id, new FinishSessionRequest());
 
-            await Assert.ThrowsAsync<ConflictException>(() => service.FinishAsync(sonuc.Session.Id));
+            await Assert.ThrowsAsync<ConflictException>(() => service.FinishAsync(sonuc.Session.Id, new FinishSessionRequest()));
         }
     }
 
@@ -356,7 +356,7 @@ public class WorkoutSessionServiceTests
             context.Add(digerOturum);
             await context.SaveChangesAsync();
 
-            await Assert.ThrowsAsync<NotFoundException>(() => service.FinishAsync(digerOturum.Id));
+            await Assert.ThrowsAsync<NotFoundException>(() => service.FinishAsync(digerOturum.Id, new FinishSessionRequest()));
             await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteAsync(digerOturum.Id));
         }
     }
@@ -789,7 +789,7 @@ public class WorkoutSessionServiceTests
             await context.SaveChangesAsync();
             var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
             saat.UtcNow = saat.UtcNow.AddHours(1);
-            await service.FinishAsync(id);
+            await service.FinishAsync(id, new FinishSessionRequest());
 
             await Assert.ThrowsAsync<ConflictException>(
                 () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = 2 }));

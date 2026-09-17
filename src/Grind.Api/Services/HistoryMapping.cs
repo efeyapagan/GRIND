@@ -46,6 +46,7 @@ internal static class HistoryMapping
             session.EndedAt,
             session.Template?.Name,
             session.Notes,
+            session.Difficulty,
             // Toplamlar GÖSTERİLEN setlerden hesaplanıyor: geçmiş ucunda egzersiz filtresi varsa toplam da
             // filtreli olur ve listeyle tutarlı kalır (Faz 9 spec Karar 8).
             shown.Sum(s => s.Weight * s.Reps),

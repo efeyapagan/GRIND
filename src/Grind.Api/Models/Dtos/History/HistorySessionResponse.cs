@@ -1,4 +1,5 @@
 using Grind.Api.Models.Dtos.Set;
+using Grind.Api.Models.Enums;
 
 namespace Grind.Api.Models.Dtos.History;
 
@@ -20,6 +21,10 @@ namespace Grind.Api.Models.Dtos.History;
 /// <see cref="MedianRestSeconds"/> (#71): <see cref="Sets"/>'teki dinlenmelerin medyanı — filtreliyken de
 /// listeyle tutarlı. Setlerin dinlenmesi ise filtreden BAĞIMSIZDIR (oturumun tüm setlerinden hesaplanır).
 /// Hiç dinlenme yoksa <c>null</c>.
+///
+/// <see cref="Difficulty"/> (#118): bitirirken seçilen zorluk; null ise seçilmedi/atlandı ya da
+/// oturum hâlâ açık. Export ucu (Faz 11) bu DTO'yu aynen kullandığı için ikinci bir alan
+/// eklemeye gerek kalmadı (DRY).
 /// </summary>
 public record HistorySessionResponse(
     long SessionId,
@@ -27,6 +32,7 @@ public record HistorySessionResponse(
     DateTime? EndedAt,
     string? TemplateName,
     string? Notes,
+    SessionDifficulty? Difficulty,
     decimal TotalVolume,
     int SetCount,
     int? MedianRestSeconds,

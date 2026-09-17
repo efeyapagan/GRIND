@@ -1,3 +1,5 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Entities;
 
 public class WorkoutSession
@@ -14,6 +16,13 @@ public class WorkoutSession
     public DateTime? EndedAt { get; set; }
 
     public string? Notes { get; set; }
+
+    /// <summary>
+    /// null ise kullanıcı zorluk seçmedi/atladı. Yalnızca <c>POST /api/sessions/{id}/finish</c>
+    /// gövdesinde belirlenir; bitmiş bir oturumun zorluğu sonradan DEĞİŞTİRİLEMEZ (ayrı bir
+    /// güncelleme ucu yok — <see cref="Notes"/>'un aksine).
+    /// </summary>
+    public SessionDifficulty? Difficulty { get; set; }
 
     public User User { get; set; } = null!;
     public WorkoutTemplate? Template { get; set; }

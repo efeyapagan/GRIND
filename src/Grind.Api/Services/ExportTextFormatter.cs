@@ -146,6 +146,11 @@ public static class ExportTextFormatter
             Line(text, $"Not: {SingleLine(session.Notes)}");
         }
 
+        if (session.Difficulty is { } difficulty)
+        {
+            Line(text, $"Zorluk: {DifficultyText(difficulty)}");
+        }
+
         if (session.Sets.Count == 0)
         {
             Line(text, "(Bu oturumda set girilmedi.)");
@@ -180,6 +185,15 @@ public static class ExportTextFormatter
             Line(text, Inv($"- {DayText(local)} {TimeText(local)} — {log.Weight:0.##} kg"));
         }
     }
+
+    /// <summary>Sabit TR etiketi — enum adı (ör. "Hard") LLM'e İngilizce sızmasın.</summary>
+    private static string DifficultyText(SessionDifficulty difficulty) => difficulty switch
+    {
+        SessionDifficulty.Easy => "Kolay",
+        SessionDifficulty.Medium => "Orta",
+        SessionDifficulty.Hard => "Zor",
+        _ => difficulty.ToString()
+    };
 
     private static string SetWithMarks(SetEntryResponse set)
     {

@@ -22,6 +22,7 @@ import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
 import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
+import ZorlukSecici from '../components/ZorlukSecici';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import Takvim from '../components/Takvim';
@@ -82,6 +83,8 @@ export default function TodayPage() {
   const hareketEkleMutasyonu = useAddSessionExercise();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
+  // #118: "Antrenmani bitir"e dokunulduysa zorluk sorusu gosterilir; oturum henuz KAPANMAMISTIR.
+  const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
 
   // Issue #57: set silme. Bekleyen set listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal
   // et" karari sunucu verisinden gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz.
@@ -226,11 +229,17 @@ export default function TodayPage() {
                 <X aria-hidden size={18} />
                 Antrenmanı iptal et
               </button>
+            ) : zorlukSoruluyor ? (
+              // #118: bitirme iki adim -- once "nasil gecti", sonra kapanis. Zorluk YALNIZCA burada
+              // alinir (sunucuda sonradan degistiren bir uc yok), bu yuzden soru bitirmenin onunde durur.
+              <ZorlukSecici
+                bekliyor={bitirMutasyonu.isPending}
+                onSec={(zorluk) => bitirMutasyonu.mutate({ sessionId: gorunenOturum.id, zorluk })}
+              />
             ) : (
               <button
                 type="button"
-                onClick={() => bitirMutasyonu.mutate(gorunenOturum.id)}
-                disabled={bitirMutasyonu.isPending}
+                onClick={() => setZorlukSoruluyor(true)}
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
               >
                 <CircleCheck aria-hidden size={18} />
