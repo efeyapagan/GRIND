@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
         path: 'profile',
         element: <ProfileLayout />,
         children: [
-          { index: true, element: <Navigate to="account" replace /> },
+          { index: true, element: <Navigate to="records" replace /> },
           { path: 'account', element: <ProfilePage /> },
           { path: 'measurements', element: <MeasurementsPage /> },
           { path: 'history', element: <HistoryPage /> },

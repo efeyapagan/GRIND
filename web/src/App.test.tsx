@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,11 +25,7 @@ function testeOzelSorguIstemcisi(): QueryClient {
 
 /**
  * Gercek uygulamadaki route agacini taklit eder (bkz. `auth/ProtectedRoute.test.tsx`'teki ayni
- * desen) -- App artik `useAuth()` kullaniyor (cikis dugmesi icin), bu yuzden gercek bir
- * `AuthProvider` icinde ve gercek yonlendirme ile test edilmesi gerekiyor; mock bir auth
- * context bunu dogrulayamazdi.
- *
- * Issue #119/#120: alt menu Ana Sayfa · (+) · Profil oldu -- rotalar buna gore.
+ * desen). Issue #119/#120: alt menu Ana Sayfa · (+) · Profil oldu -- rotalar buna gore.
  */
 function testRouterOlustur() {
   return createMemoryRouter(
@@ -111,67 +107,6 @@ test('aktif sayfanin baglantisi aria-current=page tasir', async () => {
   expect(screen.getByRole('link', { name: 'Profil' })).not.toHaveAttribute('aria-current');
 });
 
-test('cikis yap tiklaninca oturum kapanir ve giris ekrani gosterilir', async () => {
-  const kullanici = userEvent.setup();
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-
-  // hidden:true sarttir: jsdom [popover]:not(:popover-open) icin display:none uyguluyor
-  // (gercek tarayicidaki Popover API davranisi jsdom'da yok) -- userEvent.click bunu
-  // sorunsuz tetikler (jsdom gercek hit-testing yapmaz), sadece erisilebilirlik sorgusu
-  // varsayilanda gizli elemanlari eliyor.
-  await kullanici.click(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
-
-  expect(await screen.findByRole('heading', { name: 'Giriş Yap' })).toBeInTheDocument();
-});
-
-test('cikis yap sekme cubugunda degil, hesap menusunun icinde', async () => {
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-
-  const gezinme = screen.getByRole('navigation', { name: 'Ana gezinme' });
-  expect(within(gezinme).queryByRole('button', { name: 'Çıkış yap' })).not.toBeInTheDocument();
-
-  // Tetikleyici menuyu popovertarget ile acar; "Cikis yap" o menunun ICINDE (spec Karar 8).
-  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
-  expect(tetikleyici).toHaveAttribute('popovertarget', 'hesap-menusu');
-  const menu = document.getElementById('hesap-menusu');
-  expect(menu).toHaveAttribute('popover', 'auto');
-  // hidden:true: yukaridaki jsdom popover notuna bakin.
-  expect(menu).toContainElement(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
-});
-
-/** Issue #119/#120: hesap menusu artik SADECE Cikis yap tasir -- kullanici adi/Sablonlar Profil'e tasindi. */
-test('hesap menusu tek ogeye indirgendi: sadece Cikis yap', async () => {
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-
-  const menu = document.getElementById('hesap-menusu')!;
-  expect(within(menu).getAllByRole('button', { hidden: true })).toHaveLength(1);
-  expect(within(menu).getByRole('button', { name: 'Çıkış yap', hidden: true })).toBeInTheDocument();
-});
-
 test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince gunceller (issue #65)', async () => {
   const kullanici = userEvent.setup();
   render(
@@ -190,7 +125,8 @@ test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince g
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hesap');
 });
 
-test('GRIND yazisi hesap menusu dugmesiyle ayni tarafta (sag ustte) durur', async () => {
+/** Issue #119/#120: hesap menusu kaldirildi -- ust kabukta artik sadece "GRIND" yazisi var. */
+test('sag ustte sadece GRIND yazisi var, hesap dugmesi yok', async () => {
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
@@ -201,10 +137,8 @@ test('GRIND yazisi hesap menusu dugmesiyle ayni tarafta (sag ustte) durur', asyn
 
   await screen.findByText('Ic sayfa icerigi');
 
-  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
-  // Issue #65 Karar 2: "GRIND" yazisi artik solda baslik degil, hesap ikonunun YANINDA durur --
-  // ikisi ayni kapsayicinin (ust bilgi satirinin sag yarisi) icinde olmali.
-  expect(tetikleyici.parentElement).toHaveTextContent('GRIND');
+  expect(screen.getByText('GRIND')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Hesap menüsü' })).not.toBeInTheDocument();
   // Sol tarafta artik "GRIND" DEGIL, sayfa basligi var.
   expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('GRIND');
 });
