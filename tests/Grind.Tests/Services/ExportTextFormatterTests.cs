@@ -73,7 +73,7 @@ public class ExportTextFormatterTests
             ],
             BodyWeights:
             [
-                new BodyWeightLogResponse(7, 82.40m, null, null, new DateTime(2026, 3, 1, 5, 10, 0, DateTimeKind.Utc))
+                new BodyWeightLogResponse(7, 82.40m, null, null, null, null, new DateTime(2026, 3, 1, 5, 10, 0, DateTimeKind.Utc))
             ],
             AllTimeRecords:
             [

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Scale, Trash2 } from 'lucide-react';
+import { Plus, Scale, Trash2 } from 'lucide-react';
 import { useAddMeasurement, useDeleteMeasurement, useMeasurements, type Olcu } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { formatTrDate, formatTrTime } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
+import Modal from '../ui/Modal';
 import SayiAlani from '../ui/SayiAlani';
 import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -14,14 +15,15 @@ import HataKutusu from '../ui/HataKutusu';
 const SAYFA_DUGMESI =
   'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
 
-const BILINEN_ALANLAR = ['weight', 'bodyFatPercent', 'waistCm'] as const;
+const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
 
 /**
- * Vücut ölçüleri sekmesi (issue #119): kilo, yağ oranı ve bel çevresi -- ÜÇÜ DE opsiyonel, sunucu
- * en az birinin dolu olmasını ister (aynı kural burada da uygulanır, ama belirleyici olan sunucunun
- * cevabıdır). Bir kayıtta yalnızca bazı ölçüler girilebilir; liste her satırda SADECE dolu olan
- * ölçüleri gösterir (bkz. `OlcuMetni`, backend'in `ExportTextFormatter`ındaki aynı mantığın
- * istemci tarafı karşılığı).
+ * Vücut ölçüleri sekmesi (issue #119, kullanıcı kararıyla revize): "Yeni ölçüm ekle" bir
+ * PENCERE (dialog) açar -- boy ve kilo ZORUNLU, yağ oranı/bel/kalça çevresi opsiyonel. Aynı gün
+ * aynı boy+kiloyla ikinci bir kayıt sunucudan 409 alır ("zaten kayıtlı"); bu, sunucunun `detail`
+ * metniyle `apiHatasiniAyir`in genel hata yoluyla otomatik gösterilir (409'un alan hatası yoktur).
+ * Liste her satırda SADECE dolu olan ölçüleri gösterir (bkz. `olcuMetni`, backend'in
+ * `ExportTextFormatter`ındaki aynı mantığın istemci tarafı karşılığı).
  */
 export default function MeasurementsPage() {
   usePageTitle('Ölçüler');
@@ -30,12 +32,30 @@ export default function MeasurementsPage() {
   const ekleMutasyonu = useAddMeasurement();
   const silMutasyonu = useDeleteMeasurement();
 
+  const [modalAcik, setModalAcik] = useState(false);
   const [kilo, setKilo] = useState('');
+  const [boy, setBoy] = useState('');
   const [yagOrani, setYagOrani] = useState('');
   const [belCevresi, setBelCevresi] = useState('');
+  const [kalcaCevresi, setKalcaCevresi] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
   const [silinecekId, setSilinecekId] = useState<number | null>(null);
+
+  function formuSifirla() {
+    setKilo('');
+    setBoy('');
+    setYagOrani('');
+    setBelCevresi('');
+    setKalcaCevresi('');
+    setGenelHata(null);
+    setAlanHatalari({});
+  }
+
+  function penceresiniAc() {
+    formuSifirla();
+    setModalAcik(true);
+  }
 
   function sayiyaCevir(deger: string): number | undefined {
     return deger.trim() === '' ? undefined : Number(deger.replace(',', '.'));
@@ -48,20 +68,26 @@ export default function MeasurementsPage() {
 
     const govde = {
       weight: sayiyaCevir(kilo),
+      heightCm: sayiyaCevir(boy),
       bodyFatPercent: sayiyaCevir(yagOrani),
       waistCm: sayiyaCevir(belCevresi),
+      hipCm: sayiyaCevir(kalcaCevresi),
     };
 
-    if (govde.weight === undefined && govde.bodyFatPercent === undefined && govde.waistCm === undefined) {
-      setGenelHata('En az bir ölçü girmelisin.');
+    // Boy ve kilo ZORUNLU (kullanıcı kararı) -- sunucu da aynı kuralı uygular, burası sadece
+    // hızlı geri bildirim (RegisterPage'deki istemci-tarafı doğrulama deseninin aynısı).
+    const hatalar: Record<string, string> = {};
+    if (govde.weight === undefined) hatalar.weight = 'Kilo gerekli.';
+    if (govde.heightCm === undefined) hatalar.heightCm = 'Boy gerekli.';
+    if (Object.keys(hatalar).length > 0) {
+      setAlanHatalari(hatalar);
       return;
     }
 
     ekleMutasyonu.mutate(govde, {
       onSuccess: () => {
-        setKilo('');
-        setYagOrani('');
-        setBelCevresi('');
+        formuSifirla();
+        setModalAcik(false);
       },
       onError: (hata) => {
         const ayrilmis = apiHatasiniAyir(hata, BILINEN_ALANLAR);
@@ -73,48 +99,77 @@ export default function MeasurementsPage() {
 
   return (
     <div className="flex flex-col gap-5 pb-4">
-      <form onSubmit={gonder} className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
-        <h2 className="text-heading">Yeni ölçü</h2>
-        <div className="grid grid-cols-3 gap-2">
-          <SayiAlani
-            id="olcu-kilo"
-            etiket="Kilo"
-            ekranOkuyucuEki=" (kg)"
-            birim="kg"
-            inputMode="decimal"
-            placeholder="—"
-            value={kilo}
-            onChange={setKilo}
-            hata={alanHatalari.weight}
-          />
-          <SayiAlani
-            id="olcu-yag-orani"
-            etiket="Yağ"
-            ekranOkuyucuEki=" (%)"
-            birim="%"
-            inputMode="decimal"
-            placeholder="—"
-            value={yagOrani}
-            onChange={setYagOrani}
-            hata={alanHatalari.bodyFatPercent}
-          />
-          <SayiAlani
-            id="olcu-bel-cevresi"
-            etiket="Bel"
-            ekranOkuyucuEki=" (cm)"
-            birim="cm"
-            inputMode="decimal"
-            placeholder="—"
-            value={belCevresi}
-            onChange={setBelCevresi}
-            hata={alanHatalari.waistCm}
-          />
-        </div>
-        {genelHata && <HataKutusu baslik="Ölçü kaydedilemedi" mesaj={genelHata} />}
-        <BirincilDugme type="submit" yukseklik="normal" disabled={ekleMutasyonu.isPending}>
-          Kaydet
-        </BirincilDugme>
-      </form>
+      <BirincilDugme onClick={penceresiniAc} yukseklik="normal">
+        <Plus aria-hidden size={20} />
+        Yeni ölçüm ekle
+      </BirincilDugme>
+
+      <Modal acik={modalAcik} onKapat={() => setModalAcik(false)} baslik="Yeni ölçüm">
+        <form onSubmit={gonder} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            <SayiAlani
+              id="olcu-boy"
+              etiket="Boy"
+              ekranOkuyucuEki=" (cm)"
+              birim="cm"
+              inputMode="decimal"
+              placeholder="—"
+              value={boy}
+              onChange={setBoy}
+              hata={alanHatalari.heightCm}
+            />
+            <SayiAlani
+              id="olcu-kilo"
+              etiket="Kilo"
+              ekranOkuyucuEki=" (kg)"
+              birim="kg"
+              inputMode="decimal"
+              placeholder="—"
+              value={kilo}
+              onChange={setKilo}
+              hata={alanHatalari.weight}
+            />
+            <SayiAlani
+              id="olcu-yag-orani"
+              etiket="Yağ oranı"
+              ekranOkuyucuEki=" (%)"
+              birim="%"
+              inputMode="decimal"
+              placeholder="—"
+              value={yagOrani}
+              onChange={setYagOrani}
+              hata={alanHatalari.bodyFatPercent}
+            />
+            <SayiAlani
+              id="olcu-bel-cevresi"
+              etiket="Bel çevresi"
+              ekranOkuyucuEki=" (cm)"
+              birim="cm"
+              inputMode="decimal"
+              placeholder="—"
+              value={belCevresi}
+              onChange={setBelCevresi}
+              hata={alanHatalari.waistCm}
+            />
+            <SayiAlani
+              id="olcu-kalca-cevresi"
+              etiket="Kalça çevresi"
+              ekranOkuyucuEki=" (cm)"
+              birim="cm"
+              inputMode="decimal"
+              placeholder="—"
+              value={kalcaCevresi}
+              onChange={setKalcaCevresi}
+              hata={alanHatalari.hipCm}
+            />
+          </div>
+          <p className="text-label text-muted">Boy ve kilo zorunlu; diğerleri opsiyonel.</p>
+          {genelHata && <HataKutusu baslik="Ölçü kaydedilemedi" mesaj={genelHata} />}
+          <BirincilDugme type="submit" yukseklik="normal" disabled={ekleMutasyonu.isPending}>
+            Kaydet
+          </BirincilDugme>
+        </form>
+      </Modal>
 
       {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
 
@@ -178,8 +233,10 @@ export default function MeasurementsPage() {
 function olcuMetni(olcu: Olcu): string {
   const parcalar: string[] = [];
   if (olcu.weight !== null) parcalar.push(`${olcu.weight} kg`);
+  if (olcu.heightCm !== null) parcalar.push(`${olcu.heightCm} cm boy`);
   if (olcu.bodyFatPercent !== null) parcalar.push(`%${olcu.bodyFatPercent} yağ`);
   if (olcu.waistCm !== null) parcalar.push(`${olcu.waistCm} cm bel`);
+  if (olcu.hipCm !== null) parcalar.push(`${olcu.hipCm} cm kalça`);
   return parcalar.join(', ');
 }
 

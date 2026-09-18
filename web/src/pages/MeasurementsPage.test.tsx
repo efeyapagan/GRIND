@@ -24,12 +24,19 @@ function ekraniOlustur() {
   );
 }
 
+/** "Yeni ölçüm ekle" pencereyi (dialog) açar -- form her zaman bu pencerenin içindedir. */
+async function penceresiniAc(kullanici: ReturnType<typeof userEvent.setup>) {
+  await kullanici.click(screen.getByRole('button', { name: 'Yeni ölçüm ekle' }));
+}
+
 function ornekOlcu(gecersizler: Partial<BodyWeightLogResponse> = {}): BodyWeightLogResponse {
   return {
     id: 1,
     weight: 82.4,
+    heightCm: 180,
     bodyFatPercent: null,
     waistCm: null,
+    hipCm: null,
     recordedAt: '2026-09-18T10:00:00Z',
     ...gecersizler,
   };
@@ -54,8 +61,8 @@ test('olculer listelenir, sadece dolu olan alanlari gosterir', async () => {
     http.get('/api/body-weights', () =>
       HttpResponse.json(
         sayfaYaniti([
-          ornekOlcu({ id: 1, weight: 82.4, bodyFatPercent: null, waistCm: null }),
-          ornekOlcu({ id: 2, weight: null, bodyFatPercent: 18.5, waistCm: 82 }),
+          ornekOlcu({ id: 1, weight: 82.4, heightCm: 180, bodyFatPercent: null, waistCm: null, hipCm: null }),
+          ornekOlcu({ id: 2, weight: null, heightCm: null, bodyFatPercent: 18.5, waistCm: 82, hipCm: 98 }),
         ]),
       ),
     ),
@@ -65,13 +72,15 @@ test('olculer listelenir, sadece dolu olan alanlari gosterir', async () => {
   const satirlar = await screen.findAllByRole('listitem');
   expect(satirlar).toHaveLength(2);
   expect(satirlar[0]).toHaveTextContent('82.4 kg');
+  expect(satirlar[0]).toHaveTextContent('180 cm boy');
   expect(satirlar[0]).not.toHaveTextContent('yağ');
   expect(satirlar[1]).toHaveTextContent('%18.5 yağ');
   expect(satirlar[1]).toHaveTextContent('82 cm bel');
+  expect(satirlar[1]).toHaveTextContent('98 cm kalça');
   expect(satirlar[1]).not.toHaveTextContent('kg,');
 });
 
-test('form govdesi sadece doldurulan alanlari tasir, digerleri gonderilmez', async () => {
+test('pencere acilir, form govdesi doldurulan alanlari tasir, basarili olunca pencere kapanir', async () => {
   let govde: unknown = 'dokunulmadi';
   let cagriSayisi = 0;
   server.use(
@@ -88,14 +97,26 @@ test('form govdesi sadece doldurulan alanlari tasir, digerleri gonderilmez', asy
   ekraniOlustur();
 
   await screen.findByText('Henüz ölçü yok');
+  await penceresiniAc(kullanici);
+  expect(screen.getByRole('heading', { name: 'Yeni ölçüm' })).toBeInTheDocument();
+
+  await kullanici.type(screen.getByLabelText(/Boy/), '180');
   await kullanici.type(screen.getByLabelText(/Kilo/), '82.4');
   await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
 
-  await screen.findByText('82.4 kg');
-  expect(govde).toEqual({ weight: 82.4, bodyFatPercent: undefined, waistCm: undefined });
+  await screen.findByText('82.4 kg, 180 cm boy');
+  expect(govde).toEqual({
+    weight: 82.4,
+    heightCm: 180,
+    bodyFatPercent: undefined,
+    waistCm: undefined,
+    hipCm: undefined,
+  });
+  // Basarili gonderim sonrasi pencere kapanir (baslik artik ekranda yok).
+  expect(screen.queryByRole('heading', { name: 'Yeni ölçüm' })).not.toBeInTheDocument();
 });
 
-test('ucu de bos gonderilirse istek atilmadan genel hata gosterilir', async () => {
+test('kilo ve boy olmadan gonderilirse istek atilmadan alan hatalari gosterilir', async () => {
   let istekAtildiMi = false;
   server.use(
     http.get('/api/body-weights', () => HttpResponse.json(sayfaYaniti([]))),
@@ -108,10 +129,52 @@ test('ucu de bos gonderilirse istek atilmadan genel hata gosterilir', async () =
   ekraniOlustur();
 
   await screen.findByText('Henüz ölçü yok');
+  await penceresiniAc(kullanici);
   await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
 
-  expect(await screen.findByText('En az bir ölçü girmelisin.')).toBeInTheDocument();
+  expect(await screen.findByText('Kilo gerekli.')).toBeInTheDocument();
+  expect(screen.getByText('Boy gerekli.')).toBeInTheDocument();
   expect(istekAtildiMi).toBe(false);
+});
+
+/** Issue #119, kullanıcı kararı: aynı gün aynı boy+kilo sunucudan 409 alır -- "zaten kayıtlı" gösterilir. */
+test('sunucu 409 donerse "zaten kayitli" mesaji gosterilir, pencere acik kalir', async () => {
+  server.use(
+    http.get('/api/body-weights', () => HttpResponse.json(sayfaYaniti([]))),
+    http.post('/api/body-weights', () =>
+      HttpResponse.json(
+        { title: 'Çakışma', status: 409, detail: 'Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.' },
+        { status: 409 },
+      ),
+    ),
+  );
+  const kullanici = userEvent.setup();
+  ekraniOlustur();
+
+  await screen.findByText('Henüz ölçü yok');
+  await penceresiniAc(kullanici);
+  await kullanici.type(screen.getByLabelText(/Boy/), '180');
+  await kullanici.type(screen.getByLabelText(/Kilo/), '82.4');
+  await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+  expect(
+    await screen.findByText('Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.'),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Yeni ölçüm' })).toBeInTheDocument();
+});
+
+test('pencere Kapat dugmesiyle kapanir', async () => {
+  server.use(http.get('/api/body-weights', () => HttpResponse.json(sayfaYaniti([]))));
+  const kullanici = userEvent.setup();
+  ekraniOlustur();
+
+  await screen.findByText('Henüz ölçü yok');
+  await penceresiniAc(kullanici);
+  expect(screen.getByRole('heading', { name: 'Yeni ölçüm' })).toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Kapat' }));
+
+  expect(screen.queryByRole('heading', { name: 'Yeni ölçüm' })).not.toBeInTheDocument();
 });
 
 test('olcu silme once onay sorar, vazgecince istek gitmez', async () => {

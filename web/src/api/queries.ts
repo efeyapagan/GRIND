@@ -972,8 +972,10 @@ export function useDeleteInsight() {
 export interface Olcu {
   id: number;
   weight: number | null;
+  heightCm: number | null;
   bodyFatPercent: number | null;
   waistCm: number | null;
+  hipCm: number | null;
   recordedAt: string;
 }
 
@@ -984,8 +986,10 @@ function dogrulanmisOlcu(yanit: BodyWeightLogResponse): Olcu {
   return {
     id: yanit.id,
     weight: yanit.weight ?? null,
+    heightCm: yanit.heightCm ?? null,
     bodyFatPercent: yanit.bodyFatPercent ?? null,
     waistCm: yanit.waistCm ?? null,
+    hipCm: yanit.hipCm ?? null,
     recordedAt: yanit.recordedAt,
   };
 }
