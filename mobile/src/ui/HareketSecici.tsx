@@ -1,0 +1,134 @@
+import { useRef, useState } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
+import { Check, Search } from 'lucide-react-native';
+import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
+import { egzersizAra } from '@grind/shared/lib/egzersizler';
+import { ikonRenk } from './renkler';
+
+const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
+  { deger: null, etiket: 'Tümü' },
+  { deger: 'Push', etiket: 'Push' },
+  { deger: 'Pull', etiket: 'Pull' },
+  { deger: 'Legs', etiket: 'Legs' },
+  { deger: 'Other', etiket: 'Diğer' },
+];
+
+interface Props {
+  id: string;
+  egzersizler: readonly Egzersiz[];
+  secilenId: number;
+  secilenAd: string;
+  devreDisiIdler?: ReadonlySet<number>;
+  onSec: (exerciseId: number) => void;
+  otomatikOdak?: boolean;
+  listeYukari?: boolean;
+}
+
+/**
+ * Hareketi YAZARAK arayip secme (issue #48). Web'in odak/kaybi (focus/blur) tabanli acilir-listesiyle
+ * AYNI fikir; klavye ok tuslariyla gezinme (masaustune ozgu) BILEREK atlandi -- dokunmatik cihazda
+ * karsiligi yok, liste zaten dokunarak secilir.
+ */
+export default function HareketSecici({
+  id,
+  egzersizler,
+  secilenId,
+  secilenAd,
+  devreDisiIdler,
+  onSec,
+  otomatikOdak = false,
+  listeYukari = false,
+}: Props) {
+  const [acik, setAcik] = useState(false);
+  const [sorgu, setSorgu] = useState('');
+  const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
+  const alanRef = useRef<TextInput>(null);
+  const devreDisi = devreDisiIdler ?? new Set<number>();
+
+  const sonuclar = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
+
+  function ac() {
+    setSorgu('');
+    setAcik(true);
+  }
+
+  function kapat() {
+    setAcik(false);
+    setSorgu('');
+    setKategori(null);
+  }
+
+  function sec(egzersiz: Egzersiz) {
+    if (devreDisi.has(egzersiz.id)) {
+      return;
+    }
+    onSec(egzersiz.id);
+    kapat();
+    alanRef.current?.blur();
+  }
+
+  return (
+    <View className="relative">
+      <View className="relative flex-row items-center">
+        <View className="pointer-events-none absolute left-3 z-10">
+          <Search color={ikonRenk.muted} size={18} />
+        </View>
+        <TextInput
+          ref={alanRef}
+          nativeID={id}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoFocus={otomatikOdak}
+          value={acik ? sorgu : secilenAd}
+          placeholder={acik ? secilenAd : undefined}
+          placeholderTextColor={ikonRenk.muted}
+          onFocus={ac}
+          onChangeText={(metin) => {
+            setSorgu(metin);
+            setAcik(true);
+          }}
+          className="h-12 w-full rounded-lg bg-inset pr-4 pl-10 text-body-lg text-fg focus:bg-surface-3"
+        />
+      </View>
+
+      {acik && (
+        <View
+          className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+        >
+          <View className="flex-row flex-wrap gap-1 border-b border-surface-4 p-1">
+            {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
+              <Pressable
+                key={etiket}
+                accessibilityState={{ selected: kategori === deger }}
+                onPress={() => setKategori(deger)}
+                className={`min-h-11 items-center justify-center rounded-full px-3 ${kategori === deger ? 'bg-surface-4' : ''}`}
+              >
+                <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>{etiket}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" className="max-h-64">
+            {sonuclar.map((egzersiz) => {
+              const secili = egzersiz.id === secilenId;
+              const kapali = devreDisi.has(egzersiz.id);
+              return (
+                <Pressable
+                  key={egzersiz.id}
+                  disabled={kapali}
+                  onPress={() => sec(egzersiz)}
+                  className="min-h-11 flex-row items-center justify-between gap-2 px-4"
+                >
+                  <Text className={`text-body ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}>{egzersiz.name}</Text>
+                  {secili && <Check color={ikonRenk.accent} size={18} />}
+                </Pressable>
+              );
+            })}
+            {sonuclar.length === 0 && (
+              <Text className="px-4 py-3 text-body text-muted">Eşleşen hareket yok.</Text>
+            )}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}

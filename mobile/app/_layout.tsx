@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureRequestClient } from '@grind/shared/api/client';
 import { session } from '../src/session';
 import { API_BASE_URL } from '../src/apiConfig';
+import { AuthProvider } from '../src/auth/AuthContext';
 
 const sorguIstemcisi = new QueryClient();
 
@@ -27,7 +28,9 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={sorguIstemcisi}>
-      <Slot />
+      <AuthProvider>
+        <Slot />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

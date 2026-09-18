@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./designTokens": "./src/designTokens.ts",
+    "./pageTitle": "./src/pageTitle.tsx",
     "./api/client": "./src/api/client.ts",
     "./api/queries": "./src/api/queries.ts",
     "./api/problem": "./src/api/problem.ts",
