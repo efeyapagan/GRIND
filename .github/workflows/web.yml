@@ -3,10 +3,10 @@ name: Web CI
 on:
   pull_request:
     branches: [master, dev]
-    paths: ['web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'packages/shared/**', 'package.json', 'package-lock.json', '.github/workflows/web.yml']
   push:
     branches: [master, dev]
-    paths: ['web/**', '.github/workflows/web.yml']
+    paths: ['web/**', 'packages/shared/**', 'package.json', 'package-lock.json', '.github/workflows/web.yml']
 
 # DIKKAT: grup adi .NET CI'inkinden (ci-...) FARKLI olmali; ayni grup ayni branch'te
 # birbirlerini iptal eder.
@@ -18,9 +18,6 @@ jobs:
   build-and-test:
     name: Derle ve test et
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
 
     steps:
       - name: Depoyu al
@@ -31,16 +28,18 @@ jobs:
         with:
           node-version-file: web/.nvmrc
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Bagimliliklari kur
+      # npm workspaces: web, `@grind/shared` sembolik baglantisi kok kurulumla olusur --
+      # `web/` icinde tek basina `npm ci` calistirmak bu paketi cozemez (registry'de yok).
+      - name: Bagimliliklari kur (kok, workspaces)
         run: npm ci
 
       - name: Tip kontrolu
-        run: npm run typecheck
+        run: npm run typecheck --workspace web
 
       - name: Testler
-        run: npm run test
+        run: npm run test --workspace web
 
       - name: Derle
-        run: npm run build
+        run: npm run build --workspace web
