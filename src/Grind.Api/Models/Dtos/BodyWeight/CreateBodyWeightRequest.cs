@@ -3,16 +3,20 @@ using System.ComponentModel.DataAnnotations;
 namespace Grind.Api.Models.Dtos.BodyWeight;
 
 /// <summary>
-/// Tartı kaydı. <c>Weight</c> nullable + <c>[Required]</c>: non-nullable olsaydı gövdede hiç
-/// gönderilmediğinde sessizce 0'a bağlanırdı (Faz 8'in <c>CreateSetRequest</c> dersi).
-/// Alt sınır veritabanındaki <c>"Weight" &gt; 0</c> kısıtıyla hizalı — kısıt ihlali 400 yerine 500
-/// üretirdi.
+/// Vücut ölçüsü kaydı (issue #119). Üç ölçü de opsiyoneldir ama EN AZ BİRİ zorunludur (servis
+/// katmanında kontrol edilir, DataAnnotations tek başına çapraz-alan kuralı yazamaz) — tamamen
+/// boş bir kayıt anlamsızdır. Bir kullanıcı yalnızca bel çevresini girip kiloyu boş bırakabilir.
 /// </summary>
 public class CreateBodyWeightRequest
 {
-    [Required(ErrorMessage = "Kilo zorunlu.")]
     [Range(0.01, 999.99, ErrorMessage = "Kilo 0,01 ile 999,99 arasında olmalı.")]
     public decimal? Weight { get; set; }
+
+    [Range(0.1, 75, ErrorMessage = "Vücut yağ oranı 0,1 ile 75 arasında olmalı.")]
+    public decimal? BodyFatPercent { get; set; }
+
+    [Range(1, 250, ErrorMessage = "Bel çevresi 1 ile 250 cm arasında olmalı.")]
+    public decimal? WaistCm { get; set; }
 
     /// <summary>
     /// Opsiyonel; verilmezse şimdi. OFFSET İLE gönderilmeli (<c>2026-03-10T08:00:00+03:00</c> veya

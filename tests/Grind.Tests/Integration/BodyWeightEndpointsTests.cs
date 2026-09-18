@@ -181,6 +181,33 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>Issue #119: kilo hiç verilmeden sadece yağ oranıyla kayıt açılabilir.</summary>
+    [Fact]
+    public async Task Sadece_yag_orani_ile_201_doner()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/body-weights",
+            new CreateBodyWeightRequest { BodyFatPercent = 18.5m }, Json);
+        var eklenen = await response.Content.ReadFromJsonAsync<BodyWeightLogResponse>(Json);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Null(eklenen!.Weight);
+        Assert.Equal(18.5m, eklenen.BodyFatPercent);
+    }
+
+    /// <summary>Üçü de boş bir kayıt anlamsızdır -- DataAnnotations tek başına bunu yakalayamaz.</summary>
+    [Fact]
+    public async Task Ucu_de_bos_govde_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/body-weights", new CreateBodyWeightRequest(), Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task Karsilastirma_kilo_ve_hacmi_iki_seride_doner()
     {

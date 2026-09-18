@@ -28,14 +28,32 @@ public class BodyWeightLogService(
     public async Task<BodyWeightLogResponse> CreateAsync(
         CreateBodyWeightRequest request, CancellationToken cancellationToken = default)
     {
-        // [Required] MVC katmanında çalıştı; servis doğrudan çağrıldığında da aynı sözleşme.
-        var weight = request.Weight!.Value;
-        WeightScale.EnsureAtMostTwoDecimals(weight);
+        if (request.Weight is null && request.BodyFatPercent is null && request.WaistCm is null)
+        {
+            // Üçü de opsiyonel oldugu için DataAnnotations bunu YAKALAYAMAZ (çapraz-alan kuralı) --
+            // tamamen boş bir ölçü kaydı anlamsızdır (issue #119).
+            throw new ValidationException("En az bir ölçü (kilo, yağ oranı veya bel çevresi) girilmeli.");
+        }
+
+        if (request.Weight is { } weight)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(weight);
+        }
+        if (request.BodyFatPercent is { } bodyFatPercent)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(bodyFatPercent);
+        }
+        if (request.WaistCm is { } waistCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(waistCm);
+        }
 
         var log = new BodyWeightLog
         {
             UserId = currentUser.UserId,
-            Weight = weight,
+            Weight = request.Weight,
+            BodyFatPercent = request.BodyFatPercent,
+            WaistCm = request.WaistCm,
             RecordedAt = request.RecordedAt is { } recordedAt ? ToUtcNotInFuture(recordedAt) : Now()
         };
 
@@ -64,7 +82,8 @@ public class BodyWeightLogService(
     public async Task<BodyWeightLogResponse> PatchAsync(
         long id, PatchBodyWeightRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.Weight is null && request.RecordedAt is null)
+        if (request.Weight is null && request.BodyFatPercent is null
+            && request.WaistCm is null && request.RecordedAt is null)
         {
             // Boş gövde DTO doğrulamasını geçer (tüm alanlar nullable). Sessizce 200 dönmek
             // çağıranın isteğinin uygulandığını sanmasına yol açardı.
@@ -77,6 +96,18 @@ public class BodyWeightLogService(
         {
             WeightScale.EnsureAtMostTwoDecimals(weight);
             log.Weight = weight;
+        }
+
+        if (request.BodyFatPercent is { } bodyFatPercent)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(bodyFatPercent);
+            log.BodyFatPercent = bodyFatPercent;
+        }
+
+        if (request.WaistCm is { } waistCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(waistCm);
+            log.WaistCm = waistCm;
         }
 
         if (request.RecordedAt is { } recordedAt)
@@ -120,5 +151,5 @@ public class BodyWeightLogService(
            ?? throw new NotFoundException(LogNotFound);
 
     private static BodyWeightLogResponse ToResponse(BodyWeightLog log) =>
-        new(log.Id, log.Weight, log.RecordedAt);
+        new(log.Id, log.Weight, log.BodyFatPercent, log.WaistCm, log.RecordedAt);
 }
