@@ -12,4 +12,5 @@ export const ikonRenk = {
   onAccent: renkler['on-accent'],
   accentSoft: renkler['accent-soft'],
   danger: renkler.danger,
+  onDanger: renkler['on-danger-bg'],
 } as const;

@@ -11,6 +11,7 @@ interface Props extends PressableProps {
 export default function BirincilDugme({ yukseklik, children, disabled, ...dugme }: Props) {
   return (
     <Pressable
+      accessibilityRole="button"
       disabled={disabled}
       {...dugme}
       className={`w-full flex-row items-center justify-center gap-2 rounded-xl bg-accent ${YUKSEKLIK[yukseklik]} ${disabled ? 'opacity-60' : ''}`}

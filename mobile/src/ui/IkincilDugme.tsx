@@ -8,6 +8,7 @@ interface Props extends PressableProps {
 export default function IkincilDugme({ children, disabled, ...dugme }: Props) {
   return (
     <Pressable
+      accessibilityRole="button"
       disabled={disabled}
       {...dugme}
       className={`h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-4 ${disabled ? 'opacity-60' : ''}`}

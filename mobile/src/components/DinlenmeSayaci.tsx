@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, Vibration } from 'react-native';
 import { Timer } from 'lucide-react-native';
+import { useAudioPlayer } from 'expo-audio';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
   bittiMi,
   EK_SURE_SN,
@@ -13,6 +15,7 @@ import {
 import { ikonRenk } from '../ui/renkler';
 
 const BITTI_GORUNME_MS = 3000;
+const KEEP_AWAKE_ETIKETI = 'dinlenme-sayaci';
 
 interface Props {
   dinlenme: Dinlenme | null;
@@ -20,16 +23,17 @@ interface Props {
 }
 
 /**
- * web/src/components/DinlenmeSayaci.tsx ile ayni mantik (spec Karar 6). Bip sesi (Web Audio, web'e
- * ozgu) BILEREK atlandi; titresim RN'in yerlesik `Vibration` API'siyle KORUNDU. Ekran acik tutma
- * (Wake Lock) da atlandi -- `expo-keep-awake` gerektirir, sayac yine dogru calisir (Date.now()
- * tabanli), sadece ekran kilitlenebilir.
+ * web/src/components/DinlenmeSayaci.tsx ile ayni mantik (spec Karar 6). Web Audio yerine
+ * expo-audio ile GERCEK bir bip sesi (880Hz, web'deki `bipCal()` ile ayni ton -- bkz.
+ * assets/sounds/dinlenme-bitti.wav) ve Wake Lock yerine expo-keep-awake ile ekran acik tutma
+ * eklendi (Faz 3 cilalama). Titresim RN'in yerlesik `Vibration` API'siyle.
  */
 export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
   const [simdi, setSimdi] = useState(() => Date.now());
   const etkinSimdi = dinlenme ? Math.max(simdi, dinlenme.bitisMs - dinlenme.toplamMs) : simdi;
   const bitti = dinlenme !== null && bittiMi(dinlenme, etkinSimdi);
   const calisiyor = dinlenme !== null && !bitti;
+  const bipCalar = useAudioPlayer(require('../../assets/sounds/dinlenme-bitti.wav'));
 
   useEffect(() => {
     if (!calisiyor) {
@@ -44,9 +48,20 @@ export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
       return;
     }
     Vibration.vibrate(400);
+    void bipCalar.seekTo(0).then(() => bipCalar.play());
     const zamanlayici = setTimeout(() => onDegis(null), BITTI_GORUNME_MS);
     return () => clearTimeout(zamanlayici);
-  }, [bitti, onDegis]);
+  }, [bitti, onDegis, bipCalar]);
+
+  useEffect(() => {
+    if (!calisiyor) {
+      return;
+    }
+    void activateKeepAwakeAsync(KEEP_AWAKE_ETIKETI);
+    return () => {
+      void deactivateKeepAwake(KEEP_AWAKE_ETIKETI);
+    };
+  }, [calisiyor]);
 
   if (!dinlenme) {
     return null;

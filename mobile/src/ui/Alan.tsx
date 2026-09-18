@@ -27,6 +27,7 @@ export default function Alan({ id, etiket, ikon: Ikon, ipucu, hata, sagEk, ...gi
         </View>
         <TextInput
           nativeID={id}
+          accessibilityLabel={etiket}
           accessibilityLabelledBy={`${id}-etiket`}
           placeholderTextColor={ikonRenk.muted}
           {...girdi}
