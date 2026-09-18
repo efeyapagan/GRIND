@@ -45,6 +45,19 @@ public class BodyWeightLogRepository(AppDbContext context)
             .ThenBy(b => b.Id)
             .ToListAsync(cancellationToken);
 
+    public Task<bool> ExistsWithSameMeasurementAsync(
+        long userId,
+        DateTime dayFromUtcInclusive,
+        DateTime dayToUtcExclusive,
+        decimal weight,
+        decimal heightCm,
+        CancellationToken cancellationToken = default)
+        => Set.AnyAsync(b =>
+            b.UserId == userId
+            && b.RecordedAt >= dayFromUtcInclusive && b.RecordedAt < dayToUtcExclusive
+            && b.Weight == weight && b.HeightCm == heightCm,
+            cancellationToken);
+
     private IQueryable<BodyWeightLog> FilterByRange(
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive)
     {

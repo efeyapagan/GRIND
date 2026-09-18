@@ -194,8 +194,10 @@ public static class ExportTextFormatter
     {
         var parcalar = new List<string>();
         if (log.Weight is { } weight) parcalar.Add(Inv($"{weight:0.##} kg"));
+        if (log.HeightCm is { } boy) parcalar.Add(Inv($"{boy:0.##} cm boy"));
         if (log.BodyFatPercent is { } yagOrani) parcalar.Add(Inv($"%{yagOrani:0.##} yağ"));
         if (log.WaistCm is { } bel) parcalar.Add(Inv($"{bel:0.##} cm bel"));
+        if (log.HipCm is { } kalca) parcalar.Add(Inv($"{kalca:0.##} cm kalça"));
         return string.Join(", ", parcalar);
     }
 
