@@ -3,6 +3,7 @@ using System;
 using Grind.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Grind.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917185356_AntrenmanZorlugu")]
+    partial class AntrenmanZorlugu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -88,21 +91,13 @@ namespace Grind.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<decimal?>("BodyFatPercent")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("numeric(6,2)");
-
                     b.Property<DateTime>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal?>("WaistCm")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("numeric(6,2)");
-
-                    b.Property<decimal?>("Weight")
+                    b.Property<decimal>("Weight")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
 
@@ -112,10 +107,6 @@ namespace Grind.Api.Data.Migrations
 
                     b.ToTable("BodyWeightLogs", t =>
                         {
-                            t.HasCheckConstraint("CK_BodyWeightLog_BodyFatPercent_Positive", "\"BodyFatPercent\" > 0");
-
-                            t.HasCheckConstraint("CK_BodyWeightLog_WaistCm_Positive", "\"WaistCm\" > 0");
-
                             t.HasCheckConstraint("CK_BodyWeightLog_Weight_Positive", "\"Weight\" > 0");
                         });
                 });

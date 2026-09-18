@@ -134,6 +134,7 @@ function sahteSunucuyuKur(
   const silinenSetler: number[] = [];
   const eklenenHareketler: number[] = [];
   const kaldirilanHareketler: number[] = [];
+  const bitirmeGovdeleri: unknown[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -233,7 +234,8 @@ function sahteSunucuyuKur(
       };
       return HttpResponse.json(yeniSet);
     }),
-    http.post('/api/sessions/:id/finish', () => {
+    http.post('/api/sessions/:id/finish', async ({ request }) => {
+      bitirmeGovdeleri.push(await request.json());
       if (oturum) {
         oturum = { ...oturum, endedAt: new Date().toISOString(), isOpen: false };
       }
@@ -295,6 +297,7 @@ function sahteSunucuyuKur(
   );
 
   return {
+    bitirmeGovdeleri: () => bitirmeGovdeleri,
     sonGonderilenGovde: () => gonderilenGovdeler.at(-1),
     baslatmaGovdeleri: () => baslatmaGovdeleri,
     ilerlemeAramalari: () => ilerlemeAramalari,
@@ -639,7 +642,7 @@ test('setler sorgusu 500 donerse hata gosterilir, "henuz set eklenmedi" bos duru
   expect(screen.queryByText('Bugün henüz set eklenmedi.')).not.toBeInTheDocument();
 });
 
-test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', async () => {
+test('Antrenmani bitir once zorluk sorar, secilen zorluk govdeye girer ve oturum kapanir', async () => {
   const acikOturum: SessionResponse = {
     id: 7,
     startedAt: new Date().toISOString(),
@@ -651,17 +654,47 @@ test('Antrenmani bitir POST finish cagirir ve oturum kapaninca dugme kaybolur', 
     progress: [],
   };
   // Set GIRILMIS oturum: "bitir" yalnizca bu durumda cikar (#47).
-  sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
 
   const kullanici = userEvent.setup();
   antrenmanSayfasiniOlustur();
 
-  const dugme = await screen.findByRole('button', { name: 'Antrenmanı bitir' });
-  await kullanici.click(dugme);
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+  // #118: bitirme TEK dokunusla olmaz -- once "nasil gecti" sorulur, oturum hala aciktir.
+  expect(ortam.bitirmeGovdeleri()).toEqual([]);
+  await kullanici.click(screen.getByRole('button', { name: 'Zor' }));
 
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument(),
   );
+  expect(ortam.bitirmeGovdeleri()).toEqual([{ difficulty: 'Hard' }]);
+});
+
+test('zorluk atlanirsa antrenman zorluksuz biter', async () => {
+  const acikOturum: SessionResponse = {
+    id: 7,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
+
+  const kullanici = userEvent.setup();
+  antrenmanSayfasiniOlustur();
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Atla' }));
+
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Antrenmanı bitir' })).not.toBeInTheDocument(),
+  );
+  // Zorluk ZORUNLU degil: atlayan kullanici icin null gider.
+  expect(ortam.bitirmeGovdeleri()).toEqual([{ difficulty: null }]);
 });
 
 test('setsiz acik oturumda bitir yerine iptal cikar ve DELETE ile bos duruma donulur', async () => {
@@ -843,11 +876,13 @@ test('antrenmani bitir basarisiz olursa hata gosterilir ve dugme yerinde kalir',
   antrenmanSayfasiniOlustur();
 
   await kullanici.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+  await kullanici.click(screen.getByRole('button', { name: 'Orta' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Antrenman bitirilemedi. Lütfen tekrar deneyin.',
   );
-  expect(screen.getByRole('button', { name: 'Antrenmanı bitir' })).toBeInTheDocument();
+  // Zorluk secenekleri YERINDE kalir: bitirme basarisiz oldu, kullanici yeniden denemeli (#118).
+  expect(screen.getByRole('button', { name: 'Orta' })).toBeInTheDocument();
 });
 
 test('bos durumda sablon kartina dokunmak templateId ile oturum baslatir ve hareket kartlari gorunur', async () => {

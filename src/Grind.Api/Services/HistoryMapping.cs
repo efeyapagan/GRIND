@@ -1,4 +1,5 @@
 using Grind.Api.Common.Rest;
+using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Entities;
@@ -44,8 +45,10 @@ internal static class HistoryMapping
             session.Id,
             session.StartedAt,
             session.EndedAt,
+            DurationCalculator.SecondsBetween(session.StartedAt, session.EndedAt),
             session.Template?.Name,
             session.Notes,
+            session.Difficulty,
             // Toplamlar GÖSTERİLEN setlerden hesaplanıyor: geçmiş ucunda egzersiz filtresi varsa toplam da
             // filtreli olur ve listeyle tutarlı kalır (Faz 9 spec Karar 8).
             shown.Sum(s => s.Weight * s.Reps),

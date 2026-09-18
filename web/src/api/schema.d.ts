@@ -1692,7 +1692,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["FinishSessionRequest"];
+                    "text/json": components["schemas"]["FinishSessionRequest"];
+                    "application/*+json": components["schemas"]["FinishSessionRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -2989,6 +2995,9 @@ export interface components {
             longestWeekStreak?: number;
             volumeByExercise?: components["schemas"]["ExerciseVolumeResponse"][] | null;
         };
+        FinishSessionRequest: {
+            difficulty?: components["schemas"]["SessionDifficulty"];
+        };
         GenerateInsightRequest: {
             /** Format: date */
             from?: string | null;
@@ -3004,6 +3013,7 @@ export interface components {
             endedAt?: string | null;
             templateName?: string | null;
             notes?: string | null;
+            difficulty?: components["schemas"]["SessionDifficulty"];
             /** Format: double */
             totalVolume?: number;
             /** Format: int32 */
@@ -3071,6 +3081,8 @@ export interface components {
             username: string;
             password: string;
         };
+        /** @enum {string} */
+        SessionDifficulty: "Easy" | "Medium" | "Hard";
         SessionProgressResponse: {
             /** Format: int64 */
             exerciseId?: number;
@@ -3094,6 +3106,7 @@ export interface components {
             templateId?: number | null;
             templateName?: string | null;
             notes?: string | null;
+            difficulty?: components["schemas"]["SessionDifficulty"];
             progress?: components["schemas"]["SessionProgressResponse"][] | null;
         };
         SetEntryResponse: {

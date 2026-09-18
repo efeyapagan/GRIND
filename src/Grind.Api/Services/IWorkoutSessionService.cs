@@ -65,8 +65,14 @@ public interface IWorkoutSessionService
     Task<StartSessionResult> StartAsync(
         StartSessionRequest request, CancellationToken cancellationToken = default);
 
-    /// <summary>Zaten bitmiş oturumda ConflictException (409) — gerçek bitiş zamanı kaybolmasın.</summary>
-    Task<SessionResponse> FinishAsync(long id, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Zaten bitmiş oturumda ConflictException (409) — gerçek bitiş zamanı kaybolmasın. Zorluk
+    /// (#118) YALNIZCA burada yazılır: <paramref name="request"/>.<c>Difficulty</c> null ise
+    /// kullanıcı seçmedi/atladı; ayrı bir güncelleme ucu yok, bu yüzden bir kez yazılan zorluk
+    /// bir daha değişmez.
+    /// </summary>
+    Task<SessionResponse> FinishAsync(
+        long id, FinishSessionRequest request, CancellationToken cancellationToken = default);
 
     Task<SessionResponse> UpdateNotesAsync(
         long id, UpdateSessionNotesRequest request, CancellationToken cancellationToken = default);

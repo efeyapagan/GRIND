@@ -113,6 +113,32 @@ public class StatsService(
     }
 
     /// <summary>
+    /// <see cref="sessionRepository"/>.GetInRangeAsync KULLANILIR: seti olmayan oturumları da
+    /// döner (export ucuyla aynı kaynak, DRY) — süre setle ilgisizdir, boş bir oturum da bir
+    /// süre taşır. Açık oturumlar (EndedAt null) <see cref="DurationCalculator.SecondsBetween"/>'in
+    /// döndüğü null ile burada ELENİR (issue #73 Karar 1).
+    /// </summary>
+    public async Task<DurationSummaryResponse> GetDurationSummaryAsync(
+        StatsRangeQuery query, CancellationToken cancellationToken = default)
+    {
+        var (fromUtc, toUtc) = LocalDayRange.Resolve(query.From, query.To);
+
+        var sessions = await sessionRepository.GetInRangeAsync(
+            currentUser.UserId, fromUtc, toUtc, cancellationToken);
+
+        var closedSeconds = sessions
+            .Select(s => DurationCalculator.SecondsBetween(s.StartedAt, s.EndedAt))
+            .OfType<long>()
+            .ToList();
+
+        var summary = DurationCalculator.Summarize(closedSeconds);
+
+        return new DurationSummaryResponse(
+            query.From, query.To,
+            summary.MedianSeconds, summary.TotalSeconds, summary.SessionCount, summary.LikelyForgottenCount);
+    }
+
+    /// <summary>
     /// Oturum toplamlarını TR günlerine yerleştirir. Gruplama BELLEKTE: gün sınırı politikası
     /// <see cref="TurkeyDay"/>'de yaşıyor ve SQL'de <c>AT TIME ZONE</c> ile ikinci bir kopyası
     /// yazılmıyor (spec Karar 6). Belleğe gelen satır sayısı OTURUM sayısıyla sınırlı — setler

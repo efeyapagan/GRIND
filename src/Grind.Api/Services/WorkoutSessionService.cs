@@ -206,7 +206,7 @@ public class WorkoutSessionService(
     }
 
     public async Task<SessionResponse> FinishAsync(
-        long id, CancellationToken cancellationToken = default)
+        long id, FinishSessionRequest request, CancellationToken cancellationToken = default)
     {
         var session = await OwnedOrThrowAsync(id, cancellationToken);
 
@@ -217,6 +217,9 @@ public class WorkoutSessionService(
         }
 
         session.EndedAt = timeProvider.GetUtcNow().UtcDateTime;
+        // Zorluk YALNIZCA burada yazılır — ayrı bir güncelleme ucu yok, bu yüzden bitmiş bir
+        // oturumun zorluğu bir daha asla değişmez.
+        session.Difficulty = request.Difficulty;
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToResponse(session, await ProgressAsync(session, cancellationToken));
@@ -336,8 +339,10 @@ public class WorkoutSessionService(
         session.StartedAt,
         session.EndedAt,
         IsOpen: session.EndedAt is null,
+        DurationCalculator.SecondsBetween(session.StartedAt, session.EndedAt),
         session.TemplateId,
         session.Template?.Name,
         session.Notes,
+        session.Difficulty,
         progress);
 }

@@ -639,12 +639,25 @@ export async function setiSil(id: number): Promise<void> {
   await request<void>(`/sets/${id}`, { method: 'DELETE' });
 }
 
+/** #118: antrenman bitiminde secilen zorluk; `null` = kullanici atladi (secim zorunlu degil). */
+export type Zorluk = components['schemas']['SessionDifficulty'];
+
 export function useFinishSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (sessionId: number): Promise<void> => {
-      await request<SessionResponse>(`/sessions/${sessionId}/finish`, { method: 'POST' });
+    // Zorluk yalnizca BITIRIRKEN alinir: sunucuda sonradan degistiren bir uc yok (#118).
+    mutationFn: async ({
+      sessionId,
+      zorluk,
+    }: {
+      sessionId: number;
+      zorluk: Zorluk | null;
+    }): Promise<void> => {
+      await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
+        method: 'POST',
+        body: JSON.stringify({ difficulty: zorluk }),
+      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });

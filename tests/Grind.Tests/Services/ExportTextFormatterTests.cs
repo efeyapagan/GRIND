@@ -29,7 +29,7 @@ public class ExportTextFormatterTests
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
-        new(1, startedAt, endedAt, null, null, sets.Sum(s => s.Weight * s.Reps), sets.Length, null, sets);
+        new(1, startedAt, endedAt, null, null, null, null, sets.Sum(s => s.Weight * s.Reps), sets.Length, null, sets);
 
     private static string Formatla(params HistorySessionResponse[] oturumlar) =>
         ExportTextFormatter.Format(Bos() with { Sessions = oturumlar });
@@ -58,7 +58,8 @@ public class ExportTextFormatterTests
                 new HistorySessionResponse(41,
                     new DateTime(2026, 3, 2, 15, 30, 0, DateTimeKind.Utc),
                     new DateTime(2026, 3, 2, 16, 45, 0, DateTimeKind.Utc),
-                    "Push Day A", "omuz sıkıştı", 2785m, 6, null,
+                    4500,
+                    "Push Day A", "omuz sıkıştı", SessionDifficulty.Medium, 2785m, 6, null,
                     [
                         Set(1, "Bench Press", 80m, 8),
                         Set(1, "Bench Press", 80m, 7, rir: 1),
@@ -68,7 +69,7 @@ public class ExportTextFormatterTests
                         Set(2, "Overhead Press", 40m, 9)
                     ]),
                 new HistorySessionResponse(42,
-                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, 0m, 0, null, [])
+                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, null, 0m, 0, null, [])
             ],
             BodyWeights:
             [
@@ -112,6 +113,7 @@ public class ExportTextFormatterTests
             ## Oturumlar
             ### 2026-03-02 Pzt 18:30–19:45 · Push Day A
             Not: omuz sıkıştı
+            Zorluk: Orta
             - Bench Press: 80×8, 80×7 (RIR 1), 85×5 [PR: ağırlık]
             - Overhead Press: 40×10, 40×10, 40×9
             Toplam: 6 set, 2785 kg
@@ -252,6 +254,20 @@ public class ExportTextFormatterTests
     }
 
     /// <summary>
+    /// #118: zorluk seçilmişse Türkçe etiketle yazılır, seçilmemişse (null) satır hiç yazılmaz —
+    /// LLM'e "Zorluk: " diye boş bir satır göndermenin faydası yok.
+    /// </summary>
+    [Fact]
+    public void Zorluk_secilmisse_turkce_etiketle_yazilir_secilmemisse_satir_yazilmaz()
+    {
+        var zorluklu = Oturum(An, null) with { Difficulty = SessionDifficulty.Hard };
+        var zorluksuz = Oturum(An, null);
+
+        Assert.Contains("\nZorluk: Zor\n", Formatla(zorluklu));
+        Assert.DoesNotContain("Zorluk:", Formatla(zorluksuz));
+    }
+
+    /// <summary>
     /// Kullanıcı metni tek satıra iner: aksi halde "## ..." ile başlayan bir not satırı belgenin
     /// başlık yapısını bozabilirdi.
     /// </summary>
@@ -281,7 +297,7 @@ public class ExportTextFormatterTests
                 [new ExerciseVolumeResponse(1, zararli, 80m, 1)]),
             Sessions =
             [
-                new HistorySessionResponse(1, An, null, zararli, null, 80m, 1, null,
+                new HistorySessionResponse(1, An, null, null, zararli, null, null, 80m, 1, null,
                     [Set(1, zararli, 80m, 8)])
             ],
             AllTimeRecords =
