@@ -3,6 +3,8 @@ namespace Grind.Api.Models.Dtos.Session;
 /// <summary>
 /// <paramref name="IsOpen"/> türetilmiştir (<c>EndedAt is null</c>) — istemcinin null
 /// kontrolü yazmasına gerek kalmasın.
+/// <paramref name="DurationSeconds"/> açık oturumda (issue #73) null — devam eden bir oturumu
+/// bitmiş gibi göstermemek için "şu ana kadar geçen süre" DOLDURULMAZ.
 /// <paramref name="Progress"/> BOŞ LİSTE iki farklı durumda gelir ve bunlar istemci için
 /// AYNI ŞEY DEĞİLDİR: (1) antrenmanın hareket listesi boş (şablonsuz ve setsiz); (2)
 /// bu yanıt <c>GET /api/sessions</c> (liste) ucundan geliyor — N+1'den kaçınmak için liste
@@ -16,6 +18,7 @@ public record SessionResponse(
     DateTime StartedAt,
     DateTime? EndedAt,
     bool IsOpen,
+    long? DurationSeconds,
     long? TemplateId,
     string? TemplateName,
     string? Notes,

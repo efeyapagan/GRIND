@@ -507,4 +507,128 @@ public class StatsServiceTests
             Assert.Empty(trend.Volume);
         }
     }
+
+    // ---- Süre özeti (issue #73) ----
+
+    private static void SeedSession(
+        AppDbContext context, User user, DateTime startedAtUtc, DateTime? endedAtUtc)
+    {
+        var session = TestDatabase.NewSession(user);
+        session.StartedAt = startedAtUtc;
+        session.EndedAt = endedAtUtc;
+        context.Add(session);
+    }
+
+    /// <summary>Açık oturum (issue #73 Karar 1) özete hiç girmez -- ne medyana ne sayaca.</summary>
+    [Fact]
+    public async Task Acik_oturum_sure_ozetine_girmez()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, Bugun, null);
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery());
+
+            Assert.Null(ozet.MedianSeconds);
+            Assert.Equal(0, ozet.SessionCount);
+            Assert.Equal(0, ozet.TotalSeconds);
+        }
+    }
+
+    [Fact]
+    public async Task Kapanmis_oturumlarin_medyani_ve_toplami_dogru_hesaplanir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, Bugun, Bugun.AddMinutes(30));
+            SeedSession(context, user, Bugun.AddDays(-1), Bugun.AddDays(-1).AddMinutes(60));
+            SeedSession(context, user, Bugun.AddDays(-2), Bugun.AddDays(-2).AddMinutes(90));
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery());
+
+            Assert.Equal(60 * 60, ozet.MedianSeconds);
+            Assert.Equal((30 + 60 + 90) * 60, ozet.TotalSeconds);
+            Assert.Equal(3, ozet.SessionCount);
+            Assert.Equal(0, ozet.LikelyForgottenCount);
+        }
+    }
+
+    /// <summary>
+    /// Kullanıcı kararı: unutulmuş (>4 saat) oturum medyanı bozmaz, toplamdan ÇIKARILMAZ, ama
+    /// AYRICA sayılır.
+    /// </summary>
+    [Fact]
+    public async Task Asiri_uzun_oturum_toplama_dahildir_ama_ayrica_sayilir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, Bugun, Bugun.AddMinutes(30));
+            SeedSession(context, user, Bugun.AddDays(-1), Bugun.AddDays(-1).AddHours(6));
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery());
+
+            Assert.Equal(1, ozet.LikelyForgottenCount);
+            Assert.Equal(30 * 60 + 6 * 3600, ozet.TotalSeconds);
+        }
+    }
+
+    [Fact]
+    public async Task Sure_ozeti_araliga_gore_filtrelenir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, Bugun, Bugun.AddMinutes(30));
+            SeedSession(context, user, Bugun.AddDays(-10), Bugun.AddDays(-10).AddMinutes(90));
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery
+            {
+                From = new DateOnly(2026, 3, 12), To = new DateOnly(2026, 3, 12)
+            });
+
+            Assert.Equal(1, ozet.SessionCount);
+            Assert.Equal(30 * 60, ozet.TotalSeconds);
+        }
+    }
+
+    /// <summary>Seti olmayan bir oturum bile bir süre taşır (spec Karar 3'ün AKSİNE — burası hacim değil).</summary>
+    [Fact]
+    public async Task Seti_olmayan_kapanmis_oturum_da_sureye_dahildir()
+    {
+        var (context, user, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, Bugun, Bugun.AddMinutes(20));
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery());
+
+            Assert.Equal(1, ozet.SessionCount);
+            Assert.Equal(20 * 60, ozet.MedianSeconds);
+        }
+    }
+
+    [Fact]
+    public async Task Baskasinin_oturumlari_sure_ozetine_girmez()
+    {
+        var (context, _, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            SeedSession(context, digerKullanici, Bugun, Bugun.AddMinutes(30));
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDurationSummaryAsync(new StatsRangeQuery());
+
+            Assert.Equal(0, ozet.SessionCount);
+        }
+    }
 }

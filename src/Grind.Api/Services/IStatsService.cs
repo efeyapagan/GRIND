@@ -28,4 +28,11 @@ public interface IStatsService
     /// </summary>
     Task<BodyWeightTrendResponse> GetBodyWeightTrendAsync(
         StatsRangeQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Antrenman süresi özeti — medyan/toplam (issue #73). Açık oturumlar hariçtir; bkz.
+    /// <see cref="DurationSummaryResponse"/>.
+    /// </summary>
+    Task<DurationSummaryResponse> GetDurationSummaryAsync(
+        StatsRangeQuery query, CancellationToken cancellationToken = default);
 }
