@@ -1,0 +1,9 @@
+{
+  "name": "grind",
+  "private": true,
+  "workspaces": [
+    "web",
+    "mobile",
+    "packages/*"
+  ]
+}

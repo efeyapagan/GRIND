@@ -1,0 +1,32 @@
+{
+  "name": "@grind/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./api/client": "./src/api/client.ts",
+    "./api/queries": "./src/api/queries.ts",
+    "./api/problem": "./src/api/problem.ts",
+    "./api/schema": "./src/api/schema.d.ts",
+    "./lib/dinlenme": "./src/lib/dinlenme.ts",
+    "./lib/gecikmeliSilme": "./src/lib/gecikmeliSilme.ts",
+    "./lib/grafik": "./src/lib/grafik.ts",
+    "./lib/rekor": "./src/lib/rekor.ts",
+    "./lib/apiErrors": "./src/lib/apiErrors.ts",
+    "./lib/egzersizler": "./src/lib/egzersizler.ts",
+    "./lib/format": "./src/lib/format.ts",
+    "./lib/ilerleme": "./src/lib/ilerleme.ts",
+    "./lib/setGirdisi": "./src/lib/setGirdisi.ts",
+    "./lib/takvim": "./src/lib/takvim.ts"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.102.8",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
