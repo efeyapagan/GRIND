@@ -1692,7 +1692,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["FinishSessionRequest"];
+                    "text/json": components["schemas"]["FinishSessionRequest"];
+                    "application/*+json": components["schemas"]["FinishSessionRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -2348,6 +2354,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/duration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    From?: string;
+                    To?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DurationSummaryResponse"];
+                        "application/json": components["schemas"]["DurationSummaryResponse"];
+                        "text/json": components["schemas"]["DurationSummaryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/exercises/{exerciseId}/progress": {
         parameters: {
             query?: never;
@@ -2769,7 +2826,15 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** Format: double */
-            weight?: number;
+            weight?: number | null;
+            /** Format: double */
+            heightCm?: number | null;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
+            /** Format: double */
+            hipCm?: number | null;
             /** Format: date-time */
             recordedAt?: string;
         };
@@ -2824,6 +2889,14 @@ export interface components {
         CreateBodyWeightRequest: {
             /** Format: double */
             weight: number;
+            /** Format: double */
+            heightCm: number;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
+            /** Format: double */
+            hipCm?: number | null;
             /** Format: date-time */
             recordedAt?: string | null;
         };
@@ -2874,6 +2947,20 @@ export interface components {
         };
         DeleteAccountRequest: {
             password: string;
+        };
+        DurationSummaryResponse: {
+            /** Format: date */
+            from?: string | null;
+            /** Format: date */
+            to?: string | null;
+            /** Format: int64 */
+            medianSeconds?: number | null;
+            /** Format: int64 */
+            totalSeconds?: number;
+            /** Format: int32 */
+            sessionCount?: number;
+            /** Format: int32 */
+            likelyForgottenCount?: number;
         };
         /** @enum {string} */
         ExerciseCategory: "Push" | "Pull" | "Legs" | "Other";
@@ -2981,6 +3068,9 @@ export interface components {
             longestWeekStreak?: number;
             volumeByExercise?: components["schemas"]["ExerciseVolumeResponse"][] | null;
         };
+        FinishSessionRequest: {
+            difficulty?: components["schemas"]["SessionDifficulty"];
+        };
         GenerateInsightRequest: {
             /** Format: date */
             from?: string | null;
@@ -2994,8 +3084,11 @@ export interface components {
             startedAt?: string;
             /** Format: date-time */
             endedAt?: string | null;
+            /** Format: int64 */
+            durationSeconds?: number | null;
             templateName?: string | null;
             notes?: string | null;
+            difficulty?: components["schemas"]["SessionDifficulty"];
             /** Format: double */
             totalVolume?: number;
             /** Format: int32 */
@@ -3024,6 +3117,14 @@ export interface components {
         PatchBodyWeightRequest: {
             /** Format: double */
             weight?: number | null;
+            /** Format: double */
+            heightCm?: number | null;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
+            /** Format: double */
+            hipCm?: number | null;
             /** Format: date-time */
             recordedAt?: string | null;
         };
@@ -3059,6 +3160,8 @@ export interface components {
             username: string;
             password: string;
         };
+        /** @enum {string} */
+        SessionDifficulty: "Easy" | "Medium" | "Hard";
         SessionProgressResponse: {
             /** Format: int64 */
             exerciseId?: number;
@@ -3079,9 +3182,12 @@ export interface components {
             endedAt?: string | null;
             isOpen?: boolean;
             /** Format: int64 */
+            durationSeconds?: number | null;
+            /** Format: int64 */
             templateId?: number | null;
             templateName?: string | null;
             notes?: string | null;
+            difficulty?: components["schemas"]["SessionDifficulty"];
             progress?: components["schemas"]["SessionProgressResponse"][] | null;
         };
         SetEntryResponse: {

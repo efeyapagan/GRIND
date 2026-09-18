@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.Session;
 using Grind.Api.Models.Dtos.Template;
+using Grind.Api.Models.Enums;
 
 namespace Grind.Tests.Integration;
 
@@ -171,6 +172,40 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
 
         Assert.Equal(HttpStatusCode.OK, ilk.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, ikinci.StatusCode);
+    }
+
+    /// <summary>#118: zorluk yalnızca finish gövdesinde belirlenir ve yanıtta aynen döner.</summary>
+    [Fact]
+    public async Task Zorlukla_bitirme_zorlugu_kaydeder_ve_dondurur()
+    {
+        var client = await AuthenticatedClientAsync();
+        var baslatma = await client.PostAsJsonAsync("/api/sessions", new StartSessionRequest(), Json);
+        var olusan = await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json);
+
+        var bitirme = await client.PostAsJsonAsync(
+            $"/api/sessions/{olusan!.Id}/finish", new FinishSessionRequest { Difficulty = SessionDifficulty.Hard }, Json);
+
+        Assert.Equal(HttpStatusCode.OK, bitirme.StatusCode);
+        var bitmis = await bitirme.Content.ReadFromJsonAsync<SessionResponse>(Json);
+        Assert.Equal(SessionDifficulty.Hard, bitmis!.Difficulty);
+    }
+
+    /// <summary>
+    /// Gövdesiz (null gövde) bitirme — Content-Length: 0 durumundaki mevcut davranışla aynı —
+    /// hâlâ 200 döner ve zorluk seçilmediği için null kalır.
+    /// </summary>
+    [Fact]
+    public async Task Govdesiz_bitirme_zorluksuz_kalir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var baslatma = await client.PostAsJsonAsync("/api/sessions", new StartSessionRequest(), Json);
+        var olusan = await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json);
+
+        var bitirme = await client.PostAsync($"/api/sessions/{olusan!.Id}/finish", null);
+
+        Assert.Equal(HttpStatusCode.OK, bitirme.StatusCode);
+        var bitmis = await bitirme.Content.ReadFromJsonAsync<SessionResponse>(Json);
+        Assert.Null(bitmis!.Difficulty);
     }
 
     [Fact]

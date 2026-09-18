@@ -33,4 +33,17 @@ public interface IBodyWeightLogRepository : IRepository<BodyWeightLog>
         DateTime? fromUtcInclusive,
         DateTime? toUtcExclusive,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen TR gününde (issue #119: "art arda aynı gün, aynı boy/kilo") aynı kullanıcının
+    /// aynı <paramref name="weight"/> ve <paramref name="heightCm"/> ile başka bir kaydı var mı.
+    /// Diğer ölçüler (yağ oranı, bel/kalça çevresi) bu karşılaştırmaya DAHİL DEĞİLDİR.
+    /// </summary>
+    Task<bool> ExistsWithSameMeasurementAsync(
+        long userId,
+        DateTime dayFromUtcInclusive,
+        DateTime dayToUtcExclusive,
+        decimal weight,
+        decimal heightCm,
+        CancellationToken cancellationToken = default);
 }

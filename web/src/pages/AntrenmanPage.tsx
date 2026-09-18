@@ -22,9 +22,9 @@ import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
 import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
+import ZorlukSecici from '../components/ZorlukSecici';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
-import Takvim from '../components/Takvim';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
 import { usePageTitle } from '../ui/PageTitleContext';
@@ -38,9 +38,11 @@ interface BekleyenHareket {
 }
 
 /**
- * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi
- * bos eski bir oturumda gruplu set listesi; oturum yoksa Takvim + "Sablonla basla" (#81, #87). Alt alan
- * oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
+ * Antrenman baslatma/devam ekrani (issue #119/#120): alt menudeki buyuk "+" dugmesiyle acilir.
+ * Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi bos eski
+ * bir oturumda gruplu set listesi; oturum yoksa "Sablonla basla" (#81, #87 -- Takvim burada DEGIL,
+ * Ana Sayfa'da: iki ekran ayri kayguya sahip, biri antrenmanin kendisi, digeri genel bakis). Alt
+ * alan oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
  * SablonOlusturCagrisi ("+ Sablon olustur", #61) -- serbest antrenman artik arayuzden
  * BASLATILAMAZ, her antrenman bir sablonla baslar. Backend'e dokunulmadi: POST /api/sets'in
  * oturumu kendiliginden acmasi API'de duruyor, arayuz artik KULLANMIYOR.
@@ -61,10 +63,12 @@ interface BekleyenHareket {
  * degistigi icin liste kismen ortuluyordu). Kok `div`e minimum yukseklik verilir ki icerik kisa
  * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
-export default function TodayPage() {
-  usePageTitle('Bugün');
+export default function AntrenmanPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
+  // Sayfa iki farkli isi gorur: baslatma (sablon sec) ve devam eden bir antrenman -- baslik hangisi
+  // oldugunu yansitir (issue #119/#120).
+  usePageTitle(gorunenOturum ? 'Antrenman' : 'Antrenman başlat');
   const {
     data: setler,
     isLoading: setlerYukleniyor,
@@ -82,6 +86,8 @@ export default function TodayPage() {
   const hareketEkleMutasyonu = useAddSessionExercise();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
+  // #118: "Antrenmani bitir"e dokunulduysa zorluk sorusu gosterilir; oturum henuz KAPANMAMISTIR.
+  const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
 
   // Issue #57: set silme. Bekleyen set listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal
   // et" karari sunucu verisinden gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz.
@@ -226,11 +232,17 @@ export default function TodayPage() {
                 <X aria-hidden size={18} />
                 Antrenmanı iptal et
               </button>
+            ) : zorlukSoruluyor ? (
+              // #118: bitirme iki adim -- once "nasil gecti", sonra kapanis. Zorluk YALNIZCA burada
+              // alinir (sunucuda sonradan degistiren bir uc yok), bu yuzden soru bitirmenin onunde durur.
+              <ZorlukSecici
+                bekliyor={bitirMutasyonu.isPending}
+                onSec={(zorluk) => bitirMutasyonu.mutate({ sessionId: gorunenOturum.id, zorluk })}
+              />
             ) : (
               <button
                 type="button"
-                onClick={() => bitirMutasyonu.mutate(gorunenOturum.id)}
-                disabled={bitirMutasyonu.isPending}
+                onClick={() => setZorlukSoruluyor(true)}
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
               >
                 <CircleCheck aria-hidden size={18} />
@@ -320,12 +332,7 @@ export default function TodayPage() {
       )}
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
-        <>
-          {/* #81: Takvim "Şablonla başla"nın hemen üstünde; antrenman açılınca ikisi birlikte kaybolur.
-              #87: "Bugün henüz antrenman yok" boş durumu kaldırıldı, Bugün bir ana sayfa gibi Takvimle açılır. */}
-          <Takvim />
-          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
-        </>
+        <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
       )}
 
       {setSilme.bekleyen && (

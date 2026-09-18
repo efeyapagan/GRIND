@@ -30,6 +30,9 @@ type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
 type UpdateWeeklyTargetRequest = components['schemas']['UpdateWeeklyTargetRequest'];
 type AiInsightResponse = components['schemas']['AiInsightResponse'];
 type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
+type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
+type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogResponsePagedResponse'];
+type CreateBodyWeightRequest = components['schemas']['CreateBodyWeightRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -72,6 +75,10 @@ export const queryKeys = {
   // `historyAll` ile ayni gerekce.
   insightsAll: ['insights'] as const,
   insights: (page: number) => [...queryKeys.insightsAll, page] as const,
+  // Onek: yeni bir olcu eklenince (ya da silinince) TUM sayfalar tazelensin (issue #119) --
+  // `historyAll` ile ayni gerekce.
+  measurementsAll: ['measurements'] as const,
+  measurements: (page: number) => [...queryKeys.measurementsAll, page] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -632,12 +639,25 @@ export async function setiSil(id: number): Promise<void> {
   await request<void>(`/sets/${id}`, { method: 'DELETE' });
 }
 
+/** #118: antrenman bitiminde secilen zorluk; `null` = kullanici atladi (secim zorunlu degil). */
+export type Zorluk = components['schemas']['SessionDifficulty'];
+
 export function useFinishSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (sessionId: number): Promise<void> => {
-      await request<SessionResponse>(`/sessions/${sessionId}/finish`, { method: 'POST' });
+    // Zorluk yalnizca BITIRIRKEN alinir: sunucuda sonradan degistiren bir uc yok (#118).
+    mutationFn: async ({
+      sessionId,
+      zorluk,
+    }: {
+      sessionId: number;
+      zorluk: Zorluk | null;
+    }): Promise<void> => {
+      await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
+        method: 'POST',
+        body: JSON.stringify({ difficulty: zorluk }),
+      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
@@ -945,6 +965,97 @@ export function useDeleteInsight() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.insightsAll });
+    },
+  });
+}
+
+export interface Olcu {
+  id: number;
+  weight: number | null;
+  heightCm: number | null;
+  bodyFatPercent: number | null;
+  waistCm: number | null;
+  hipCm: number | null;
+  recordedAt: string;
+}
+
+function dogrulanmisOlcu(yanit: BodyWeightLogResponse): Olcu {
+  if (yanit.id === undefined || !yanit.recordedAt) {
+    throw new Error('Sunucudan eksik olcu yaniti alindi.');
+  }
+  return {
+    id: yanit.id,
+    weight: yanit.weight ?? null,
+    heightCm: yanit.heightCm ?? null,
+    bodyFatPercent: yanit.bodyFatPercent ?? null,
+    waistCm: yanit.waistCm ?? null,
+    hipCm: yanit.hipCm ?? null,
+    recordedAt: yanit.recordedAt,
+  };
+}
+
+export interface OlcuSayfasi {
+  items: Olcu[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+function dogrulanmisOlcuSayfasi(yanit: BodyWeightLogResponsePagedResponse): OlcuSayfasi {
+  if (
+    yanit.page === undefined ||
+    yanit.pageSize === undefined ||
+    yanit.totalCount === undefined ||
+    yanit.totalPages === undefined
+  ) {
+    throw new Error('Sunucudan eksik olcu sayfasi yaniti alindi.');
+  }
+  return {
+    items: (yanit.items ?? []).map(dogrulanmisOlcu),
+    page: yanit.page,
+    pageSize: yanit.pageSize,
+    totalCount: yanit.totalCount,
+    totalPages: yanit.totalPages,
+  };
+}
+
+/** Sayfalama TAMAMEN sunucunun zarfindan surulur -- `useHistory` ile ayni desen (issue #119). */
+export function useMeasurements(page: number) {
+  return useQuery({
+    queryKey: queryKeys.measurements(page),
+    queryFn: async (): Promise<OlcuSayfasi> => {
+      const yanit = await request<BodyWeightLogResponsePagedResponse>(`/body-weights?Page=${page}`);
+      return dogrulanmisOlcuSayfasi(yanit);
+    },
+  });
+}
+
+/** Ucu de opsiyonel; sunucu en az birinin dolu olmasini ister (issue #119 Karar). */
+export function useAddMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (govde: CreateBodyWeightRequest): Promise<Olcu> =>
+      dogrulanmisOlcu(
+        await request<BodyWeightLogResponse>('/body-weights', {
+          method: 'POST',
+          body: JSON.stringify(govde),
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.measurementsAll });
+    },
+  });
+}
+
+export function useDeleteMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await request<void>(`/body-weights/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.measurementsAll });
     },
   });
 }

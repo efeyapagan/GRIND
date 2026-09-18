@@ -25,18 +25,51 @@ public class BodyWeightLogService(
     /// </summary>
     private static readonly TimeSpan FutureTolerance = TimeSpan.FromMinutes(5);
 
+    /// <summary>Aynı gün, aynı boy/kilo tekrarını engeller (issue #119, kullanıcı kararı).</summary>
+    private const string DuplicateMeasurement = "Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.";
+
     public async Task<BodyWeightLogResponse> CreateAsync(
         CreateBodyWeightRequest request, CancellationToken cancellationToken = default)
     {
-        // [Required] MVC katmanında çalıştı; servis doğrudan çağrıldığında da aynı sözleşme.
+        // [Required] MVC katmanında çalıştı (Weight/HeightCm); servis doğrudan çağrıldığında da
+        // aynı sözleşme.
         var weight = request.Weight!.Value;
+        var heightCm = request.HeightCm!.Value;
         WeightScale.EnsureAtMostTwoDecimals(weight);
+        WeightScale.EnsureAtMostTwoDecimals(heightCm);
+        if (request.BodyFatPercent is { } bodyFatPercent)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(bodyFatPercent);
+        }
+        if (request.WaistCm is { } waistCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(waistCm);
+        }
+        if (request.HipCm is { } hipCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(hipCm);
+        }
+
+        var recordedAt = request.RecordedAt is { } girilenZaman ? ToUtcNotInFuture(girilenZaman) : Now();
+
+        // Karşılaştırma SADECE boy+kilo üzerinden (issue #119): diğer ölçüler (yağ oranı, bel/kalça)
+        // farklı olsa bile aynı gün aynı boy+kilo "zaten kayıtlı" sayılır.
+        var (gunBaslangici, gunBitisi) = TurkeyDay.RangeFor(recordedAt);
+        if (await repository.ExistsWithSameMeasurementAsync(
+                currentUser.UserId, gunBaslangici, gunBitisi, weight, heightCm, cancellationToken))
+        {
+            throw new ConflictException(DuplicateMeasurement);
+        }
 
         var log = new BodyWeightLog
         {
             UserId = currentUser.UserId,
             Weight = weight,
-            RecordedAt = request.RecordedAt is { } recordedAt ? ToUtcNotInFuture(recordedAt) : Now()
+            HeightCm = heightCm,
+            BodyFatPercent = request.BodyFatPercent,
+            WaistCm = request.WaistCm,
+            HipCm = request.HipCm,
+            RecordedAt = recordedAt
         };
 
         repository.Add(log);
@@ -64,7 +97,8 @@ public class BodyWeightLogService(
     public async Task<BodyWeightLogResponse> PatchAsync(
         long id, PatchBodyWeightRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.Weight is null && request.RecordedAt is null)
+        if (request.Weight is null && request.HeightCm is null && request.BodyFatPercent is null
+            && request.WaistCm is null && request.HipCm is null && request.RecordedAt is null)
         {
             // Boş gövde DTO doğrulamasını geçer (tüm alanlar nullable). Sessizce 200 dönmek
             // çağıranın isteğinin uygulandığını sanmasına yol açardı.
@@ -77,6 +111,30 @@ public class BodyWeightLogService(
         {
             WeightScale.EnsureAtMostTwoDecimals(weight);
             log.Weight = weight;
+        }
+
+        if (request.HeightCm is { } heightCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(heightCm);
+            log.HeightCm = heightCm;
+        }
+
+        if (request.BodyFatPercent is { } bodyFatPercent)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(bodyFatPercent);
+            log.BodyFatPercent = bodyFatPercent;
+        }
+
+        if (request.WaistCm is { } waistCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(waistCm);
+            log.WaistCm = waistCm;
+        }
+
+        if (request.HipCm is { } hipCm)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(hipCm);
+            log.HipCm = hipCm;
         }
 
         if (request.RecordedAt is { } recordedAt)
@@ -120,5 +178,5 @@ public class BodyWeightLogService(
            ?? throw new NotFoundException(LogNotFound);
 
     private static BodyWeightLogResponse ToResponse(BodyWeightLog log) =>
-        new(log.Id, log.Weight, log.RecordedAt);
+        new(log.Id, log.Weight, log.HeightCm, log.BodyFatPercent, log.WaistCm, log.HipCm, log.RecordedAt);
 }

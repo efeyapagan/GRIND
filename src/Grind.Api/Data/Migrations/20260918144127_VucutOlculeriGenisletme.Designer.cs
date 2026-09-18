@@ -3,6 +3,7 @@ using System;
 using Grind.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Grind.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918144127_VucutOlculeriGenisletme")]
+    partial class VucutOlculeriGenisletme
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -92,14 +95,6 @@ namespace Grind.Api.Data.Migrations
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
 
-                    b.Property<decimal?>("HeightCm")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("numeric(6,2)");
-
-                    b.Property<decimal?>("HipCm")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("numeric(6,2)");
-
                     b.Property<DateTime>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -121,10 +116,6 @@ namespace Grind.Api.Data.Migrations
                     b.ToTable("BodyWeightLogs", t =>
                         {
                             t.HasCheckConstraint("CK_BodyWeightLog_BodyFatPercent_Positive", "\"BodyFatPercent\" > 0");
-
-                            t.HasCheckConstraint("CK_BodyWeightLog_HeightCm_Positive", "\"HeightCm\" > 0");
-
-                            t.HasCheckConstraint("CK_BodyWeightLog_HipCm_Positive", "\"HipCm\" > 0");
 
                             t.HasCheckConstraint("CK_BodyWeightLog_WaistCm_Positive", "\"WaistCm\" > 0");
 
@@ -827,10 +818,6 @@ namespace Grind.Api.Data.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Difficulty")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("timestamp with time zone");
