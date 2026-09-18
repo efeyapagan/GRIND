@@ -64,12 +64,19 @@ public class SessionsController(IWorkoutSessionService sessionService) : Control
             : Ok(result.Session);
     }
 
+    /// <summary>
+    /// Bitirir. Gövde opsiyonel — <c>Start</c>'taki aynı model-binding savunması: sıfır bayt'lık
+    /// bir gövde null'a bağlanır, bu yüzden gövdesiz bir bitirme de geçerli olmalı (zorluk seçimi
+    /// #118'de zorunlu değil). Gövdedeki <c>difficulty</c> yalnızca burada yazılır, sonradan
+    /// değiştirilemez.
+    /// </summary>
     [HttpPost("{id:long}/finish")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<SessionResponse>> Finish(long id, CancellationToken cancellationToken)
-        => Ok(await sessionService.FinishAsync(id, cancellationToken));
+    public async Task<ActionResult<SessionResponse>> Finish(
+        long id, [FromBody] FinishSessionRequest? request, CancellationToken cancellationToken)
+        => Ok(await sessionService.FinishAsync(id, request ?? new FinishSessionRequest(), cancellationToken));
 
     /// <summary>
     /// Notu günceller. DİKKAT — Faz 6'daki <c>PatchTemplateRequest</c>'in aksine, burada

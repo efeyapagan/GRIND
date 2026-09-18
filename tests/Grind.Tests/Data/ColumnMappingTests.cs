@@ -12,7 +12,7 @@ public class ColumnMappingTests
             .Where(p => (Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType).IsEnum)
             .ToArray();
 
-        Assert.Equal(4, enumProperties.Length);
+        Assert.Equal(5, enumProperties.Length);
 
         foreach (var property in enumProperties)
         {
