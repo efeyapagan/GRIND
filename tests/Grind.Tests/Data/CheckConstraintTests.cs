@@ -65,6 +65,14 @@ public class CheckConstraintTests
         Assert.Contains("> 0", SqlOf<BodyWeightLog>("CK_BodyWeightLog_Weight_Positive"));
     }
 
+    /// <summary>Issue #119: yağ oranı ve bel çevresi de (Weight gibi) opsiyonel ama pozitif olmalı.</summary>
+    [Fact]
+    public void Yag_orani_ve_bel_cevresi_sifir_olamaz_ama_bos_birakilabilir()
+    {
+        Assert.Contains("> 0", SqlOf<BodyWeightLog>("CK_BodyWeightLog_BodyFatPercent_Positive"));
+        Assert.Contains("> 0", SqlOf<BodyWeightLog>("CK_BodyWeightLog_WaistCm_Positive"));
+    }
+
     /// <summary>#97: null = hedef yok; hafta 7 gündür.</summary>
     [Fact]
     public void Haftalik_hedef_bos_ya_da_bir_ile_yedi_arasindadir()

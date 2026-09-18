@@ -225,7 +225,7 @@ public class ExportServiceTests
                 .GetAsync(new StatsRangeQuery { From = new DateOnly(2026, 3, 11) });
 
             Assert.Equal(new[] { Simdi.AddDays(-1), Simdi }, export.Sessions.Select(s => s.StartedAt));
-            Assert.Equal(new[] { 82m, 81m }, export.BodyWeights.Select(b => b.Weight));
+            Assert.Equal(new decimal?[] { 82m, 81m }, export.BodyWeights.Select(b => b.Weight));
         }
     }
 

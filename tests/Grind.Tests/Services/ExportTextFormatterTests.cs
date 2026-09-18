@@ -72,7 +72,7 @@ public class ExportTextFormatterTests
             ],
             BodyWeights:
             [
-                new BodyWeightLogResponse(7, 82.40m, new DateTime(2026, 3, 1, 5, 10, 0, DateTimeKind.Utc))
+                new BodyWeightLogResponse(7, 82.40m, null, null, new DateTime(2026, 3, 1, 5, 10, 0, DateTimeKind.Utc))
             ],
             AllTimeRecords:
             [
@@ -119,7 +119,7 @@ public class ExportTextFormatterTests
             ### 2026-03-04 Çar 07:10–(bitirilmedi)
             (Bu oturumda set girilmedi.)
 
-            ## Vücut ağırlığı
+            ## Vücut ölçüleri
             - 2026-03-01 Paz 08:10 — 82.4 kg
             """.ReplaceLineEndings("\n") + "\n";
 
@@ -236,7 +236,7 @@ public class ExportTextFormatterTests
         Assert.Contains("## Egzersiz bazında hacim\nBu aralıkta kayıt yok.\n", metin);
         Assert.Contains("## Tüm zamanların rekorları (aralıktan bağımsız)\nHenüz kayıt yok.\n", metin);
         Assert.Contains("## Oturumlar\nBu aralıkta kayıt yok.\n", metin);
-        Assert.Contains("## Vücut ağırlığı\nBu aralıkta kayıt yok.\n", metin);
+        Assert.Contains("## Vücut ölçüleri\nBu aralıkta kayıt yok.\n", metin);
     }
 
     [Theory]

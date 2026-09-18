@@ -2769,7 +2769,11 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** Format: double */
-            weight?: number;
+            weight?: number | null;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
             /** Format: date-time */
             recordedAt?: string;
         };
@@ -2823,7 +2827,11 @@ export interface components {
         };
         CreateBodyWeightRequest: {
             /** Format: double */
-            weight: number;
+            weight?: number | null;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
             /** Format: date-time */
             recordedAt?: string | null;
         };
@@ -3024,6 +3032,10 @@ export interface components {
         PatchBodyWeightRequest: {
             /** Format: double */
             weight?: number | null;
+            /** Format: double */
+            bodyFatPercent?: number | null;
+            /** Format: double */
+            waistCm?: number | null;
             /** Format: date-time */
             recordedAt?: string | null;
         };

@@ -40,7 +40,7 @@ function sifreUzunlugunuDogrula(sifre: string): string | null {
  * `client.ts`'teki `sifreTeyidi401`) -- yanlizca bu formun hatasi olarak gosterilir.
  */
 export default function ProfilePage() {
-  usePageTitle('Profil');
+  usePageTitle('Hesap');
   const { username, updateProfile } = useAuth();
 
   return (

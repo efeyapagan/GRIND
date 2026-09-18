@@ -124,6 +124,105 @@ public class BodyWeightLogServiceTests
         }
     }
 
+    // ---- Vücut ölçüleri (issue #119): üçü de opsiyonel, en az biri zorunlu ----
+
+    [Fact]
+    public async Task Sadece_yag_orani_ile_kayit_olusturulabilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(new CreateBodyWeightRequest { BodyFatPercent = 18.5m });
+
+            Assert.Null(eklenen.Weight);
+            Assert.Equal(18.5m, eklenen.BodyFatPercent);
+            Assert.Null(eklenen.WaistCm);
+        }
+    }
+
+    [Fact]
+    public async Task Sadece_bel_cevresi_ile_kayit_olusturulabilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(new CreateBodyWeightRequest { WaistCm = 82m });
+
+            Assert.Null(eklenen.Weight);
+            Assert.Null(eklenen.BodyFatPercent);
+            Assert.Equal(82m, eklenen.WaistCm);
+        }
+    }
+
+    [Fact]
+    public async Task Uc_olcu_de_ayni_kayitta_birlikte_saklanabilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(
+                new CreateBodyWeightRequest { Weight = 82.4m, BodyFatPercent = 18.5m, WaistCm = 82m });
+
+            Assert.Equal(82.4m, eklenen.Weight);
+            Assert.Equal(18.5m, eklenen.BodyFatPercent);
+            Assert.Equal(82m, eklenen.WaistCm);
+        }
+    }
+
+    /// <summary>Tamamen boş bir ölçü kaydı anlamsızdır -- DataAnnotations bunu YAKALAYAMAZ (çapraz-alan).</summary>
+    [Fact]
+    public async Task Ucu_de_bos_olan_kayit_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.CreateAsync(new CreateBodyWeightRequest()));
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_yag_orani_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.CreateAsync(new CreateBodyWeightRequest { BodyFatPercent = 18.455m }));
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_bel_cevresi_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.CreateAsync(new CreateBodyWeightRequest { WaistCm = 82.455m }));
+        }
+    }
+
+    [Fact]
+    public async Task Yag_orani_ve_bel_cevresi_patch_ile_eklenebilir()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(Yeni(82.4m));
+
+            await service.PatchAsync(eklenen.Id,
+                new PatchBodyWeightRequest { BodyFatPercent = 17.2m, WaistCm = 80m });
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
+
+            Assert.Equal(82.4m, satir.Weight);
+            Assert.Equal(17.2m, satir.BodyFatPercent);
+            Assert.Equal(80m, satir.WaistCm);
+        }
+    }
+
     // ---- Listeleme ----
 
     [Fact]

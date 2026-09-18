@@ -24,7 +24,6 @@ import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
-import Takvim from '../components/Takvim';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
 import { usePageTitle } from '../ui/PageTitleContext';
@@ -38,9 +37,11 @@ interface BekleyenHareket {
 }
 
 /**
- * "Bugun" ekrani. Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi
- * bos eski bir oturumda gruplu set listesi; oturum yoksa Takvim + "Sablonla basla" (#81, #87). Alt alan
- * oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
+ * Antrenman baslatma/devam ekrani (issue #119/#120): alt menudeki buyuk "+" dugmesiyle acilir.
+ * Acik oturum varsa baslangic saati (TR), sablon adi ve hareket kartlari; hareket listesi bos eski
+ * bir oturumda gruplu set listesi; oturum yoksa "Sablonla basla" (#81, #87 -- Takvim burada DEGIL,
+ * Ana Sayfa'da: iki ekran ayri kayguya sahip, biri antrenmanin kendisi, digeri genel bakis). Alt
+ * alan oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
  * SablonOlusturCagrisi ("+ Sablon olustur", #61) -- serbest antrenman artik arayuzden
  * BASLATILAMAZ, her antrenman bir sablonla baslar. Backend'e dokunulmadi: POST /api/sets'in
  * oturumu kendiliginden acmasi API'de duruyor, arayuz artik KULLANMIYOR.
@@ -61,10 +62,12 @@ interface BekleyenHareket {
  * degistigi icin liste kismen ortuluyordu). Kok `div`e minimum yukseklik verilir ki icerik kisa
  * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
-export default function TodayPage() {
-  usePageTitle('Bugün');
+export default function AntrenmanPage() {
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
+  // Sayfa iki farkli isi gorur: baslatma (sablon sec) ve devam eden bir antrenman -- baslik hangisi
+  // oldugunu yansitir (issue #119/#120).
+  usePageTitle(gorunenOturum ? 'Antrenman' : 'Antrenman başlat');
   const {
     data: setler,
     isLoading: setlerYukleniyor,
@@ -320,12 +323,7 @@ export default function TodayPage() {
       )}
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
-        <>
-          {/* #81: Takvim "Şablonla başla"nın hemen üstünde; antrenman açılınca ikisi birlikte kaybolur.
-              #87: "Bugün henüz antrenman yok" boş durumu kaldırıldı, Bugün bir ana sayfa gibi Takvimle açılır. */}
-          <Takvim />
-          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
-        </>
+        <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
       )}
 
       {setSilme.bekleyen && (
