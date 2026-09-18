@@ -49,10 +49,6 @@
     "setupFiles": [
       "./jest.setup.js"
     ],
-    "moduleNameMapper": {
-      "^react$": "<rootDir>/node_modules/react",
-      "^react/(.*)$": "<rootDir>/node_modules/react/$1"
-    },
     "transform": {
       "\\.[jt]sx?$": "babel-jest",
       "\\.mjs$": "babel-jest"
