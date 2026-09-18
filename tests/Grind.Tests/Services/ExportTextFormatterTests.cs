@@ -29,7 +29,7 @@ public class ExportTextFormatterTests
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
-        new(1, startedAt, endedAt, null, null, null, sets.Sum(s => s.Weight * s.Reps), sets.Length, null, sets);
+        new(1, startedAt, endedAt, null, null, null, null, sets.Sum(s => s.Weight * s.Reps), sets.Length, null, sets);
 
     private static string Formatla(params HistorySessionResponse[] oturumlar) =>
         ExportTextFormatter.Format(Bos() with { Sessions = oturumlar });
@@ -58,6 +58,7 @@ public class ExportTextFormatterTests
                 new HistorySessionResponse(41,
                     new DateTime(2026, 3, 2, 15, 30, 0, DateTimeKind.Utc),
                     new DateTime(2026, 3, 2, 16, 45, 0, DateTimeKind.Utc),
+                    4500,
                     "Push Day A", "omuz sıkıştı", SessionDifficulty.Medium, 2785m, 6, null,
                     [
                         Set(1, "Bench Press", 80m, 8),
@@ -68,7 +69,7 @@ public class ExportTextFormatterTests
                         Set(2, "Overhead Press", 40m, 9)
                     ]),
                 new HistorySessionResponse(42,
-                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, 0m, 0, null, [])
+                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, null, 0m, 0, null, [])
             ],
             BodyWeights:
             [
@@ -296,7 +297,7 @@ public class ExportTextFormatterTests
                 [new ExerciseVolumeResponse(1, zararli, 80m, 1)]),
             Sessions =
             [
-                new HistorySessionResponse(1, An, null, zararli, null, null, 80m, 1, null,
+                new HistorySessionResponse(1, An, null, null, zararli, null, null, 80m, 1, null,
                     [Set(1, zararli, 80m, 8)])
             ],
             AllTimeRecords =

@@ -72,6 +72,9 @@ public class WorkoutSessionServiceTests
             Assert.True(sonuc.Session.IsOpen);
             Assert.Null(sonuc.Session.EndedAt);
             Assert.Null(sonuc.Session.TemplateId);
+            // Issue #73: açık oturumda süre hesaplanamaz -- "şu ana kadar geçen süre" ile
+            // doldurmak, devam eden bir oturumu bitmiş gibi gösterirdi.
+            Assert.Null(sonuc.Session.DurationSeconds);
         }
     }
 
@@ -293,6 +296,7 @@ public class WorkoutSessionServiceTests
 
             Assert.False(bitmis.IsOpen);
             Assert.Equal(saat.UtcNow, bitmis.EndedAt);
+            Assert.Equal(3600, bitmis.DurationSeconds);
         }
     }
 

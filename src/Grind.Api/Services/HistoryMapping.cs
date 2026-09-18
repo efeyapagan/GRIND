@@ -1,4 +1,5 @@
 using Grind.Api.Common.Rest;
+using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Entities;
@@ -44,6 +45,7 @@ internal static class HistoryMapping
             session.Id,
             session.StartedAt,
             session.EndedAt,
+            DurationCalculator.SecondsBetween(session.StartedAt, session.EndedAt),
             session.Template?.Name,
             session.Notes,
             session.Difficulty,
