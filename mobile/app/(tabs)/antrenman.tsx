@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
+import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, X } from 'lucide-react-native';
 import {
@@ -58,6 +59,18 @@ export default function AntrenmanScreen() {
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
   const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
+
+  const kaydiriciRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    // BILINEN ACIK SORUN (simulator dokunma testinde bulundu): AddSetForm ekranin en altina
+    // yaslaniyor (mt-auto); klavye acilinca KeyboardAvoidingView icerigi kucultur ama otomatik
+    // kaydirmiyor, "Set ekle" dugmesi klavyenin arkasinda kalabiliyor. Bu scrollToEnd denemesi
+    // sorunu TAM cozmedi (simulatorde dogrulanmadi) -- gercek cozum icin ayri bir issue acilmali.
+    const gizlenince = Keyboard.addListener('keyboardDidShow', () => {
+      kaydiriciRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => gizlenince.remove();
+  }, []);
 
   const queryClient = useQueryClient();
   const setSilmeyiTamamla = useCallback(
@@ -157,7 +170,7 @@ export default function AntrenmanScreen() {
   }
 
   return (
-    <ScrollView contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
+    <EkranKaydirici ref={kaydiriciRef} contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
       <View className="flex-col gap-1">
         <View className="flex-row items-center justify-end gap-2">
           {gorunenOturum?.isOpen &&
@@ -293,6 +306,6 @@ export default function AntrenmanScreen() {
       ) : (
         <SablonOlusturCagrisi />
       )}
-    </ScrollView>
+    </EkranKaydirici>
   );
 }

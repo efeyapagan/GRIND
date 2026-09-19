@@ -27,6 +27,7 @@ const SayiAlani = forwardRef<TextInputType, Props>(function SayiAlani(
         <TextInput
           ref={ref}
           nativeID={id}
+          testID={id}
           accessibilityLabel={etiket}
           inputMode={inputMode}
           keyboardType={inputMode === 'decimal' ? 'decimal-pad' : 'number-pad'}

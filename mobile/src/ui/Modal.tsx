@@ -1,4 +1,4 @@
-import { Modal as RNModal, View, Text, Pressable } from 'react-native';
+import { Modal as RNModal, View, Text, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
 import IkonDugmesi from './IkonDugmesi';
 import { ikonRenk } from './renkler';
@@ -18,17 +18,24 @@ interface Props {
 export default function Modal({ acik, onKapat, baslik, children }: Props) {
   return (
     <RNModal visible={acik} transparent animationType="fade" onRequestClose={onKapat}>
-      <Pressable className="flex-1 justify-center bg-black/60 p-4" onPress={onKapat}>
-        <Pressable onPress={(e) => e.stopPropagation()} className="w-full self-center rounded-xl bg-surface-1" style={{ maxWidth: 384 }}>
-          <View className="flex-row items-center justify-between gap-2 p-4">
-            <Text className="text-heading text-fg">{baslik}</Text>
-            <IkonDugmesi etiket="Kapat" onPress={onKapat}>
-              <X color={ikonRenk.muted} size={20} />
-            </IkonDugmesi>
-          </View>
-          <View className="flex flex-col gap-4 p-4 pt-0">{children}</View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+        <Pressable className="flex-1 justify-center bg-black/60 p-4" onPress={onKapat}>
+          <Pressable onPress={(e) => e.stopPropagation()} className="w-full self-center rounded-xl bg-surface-1" style={{ maxWidth: 384, maxHeight: '90%' }}>
+            <View className="flex-row items-center justify-between gap-2 p-4">
+              <Text className="text-heading text-fg">{baslik}</Text>
+              <IkonDugmesi etiket="Kapat" onPress={onKapat}>
+                <X color={ikonRenk.muted} size={20} />
+              </IkonDugmesi>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <View className="flex flex-col gap-4 p-4 pt-0">{children}</View>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </RNModal>
   );
 }
