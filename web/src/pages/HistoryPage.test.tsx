@@ -56,12 +56,43 @@ function sayfaYaniti(
   return {
     items: oturumlar,
     page: 1,
-    pageSize: 20,
+    pageSize: 25,
     totalCount: oturumlar.length,
     totalPages: 1,
     ...zarf,
   };
 }
+
+/**
+ * jsdom `IntersectionObserver`i uygulamaz -- issue #138 (sonsuz kaydirma) listenin sonundaki
+ * bir gozlemci ogesiyle calisir, bu yuzden testte sahte bir tanimla degistirilir. `tetikle`
+ * gozlemlenen ogenin gorunur oldugunu (`isIntersecting: true`) bildirir, `HistoryPage`in
+ * `fetchNextPage` cagirmasini tetikler.
+ */
+function sahteKesisimGozlemcisiKur() {
+  const geriCagirmalar: IntersectionObserverCallback[] = [];
+  class SahteIntersectionObserver implements IntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds: number[] = [];
+    constructor(geriCagirma: IntersectionObserverCallback) {
+      geriCagirmalar.push(geriCagirma);
+    }
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = () => [];
+  }
+  vi.stubGlobal('IntersectionObserver', SahteIntersectionObserver);
+  return {
+    tetikle: () => {
+      const sahteEntry = { isIntersecting: true } as IntersectionObserverEntry;
+      geriCagirmalar.forEach((cb) => cb([sahteEntry], new SahteIntersectionObserver(() => {})));
+    },
+  };
+}
+
+afterEach(() => vi.unstubAllGlobals());
 
 test('gecmis listesi oturumlari sunucunun sirasiyla gosterir; her satirda TR tarihi, set sayisi ve hacim var', async () => {
   const oturumlar: HistorySessionResponse[] = [
@@ -84,7 +115,7 @@ test('gecmis listesi oturumlari sunucunun sirasiyla gosterir; her satirda TR tar
   expect(satirlar[1]).toHaveTextContent('1.000');
 });
 
-test('sonraki sayfaya gecilebilir ve ikinci istek Page=2 tasir', async () => {
+test('listenin sonuna gelinince sonraki sayfa otomatik yuklenir ve iki sayfanin oturumlari birlikte gorunur', async () => {
   const yakalananAramaDizgileri: string[] = [];
   server.use(
     http.get('/api/history', ({ request }) => {
@@ -92,7 +123,7 @@ test('sonraki sayfaya gecilebilir ve ikinci istek Page=2 tasir', async () => {
       yakalananAramaDizgileri.push(url.search);
       const sayfa = Number(url.searchParams.get('Page') ?? '1');
       return HttpResponse.json(
-        sayfaYaniti([ornekOturum({ sessionId: sayfa })], {
+        sayfaYaniti([ornekOturum({ sessionId: sayfa, startedAt: `2026-09-${10 + sayfa}T08:00:00Z` })], {
           page: sayfa,
           totalCount: 40,
           totalPages: 2,
@@ -101,23 +132,45 @@ test('sonraki sayfaya gecilebilir ve ikinci istek Page=2 tasir', async () => {
     }),
   );
 
-  const kullanici = userEvent.setup();
+  const gozlemci = sahteKesisimGozlemcisiKur();
   gecmisSayfasiniOlustur();
 
   await screen.findAllByRole('listitem');
-  // Sayfa bilgisi ve toplam sayi sunucunun zarfindan gelir, istemcide hesaplanmaz (spec).
-  expect(screen.getByText('Sayfa 1 / 2')).toBeInTheDocument();
-  expect(screen.getByText('40 antrenman')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Önceki' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Sonraki' })).toBeEnabled();
+  // Onceki/Sonraki dugmesi YOK -- sayfa numarasi/sayisi da (spec: issue #138) artik gosterilmez.
+  expect(screen.queryByRole('button', { name: 'Sonraki' })).not.toBeInTheDocument();
+  expect(yakalananAramaDizgileri).toEqual(['?Page=1&PageSize=25']);
 
-  await kullanici.click(screen.getByRole('button', { name: 'Sonraki' }));
+  // Liste sonundaki gozlemci ogesi "gorunur" olunca (kullanici asagi kaydirmis gibi) otomatik yuklenir.
+  gozlemci.tetikle();
 
-  await waitFor(() =>
-    expect(yakalananAramaDizgileri.some((dizgi) => dizgi.includes('Page=2'))).toBe(true),
+  await waitFor(() => expect(yakalananAramaDizgileri).toEqual(['?Page=1&PageSize=25', '?Page=2&PageSize=25']));
+  // Iki sayfanin oturumlari da (1. VE 2. sayfa) UST USTE YAZMADAN, BIRLIKTE listede kalir.
+  const satirlar = await screen.findAllByRole('listitem');
+  expect(satirlar).toHaveLength(2);
+});
+
+test('son sayfadaysa gozlemci tekrar tetiklense bile yeni istek atilmaz', async () => {
+  const yakalananAramaDizgileri: string[] = [];
+  server.use(
+    http.get('/api/history', ({ request }) => {
+      yakalananAramaDizgileri.push(new URL(request.url).search);
+      return HttpResponse.json(sayfaYaniti([ornekOturum()], { page: 1, totalCount: 1, totalPages: 1 }));
+    }),
   );
-  // Son (2.) sayfadayken "Sonraki" artik pasif olmali (spec: totalPages'e gore surulur).
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Sonraki' })).toBeDisabled());
+
+  const gozlemci = sahteKesisimGozlemcisiKur();
+  gecmisSayfasiniOlustur();
+
+  await screen.findAllByRole('listitem');
+  expect(yakalananAramaDizgileri).toHaveLength(1);
+
+  // totalPages: 1 iken zaten son sayfadayiz -- gozlemci tetiklense de (sonsuz dongu/gereksiz
+  // istek koruması) ikinci bir istek gitmemeli.
+  gozlemci.tetikle();
+  gozlemci.tetikle();
+
+  await new Promise((coz) => setTimeout(coz, 50));
+  expect(yakalananAramaDizgileri).toHaveLength(1);
 });
 
 test('hic oturum yoksa bos durum metni gorunur', async () => {
