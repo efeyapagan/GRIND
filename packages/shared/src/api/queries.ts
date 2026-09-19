@@ -76,13 +76,13 @@ export const queryKeys = {
   calendarAll: ['calendar'] as const,
   calendar: (from: string, to: string) => [...queryKeys.calendarAll, from, to] as const,
   // Onek: yeni bir yorum uretilince (ya da silinince) TUM sayfalar tazelensin (issue #76) --
-  // `historyAll` ile ayni gerekce.
+  // `historyAll` ile ayni gerekce. Issue #147: sonsuz kaydirma -- `historyInfinite` ile ayni desen.
   insightsAll: ['insights'] as const,
-  insights: (page: number) => [...queryKeys.insightsAll, page] as const,
+  insightsInfinite: ['insights', 'infinite'] as const,
   // Onek: yeni bir olcu eklenince (ya da silinince) TUM sayfalar tazelensin (issue #119) --
-  // `historyAll` ile ayni gerekce.
+  // `historyAll` ile ayni gerekce. Issue #147: sonsuz kaydirma -- `historyInfinite` ile ayni desen.
   measurementsAll: ['measurements'] as const,
-  measurements: (page: number) => [...queryKeys.measurementsAll, page] as const,
+  measurementsInfinite: ['measurements', 'infinite'] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -366,8 +366,12 @@ export function useHistory(page: number) {
   });
 }
 
-/** Issue #138: sonsuz kaydirma sayfa boyutu -- her yuklemede en fazla bu kadar antrenman gelir. */
-export const GECMIS_SAYFA_BOYUTU = 25;
+/**
+ * Sonsuz kaydirma sayfa boyutu (issue #138) -- her yuklemede en fazla bu kadar oge gelir.
+ * Gecmis/Insights/Measurements'in UCUNUN sunucudan tek seferde ne kadar cektigi TEK bir
+ * yerde tanimli kalsin diye ortak (DRY).
+ */
+export const SAYFA_BOYUTU = 25;
 
 /**
  * Web'in Onceki/Sonraki dugmeleri yerine kullandigi sonsuz kaydirma hook'u (issue #138):
@@ -382,7 +386,7 @@ export function useInfiniteHistory() {
     initialPageParam: 1,
     queryFn: async ({ pageParam }): Promise<GecmisSayfasi> => {
       const yanit = await request<HistorySessionResponsePagedResponse>(
-        `/history?Page=${pageParam}&PageSize=${GECMIS_SAYFA_BOYUTU}`,
+        `/history?Page=${pageParam}&PageSize=${SAYFA_BOYUTU}`,
       );
       return dogrulanmisGecmisSayfasi(yanit);
     },
@@ -956,14 +960,23 @@ function dogrulanmisYorumSayfasi(yanit: AiInsightResponsePagedResponse): YorumSa
   };
 }
 
-/** Sayfalama TAMAMEN sunucunun zarfindan surulur -- `useHistory` ile ayni desen (KISS). */
-export function useInsights(page: number) {
-  return useQuery({
-    queryKey: queryKeys.insights(page),
-    queryFn: async (): Promise<YorumSayfasi> => {
-      const yanit = await request<AiInsightResponsePagedResponse>(`/insights?Page=${page}`);
+/**
+ * Sonsuz kaydirma (issue #147) -- `useInfiniteHistory` ile ayni desen: sayfalar TanStack
+ * Query'nin kendi `pages` dizisinde birikir, istemci ayri bir "biriktirilmis liste" state'i
+ * tutmaz. `queryKeys.insightsAll` ile invalidate edilince (yeni yorum uretilince/silinince)
+ * TUM biriktirilmis sayfalar birlikte yeniden cekilir.
+ */
+export function useInfiniteInsights() {
+  return useInfiniteQuery({
+    queryKey: queryKeys.insightsInfinite,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<YorumSayfasi> => {
+      const yanit = await request<AiInsightResponsePagedResponse>(
+        `/insights?Page=${pageParam}&PageSize=${SAYFA_BOYUTU}`,
+      );
       return dogrulanmisYorumSayfasi(yanit);
     },
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
   });
 }
 
@@ -1052,14 +1065,18 @@ function dogrulanmisOlcuSayfasi(yanit: BodyWeightLogResponsePagedResponse): Olcu
   };
 }
 
-/** Sayfalama TAMAMEN sunucunun zarfindan surulur -- `useHistory` ile ayni desen (issue #119). */
-export function useMeasurements(page: number) {
-  return useQuery({
-    queryKey: queryKeys.measurements(page),
-    queryFn: async (): Promise<OlcuSayfasi> => {
-      const yanit = await request<BodyWeightLogResponsePagedResponse>(`/body-weights?Page=${page}`);
+/** Sonsuz kaydirma (issue #147) -- `useInfiniteHistory` ile ayni desen. */
+export function useInfiniteMeasurements() {
+  return useInfiniteQuery({
+    queryKey: queryKeys.measurementsInfinite,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<OlcuSayfasi> => {
+      const yanit = await request<BodyWeightLogResponsePagedResponse>(
+        `/body-weights?Page=${pageParam}&PageSize=${SAYFA_BOYUTU}`,
+      );
       return dogrulanmisOlcuSayfasi(yanit);
     },
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
   });
 }
 
