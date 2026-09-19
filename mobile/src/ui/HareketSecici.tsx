@@ -76,6 +76,7 @@ export default function HareketSecici({
         <TextInput
           ref={alanRef}
           nativeID={id}
+          testID={id}
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus={otomatikOdak}

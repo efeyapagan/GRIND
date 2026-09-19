@@ -85,7 +85,7 @@ export default function LoginScreen() {
           onChangeText={setSifre}
           hata={alanHatalari.password}
         />
-        <BirincilDugme yukseklik="normal" disabled={gonderiliyor} onPress={gonder}>
+        <BirincilDugme testID="giris-yap-buton" yukseklik="normal" disabled={gonderiliyor} onPress={gonder}>
           Giriş yap
         </BirincilDugme>
       </View>

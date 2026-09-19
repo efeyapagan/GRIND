@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { LogOut } from 'lucide-react-native';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
@@ -7,6 +7,7 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import SifreAlani from '../../../src/ui/SifreAlani';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
+import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import HaftalikHedefSecici from '../../../src/components/HaftalikHedefSecici';
 import { ikonRenk } from '../../../src/ui/renkler';
 
@@ -26,7 +27,7 @@ export default function AccountScreen() {
   const { username, updateProfile, logout } = useAuth();
 
   return (
-    <ScrollView contentContainerClassName="gap-6 px-4 pt-2 pb-4">
+    <EkranKaydirici contentContainerClassName="gap-6 px-4 pt-2 pb-4">
       <View className="flex-col gap-1 rounded-xl bg-surface-1 p-4">
         <Text className="text-label text-muted">Kullanıcı adı</Text>
         <Text className="text-body text-fg">{username}</Text>
@@ -43,7 +44,7 @@ export default function AccountScreen() {
         <LogOut color={ikonRenk.danger} size={18} />
         <Text className="text-label text-danger">Çıkış yap</Text>
       </Pressable>
-    </ScrollView>
+    </EkranKaydirici>
   );
 }
 

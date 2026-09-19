@@ -1,9 +1,10 @@
-import { Text, ScrollView } from 'react-native';
+import { Text } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTemplate } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import SablonFormu from '../../../src/components/SablonFormu';
+import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import { ikonRenk } from '../../../src/ui/renkler';
 
 function GeriBaglantisi() {
@@ -24,28 +25,28 @@ export default function SablonDuzenleScreen() {
 
   if (isLoading) {
     return (
-      <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+      <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
         <GeriBaglantisi />
         <Text className="text-body text-muted">Yükleniyor...</Text>
-      </ScrollView>
+      </EkranKaydirici>
     );
   }
 
   if (isError || !sablon) {
     return (
-      <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+      <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
         <GeriBaglantisi />
         <Text accessibilityRole="alert" className="text-body text-danger">
           Şablon alınamadı.
         </Text>
-      </ScrollView>
+      </EkranKaydirici>
     );
   }
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+    <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
       <GeriBaglantisi />
       <SablonFormu key={sablon.id} sablon={sablon} donusYolu="/templates" />
-    </ScrollView>
+    </EkranKaydirici>
   );
 }
