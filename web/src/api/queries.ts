@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -36,11 +37,11 @@ type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePa
  * `records` anahtarini kullanacak, set eklendikten sonra burasi invalidate edilir ki
  * "tum zamanlarin rekorlari" ekrani bayat kalmasin.
  *
- * `historyAll`, `history(page)`nin ONEKI (prefix) olarak tutulur -- yeni bir set gecmisteki
- * set sayisini/hacmini ve (sayfa 1'e yeni bir oturum ekleyerek) sayfalamayi da etkiler (review
- * bulgusu M1). Tek bir sayfayi invalidate etmek digerlerini bayat birakirdi; `historyAll` ile
- * invalidate etmek TUM sayfalari (query key prefix eslesmesiyle) kapsar. Ham bir string literal
- * ('history') yerine bu nesne uzerinden gidilir ki anahtar TEK bir yerde tanimli kalsin (DRY).
+ * `historyAll`, `historyInfinite`nin ONEKI (prefix) olarak tutulur -- yeni bir set gecmisteki
+ * set sayisini/hacmini ve sayfalamayi da etkiler (review bulgusu M1). `historyAll` ile
+ * invalidate etmek TUM biriktirilmis sayfalari (query key prefix eslesmesiyle) kapsar. Ham bir
+ * string literal ('history') yerine bu nesne uzerinden gidilir ki anahtar TEK bir yerde tanimli
+ * kalsin (DRY).
  */
 export const queryKeys = {
   openSession: ['openSession'] as const,
@@ -48,7 +49,9 @@ export const queryKeys = {
   exercises: ['exercises'] as const,
   records: ['records'] as const,
   historyAll: ['history'] as const,
-  history: (page: number) => [...queryKeys.historyAll, page] as const,
+  // Issue #138: sonsuz kaydirma -- tek bir sayfa numarasi degil, TUM biriktirilmis sayfalar
+  // TEK bir query key altinda tutulur (useInfiniteQuery'nin kendi ic sayfalama mekanizmasi).
+  historyInfinite: ['history', 'infinite'] as const,
   // Takvimde secilen gunun oturumlari (#90); `historyAll` oneki altinda, set degisince o da tazelenir.
   historyDay: (gun: string | null) => [...queryKeys.historyAll, 'gun', gun] as const,
   templates: ['templates'] as const,
@@ -336,18 +339,28 @@ export function useExercises() {
   });
 }
 
+/** Issue #138: sonsuz kaydirma sayfa boyutu -- her yuklemede en fazla bu kadar antrenman gelir. */
+export const GECMIS_SAYFA_BOYUTU = 25;
+
 /**
- * Sayfalama TAMAMEN sunucunun zarfindan (`page`/`totalPages`) surulur -- istemci ne toplam
- * sayfa sayisini ne de toplam kaydi kendisi HESAPLAR (spec). `PageSize` bilerek GONDERILMEZ:
- * bu dilim filtre/boyut secimi sunmuyor (KISS), sunucunun varsayilani (20) kullanilir.
+ * Sayfalama TAMAMEN sunucunun zarfindan (`page`/`totalPages`) surulur -- istemci toplam sayfa
+ * sayisini kendisi HESAPLAMAZ (spec), yalnizca "bir sonraki sayfa var mi" sorusuna `page <
+ * totalPages` ile cevap verir. Onceki/Sonraki dugmeleri yerine sonsuz kaydirma (issue #138):
+ * `HistoryPage` listenin sonuna gelindiginde `fetchNextPage`i cagirir, sayfalar TanStack
+ * Query'nin kendi `pages` dizisinde biriktirilir -- istemci ayri bir "biriktirilmis liste"
+ * state'i tutmaz.
  */
-export function useHistory(page: number) {
-  return useQuery({
-    queryKey: queryKeys.history(page),
-    queryFn: async (): Promise<GecmisSayfasi> => {
-      const yanit = await request<HistorySessionResponsePagedResponse>(`/history?Page=${page}`);
+export function useInfiniteHistory() {
+  return useInfiniteQuery({
+    queryKey: queryKeys.historyInfinite,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<GecmisSayfasi> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>(
+        `/history?Page=${pageParam}&PageSize=${GECMIS_SAYFA_BOYUTU}`,
+      );
       return dogrulanmisGecmisSayfasi(yanit);
     },
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
   });
 }
 

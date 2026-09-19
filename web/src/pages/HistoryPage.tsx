@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Brain, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { oturumSilindiTazele, oturumuSil, useHistory, type GecmisOturum } from '../api/queries';
+import { Brain, CalendarDays } from 'lucide-react';
+import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '../api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { sallamaIzniIste, useSallama } from '../lib/sallama';
 import GecmisKarti from '../components/GecmisKarti';
@@ -10,14 +10,15 @@ import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import { usePageTitle } from '../ui/PageTitleContext';
 
-// Sayfalama dugmeleri (Stitch: 52 px).
-const SAYFA_DUGMESI =
-  'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
-
 /**
- * "Gecmis" ekrani -- sunucunun sayfali zarfini oldugu gibi gosterir. Sira, sayfa bilgisi, toplam
- * sayi ve hacim TAMAMEN sunucudan gelir (spec); istemci hicbir seyi yeniden HESAPLAMAZ veya
- * SIRALAMAZ. Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
+ * "Gecmis" ekrani -- sunucunun sayfali zarfini oldugu gibi gosterir. Sira, toplam sayi ve hacim
+ * TAMAMEN sunucudan gelir (spec); istemci hicbir seyi yeniden HESAPLAMAZ veya SIRALAMAZ. Hata
+ * durumu bos durumdan AYRI ve ONCELIKLI gosterilir.
+ *
+ * Sayfalama Onceki/Sonraki dugmeleri yerine SONSUZ KAYDIRMA'dir (issue #138): listenin sonundaki
+ * gorunmez `sentinelRef` ogesi viewport'a girince (`IntersectionObserver`) bir sonraki 25'lik
+ * sayfa otomatik cekilir; sayfalar TanStack Query'nin kendi `pages` dizisinde birikir, istemci
+ * ayri bir "biriktirilmis liste" state'i TUTMAZ.
  *
  * Silme (issue #46) GECIKMELIDIR: onaydan sonra kart listeden hemen kalkar ama DELETE istegi
  * ancak geri alma penceresi kapaninca gider. Sebep teknik ve baglayici -- API silinmis bir
@@ -30,8 +31,7 @@ const SAYFA_DUGMESI =
  */
 export default function HistoryPage() {
   usePageTitle('Geçmiş');
-  const [sayfa, setSayfa] = useState(1);
-  const { data, isLoading, isError } = useHistory(sayfa);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
   // bagimlilik olarak kullanilabilir, ref'e kopyalanmasi gerekmez.
   const queryClient = useQueryClient();
@@ -60,8 +60,33 @@ export default function HistoryPage() {
 
   useSallama(bekleyen !== null, geriAl);
 
-  // Bekleyen silme listeden hemen kalkar; geri alinirsa sunucudan silinmedigi icin oldugu gibi doner.
-  const gorunenler = data?.items.filter((o) => o.sessionId !== bekleyen?.sessionId) ?? [];
+  // Sunucudan gelen TUM sayfalarin oturumlari BIRLIKTE, sunucu sirasiyla (spec: istemci yeniden
+  // SIRALAMAZ) -- `pages` TanStack Query'nin kendi biriktirdigi dizidir, burada ayrica bir state
+  // tutulmaz. Bekleyen silme listeden hemen kalkar; geri alinirsa sunucudan silinmedigi icin
+  // oldugu gibi doner.
+  const tumOturumlar = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
+  const gorunenler = tumOturumlar.filter((o) => o.sessionId !== bekleyen?.sessionId);
+
+  // Liste sonundaki gorunmez oge viewport'a girince bir sonraki sayfa cekilir. `hasNextPage`
+  // false iken gozlemci hic KURULMAZ -- son sayfadayken bos yere bir IntersectionObserver
+  // ayakta tutulmaz (ikinci test: "son sayfadaysa ... yeni istek atilmaz").
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage) {
+      return;
+    }
+    const gozlemci = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    gozlemci.observe(sentinel);
+    return () => gozlemci.disconnect();
+  }, [hasNextPage, fetchNextPage]);
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
@@ -100,32 +125,10 @@ export default function HistoryPage() {
               />
             ))}
           </ul>
-          <div className="mt-3 flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={() => setSayfa((s) => s - 1)}
-              disabled={data.page <= 1}
-              className={SAYFA_DUGMESI}
-            >
-              <ChevronLeft aria-hidden size={18} />
-              Önceki
-            </button>
-            <div className="flex shrink-0 flex-col items-center px-2">
-              <span className="text-label tabular-nums">
-                Sayfa {data.page} / {data.totalPages}
-              </span>
-              <span className="text-label-xs text-muted">{data.totalCount} antrenman</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSayfa((s) => s + 1)}
-              disabled={data.page >= data.totalPages}
-              className={SAYFA_DUGMESI}
-            >
-              Sonraki
-              <ChevronRight aria-hidden size={18} />
-            </button>
-          </div>
+          {/* Gorunmez sentinel: listenin sonuna gelinince (`IntersectionObserver`) bir sonraki
+              sayfa otomatik cekilir -- `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
         </>
       )}
 
