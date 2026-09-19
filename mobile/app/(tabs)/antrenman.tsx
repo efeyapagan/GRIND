@@ -200,7 +200,7 @@ export default function AntrenmanScreen() {
             ))}
         </View>
         {gorunenOturum && (
-          <View className="flex-row flex-wrap items-center gap-2">
+          <View className="mt-2 flex-row flex-wrap items-center gap-2">
             {gorunenOturum.isOpen && (
               <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
                 <View className="size-2 rounded-full bg-muted" />

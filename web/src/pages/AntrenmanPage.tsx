@@ -251,7 +251,7 @@ export default function AntrenmanPage() {
             ))}
         </div>
         {gorunenOturum && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             {gorunenOturum.isOpen && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
                 <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
