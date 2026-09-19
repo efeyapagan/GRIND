@@ -24,10 +24,6 @@ function profilSayfasiniOlustur() {
   );
 }
 
-function kullaniciAdiFormu() {
-  return screen.getByRole('heading', { name: 'Kullanıcı adı' }).closest('section')!;
-}
-
 function sifreFormu() {
   return screen.getByRole('heading', { name: 'Şifre değiştir' }).closest('section')!;
 }
@@ -66,102 +62,13 @@ afterEach(() => {
   session.clear();
 });
 
-test('kullanici adi alani mevcut kullanici adiyla onceden dolu gelir', () => {
+/** Issue #119 kullanici karari: kullanici adi artik DUZENLENEMEZ, sadece goruntulenir. */
+test('kullanici adi duzenlenemez bir metin olarak gorunur', () => {
   profilSayfasiniOlustur();
 
-  expect(within(kullaniciAdiFormu()).getByLabelText('Kullanıcı adı')).toHaveValue('benimadim');
-});
-
-test('kullanici adi degistirilince PATCH govdesi currentPassword ve newUsername tasir, basari mesaji cikar', async () => {
-  let gonderilen: unknown = null;
-  server.use(
-    http.patch('/api/auth/me', async ({ request }) => {
-      gonderilen = await request.json();
-      return HttpResponse.json({
-        token: 'yeni-token',
-        expiresAtUtc: new Date(Date.now() + 3_600_000).toISOString(),
-        username: 'yeniadim',
-      });
-    }),
-  );
-
-  const kullanici = userEvent.setup();
-  profilSayfasiniOlustur();
-
-  const form = kullaniciAdiFormu();
-  await kullanici.clear(within(form).getByLabelText('Kullanıcı adı'));
-  await kullanici.type(within(form).getByLabelText('Kullanıcı adı'), 'yeniadim');
-  await kullanici.type(within(form).getByLabelText('Mevcut şifre'), 'eski-sifrem-123');
-  await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
-
-  expect(await within(form).findByText('Kullanıcı adın güncellendi.')).toBeInTheDocument();
-  expect(gonderilen).toEqual({ currentPassword: 'eski-sifrem-123', newUsername: 'yeniadim' });
-  // Basarili degisiklik sonrasi oturum YENI kullanici adiyla guncellendi (AuthContext.test.tsx'te
-  // ayrica dogrulanan davranis burada uctan uca da gorunur).
-  expect(session.read()?.username).toBe('yeniadim');
-});
-
-test('kullanici adi formu bos gonderilirse istek gitmez, alan hatasi gosterilir', async () => {
-  let istekYapildiMi = false;
-  server.use(
-    http.patch('/api/auth/me', () => {
-      istekYapildiMi = true;
-      return HttpResponse.json({ token: 't', expiresAtUtc: new Date().toISOString(), username: 'x' });
-    }),
-  );
-
-  const kullanici = userEvent.setup();
-  profilSayfasiniOlustur();
-
-  const form = kullaniciAdiFormu();
-  await kullanici.clear(within(form).getByLabelText('Kullanıcı adı'));
-  await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
-
-  const hatalar = within(form).getAllByRole('alert');
-  expect(hatalar.map((h) => h.textContent)).toEqual(
-    expect.arrayContaining(['Kullanıcı adı gerekli.', 'Mevcut şifre gerekli.']),
-  );
-  expect(istekYapildiMi).toBe(false);
-});
-
-test('kullanici adi yanlis mevcut sifreyle 401 alirsa "Mevcut şifre yanlış." gosterilir, oturum dusmez', async () => {
-  server.use(
-    http.patch('/api/auth/me', () =>
-      HttpResponse.json({ title: 'Yetkisiz', status: 401, detail: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 }),
-    ),
-  );
-
-  const kullanici = userEvent.setup();
-  profilSayfasiniOlustur();
-
-  const form = kullaniciAdiFormu();
-  await kullanici.type(within(form).getByLabelText('Mevcut şifre'), 'yanlis-sifre');
-  await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
-
-  expect(await within(form).findByText('Mevcut şifre yanlış.')).toBeInTheDocument();
-  expect(session.read()?.token).toBe('gecerli-token');
-});
-
-test('baskasina ait kullanici adiyla 409 donerse genel hata gosterilir', async () => {
-  server.use(
-    http.patch('/api/auth/me', () =>
-      HttpResponse.json(
-        { title: 'Çakışma', status: 409, detail: "'baskasi' kullanıcı adı zaten alınmış." },
-        { status: 409 },
-      ),
-    ),
-  );
-
-  const kullanici = userEvent.setup();
-  profilSayfasiniOlustur();
-
-  const form = kullaniciAdiFormu();
-  await kullanici.clear(within(form).getByLabelText('Kullanıcı adı'));
-  await kullanici.type(within(form).getByLabelText('Kullanıcı adı'), 'baskasi');
-  await kullanici.type(within(form).getByLabelText('Mevcut şifre'), 'eski-sifrem-123');
-  await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
-
-  expect(await within(form).findByText("'baskasi' kullanıcı adı zaten alınmış.")).toBeInTheDocument();
+  expect(screen.getByText('benimadim')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Kullanıcı adı')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Kullanıcı adı' })).not.toBeInTheDocument();
 });
 
 test('sifre degistirilince PATCH govdesi currentPassword ve newPassword tasir, alanlar temizlenir', async () => {
@@ -257,35 +164,6 @@ test('sifre formu yanlis mevcut sifreyle 401 alirsa oturum dusmeden hata gosteri
   expect(session.read()?.token).toBe('gecerli-token');
 });
 
-test('iki form birbirinden bagimsizdir: biri gonderilirken digeri etkilenmez', async () => {
-  const govdeler: unknown[] = [];
-  server.use(
-    http.patch('/api/auth/me', async ({ request }) => {
-      govdeler.push(await request.json());
-      return HttpResponse.json({
-        token: 'yeni-token',
-        expiresAtUtc: new Date(Date.now() + 3_600_000).toISOString(),
-        username: 'benimadim',
-      });
-    }),
-  );
-
-  const kullanici = userEvent.setup();
-  profilSayfasiniOlustur();
-
-  const sForm = sifreFormu();
-  await kullanici.type(within(sForm).getByLabelText('Mevcut şifre'), 'eski-sifrem-123');
-  await kullanici.type(within(sForm).getByLabelText('Yeni şifre'), 'yeni-sifrem-456');
-  await kullanici.type(within(sForm).getByLabelText('Yeni şifre tekrarı'), 'yeni-sifrem-456');
-  await kullanici.click(within(sForm).getByRole('button', { name: 'Kaydet' }));
-
-  await within(sForm).findByText('Şifren güncellendi.');
-  // Kullanici adi formu HIC dokunulmadi -- gonderilen tek govde sifre formununki, kullanici
-  // adi alani mevcut adiyla ayni kaldi.
-  expect(govdeler).toEqual([{ currentPassword: 'eski-sifrem-123', newPassword: 'yeni-sifrem-456' }]);
-  expect(within(kullaniciAdiFormu()).getByLabelText('Kullanıcı adı')).toHaveValue('benimadim');
-});
-
 test('haftalik hedef sunucunun degeriyle gelir; secim PUT gonderir ve deger yeniden istenir (#97, #117)', async () => {
   const araliklar = takvimSunucusu(4);
   const govdeler: unknown[] = [];
@@ -304,4 +182,16 @@ test('haftalik hedef sunucunun degeriyle gelir; secim PUT gonderir ve deger yeni
 
   await waitFor(() => expect(govdeler).toEqual([{ weeklyTargetDays: null }]));
   await waitFor(() => expect(araliklar).toHaveLength(2));
+});
+
+/** Issue #119/#120: Cikis yap ust kabuktaki hesap menusunden buraya (Hesap sekmesinin en altina) tasindi. */
+test('cikis yap tiklaninca oturum kapanir', async () => {
+  const kullanici = userEvent.setup();
+  profilSayfasiniOlustur();
+
+  expect(session.read()).not.toBeNull();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Çıkış yap' }));
+
+  expect(session.read()).toBeNull();
 });

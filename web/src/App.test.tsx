@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,9 +25,7 @@ function testeOzelSorguIstemcisi(): QueryClient {
 
 /**
  * Gercek uygulamadaki route agacini taklit eder (bkz. `auth/ProtectedRoute.test.tsx`'teki ayni
- * desen) -- App artik `useAuth()` kullaniyor (cikis dugmesi icin), bu yuzden gercek bir
- * `AuthProvider` icinde ve gercek yonlendirme ile test edilmesi gerekiyor; mock bir auth
- * context bunu dogrulayamazdi.
+ * desen). Issue #119/#120: alt menu Ana Sayfa · (+) · Profil oldu -- rotalar buna gore.
  */
 function testRouterOlustur() {
   return createMemoryRouter(
@@ -40,10 +38,9 @@ function testRouterOlustur() {
           </ProtectedRoute>
         ),
         children: [
-          { index: true, element: <SayfaGovdesi baslik="Bugün" metin="Ic sayfa icerigi" /> },
-          { path: 'history', element: <SayfaGovdesi baslik="Geçmiş" metin="Gecmis sayfasi" /> },
-          { path: 'records', element: <SayfaGovdesi baslik="Rekorlar" metin="Rekorlar sayfasi" /> },
-          { path: 'templates', element: <SayfaGovdesi baslik="Şablonlar" metin="Sablonlar sayfasi" /> },
+          { index: true, element: <SayfaGovdesi baslik="Ana sayfa" metin="Ic sayfa icerigi" /> },
+          { path: 'antrenman', element: <SayfaGovdesi baslik="Antrenman başlat" metin="Antrenman sayfasi" /> },
+          { path: 'profile', element: <SayfaGovdesi baslik="Hesap" metin="Profil sayfasi" /> },
         ],
       },
       { path: '/login', element: <h1>Giriş Yap</h1> },
@@ -73,7 +70,7 @@ test('App, ic route icerigini Outlet ile gosterir', async () => {
   expect(await screen.findByText('Ic sayfa icerigi')).toBeInTheDocument();
 });
 
-test('gezinme baglantilari Bugun, Gecmis ve Rekorlar sayfalarina gider', async () => {
+test('gezinme baglantilari Ana sayfa, Antrenman ve Profil sayfalarina gider', async () => {
   const kullanici = userEvent.setup();
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
@@ -85,13 +82,13 @@ test('gezinme baglantilari Bugun, Gecmis ve Rekorlar sayfalarina gider', async (
 
   await screen.findByText('Ic sayfa icerigi');
 
-  await kullanici.click(screen.getByRole('link', { name: 'Geçmiş' }));
-  expect(await screen.findByText('Gecmis sayfasi')).toBeInTheDocument();
+  await kullanici.click(screen.getByRole('link', { name: 'Antrenman başlat' }));
+  expect(await screen.findByText('Antrenman sayfasi')).toBeInTheDocument();
 
-  await kullanici.click(screen.getByRole('link', { name: 'Rekorlar' }));
-  expect(await screen.findByText('Rekorlar sayfasi')).toBeInTheDocument();
+  await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
+  expect(await screen.findByText('Profil sayfasi')).toBeInTheDocument();
 
-  await kullanici.click(screen.getByRole('link', { name: 'Bugün' }));
+  await kullanici.click(screen.getByRole('link', { name: 'Ana sayfa' }));
   expect(await screen.findByText('Ic sayfa icerigi')).toBeInTheDocument();
 });
 
@@ -106,69 +103,8 @@ test('aktif sayfanin baglantisi aria-current=page tasir', async () => {
 
   await screen.findByText('Ic sayfa icerigi');
 
-  expect(screen.getByRole('link', { name: 'Bugün' })).toHaveAttribute('aria-current', 'page');
-  expect(screen.getByRole('link', { name: 'Geçmiş' })).not.toHaveAttribute('aria-current');
-});
-
-test('cikis yap tiklaninca oturum kapanir ve giris ekrani gosterilir', async () => {
-  const kullanici = userEvent.setup();
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-
-  // hidden:true sarttir: jsdom [popover]:not(:popover-open) icin display:none uyguluyor
-  // (gercek tarayicidaki Popover API davranisi jsdom'da yok) -- userEvent.click bunu
-  // sorunsuz tetikler (jsdom gercek hit-testing yapmaz), sadece erisilebilirlik sorgusu
-  // varsayilanda gizli elemanlari eliyor.
-  await kullanici.click(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
-
-  expect(await screen.findByRole('heading', { name: 'Giriş Yap' })).toBeInTheDocument();
-});
-
-test('cikis yap sekme cubugunda degil, hesap menusunun icinde', async () => {
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-
-  const gezinme = screen.getByRole('navigation', { name: 'Ana gezinme' });
-  expect(within(gezinme).queryByRole('button', { name: 'Çıkış yap' })).not.toBeInTheDocument();
-
-  // Tetikleyici menuyu popovertarget ile acar; "Cikis yap" o menunun ICINDE (spec Karar 8).
-  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
-  expect(tetikleyici).toHaveAttribute('popovertarget', 'hesap-menusu');
-  const menu = document.getElementById('hesap-menusu');
-  expect(menu).toHaveAttribute('popover', 'auto');
-  // hidden:true: yukaridaki jsdom popover notuna bakin.
-  expect(menu).toContainElement(screen.getByRole('button', { name: 'Çıkış yap', hidden: true }));
-});
-
-test('hesap menusundeki Sablonlar baglantisi sablon listesine gider', async () => {
-  const kullanici = userEvent.setup();
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
-      <AuthProvider>
-        <RouterProvider router={testRouterOlustur()} />
-      </AuthProvider>
-    </QueryClientProvider>,
-  );
-
-  await screen.findByText('Ic sayfa icerigi');
-  // jsdom kapali popover'i gizler (bkz. cikis testleri) -- { hidden: true }.
-  await kullanici.click(screen.getByRole('link', { name: 'Şablonlar', hidden: true }));
-
-  expect(await screen.findByText('Sablonlar sayfasi')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Ana sayfa' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: 'Profil' })).not.toHaveAttribute('aria-current');
 });
 
 test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince gunceller (issue #65)', async () => {
@@ -182,14 +118,15 @@ test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince g
   );
 
   await screen.findByText('Ic sayfa icerigi');
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bugün');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ana sayfa');
 
-  await kullanici.click(screen.getByRole('link', { name: 'Geçmiş' }));
-  await screen.findByText('Gecmis sayfasi');
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Geçmiş');
+  await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
+  await screen.findByText('Profil sayfasi');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hesap');
 });
 
-test('GRIND yazisi hesap menusu dugmesiyle ayni tarafta (sag ustte) durur', async () => {
+/** Issue #119/#120: hesap menusu kaldirildi -- ust kabukta artik sadece "GRIND" yazisi var. */
+test('sag ustte sadece GRIND yazisi var, hesap dugmesi yok', async () => {
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
@@ -200,49 +137,26 @@ test('GRIND yazisi hesap menusu dugmesiyle ayni tarafta (sag ustte) durur', asyn
 
   await screen.findByText('Ic sayfa icerigi');
 
-  const tetikleyici = screen.getByRole('button', { name: 'Hesap menüsü' });
-  // Issue #65 Karar 2: "GRIND" yazisi artik solda baslik degil, hesap ikonunun YANINDA durur --
-  // ikisi ayni kapsayicinin (ust bilgi satirinin sag yarisi) icinde olmali.
-  expect(tetikleyici.parentElement).toHaveTextContent('GRIND');
+  expect(screen.getByText('GRIND')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Hesap menüsü' })).not.toBeInTheDocument();
   // Sol tarafta artik "GRIND" DEGIL, sayfa basligi var.
   expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('GRIND');
 });
 
-test('hesap menusunde kullanici adi gorunur ve profile gider', async () => {
+/** Issue #120: "+" HER ZAMAN /antrenman'a gider -- durum kontrolu (acik oturum var mi) sayfanin kendi isi. */
+test('artı dugmesi antrenman sayfasina gider', async () => {
   const kullanici = userEvent.setup();
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
-        <RouterProvider
-          router={createMemoryRouter(
-            [
-              {
-                path: '/',
-                element: (
-                  <ProtectedRoute>
-                    <App />
-                  </ProtectedRoute>
-                ),
-                children: [
-                  { index: true, element: <p>Ic sayfa icerigi</p> },
-                  { path: 'profile', element: <p>Profil sayfasi</p> },
-                ],
-              },
-              { path: '/login', element: <h1>Giriş Yap</h1> },
-            ],
-            { initialEntries: ['/'] },
-          )}
-        />
+        <RouterProvider router={testRouterOlustur()} />
       </AuthProvider>
     </QueryClientProvider>,
   );
 
   await screen.findByText('Ic sayfa icerigi');
-  // jsdom kapali popover'i gizler (bkz. yukaridaki cikis testleri) -- { hidden: true }.
-  const kullaniciAdiBaglantisi = screen.getByRole('link', { name: /efe/, hidden: true });
-  expect(kullaniciAdiBaglantisi).toHaveAttribute('href', '/profile');
 
-  await kullanici.click(kullaniciAdiBaglantisi);
+  await kullanici.click(screen.getByRole('link', { name: 'Antrenman başlat' }));
 
-  expect(await screen.findByText('Profil sayfasi')).toBeInTheDocument();
+  expect(await screen.findByText('Antrenman sayfasi')).toBeInTheDocument();
 });

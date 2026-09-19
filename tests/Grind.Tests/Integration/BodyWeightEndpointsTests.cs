@@ -38,10 +38,11 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         return client;
     }
 
-    private static async Task<BodyWeightLogResponse> PostWeightAsync(HttpClient client, decimal weight)
+    private static async Task<BodyWeightLogResponse> PostWeightAsync(
+        HttpClient client, decimal weight, decimal heightCm = 180m, DateTimeOffset? recordedAt = null)
     {
         var response = await client.PostAsJsonAsync("/api/body-weights",
-            new CreateBodyWeightRequest { Weight = weight }, Json);
+            new CreateBodyWeightRequest { Weight = weight, HeightCm = heightCm, RecordedAt = recordedAt }, Json);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<BodyWeightLogResponse>(Json))!;
     }
@@ -67,11 +68,12 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         var client = await AuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/body-weights",
-            new CreateBodyWeightRequest { Weight = 82.4m }, Json);
+            new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m }, Json);
         var eklenen = await response.Content.ReadFromJsonAsync<BodyWeightLogResponse>(Json);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(82.4m, eklenen!.Weight);
+        Assert.Equal(180m, eklenen.HeightCm);
         Assert.EndsWith($"/api/body-weights/{eklenen.Id}", response.Headers.Location!.ToString());
     }
 
@@ -151,7 +153,7 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         var client = await AuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/body-weights",
-            new CreateBodyWeightRequest { Weight = 0m }, Json);
+            new CreateBodyWeightRequest { Weight = 0m, HeightCm = 180m }, Json);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -162,7 +164,7 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         var client = await AuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/body-weights",
-            new CreateBodyWeightRequest { Weight = 82.455m }, Json);
+            new CreateBodyWeightRequest { Weight = 82.455m, HeightCm = 180m }, Json);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -175,10 +177,72 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         var response = await client.PostAsJsonAsync("/api/body-weights", new CreateBodyWeightRequest
         {
             Weight = 82.4m,
+            HeightCm = 180m,
             RecordedAt = DateTimeOffset.UtcNow.AddDays(1)
         }, Json);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Issue #119, kullanıcı kararıyla revize: kilo VE boy zorunlu -- boy verilmezse 400.</summary>
+    [Fact]
+    public async Task Boy_olmadan_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/body-weights",
+            new CreateBodyWeightRequest { Weight = 82.4m }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Kilo_olmadan_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/body-weights",
+            new CreateBodyWeightRequest { HeightCm = 180m }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Boş govde kilo VE boy eksik olduğu için 400 alır.</summary>
+    [Fact]
+    public async Task Ucu_de_bos_govde_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/body-weights", new CreateBodyWeightRequest(), Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Kalca_cevresiyle_birlikte_kaydedilebilir()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/body-weights",
+            new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m, HipCm = 98m }, Json);
+        var eklenen = await response.Content.ReadFromJsonAsync<BodyWeightLogResponse>(Json);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(98m, eklenen!.HipCm);
+    }
+
+    /// <summary>Issue #119, kullanıcı kararı: aynı gün aynı boy+kilo ile ikinci istek 409 verir.</summary>
+    [Fact]
+    public async Task Ayni_gun_ayni_boy_kilo_ikinci_istek_409_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        await PostWeightAsync(client, 82.4m, 180m);
+
+        var response = await client.PostAsJsonAsync("/api/body-weights",
+            new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m }, Json);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

@@ -1,0 +1,47 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    branches: [master, dev]
+    paths: ['mobile/**', 'packages/shared/**', 'package.json', 'package-lock.json', '.github/workflows/mobile.yml']
+  push:
+    branches: [master, dev]
+    paths: ['mobile/**', 'packages/shared/**', 'package.json', 'package-lock.json', '.github/workflows/mobile.yml']
+
+# DIKKAT: grup adi diger CI'lardan (web-..., ci-...) FARKLI olmali; ayni grup ayni branch'te
+# birbirlerini iptal eder.
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Tip kontrolu ve test et
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # npm workspaces: mobile, `@grind/shared` sembolik baglantisi kok kurulumla olusur --
+      # `mobile/` icinde tek basina `npm ci` calistirmak bu paketi cozemez (registry'de yok).
+      - name: Bagimliliklari kur (kok, workspaces)
+        run: npm ci
+
+      - name: Tip kontrolu
+        run: npm run typecheck --workspace mobile
+
+      - name: Testler
+        run: npm run test --workspace mobile
+
+    # DIKKAT: gercek native derleme (EAS Build / Xcode) burada YAPILMAZ -- imzalama, hesap
+    # ve cok daha uzun surelerle KISA CI dongusunu bozardi. Bu is akisi yalnizca tip
+    # kontrolu ve Jest testlerini kapsar; native build ayri, isteğe bagli bir is akisina
+    # birakilir.

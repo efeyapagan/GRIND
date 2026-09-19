@@ -146,6 +146,11 @@ public static class ExportTextFormatter
             Line(text, $"Not: {SingleLine(session.Notes)}");
         }
 
+        if (session.Difficulty is { } difficulty)
+        {
+            Line(text, $"Zorluk: {DifficultyText(difficulty)}");
+        }
+
         if (session.Sets.Count == 0)
         {
             Line(text, "(Bu oturumda set girilmedi.)");
@@ -164,9 +169,13 @@ public static class ExportTextFormatter
         Line(text, Inv($"Toplam: {session.SetCount} set, {session.TotalVolume:0.##} kg"));
     }
 
+    /// <summary>
+    /// "Vücut ölçüleri" (issue #119 öncesi "Vücut ağırlığı"): bir kayıtta üç ölçünün (kilo, yağ
+    /// oranı, bel çevresi) yalnızca bazıları dolu olabilir -- satır SADECE dolu olanları gösterir.
+    /// </summary>
     private static void AppendBodyWeights(StringBuilder text, IReadOnlyList<BodyWeightLogResponse> logs)
     {
-        Section(text, "Vücut ağırlığı");
+        Section(text, "Vücut ölçüleri");
 
         if (logs.Count == 0)
         {
@@ -177,9 +186,29 @@ public static class ExportTextFormatter
         foreach (var log in logs)
         {
             var local = TurkeyDay.ToLocal(log.RecordedAt);
-            Line(text, Inv($"- {DayText(local)} {TimeText(local)} — {log.Weight:0.##} kg"));
+            Line(text, Inv($"- {DayText(local)} {TimeText(local)} — {OlcuMetni(log)}"));
         }
     }
+
+    private static string OlcuMetni(BodyWeightLogResponse log)
+    {
+        var parcalar = new List<string>();
+        if (log.Weight is { } weight) parcalar.Add(Inv($"{weight:0.##} kg"));
+        if (log.HeightCm is { } boy) parcalar.Add(Inv($"{boy:0.##} cm boy"));
+        if (log.BodyFatPercent is { } yagOrani) parcalar.Add(Inv($"%{yagOrani:0.##} yağ"));
+        if (log.WaistCm is { } bel) parcalar.Add(Inv($"{bel:0.##} cm bel"));
+        if (log.HipCm is { } kalca) parcalar.Add(Inv($"{kalca:0.##} cm kalça"));
+        return string.Join(", ", parcalar);
+    }
+
+    /// <summary>Sabit TR etiketi — enum adı (ör. "Hard") LLM'e İngilizce sızmasın.</summary>
+    private static string DifficultyText(SessionDifficulty difficulty) => difficulty switch
+    {
+        SessionDifficulty.Easy => "Kolay",
+        SessionDifficulty.Medium => "Orta",
+        SessionDifficulty.Hard => "Zor",
+        _ => difficulty.ToString()
+    };
 
     private static string SetWithMarks(SetEntryResponse set)
     {

@@ -46,8 +46,10 @@ public class BodyWeightLogServiceTests
         return (context, user, service, transaction);
     }
 
-    private static CreateBodyWeightRequest Yeni(decimal weight, DateTimeOffset? recordedAt = null) =>
-        new() { Weight = weight, RecordedAt = recordedAt };
+    /// <summary>Kilo VE boy her zaman verilir (issue #119, kullanıcı kararıyla ikisi de zorunlu).</summary>
+    private static CreateBodyWeightRequest Yeni(
+        decimal weight = 82.4m, decimal heightCm = 180m, DateTimeOffset? recordedAt = null) =>
+        new() { Weight = weight, HeightCm = heightCm, RecordedAt = recordedAt };
 
     // ---- Ekleme ----
 
@@ -57,13 +59,14 @@ public class BodyWeightLogServiceTests
         var (context, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var eklenen = await service.CreateAsync(Yeni(82.4m));
+            var eklenen = await service.CreateAsync(Yeni());
 
             context.ChangeTracker.Clear();
             var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
 
             Assert.Equal(An, satir.RecordedAt);
             Assert.Equal(82.4m, satir.Weight);
+            Assert.Equal(180m, satir.HeightCm);
         }
     }
 
@@ -78,7 +81,7 @@ public class BodyWeightLogServiceTests
         await using (transaction)
         {
             var eklenen = await service.CreateAsync(
-                Yeni(82.4m, new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.FromHours(3))));
+                Yeni(recordedAt: new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.FromHours(3))));
 
             context.ChangeTracker.Clear();
             var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
@@ -94,7 +97,7 @@ public class BodyWeightLogServiceTests
         await using (transaction)
         {
             await Assert.ThrowsAsync<ValidationException>(
-                () => service.CreateAsync(Yeni(82.4m, new DateTimeOffset(An.AddHours(1)))));
+                () => service.CreateAsync(Yeni(recordedAt: new DateTimeOffset(An.AddHours(1)))));
         }
     }
 
@@ -108,7 +111,7 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var eklenen = await service.CreateAsync(Yeni(82.4m, new DateTimeOffset(An.AddMinutes(2))));
+            var eklenen = await service.CreateAsync(Yeni(recordedAt: new DateTimeOffset(An.AddMinutes(2))));
 
             Assert.Equal(An.AddMinutes(2), eklenen.RecordedAt);
         }
@@ -120,7 +123,200 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(Yeni(82.455m)));
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(Yeni(weight: 82.455m)));
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_boy_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(Yeni(heightCm: 180.455m)));
+        }
+    }
+
+    // ---- Vücut ölçüleri (issue #119, kullanıcı kararıyla revize): kilo+boy zorunlu, gerisi opsiyonel ----
+
+    [Fact]
+    public async Task Opsiyonel_olculer_verilmezse_null_kalir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(Yeni());
+
+            Assert.Null(eklenen.BodyFatPercent);
+            Assert.Null(eklenen.WaistCm);
+            Assert.Null(eklenen.HipCm);
+        }
+    }
+
+    [Fact]
+    public async Task Bes_olcu_de_ayni_kayitta_birlikte_saklanabilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(new CreateBodyWeightRequest
+            {
+                Weight = 82.4m,
+                HeightCm = 180m,
+                BodyFatPercent = 18.5m,
+                WaistCm = 82m,
+                HipCm = 98m
+            });
+
+            Assert.Equal(82.4m, eklenen.Weight);
+            Assert.Equal(180m, eklenen.HeightCm);
+            Assert.Equal(18.5m, eklenen.BodyFatPercent);
+            Assert.Equal(82m, eklenen.WaistCm);
+            Assert.Equal(98m, eklenen.HipCm);
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_yag_orani_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m, BodyFatPercent = 18.455m }));
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_bel_cevresi_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m, WaistCm = 82.455m }));
+        }
+    }
+
+    [Fact]
+    public async Task Uc_ondalikli_kalca_cevresi_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateBodyWeightRequest { Weight = 82.4m, HeightCm = 180m, HipCm = 98.455m }));
+        }
+    }
+
+    [Fact]
+    public async Task Opsiyonel_olculer_patch_ile_eklenebilir()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var eklenen = await service.CreateAsync(Yeni());
+
+            await service.PatchAsync(eklenen.Id,
+                new PatchBodyWeightRequest { BodyFatPercent = 17.2m, WaistCm = 80m, HipCm = 96m });
+
+            context.ChangeTracker.Clear();
+            var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
+
+            Assert.Equal(82.4m, satir.Weight);
+            Assert.Equal(17.2m, satir.BodyFatPercent);
+            Assert.Equal(80m, satir.WaistCm);
+            Assert.Equal(96m, satir.HipCm);
+        }
+    }
+
+    // ---- Tekrar kontrolü (issue #119, kullanıcı kararı): aynı gün + aynı boy/kilo = zaten kayıtlı ----
+
+    [Fact]
+    public async Task Ayni_gun_ayni_boy_kilo_ile_ikinci_kayit_409_reddedilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An.AddHours(-2))));
+
+            await Assert.ThrowsAsync<ConflictException>(() => service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An.AddHours(-1)))));
+        }
+    }
+
+    /// <summary>Karşılaştırma SADECE boy+kilo -- diğer ölçüler farklı olsa bile tekrar sayılır.</summary>
+    [Fact]
+    public async Task Diger_olculer_farkli_olsa_bile_ayni_boy_kilo_tekrar_sayilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await service.CreateAsync(new CreateBodyWeightRequest
+            {
+                Weight = 82.4m, HeightCm = 180m, BodyFatPercent = 18m, WaistCm = 82m,
+                RecordedAt = new DateTimeOffset(An.AddHours(-3))
+            });
+
+            await Assert.ThrowsAsync<ConflictException>(() => service.CreateAsync(new CreateBodyWeightRequest
+            {
+                Weight = 82.4m, HeightCm = 180m, BodyFatPercent = 20m, WaistCm = 85m, HipCm = 99m,
+                RecordedAt = new DateTimeOffset(An.AddHours(-1))
+            }));
+        }
+    }
+
+    [Fact]
+    public async Task Farkli_gunde_ayni_boy_kilo_kabul_edilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An.AddDays(-1))));
+
+            var ikinci = await service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An)));
+
+            Assert.NotNull(ikinci);
+        }
+    }
+
+    [Fact]
+    public async Task Ayni_gun_farkli_kiloyla_kabul_edilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An.AddHours(-2))));
+
+            var ikinci = await service.CreateAsync(
+                Yeni(weight: 82.1m, heightCm: 180m, recordedAt: new DateTimeOffset(An.AddHours(-1))));
+
+            Assert.NotNull(ikinci);
+        }
+    }
+
+    [Fact]
+    public async Task Baskasinin_ayni_gun_ayni_olcusu_engel_olmaz()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            context.Add(new BodyWeightLog
+            {
+                User = digerKullanici, Weight = 82.4m, HeightCm = 180m, RecordedAt = An
+            });
+            await context.SaveChangesAsync();
+
+            var eklenen = await service.CreateAsync(
+                Yeni(weight: 82.4m, heightCm: 180m, recordedAt: new DateTimeOffset(An)));
+
+            Assert.NotNull(eklenen);
         }
     }
 
@@ -132,9 +328,9 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            await service.CreateAsync(Yeni(83.0m, new DateTimeOffset(An.AddDays(-2))));
-            await service.CreateAsync(Yeni(82.5m, new DateTimeOffset(An.AddDays(-1))));
-            var enYeni = await service.CreateAsync(Yeni(82.1m));
+            await service.CreateAsync(Yeni(weight: 83.0m, recordedAt: new DateTimeOffset(An.AddDays(-2))));
+            await service.CreateAsync(Yeni(weight: 82.5m, recordedAt: new DateTimeOffset(An.AddDays(-1))));
+            var enYeni = await service.CreateAsync(Yeni(weight: 82.1m));
 
             var sayfa = await service.GetPageAsync(new PagedRangeQuery { PageSize = 2 });
 
@@ -157,8 +353,8 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            await service.CreateAsync(Yeni(82.4m,
-                new DateTimeOffset(new DateTime(2026, 3, 9, 21, 30, 0, DateTimeKind.Utc))));
+            await service.CreateAsync(
+                Yeni(recordedAt: new DateTimeOffset(new DateTime(2026, 3, 9, 21, 30, 0, DateTimeKind.Utc))));
 
             var dokuzuncu = await service.GetPageAsync(new PagedRangeQuery
             {
@@ -184,7 +380,7 @@ public class BodyWeightLogServiceTests
         await using (transaction)
         {
             var zaman = An.AddHours(-1);
-            var eklenen = await service.CreateAsync(Yeni(82.4m, new DateTimeOffset(zaman)));
+            var eklenen = await service.CreateAsync(Yeni(recordedAt: new DateTimeOffset(zaman)));
 
             await service.PatchAsync(eklenen.Id, new PatchBodyWeightRequest { Weight = 81.9m });
 
@@ -192,6 +388,7 @@ public class BodyWeightLogServiceTests
             var satir = await context.Set<BodyWeightLog>().SingleAsync(b => b.Id == eklenen.Id);
 
             Assert.Equal(81.9m, satir.Weight);
+            Assert.Equal(180m, satir.HeightCm);
             Assert.Equal(zaman, satir.RecordedAt);
         }
     }
@@ -202,7 +399,7 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var eklenen = await service.CreateAsync(Yeni(82.4m));
+            var eklenen = await service.CreateAsync(Yeni());
 
             await Assert.ThrowsAsync<ValidationException>(
                 () => service.PatchAsync(eklenen.Id, new PatchBodyWeightRequest()));
@@ -217,7 +414,7 @@ public class BodyWeightLogServiceTests
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var eklenen = await service.CreateAsync(Yeni(82.4m));
+            var eklenen = await service.CreateAsync(Yeni());
 
             await service.DeleteAsync(eklenen.Id);
 
