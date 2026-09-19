@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { useCallback } from 'react';
+import { View, Text, Pressable, FlatList } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { Brain, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { oturumSilindiTazele, oturumuSil, useHistory, type GecmisOturum } from '@grind/shared/api/queries';
+import { Brain, CalendarDays } from 'lucide-react-native';
+import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '@grind/shared/api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import GecmisKarti from '../../../src/components/GecmisKarti';
@@ -12,13 +12,18 @@ import GeriAlSeridi from '../../../src/ui/GeriAlSeridi';
 import { ikonRenk } from '../../../src/ui/renkler';
 
 /**
- * web/src/pages/HistoryPage.tsx ile ayni (issue #46). Sallama-ile-geri-alma (DeviceMotion, web'e
- * ozel) BILEREK atlandi -- "Geri al" seridindeki dokunma butonu tek (ve web'de de var olan) yol.
+ * web/src/pages/HistoryPage.tsx ile ayni (issue #46, sonsuz kaydirma #142). Sallama-ile-geri-alma
+ * (DeviceMotion, web'e ozel) BILEREK atlandi -- "Geri al" seridindeki dokunma butonu tek (ve
+ * web'de de var olan) yol.
+ *
+ * Sayfalama Onceki/Sonraki dugmeleri yerine SONSUZ KAYDIRMA'dir (issue #142, web'in #138'i ile
+ * ayni desen): `FlatList`in `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi
+ * ceker; sayfalar TanStack Query'nin kendi `pages` dizisinde birikir, istemci ayri bir
+ * "biriktirilmis liste" state'i TUTMAZ.
  */
 export default function HistoryScreen() {
   usePageTitle('Geçmiş');
-  const [sayfa, setSayfa] = useState(1);
-  const { data, isLoading, isError } = useHistory(sayfa);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   const queryClient = useQueryClient();
   const silmeyiTamamla = useCallback(
     (oturum: GecmisOturum) => {
@@ -31,72 +36,63 @@ export default function HistoryScreen() {
   );
   const { bekleyen, baslat, geriAl, sureDoldu } = useGecikmeliSilme(silmeyiTamamla);
 
-  const gorunenler = data?.items.filter((o) => o.sessionId !== bekleyen?.sessionId) ?? [];
+  // Sunucudan gelen TUM sayfalarin oturumlari BIRLIKTE, sunucu sirasiyla -- `pages` TanStack
+  // Query'nin kendi biriktirdigi dizidir. Bekleyen silme listeden hemen kalkar; geri alinirsa
+  // sunucudan silinmedigi icin oldugu gibi doner.
+  const tumOturumlar = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
+  const gorunenler = tumOturumlar.filter((o) => o.sessionId !== bekleyen?.sessionId);
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
-      <Link href="/insights" asChild>
-        <Pressable className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-4">
-          <Brain color={ikonRenk.fg} size={18} />
-          <Text className="text-label text-fg">AI yorumu</Text>
-        </Pressable>
-      </Link>
-
-      {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
-
-      {isError && (
-        <Text accessibilityRole="alert" className="text-body text-danger">
-          Geçmiş alınamadı. Lütfen sayfayı yenileyin.
-        </Text>
-      )}
-
-      {!isLoading && !isError && data && gorunenler.length === 0 && (
-        <BosDurum ikon={CalendarDays} baslik="Henüz antrenman geçmişi yok" />
-      )}
-
-      {!isLoading && !isError && data && gorunenler.length > 0 && (
-        <>
-          <View className="flex-col gap-4">
-            {gorunenler.map((oturum) => (
-              <GecmisKarti key={oturum.sessionId} oturum={oturum} onSil={() => baslat(oturum)} />
-            ))}
-          </View>
-          <View className="mt-3 flex-row items-center justify-between gap-4">
-            <Pressable
-              onPress={() => setSayfa((s) => s - 1)}
-              disabled={data.page <= 1}
-              className={`h-13 flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-surface-2 ${data.page <= 1 ? 'opacity-60' : ''}`}
-            >
-              <ChevronLeft color={ikonRenk.fg} size={18} />
-              <Text className="text-label text-fg uppercase">Önceki</Text>
+    <FlatList
+      testID="gecmis-liste"
+      data={gorunenler}
+      keyExtractor={(oturum) => String(oturum.sessionId)}
+      renderItem={({ item }) => <GecmisKarti oturum={item} onSil={() => baslat(item)} />}
+      ItemSeparatorComponent={() => <View className="h-4" />}
+      contentContainerClassName="px-4 pt-2 pb-4"
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      }}
+      ListHeaderComponent={
+        <View className="mb-5 flex-col gap-5">
+          <Link href="/insights" asChild>
+            <Pressable className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-4">
+              <Brain color={ikonRenk.fg} size={18} />
+              <Text className="text-label text-fg">AI yorumu</Text>
             </Pressable>
-            <View className="shrink-0 flex-col items-center px-2">
-              <Text className="text-label text-fg">
-                Sayfa {data.page} / {data.totalPages}
-              </Text>
-              <Text className="text-label-xs text-muted">{data.totalCount} antrenman</Text>
-            </View>
-            <Pressable
-              onPress={() => setSayfa((s) => s + 1)}
-              disabled={data.page >= data.totalPages}
-              className={`h-13 flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-surface-2 ${data.page >= data.totalPages ? 'opacity-60' : ''}`}
-            >
-              <Text className="text-label text-fg uppercase">Sonraki</Text>
-              <ChevronRight color={ikonRenk.fg} size={18} />
-            </Pressable>
-          </View>
-        </>
-      )}
+          </Link>
 
-      {bekleyen && (
-        <GeriAlSeridi
-          key={bekleyen.sessionId}
-          mesaj="Antrenman silindi"
-          sureMs={GERI_AL_MS}
-          onGeriAl={geriAl}
-          onSureDoldu={sureDoldu}
-        />
-      )}
-    </ScrollView>
+          {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+
+          {isError && (
+            <Text accessibilityRole="alert" className="text-body text-danger">
+              Geçmiş alınamadı. Lütfen sayfayı yenileyin.
+            </Text>
+          )}
+        </View>
+      }
+      ListEmptyComponent={
+        !isLoading && !isError && data ? (
+          <BosDurum ikon={CalendarDays} baslik="Henüz antrenman geçmişi yok" />
+        ) : null
+      }
+      ListFooterComponent={
+        <View className="mt-5 flex-col gap-5">
+          {isFetchingNextPage && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {bekleyen && (
+            <GeriAlSeridi
+              key={bekleyen.sessionId}
+              mesaj="Antrenman silindi"
+              sureMs={GERI_AL_MS}
+              onGeriAl={geriAl}
+              onSureDoldu={sureDoldu}
+            />
+          )}
+        </View>
+      }
+    />
   );
 }
