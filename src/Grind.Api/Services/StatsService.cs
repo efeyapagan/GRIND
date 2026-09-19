@@ -93,13 +93,18 @@ public class StatsService(
 
         // Gruplama bellekte, TurkeyDay üzerinden — gün sınırı kuralının SQL'de ikinci bir kopyası
         // yok (Faz 9 Karar 6). Satır sayısı tartı sayısıyla sınırlı.
+        //
+        // Weight nullable (issue #119: bir kayıt sadece yağ oranı/bel çevresi taşıyabilir) --
+        // kilosu olmayan kayıtlar bu KİLO trendinden filtrelenir, aksi halde Average sessizce
+        // onları yoksayar ama ReadingCount'a yine de sayar (yanlış "kaç ölçüm" izlenimi verir).
         var bodyWeight = logs
+            .Where(l => l.Weight is not null)
             .GroupBy(l => TurkeyDay.LocalDateOf(l.RecordedAt))
             .Select(g => new DailyBodyWeightResponse(
                 g.Key,
                 // "Yarım yukarı": .NET'in varsayılanı banker's rounding'dir ve 82.405'i 82.40'a
                 // indirir — kilo gösteriminde kullanıcıya tutarsız görünür (spec Karar 1).
-                decimal.Round(g.Average(l => l.Weight), 2, MidpointRounding.AwayFromZero),
+                decimal.Round(g.Average(l => l.Weight!.Value), 2, MidpointRounding.AwayFromZero),
                 g.Count()))
             .OrderBy(d => d.Date)
             .ToList();

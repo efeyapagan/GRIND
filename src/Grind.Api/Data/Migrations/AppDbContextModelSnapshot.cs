@@ -88,13 +88,29 @@ namespace Grind.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal?>("BodyFatPercent")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<decimal?>("HeightCm")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<decimal?>("HipCm")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
                     b.Property<DateTime>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal>("Weight")
+                    b.Property<decimal?>("WaistCm")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<decimal?>("Weight")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
 
@@ -104,6 +120,14 @@ namespace Grind.Api.Data.Migrations
 
                     b.ToTable("BodyWeightLogs", t =>
                         {
+                            t.HasCheckConstraint("CK_BodyWeightLog_BodyFatPercent_Positive", "\"BodyFatPercent\" > 0");
+
+                            t.HasCheckConstraint("CK_BodyWeightLog_HeightCm_Positive", "\"HeightCm\" > 0");
+
+                            t.HasCheckConstraint("CK_BodyWeightLog_HipCm_Positive", "\"HipCm\" > 0");
+
+                            t.HasCheckConstraint("CK_BodyWeightLog_WaistCm_Positive", "\"WaistCm\" > 0");
+
                             t.HasCheckConstraint("CK_BodyWeightLog_Weight_Positive", "\"Weight\" > 0");
                         });
                 });
@@ -803,6 +827,10 @@ namespace Grind.Api.Data.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Difficulty")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("timestamp with time zone");

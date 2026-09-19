@@ -63,7 +63,8 @@ public class ExportService(
             query.To,
             summary,
             HistoryMapping.ToSessionResponses(sessions, sets),
-            bodyWeights.Select(b => new BodyWeightLogResponse(b.Id, b.Weight, b.RecordedAt)).ToList(),
+            bodyWeights.Select(b => new BodyWeightLogResponse(
+                b.Id, b.Weight, b.HeightCm, b.BodyFatPercent, b.WaistCm, b.HipCm, b.RecordedAt)).ToList(),
             records);
     }
 

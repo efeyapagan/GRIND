@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, GripVertical, Plus, Trash2, X } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   useCreateTemplate,
   useDeleteTemplate,
@@ -14,6 +25,7 @@ import {
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { VARSAYILAN_DINLENME_SN } from '../lib/dinlenme';
+import { anahtaraGoreTasi } from '../lib/siralama';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
 import Hap from '../ui/Hap';
@@ -192,6 +204,23 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
     });
   }
 
+  // Basili tutup surukleme (issue #118 madde 3): ok dugmeleri (yukari/asagi) YERINE degil YANINA
+  // gelir -- klavye/ekran okuyucu yolu onlarda kalir. Surukleme, ok dugmelerinin besledigi AYNI
+  // `satirlar` state'ini gunceller (`anahtaraGoreTasi`), ikinci bir sira kaynagi olusmaz.
+  const surukleSensorleri = useSensors(
+    useSensor(PointerSensor, {
+      // Kucuk bir dokunma/tiklama surukleme baslatmasin; sayfa kaydirmasi da bununla bozulmaz.
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
+  function surukleBitince({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) {
+      return;
+    }
+    setSatirlar((onceki) => anahtaraGoreTasi(onceki, Number(active.id), Number(over.id)));
+  }
+
   /** Sunucu kurallarini yansitir ama belirleyici sunucudur (spec Karar 3). */
   function dogrula(): boolean {
     const kirpilmisAd = ad.trim();
@@ -279,27 +308,36 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
           Hareketler
         </h2>
         {satirlar.length === 0 && <p className="text-body text-muted">Henüz hareket yok.</p>}
-        <ol className="flex flex-col gap-3">
-          {satirlar.map((satir, sira) => (
-            <HareketSatiri
-              key={satir.anahtar}
-              satir={satir}
-              sira={sira + 1}
-              sonMu={sira === satirlar.length - 1}
-              egzersizler={siraliEgzersizler}
-              baskaSatirdaSecilenler={new Set(
-                satirlar.filter((diger) => diger.anahtar !== satir.anahtar).map((diger) => diger.exerciseId),
-              )}
-              setHatasi={setHatalari[satir.anahtar]}
-              onEgzersiz={(exerciseId) => egzersizSec(satir.anahtar, exerciseId)}
-              onHedefSet={(deger) => satiriGuncelle(satir.anahtar, { plannedSets: deger })}
-              onDinlenme={(saniye) => satiriGuncelle(satir.anahtar, { restSeconds: saniye })}
-              onYukari={() => tasi(sira, -1)}
-              onAsagi={() => tasi(sira, 1)}
-              onKaldir={() => setSatirlar((onceki) => onceki.filter((diger) => diger.anahtar !== satir.anahtar))}
-            />
-          ))}
-        </ol>
+        <DndContext
+          sensors={surukleSensorleri}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+          onDragEnd={surukleBitince}
+        >
+          <SortableContext items={satirlar.map((satir) => satir.anahtar)} strategy={verticalListSortingStrategy}>
+            <ol className="flex flex-col gap-3">
+              {satirlar.map((satir, sira) => (
+                <HareketSatiri
+                  key={satir.anahtar}
+                  satir={satir}
+                  sira={sira + 1}
+                  sonMu={sira === satirlar.length - 1}
+                  egzersizler={siraliEgzersizler}
+                  baskaSatirdaSecilenler={new Set(
+                    satirlar.filter((diger) => diger.anahtar !== satir.anahtar).map((diger) => diger.exerciseId),
+                  )}
+                  setHatasi={setHatalari[satir.anahtar]}
+                  onEgzersiz={(exerciseId) => egzersizSec(satir.anahtar, exerciseId)}
+                  onHedefSet={(deger) => satiriGuncelle(satir.anahtar, { plannedSets: deger })}
+                  onDinlenme={(saniye) => satiriGuncelle(satir.anahtar, { restSeconds: saniye })}
+                  onYukari={() => tasi(sira, -1)}
+                  onAsagi={() => tasi(sira, 1)}
+                  onKaldir={() => setSatirlar((onceki) => onceki.filter((diger) => diger.anahtar !== satir.anahtar))}
+                />
+              ))}
+            </ol>
+          </SortableContext>
+        </DndContext>
         <IkincilDugme onClick={hareketEkle} disabled={!eklenebilirEgzersiz}>
           <Plus aria-hidden size={18} />
           Hareket ekle
@@ -372,9 +410,12 @@ interface HareketSatiriProps {
 }
 
 /**
- * Tek hareket karti. Surukle-birak YOK (spec Karar 3): yukari/asagi/kaldir dugmeleri erisilebilir ve
- * basit. Her girdinin erisilebilir adi satir numarasini tasir ("1. hareket: Hedef set"); gorunen
- * etiket kisa kalir.
+ * Tek hareket karti. Basili tutup surukleme (issue #118 madde 3) yukari/asagi/kaldir dugmelerinin
+ * YANINA gelir, YERINE degil: dugmeler klavye/ekran okuyucu icin tek erisilebilir yol olarak kalir.
+ * Tutamac (`GripVertical`) bu yuzden `aria-hidden` ve tab sirasindan CIKARILIR (`tabIndex={-1}`) --
+ * ekran okuyucuya ikinci, calismayan bir kontrol sunmamak icin (klavye ile surukleme kurulmadi,
+ * yalnizca PointerSensor var). Her girdinin erisilebilir adi satir numarasini tasir ("1. hareket:
+ * Hedef set"); gorunen etiket kisa kalir.
  */
 function HareketSatiri({
   satir,
@@ -398,10 +439,32 @@ function HareketSatiri({
         (a, b) => a.deger - b.deger,
       );
 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: satir.anahtar,
+  });
+  // dnd-kit'in surukleme sirasindaki ofseti (translate) ve gecisi yalnizca calisma anindaki
+  // sayisal degerlerdir, sabit bir Tailwind sinifiyla ifade edilemez -- projenin "satir ici style
+  // yok" kuralinin istisnasi, dnd-kit'in resmi API'si bunu boyle ister (gorsel bir tasarim tercihi
+  // degil, surukleme fizigi).
+  const surukleStili = { transform: CSS.Transform.toString(transform), transition };
+
   return (
-    <li className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
+    <li
+      ref={setNodeRef}
+      style={surukleStili}
+      className={`flex flex-col gap-3 rounded-xl p-4 ${isDragging ? 'z-10 bg-surface-4' : 'bg-surface-2'}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
+          <span
+            {...attributes}
+            {...listeners}
+            aria-hidden
+            tabIndex={-1}
+            className="flex size-11 shrink-0 touch-none items-center justify-center rounded-lg text-muted active:cursor-grabbing"
+          >
+            <GripVertical aria-hidden size={20} />
+          </span>
           <span
             aria-hidden
             className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-label"
