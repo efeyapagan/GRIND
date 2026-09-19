@@ -39,7 +39,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch"
   },
   "private": true,
@@ -49,6 +50,9 @@
     "setupFiles": [
       "./jest.setup.js"
     ],
+    "moduleNameMapper": {
+      "\\.css$": "<rootDir>/__mocks__/cssMock.js"
+    },
     "transform": {
       "\\.[jt]sx?$": "babel-jest",
       "\\.mjs$": "babel-jest"
