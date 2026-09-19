@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -6,6 +6,7 @@ import { server } from '../test/msw';
 import MeasurementsPage from './MeasurementsPage';
 import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
+import { sahteKesisimGozlemcisiKur } from '../test/kesisimGozlemcisi';
 
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
 type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogResponsePagedResponse'];
@@ -46,8 +47,56 @@ function sayfaYaniti(
   olculer: BodyWeightLogResponse[],
   zarf: Partial<BodyWeightLogResponsePagedResponse> = {},
 ): BodyWeightLogResponsePagedResponse {
-  return { items: olculer, page: 1, pageSize: 20, totalCount: olculer.length, totalPages: 1, ...zarf };
+  return { items: olculer, page: 1, pageSize: 25, totalCount: olculer.length, totalPages: 1, ...zarf };
 }
+
+afterEach(() => vi.unstubAllGlobals());
+
+test('listenin sonuna gelinince sonraki sayfa otomatik yuklenir ve iki sayfanin olculeri birlikte gorunur', async () => {
+  const aramalar: string[] = [];
+  server.use(
+    http.get('/api/body-weights', ({ request }) => {
+      const url = new URL(request.url);
+      aramalar.push(url.search);
+      const sayfa = Number(url.searchParams.get('Page') ?? '1');
+      return HttpResponse.json(
+        sayfaYaniti([ornekOlcu({ id: sayfa })], { page: sayfa, totalCount: 40, totalPages: 2 }),
+      );
+    }),
+  );
+  const gozlemci = sahteKesisimGozlemcisiKur();
+  ekraniOlustur();
+
+  await screen.findAllByRole('listitem');
+  expect(screen.queryByRole('button', { name: 'Sonraki' })).not.toBeInTheDocument();
+  expect(aramalar).toEqual(['?Page=1&PageSize=25']);
+
+  gozlemci.tetikle();
+
+  await waitFor(() => expect(aramalar).toEqual(['?Page=1&PageSize=25', '?Page=2&PageSize=25']));
+  expect(await screen.findAllByRole('listitem')).toHaveLength(2);
+});
+
+test('son sayfadaysa gozlemci tekrar tetiklense bile yeni istek atilmaz', async () => {
+  const aramalar: string[] = [];
+  server.use(
+    http.get('/api/body-weights', ({ request }) => {
+      aramalar.push(new URL(request.url).search);
+      return HttpResponse.json(sayfaYaniti([ornekOlcu()], { page: 1, totalCount: 1, totalPages: 1 }));
+    }),
+  );
+  const gozlemci = sahteKesisimGozlemcisiKur();
+  ekraniOlustur();
+
+  await screen.findAllByRole('listitem');
+  expect(aramalar).toHaveLength(1);
+
+  gozlemci.tetikle();
+  gozlemci.tetikle();
+
+  await new Promise((coz) => setTimeout(coz, 50));
+  expect(aramalar).toHaveLength(1);
+});
 
 test('hic olcu yoksa bos durum gorunur', async () => {
   server.use(http.get('/api/body-weights', () => HttpResponse.json(sayfaYaniti([]))));

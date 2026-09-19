@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
-import { useDeleteInsight, useGenerateInsight, useInsights, type Yorum } from '../api/queries';
+import { useDeleteInsight, useGenerateInsight, useInfiniteInsights, type Yorum } from '../api/queries';
 import { ApiError } from '../api/problem';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { formatTrDate, formatTrTime } from '../lib/format';
@@ -11,10 +11,6 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import BosDurum from '../ui/BosDurum';
 import HataKutusu from '../ui/HataKutusu';
-
-// Sayfalama dugmeleri (HistoryPage ile ayni stil, Stitch: 52 px).
-const SAYFA_DUGMESI =
-  'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
 
 /**
  * "AI yorumu" ekrani (issue #76). Backend'in `POST /api/insights`'i bir TARIH ARALIGINA gore
@@ -36,8 +32,7 @@ const SAYFA_DUGMESI =
  */
 export default function InsightsPage() {
   usePageTitle('AI yorumu');
-  const [sayfa, setSayfa] = useState(1);
-  const { data, isLoading, isError } = useInsights(sayfa);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
   const silMutasyonu = useDeleteInsight();
 
@@ -78,6 +73,28 @@ export default function InsightsPage() {
     abortRef.current?.abort();
     setDurum('iptal-edildi');
   }
+
+  const tumYorumlar = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
+
+  // Liste sonundaki gorunmez oge viewport'a girince bir sonraki sayfa cekilir (issue #147,
+  // HistoryPage ile ayni desen). `hasNextPage` false iken gozlemci hic KURULMAZ.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage) {
+      return;
+    }
+    const gozlemci = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    gozlemci.observe(sentinel);
+    return () => gozlemci.disconnect();
+  }, [hasNextPage, fetchNextPage]);
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
@@ -133,14 +150,14 @@ export default function InsightsPage() {
         </p>
       )}
 
-      {!isLoading && !isError && data && data.items.length === 0 && (
+      {!isLoading && !isError && data && tumYorumlar.length === 0 && (
         <BosDurum ikon={Brain} baslik="Henüz yorum yok" aciklama="Yukarıdan ilk yorumunu iste." />
       )}
 
-      {!isLoading && !isError && data && data.items.length > 0 && (
+      {!isLoading && !isError && data && tumYorumlar.length > 0 && (
         <>
           <ul className="flex flex-col gap-3">
-            {data.items.map((yorum) => (
+            {tumYorumlar.map((yorum) => (
               <YorumKarti
                 key={yorum.id}
                 yorum={yorum}
@@ -154,27 +171,9 @@ export default function InsightsPage() {
               />
             ))}
           </ul>
-          <div className="mt-3 flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={() => setSayfa((s) => s - 1)}
-              disabled={data.page <= 1}
-              className={SAYFA_DUGMESI}
-            >
-              Önceki
-            </button>
-            <span className="text-label tabular-nums">
-              Sayfa {data.page} / {data.totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setSayfa((s) => s + 1)}
-              disabled={data.page >= data.totalPages}
-              className={SAYFA_DUGMESI}
-            >
-              Sonraki
-            </button>
-          </div>
+          {/* Gorunmez sentinel: `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
         </>
       )}
     </div>
