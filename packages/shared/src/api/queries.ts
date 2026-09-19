@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -52,6 +53,9 @@ export const queryKeys = {
   records: ['records'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
+  // Issue #138: web'in sonsuz kaydirmasi -- TUM biriktirilmis sayfalar TEK bir query key altinda
+  // (useInfiniteQuery'nin kendi ic sayfalama mekanizmasi), `history(page)`den AYRI.
+  historyInfinite: ['history', 'infinite'] as const,
   // Takvimde secilen gunun oturumlari (#90); `historyAll` oneki altinda, set degisince o da tazelenir.
   historyDay: (gun: string | null) => [...queryKeys.historyAll, 'gun', gun] as const,
   templates: ['templates'] as const,
@@ -355,6 +359,30 @@ export function useHistory(page: number) {
       const yanit = await request<HistorySessionResponsePagedResponse>(`/history?Page=${page}`);
       return dogrulanmisGecmisSayfasi(yanit);
     },
+  });
+}
+
+/** Issue #138: sonsuz kaydirma sayfa boyutu -- her yuklemede en fazla bu kadar antrenman gelir. */
+export const GECMIS_SAYFA_BOYUTU = 25;
+
+/**
+ * Web'in Onceki/Sonraki dugmeleri yerine kullandigi sonsuz kaydirma hook'u (issue #138):
+ * `HistoryPage` listenin sonuna gelindiginde `fetchNextPage`i cagirir, sayfalar TanStack
+ * Query'nin kendi `pages` dizisinde biriktirilir -- istemci ayri bir "biriktirilmis liste"
+ * state'i tutmaz. `queryKeys.historyAll` ile invalidate edilince (yeni set/silme vb.) TUM
+ * biriktirilmis sayfalar birlikte yeniden cekilir -- `useHistory` ile ayni onek, ayni davranis.
+ */
+export function useInfiniteHistory() {
+  return useInfiniteQuery({
+    queryKey: queryKeys.historyInfinite,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<GecmisSayfasi> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>(
+        `/history?Page=${pageParam}&PageSize=${GECMIS_SAYFA_BOYUTU}`,
+      );
+      return dogrulanmisGecmisSayfasi(yanit);
+    },
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
   });
 }
 
