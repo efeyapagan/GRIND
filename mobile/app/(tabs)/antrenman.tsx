@@ -30,6 +30,7 @@ import SablonlaBasla from '../../src/components/SablonlaBasla';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
 import TurEtiketi from '../../src/ui/TurEtiketi';
+import IkonDugmesi from '../../src/ui/IkonDugmesi';
 import { ikonRenk } from '../../src/ui/renkler';
 
 const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
@@ -160,7 +161,18 @@ export default function AntrenmanScreen() {
   return (
     <EkranKaydirici contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
       <View className="flex-col gap-1">
-        <View className="flex-row items-center justify-end gap-2">
+        <View className="flex-row items-center justify-between gap-2">
+          {gorunenOturum?.isOpen &&
+            (zorlukSoruluyor ? (
+              <IkonDugmesi etiket="Nasıl geçti sorusunu kapat" onPress={() => setZorlukSoruluyor(false)}>
+                <X color={ikonRenk.muted} size={18} />
+              </IkonDugmesi>
+            ) : (
+              <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
+                <View className="size-2 rounded-full bg-muted" />
+                <Text className="text-label text-fg">Devam ediyor</Text>
+              </View>
+            ))}
           {gorunenOturum?.isOpen &&
             setlerYuklendi &&
             (oturumBos ? (
@@ -188,14 +200,8 @@ export default function AntrenmanScreen() {
             ))}
         </View>
         {gorunenOturum && (
-          <View className="mt-2 flex-row flex-wrap items-center gap-2">
-            {gorunenOturum.isOpen && (
-              <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-                <View className="size-2 rounded-full bg-muted" />
-                <Text className="text-label text-fg">Devam ediyor</Text>
-              </View>
-            )}
-            {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
+          <View className="mt-2 flex-row items-center justify-between gap-2">
+            <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
             <Text className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</Text>
           </View>
         )}
