@@ -1,8 +1,14 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { Link } from 'expo-router';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react-native';
-import { useDeleteInsight, useGenerateInsight, useInfiniteInsights, type Yorum } from '@grind/shared/api/queries';
+import {
+  useDeleteInsight,
+  useGenerateInsight,
+  useInfiniteInsights,
+  useInsightGenerationState,
+  type Yorum,
+} from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { formatTrDate, formatTrTime } from '@grind/shared/lib/format';
@@ -23,9 +29,11 @@ export default function InsightsScreen() {
   usePageTitle('AI yorumu');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
+  // Issue #148: web ile ayni -- "uretiliyor mu" bilgisi ekranin mutation'indan DEGIL, sekme
+  // degisse de yasayan MutationCache'ten okunur.
+  const { uretiliyor, iptalEt: uretimiIptalEt } = useInsightGenerationState();
   const silMutasyonu = useDeleteInsight();
 
-  const abortRef = useRef<AbortController | null>(null);
   const [durum, setDurum] = useState<'bos' | 'iptal-edildi' | 'bilgi' | 'hata'>('bos');
   const [bilgiMesaji, setBilgiMesaji] = useState<string | null>(null);
   const [genelHata, setGenelHata] = useState<string | null>(null);
@@ -35,9 +43,8 @@ export default function InsightsScreen() {
     setDurum('bos');
     setGenelHata(null);
     const controller = new AbortController();
-    abortRef.current = controller;
 
-    uretMutasyonu.mutate(controller.signal, {
+    uretMutasyonu.mutate(controller, {
       onError: (hata) => {
         if (controller.signal.aborted) {
           return;
@@ -54,7 +61,7 @@ export default function InsightsScreen() {
   }
 
   function iptalEt() {
-    abortRef.current?.abort();
+    uretimiIptalEt();
     setDurum('iptal-edildi');
   }
 
@@ -98,14 +105,14 @@ export default function InsightsScreen() {
           </Text>
 
           <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
-            {!uretMutasyonu.isPending && (
+            {!uretiliyor && (
               <BirincilDugme yukseklik="normal" onPress={yorumIste}>
                 <Sparkles color={ikonRenk.onAccent} size={20} />
                 <Text className="text-body-lg font-bold text-on-accent">Yorum iste</Text>
               </BirincilDugme>
             )}
 
-            {uretMutasyonu.isPending && (
+            {uretiliyor && (
               <View className="flex-col gap-3">
                 <Text className="text-body text-muted">
                   Yorum hazırlanıyor... Bu birkaç dakika sürebilir.

@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
-import { useDeleteInsight, useGenerateInsight, useInfiniteInsights, type Yorum } from '../api/queries';
+import {
+  useDeleteInsight,
+  useGenerateInsight,
+  useInfiniteInsights,
+  useInsightGenerationState,
+  type Yorum,
+} from '../api/queries';
 import { ApiError } from '../api/problem';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { formatTrDate, formatTrTime } from '../lib/format';
@@ -34,9 +40,11 @@ export default function InsightsPage() {
   usePageTitle('AI yorumu');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
+  // Issue #148: "uretiliyor mu" bilgisi bu bilesenin mutation'indan DEGIL, mount'tan bagimsiz
+  // yasayan MutationCache'ten okunur -- sayfadan cikip donuldugunde gosterge kaybolmasin.
+  const { uretiliyor, iptalEt: uretimiIptalEt } = useInsightGenerationState();
   const silMutasyonu = useDeleteInsight();
 
-  const abortRef = useRef<AbortController | null>(null);
   const [durum, setDurum] = useState<'bos' | 'iptal-edildi' | 'bilgi' | 'hata'>('bos');
   const [bilgiMesaji, setBilgiMesaji] = useState<string | null>(null);
   const [genelHata, setGenelHata] = useState<string | null>(null);
@@ -46,9 +54,8 @@ export default function InsightsPage() {
     setDurum('bos');
     setGenelHata(null);
     const controller = new AbortController();
-    abortRef.current = controller;
 
-    uretMutasyonu.mutate(controller.signal, {
+    uretMutasyonu.mutate(controller, {
       onError: (hata) => {
         // Kullanici zaten "Iptal et"e bastiysa asagidaki 'iptal-edildi' mesaji yeterli --
         // aninda gelen bir ikinci (hata) mesaji kafa karistirir.
@@ -70,7 +77,7 @@ export default function InsightsPage() {
   }
 
   function iptalEt() {
-    abortRef.current?.abort();
+    uretimiIptalEt();
     setDurum('iptal-edildi');
   }
 
@@ -110,14 +117,14 @@ export default function InsightsPage() {
       </p>
 
       <div className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
-        {!uretMutasyonu.isPending && (
+        {!uretiliyor && (
           <BirincilDugme yukseklik="normal" onClick={yorumIste}>
             <Sparkles aria-hidden size={20} />
             Yorum iste
           </BirincilDugme>
         )}
 
-        {uretMutasyonu.isPending && (
+        {uretiliyor && (
           <div className="flex flex-col gap-3">
             <p role="status" className="text-body text-muted">
               Yorum hazırlanıyor... Bu birkaç dakika sürebilir.

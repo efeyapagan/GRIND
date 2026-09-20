@@ -4,6 +4,7 @@ import {
   useDeleteInsight,
   useGenerateInsight,
   useInfiniteInsights,
+  useInsightGenerationState,
   type YorumSayfasi,
 } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
@@ -13,11 +14,13 @@ jest.mock('@grind/shared/api/queries', () => ({
   useGenerateInsight: jest.fn(),
   useDeleteInsight: jest.fn(),
   useInfiniteInsights: jest.fn(),
+  useInsightGenerationState: jest.fn(),
 }));
 
 const useGenerateInsightMock = useGenerateInsight as jest.Mock;
 const useDeleteInsightMock = useDeleteInsight as jest.Mock;
 const useInfiniteInsightsMock = useInfiniteInsights as jest.Mock;
+const useInsightGenerationStateMock = useInsightGenerationState as jest.Mock;
 
 function ornekYorum(gecersizler: Partial<YorumSayfasi['items'][number]> = {}) {
   return {
@@ -61,12 +64,36 @@ beforeEach(() => {
   useGenerateInsightMock.mockReturnValue({ mutate: jest.fn(), isPending: false });
   useDeleteInsightMock.mockReturnValue({ mutate: jest.fn() });
   useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([], { totalPages: 0 })]));
+  useInsightGenerationStateMock.mockReturnValue({ uretiliyor: false, iptalEt: jest.fn() });
 });
 
 test('hic yorum yoksa bos durum gorunur', async () => {
   await ekraniOlustur();
 
   expect(await screen.findByText('Henüz yorum yok')).toBeTruthy();
+});
+
+/**
+ * Issue #148: "hazirlaniyor" gostergesi ekranin KENDI mutation'ina (`isPending`) degil, ekran
+ * degisse de yasayan paylasilan duruma bagli. Ekrana yeni girilmis bir mount'ta mutation bos
+ * (`isPending: false`) ama uretim suruyor olabilir.
+ */
+test('baska bir ekranda baslatilmis uretim surerken gosterge gorunur, "Yorum iste" gizlenir', async () => {
+  useInsightGenerationStateMock.mockReturnValue({ uretiliyor: true, iptalEt: jest.fn() });
+  await ekraniOlustur();
+
+  expect(await screen.findByText(/Yorum hazırlanıyor/)).toBeTruthy();
+  expect(screen.queryByText('Yorum iste')).toBeNull();
+});
+
+test('Vazgec devam eden uretimin beklemesini durdurur', async () => {
+  const iptalEt = jest.fn();
+  useInsightGenerationStateMock.mockReturnValue({ uretiliyor: true, iptalEt });
+  await ekraniOlustur();
+
+  fireEvent.press(await screen.findByText('Vazgeç'));
+
+  expect(iptalEt).toHaveBeenCalledTimes(1);
 });
 
 test('iki sayfanin yorumlari birlikte, ust uste yazmadan listelenir', async () => {
