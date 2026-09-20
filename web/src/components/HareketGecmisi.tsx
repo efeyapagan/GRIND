@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
@@ -55,10 +55,10 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
   const [acik, setAcik] = useState(false);
 
   return (
-    <details className="group pt-2" onToggle={(olay) => setAcik(olay.currentTarget.open)}>
+    <details className="pt-2" onToggle={(olay) => setAcik(olay.currentTarget.open)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-label text-muted uppercase [&::-webkit-details-marker]:hidden">
         Geçmiş
-        <ChevronDown aria-hidden size={18} className="group-open:rotate-180" />
+        {acik ? <ChevronUp aria-hidden size={18} /> : <ChevronDown aria-hidden size={18} />}
       </summary>
       {acik && <HareketGrafigi exerciseId={exerciseId} exerciseName={exerciseName} />}
     </details>

@@ -8,6 +8,7 @@ import HistoryPage from './HistoryPage';
 import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 import { tamMetin } from '../test/metin';
+import { sahteKesisimGozlemcisiKur } from '../test/kesisimGozlemcisi';
 
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
@@ -60,35 +61,6 @@ function sayfaYaniti(
     totalCount: oturumlar.length,
     totalPages: 1,
     ...zarf,
-  };
-}
-
-/**
- * jsdom `IntersectionObserver`i uygulamaz -- issue #138 (sonsuz kaydirma) listenin sonundaki
- * bir gozlemci ogesiyle calisir, bu yuzden testte sahte bir tanimla degistirilir. `tetikle`
- * gozlemlenen ogenin gorunur oldugunu (`isIntersecting: true`) bildirir, `HistoryPage`in
- * `fetchNextPage` cagirmasini tetikler.
- */
-function sahteKesisimGozlemcisiKur() {
-  const geriCagirmalar: IntersectionObserverCallback[] = [];
-  class SahteIntersectionObserver implements IntersectionObserver {
-    readonly root = null;
-    readonly rootMargin = '';
-    readonly thresholds: number[] = [];
-    constructor(geriCagirma: IntersectionObserverCallback) {
-      geriCagirmalar.push(geriCagirma);
-    }
-    observe = vi.fn();
-    unobserve = vi.fn();
-    disconnect = vi.fn();
-    takeRecords = () => [];
-  }
-  vi.stubGlobal('IntersectionObserver', SahteIntersectionObserver);
-  return {
-    tetikle: () => {
-      const sahteEntry = { isIntersecting: true } as IntersectionObserverEntry;
-      geriCagirmalar.forEach((cb) => cb([sahteEntry], new SahteIntersectionObserver(() => {})));
-    },
   };
 }
 

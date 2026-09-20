@@ -20,7 +20,10 @@ export default function TabsLayout() {
     <PageTitleProvider>
       <View className="flex-1 bg-bg">
         <KabukBaslik />
-        <View className="flex-1">
+        {/* pb-7 (28px): KabukTabBar'daki ortadaki "+" dugmesi kendi kutusunun (h-16) 28px
+            USTUNE tasar (`marginTop: -28`) -- bu bosluk olmadan sayfa icerigi tam o kadar
+            asagiya kadar uzayabiliyor ve "+" dugmesiyle CAKISIYORDU (kullanici bulgusu). */}
+        <View className="flex-1 pb-7">
           <Slot />
         </View>
         <KabukTabBar />
