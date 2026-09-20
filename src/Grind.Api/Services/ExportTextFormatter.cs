@@ -204,9 +204,11 @@ public static class ExportTextFormatter
     /// <summary>Sabit TR etiketi — enum adı (ör. "Hard") LLM'e İngilizce sızmasın.</summary>
     private static string DifficultyText(SessionDifficulty difficulty) => difficulty switch
     {
+        SessionDifficulty.VeryEasy => "Çok kolay",
         SessionDifficulty.Easy => "Kolay",
         SessionDifficulty.Medium => "Orta",
         SessionDifficulty.Hard => "Zor",
+        SessionDifficulty.Maximal => "Maksimal",
         _ => difficulty.ToString()
     };
 

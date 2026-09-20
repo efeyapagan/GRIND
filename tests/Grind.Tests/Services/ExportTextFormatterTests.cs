@@ -268,6 +268,20 @@ public class ExportTextFormatterTests
     }
 
     /// <summary>
+    /// #153: zorluk beş kademeye çıktı (VeryEasy..Maximal). Yeni uçların da Türkçe karşılığı olmalı —
+    /// aksi halde export metninde ham enum adı ("Maximal") LLM'e giderdi.
+    /// </summary>
+    [Theory]
+    [InlineData(SessionDifficulty.VeryEasy, "Çok kolay")]
+    [InlineData(SessionDifficulty.Maximal, "Maksimal")]
+    public void Yeni_zorluk_kademeleri_turkce_etiketle_yazilir(SessionDifficulty zorluk, string beklenen)
+    {
+        var oturum = Oturum(An, null) with { Difficulty = zorluk };
+
+        Assert.Contains($"\nZorluk: {beklenen}\n", Formatla(oturum));
+    }
+
+    /// <summary>
     /// Kullanıcı metni tek satıra iner: aksi halde "## ..." ile başlayan bir not satırı belgenin
     /// başlık yapısını bozabilirdi.
     /// </summary>
