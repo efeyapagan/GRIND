@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '@grind/shared/api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
@@ -49,7 +49,11 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
         className="min-h-11 flex-row items-center justify-between gap-2"
       >
         <Text className="text-label text-muted uppercase">Geçmiş</Text>
-        <ChevronDown color={ikonRenk.muted} size={18} style={{ transform: [{ rotate: acik ? '180deg' : '0deg' }] }} />
+        {acik ? (
+          <ChevronUp color={ikonRenk.muted} size={18} />
+        ) : (
+          <ChevronDown color={ikonRenk.muted} size={18} />
+        )}
       </Pressable>
       {acik && <HareketGrafigi exerciseId={exerciseId} exerciseName={exerciseName} />}
     </View>

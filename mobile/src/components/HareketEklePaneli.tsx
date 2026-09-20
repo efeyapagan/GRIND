@@ -15,7 +15,9 @@ interface Props {
 export default function HareketEklePaneli({ egzersizler, onSec, onKapat }: Props) {
   return (
     <View className="flex-col gap-2">
-      <View className="flex-row items-center justify-between gap-2">
+      {/* `listeYukari` acilir listesi (z-30) buraya BINER -- z-40 olmadan kapatma X'i kapaninca
+          bir daha ULASILAMAZ hale geliyordu (kullanici bulgusu: "hareket ekle'den cikamiyorum"). */}
+      <View className="z-40 flex-row items-center justify-between gap-2">
         <Text className="pl-1 text-label text-muted uppercase">Hareket ekle</Text>
         <IkonDugmesi etiket="Hareket eklemeyi kapat" onPress={onKapat}>
           <X color={ikonRenk.muted} size={20} />
