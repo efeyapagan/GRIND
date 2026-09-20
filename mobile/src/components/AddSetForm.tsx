@@ -16,6 +16,7 @@ import HareketSecici from '../ui/HareketSecici';
 import DinlenmeSayaci from './DinlenmeSayaci';
 import HareketEklePaneli from './HareketEklePaneli';
 import { ikonRenk } from '../ui/renkler';
+import { TABBAR_HALKA_TASMASI } from '../ui/KabukTabBar';
 
 const BAGLANTI_HATASI_MESAJI =
   'Sunucuya ulaşılamadı. Set kaydedilmemiş olabilir; tekrar denemeden önce listeyi kontrol edin.';
@@ -103,7 +104,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   }
 
   return (
-    <View className="mt-auto pb-2">
+    <View className="mt-auto pb-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
       <View className="flex-col gap-2 rounded-xl bg-surface-3 p-3">
         <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
         {!acik &&
