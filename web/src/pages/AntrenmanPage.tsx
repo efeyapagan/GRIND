@@ -27,7 +27,6 @@ import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
-import IkonDugmesi from '../ui/IkonDugmesi';
 import { usePageTitle } from '../ui/PageTitleContext';
 
 const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
@@ -220,9 +219,14 @@ export default function AntrenmanPage() {
               donme) icin bir X alir. */}
           {gorunenOturum?.isOpen &&
             (zorlukSoruluyor ? (
-              <IkonDugmesi etiket="Nasıl geçti sorusunu kapat" onClick={() => setZorlukSoruluyor(false)}>
+              <button
+                type="button"
+                aria-label="Nasıl geçti sorusunu kapat"
+                onClick={() => setZorlukSoruluyor(false)}
+                className="flex size-11 items-center justify-center"
+              >
                 <X aria-hidden size={18} />
-              </IkonDugmesi>
+              </button>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
                 <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
