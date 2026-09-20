@@ -14,7 +14,13 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   [docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md):
   yeni ekranlar yalnızca oradaki token setini (Karar 2) kullanır; yeni bir Stitch çıktısının renkleri
   Karar 2'nin eşleme tablosuyla çevrilir, kodu olduğu gibi kopyalanmaz (Karar 7); `accent` kullanım
-  kuralı bağlayıcıdır. Yeni bir görsel yön (açık tema, yeni bileşen dili) için kullanıcıya sor.
+  kuralı bağlayıcıdır. Yeni bir görsel yön (yeni bileşen dili) için kullanıcıya sor. **Açık tema (#178, 2026-09-20):**
+  `web/` iki temalıdır — token'lar `:root[data-theme='light']` altında ezilir, bileşen sınıfları
+  tema bilmez; yeni bir `--color-*` token eklerken açık varyantını tanımla ya da kasıtlı olarak
+  iki temada aynı kalacağını işaretle (`IKI_TEMADA_AYNI`) — kontrast testi
+  (`paletKontrast.test.ts`) bunu ve sayılan metin/yüzey çiftlerinin eşik üstünde kalmasını zorlar.
+  `mobile/` şimdilik koyu kalır. Ayrıntı:
+  [docs/superpowers/specs/2026-09-20-acik-tema-design.md](docs/superpowers/specs/2026-09-20-acik-tema-design.md).
 - İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
   geçmiş. Şablonlar dilim 2'de geldi; istatistik, tartı, export ve AI ekranları sonraki dilimlere
   bırakıldı.
