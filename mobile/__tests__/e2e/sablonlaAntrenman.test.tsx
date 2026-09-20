@@ -63,4 +63,15 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   await waitFor(() => expect(state.setler).toHaveLength(1));
   expect(state.setler[0]).toMatchObject({ weight: 60, reps: 8, exerciseId: 1 });
   await waitFor(() => expect(screen.getByLabelText(/Bench Press, 1 \/ 3 set/)).toBeTruthy());
-});
+
+  // #153: "Antrenmanı bitir" artık oturumu kapatmaz, ayrı zorluk ekranına götürür; kadrandan
+  // "Zor" seçilip bitirilir. Bu adım GERÇEK rotayla gezinmeyi de doğrular (izole ekran testi yapamaz).
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+  await fireEvent.press(await screen.findByLabelText('Zor'));
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+  await waitFor(() => expect(state.acikOturum).toBeNull());
+  expect(state.bitmisOturumlar[0]).toMatchObject({ difficulty: 'Hard', isOpen: false });
+  // Tek testte şablon oluşturma + antrenman + set + bitirme var; gerçek rotalarla bu akış
+  // jest'in 5 sn'lik varsayılanına sığmıyor (#153 adımlarıyla ~5 sn'ye dayandı).
+}, 20_000);
