@@ -6,6 +6,7 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
+import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
 
 /** Kadran burada açılır: ortadaki kademe, hiç dokunmadan bitirenin göndereceği değerdir. */
 const VARSAYILAN_ZORLUK: Zorluk = 'Medium';
@@ -60,7 +61,7 @@ export default function AntrenmanBitirScreen() {
         </Text>
       )}
 
-      <View className="mt-auto w-full items-center gap-2">
+      <View className="mt-auto w-full items-center gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
         <BirincilDugme
           yukseklik="buyuk"
           disabled={bitirMutasyonu.isPending}
