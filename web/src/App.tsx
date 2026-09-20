@@ -23,9 +23,9 @@ import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
  * `usePageTitle` ile bildirir, kendi govdesinde ayrica bir `<h1>` YAZMAZ (tek dogruluk kaynagi).
  *
  * `env(safe-area-inset-*)` hesaplari keyfi deger olarak yazilir: Tailwind'de guvenli alan tokeni
- * yok. 4rem = baslik ve sekme cubugu yuksekligi (h-16); alt bosluk icin 5.75rem kullanilir --
- * ortadaki "+" dugmesi sekme cubugunun 1.75rem (`-mt-7`) USTUNE tastigi icin (kullanici bulgusu:
- * sayfa icerigi bu dugmeyle CAKISIYORDU), yalnizca 4rem yetmiyor.
+ * yok. Baslik icin 4rem (h-16) kullanilir; alt bosluk icin 5.5rem -- sekme cubugu artik h-14
+ * (3.5rem) ama ortadaki "+" dugmesinin halkasi cubugun 2rem USTUNE tastigi icin (issue #159),
+ * yalnizca 3.5rem yetmiyor (kullanici bulgusu: sayfa icerigi bu dugmeyle CAKISIYORDU).
  */
 export default function App() {
   return (
@@ -47,22 +47,27 @@ function Kabuk() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+      <main className="mx-auto max-w-md px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
 
+      {/* Gorsel (issue #159, kullanici referansi): cubuk `surface-1` -- sayfanin `bg` renginden
+          bir ton acik -- boylece "+" dugmesinin etrafina sarilan `bg` renkli halka (`p-1`)
+          cubuktan GORUNUR bir seritle ayrilir, duz bir cubugun onune cikan yalin bir daireden
+          daha estetik durur. `nav` seffaf kalir (halka tasmasi kok `bg` ile kaynassin diye),
+          renk yalnizca `ul` cubugunda. Cubuk h-14'e indirilip yan dugmeler h-11'e kuculdu. */}
       <nav
         aria-label="Ana gezinme"
-        className="fixed inset-x-0 bottom-0 z-40 bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]"
       >
-        <ul className="mx-auto flex h-16 max-w-md items-center px-4">
+        <ul className="mx-auto flex h-14 max-w-md items-center bg-surface-1/90 px-4 backdrop-blur-xl">
           <li className="flex flex-1 justify-center">
             <NavLink
               to="/"
               end
               aria-label="Ana sayfa"
               className={({ isActive }) =>
-                `flex h-12 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
+                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
               }
             >
               <Home aria-hidden size={22} />
@@ -70,12 +75,15 @@ function Kabuk() {
           </li>
 
           {/* Birincil eylem dugmesi (spec Karar 2 -- accent kullanim kurali "birincil dugme
-              dolgusu" kategorisine girer, "Set ekle"/"Giris yap" ile ayni). Menu cubugunun ustune
-              tasar (`-mt-7`). */}
+              dolgusu" kategorisine girer, "Set ekle"/"Giris yap" ile ayni). Halka (`bg` renkli,
+              `p-1`) cubuktan bir seritle ayirir; `-mt-6` mobildeki (`KabukTabBar`) ayni degerle
+              birebir eslesir. */}
           <li className="flex flex-1 justify-center">
-            <NavLink to="/antrenman" aria-label="Antrenman başlat" className="-mt-7 flex items-center">
-              <span className="flex size-16 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg">
-                <Plus aria-hidden size={28} />
+            <NavLink to="/antrenman" aria-label="Antrenman başlat" className="flex items-center">
+              <span className="-mt-6 flex items-center justify-center rounded-full bg-bg p-1">
+                <span className="flex size-16 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg">
+                  <Plus aria-hidden size={28} />
+                </span>
               </span>
             </NavLink>
           </li>
@@ -85,7 +93,7 @@ function Kabuk() {
               to="/profile"
               aria-label="Profil"
               className={({ isActive }) =>
-                `flex h-12 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
+                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
               }
             >
               <User aria-hidden size={22} />
