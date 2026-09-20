@@ -154,7 +154,7 @@ Sayfa kenar boşluğu 16 px.
 
 - Süs ikonları `aria-hidden`. Yalnızca ikondan oluşan düğmeler `aria-label` taşır.
 
-## Karar 5 — Tema: yalnızca koyu
+## Karar 5 — Tema: yalnızca koyu (GEÇERSİZ — bkz. #178)
 
 > **Güncelleme (#178, 2026-09-20):** Bu karar geçersizdir — `web/` artık açık temayı da destekler.
 > Mekanizma, açık palet ve `focus` token'ı için bkz.

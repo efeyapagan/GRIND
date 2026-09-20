@@ -59,25 +59,13 @@ const acik = { ...koyu, ...acikEzmeler };
 const paletler = { koyu, acik };
 const ZEMINLER = ['bg', 'inset', 'surface-1', 'surface-2', 'surface-3', 'surface-4'];
 
+// Bu ikisi marka renkleridir, iki temada AYNI -- bilerek acik blokta yoklar. Yeni bir token
+// iki temada da ayni kalacaksa buraya eklenir; aksi halde test acik varyantini ister.
+const IKI_TEMADA_AYNI = ['accent', 'on-accent'];
+
 test('acik palet, iki temada ayni olanlar disindaki her tokeni ezer', () => {
-  // accent ve on-accent marka renkleridir, iki temada AYNI -- bu yuzden acik blokta YOKTUR.
-  expect(Object.keys(acikEzmeler).sort()).toEqual(
-    [
-      'bg',
-      'inset',
-      'surface-1',
-      'surface-2',
-      'surface-3',
-      'surface-4',
-      'fg',
-      'muted',
-      'accent-soft',
-      'danger',
-      'danger-bg',
-      'on-danger-bg',
-      'focus',
-    ].sort(),
-  );
+  const beklenen = Object.keys(koyu).filter((token) => !IKI_TEMADA_AYNI.includes(token));
+  expect(Object.keys(acikEzmeler).sort()).toEqual(beklenen.sort());
 });
 
 test('metin renkleri her iki temada her yuzeyde en az 4.5:1', () => {
