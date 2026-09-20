@@ -16,9 +16,14 @@ function testeOzelSorguIstemcisi(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 }
 
-function ekraniOlustur() {
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+/**
+ * `istemci` DISARIDAN verilebilir: sayfadan cikip geri donmeyi (unmount + yeniden mount) test
+ * ederken iki render AYNI QueryClient'i paylasmali -- yoksa "devam eden uretim" bilgisinin
+ * nerede yasadigi degil, yeni bir istemcinin bos oldugu olculur (issue #148).
+ */
+function ekraniOlustur(istemci: QueryClient = testeOzelSorguIstemcisi()) {
+  return render(
+    <QueryClientProvider client={istemci}>
       <PageTitleProvider>
         <MemoryRouter initialEntries={['/insights']}>
           <Routes>
@@ -150,6 +155,56 @@ test('uretim surerken Vazgec cikar; tiklaninca "beklemeyi durdurdun" mesaji gost
     await screen.findByText(/Beklemeyi durdurdun\. Yorum yine de oluşturuluyor olabilir/),
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Yorum iste' })).toBeInTheDocument();
+});
+
+test('uretim surerken sayfadan cikilip geri donulurse "hazirlaniyor" gostergesi hala durur', async () => {
+  server.use(
+    http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))),
+    http.post('/api/insights', async () => {
+      await delay(5000);
+      return HttpResponse.json(ornekYorum(), { status: 201 });
+    }),
+  );
+  const istemci = testeOzelSorguIstemcisi();
+  const kullanici = userEvent.setup();
+  const { unmount } = ekraniOlustur(istemci);
+
+  await screen.findByText('Henüz yorum yok');
+  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText(/Yorum hazırlanıyor/);
+
+  // Issue #148: sayfadan cikmak (unmount) uretimi durdurmaz -- backend odenen LLM cagrisini
+  // zaten surdurur. Geri donuldugunde arayuz "hic istenmemis" gibi gorunmemeli.
+  unmount();
+  ekraniOlustur(istemci);
+
+  expect(await screen.findByText(/Yorum hazırlanıyor/)).toBeInTheDocument();
+  // Ikinci (ucretli) bir cagri baslatilamasin diye dugme hala gizli.
+  expect(screen.queryByRole('button', { name: 'Yorum iste' })).not.toBeInTheDocument();
+});
+
+test('geri donuldugunde Vazgec devam eden uretimin beklemesini durdurur', async () => {
+  server.use(
+    http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))),
+    http.post('/api/insights', async () => {
+      await delay(5000);
+      return HttpResponse.json(ornekYorum(), { status: 201 });
+    }),
+  );
+  const istemci = testeOzelSorguIstemcisi();
+  const kullanici = userEvent.setup();
+  const { unmount } = ekraniOlustur(istemci);
+
+  await screen.findByText('Henüz yorum yok');
+  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText(/Yorum hazırlanıyor/);
+  unmount();
+  ekraniOlustur(istemci);
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Vazgeç' }));
+
+  expect(await screen.findByRole('button', { name: 'Yorum iste' })).toBeInTheDocument();
+  expect(screen.queryByText(/Yorum hazırlanıyor/)).not.toBeInTheDocument();
 });
 
 test('AI kapaliyken (503) yumusak bir bilgi mesaji gosterilir, HataKutusu DEGIL', async () => {
