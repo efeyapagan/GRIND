@@ -154,7 +154,12 @@ Sayfa kenar boşluğu 16 px.
 
 - Süs ikonları `aria-hidden`. Yalnızca ikondan oluşan düğmeler `aria-label` taşır.
 
-## Karar 5 — Tema: yalnızca koyu
+## Karar 5 — Tema: yalnızca koyu (GEÇERSİZ — bkz. #178)
+
+> **Güncelleme (#178, 2026-09-20):** Bu karar geçersizdir — `web/` artık açık temayı da destekler.
+> Mekanizma, açık palet ve `focus` token'ı için bkz.
+> [2026-09-20-acik-tema-design.md](2026-09-20-acik-tema-design.md). Aşağıdaki paragraf yalnızca
+> `mobile/` için ve tarihsel kayıt olarak geçerlidir; manifest'teki `theme_color` hâlâ `#121316`.
 
 Tasarım ve referansların hepsi koyu; açık tema YOK (YAGNI). `color-scheme: dark` (yerel kontroller —
 `<select>` açılır listesi, kaydırma çubuğu — koyu çizilsin), `<meta name="theme-color"

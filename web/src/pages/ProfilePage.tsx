@@ -7,6 +7,7 @@ import SifreAlani from '../ui/SifreAlani';
 import HataKutusu from '../ui/HataKutusu';
 import BirincilDugme from '../ui/BirincilDugme';
 import HaftalikHedefSecici from '../components/HaftalikHedefSecici';
+import GorunumSecici from '../components/GorunumSecici';
 
 const MIN_SIFRE_KARAKTER = 8;
 const MAKS_SIFRE_BAYT = 72;
@@ -53,6 +54,13 @@ export default function ProfilePage() {
           Antrenman hedefi
         </h2>
         <HaftalikHedefSecici />
+      </section>
+      {/* #178: tema tercihi cihazda saklanir, sunucuya gitmez. */}
+      <section aria-labelledby="gorunum-basligi" className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
+        <h2 id="gorunum-basligi" className="text-heading">
+          Görünüm
+        </h2>
+        <GorunumSecici />
       </section>
       <button
         type="button"

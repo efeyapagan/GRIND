@@ -212,7 +212,7 @@ export default function HareketSecici({
                 } ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}
               >
                 {egzersiz.name}
-                {secili && <Check aria-hidden size={18} className="shrink-0 text-accent" />}
+                {secili && <Check aria-hidden size={18} className="shrink-0 text-accent-fg" />}
               </li>
             );
           })}

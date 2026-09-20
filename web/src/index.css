@@ -49,6 +49,11 @@
   --color-danger-bg: #93000a;
   --color-on-danger-bg: #ffdad6;
 
+  /* accent'in ON PLAN (foreground) formu -- metin, ikon, kenarlik, grafik cizgisi, odak halkasi
+     (#178): duz accent bu rollerde acik temada 2.43-3.00:1'e dusuyor, WCAG'i gecmiyor. accent'in
+     kendisi hala DOLGU (fill) olarak kalir -- uzerinde `on-accent` metin tasiyan yerlerde. */
+  --color-accent-fg: #ff5722;
+
   --text-title: 26px;
   --text-title--line-height: 32px;
   --text-title--letter-spacing: -0.025em;
@@ -77,9 +82,34 @@
 }
 
 @layer base {
-  /* Yalnizca koyu tema (Karar 5): yerel kontroller (select listesi, kaydirma cubugu) koyu cizilsin. */
-  :root {
+  /*
+   * Iki tema (#178, acik-tema spec Karar 1). `@theme`in degerleri KOYU temadir; acik tema yalnizca
+   * asagidaki tokenleri ezer, hicbir bilesen sinifi degismez. `data-theme` HER ZAMAN yazilir
+   * (tema.ts) -- "sistem" seciliyken bile cozulur, bu yuzden ayri bir prefers-color-scheme kopyasi
+   * yok. `color-scheme` yerel kontrollerin (select listesi, kaydirma cubugu) dogru cizilmesi icin.
+   */
+  :root,
+  :root[data-theme='dark'] {
     color-scheme: dark;
+  }
+
+  /* Acik palet: spec Karar 2. accent ve on-accent marka renkleridir, iki temada AYNI -- burada yok. */
+  :root[data-theme='light'] {
+    color-scheme: light;
+
+    --color-bg: #fdf8f6;
+    --color-inset: #ffffff;
+    --color-surface-1: #f8f2ef;
+    --color-surface-2: #f2ece9;
+    --color-surface-3: #ece6e3;
+    --color-surface-4: #e7e0dd;
+    --color-fg: #1d1b1a;
+    --color-muted: #5b5654;
+    --color-accent-soft: #a03500;
+    --color-danger: #ba1a1a;
+    --color-danger-bg: #ffdad6;
+    --color-on-danger-bg: #410002;
+    --color-accent-fg: #a03500;
   }
 
   body {
@@ -89,9 +119,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Stitch'in `focus:outline-none`'i yerine: klavye odagi her zaman gorunur (Karar 7). */
+  /* Stitch'in `focus:outline-none`'i yerine: klavye odagi her zaman gorunur (Karar 7). Renk
+     `accent` degil `accent-fg` (#178): accent acik temada 2.43:1'e kadar dusuyordu, odak halkasi
+     da accent'in diger on plan kullanimlarindan biri. */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-fg);
     outline-offset: 2px;
   }
 
