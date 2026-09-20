@@ -12,6 +12,27 @@ bu skill uygulanacak adımlardır.
 Kullanıcı bu akışın git adımlarını **sormadan** uygulamanı istiyor; yalnızca aşağıdaki
 "Dur ve bildir" durumlarında ve 2. adımdaki test onayında durursun.
 
+**Akış `dev`'de BİTMEZ.** `dev` merge'ünden sonra aynı oturumda 5. adım (master PR) ve 6. adım
+(geri-merge) da yapılır — "master'a çıkayım mı?", "şimdilik dev'de mi kalsın?" diye **sorma**;
+bu karar zaten verilmiş. Branch `dev`'i içerdiği için master PR'ının başka issue'ların işini de
+terfi ettirmesi normaldir, sormanın sebebi değildir.
+
+## 0. Geride bırakılmış terfi var mı — işe başlamadan bak
+
+```bash
+git fetch origin
+git log --format='%an | %s' origin/master..origin/dev | grep -v '| Merge '
+```
+
+Çıktı boş değilse, `dev`'de master'a çıkmamış iş birikmiş demektir (geri-merge yapılmadığı için
+sonraki PR'larda CI sessizce hiç çalışmaz). Kullanıcıya sorma, **temizle**: her biri için KENDİ
+branch'inden 5. adımdaki master PR'ını **kronolojik sırayla** aç, merge et, sonunda 6. adımı bir
+kez uygula. Gövdeyi sıfırdan yazma — `gh pr view <devPR> --json body -q .body` ile o işin dev PR
+gövdesini al, başına master satırını ekle, `Refs #<no>`yu `Closes #<no>` yap.
+
+Sahibi başkası olan işlerin PR'ını da sen açarsın (iş zaten `dev`'de kabul edilmiş, terfi sahiplik
+işi değil bakım işidir).
+
 ## 1. Issue'yu üstüne al ve branch aç
 
 Issue yoksa önce aç (`gh issue create --title ... --body-file ...`), numarayı al. Sonra:
@@ -56,9 +77,10 @@ gh pr merge <pr> --merge
 - Başlık öneki: `feat:` / `fix:` / `docs:` / `refactor:`, sonunda `(#<no>)`.
 - Gövde (Write ile, BOM'suz): `## Özet` maddeleri, `## Test planı` (koşulan komutlar ve **komutla
   sayılmış** sonuç sayıları, checkbox'lı), `Refs #<no>`, son satır PR imzası.
-- Kullanıcı dev'de denemek istediğini söylediyse master adımından önce onayını bekle.
+- Kullanıcı dev'de denemek istediğini **kendi ağzıyla** söylediyse master adımından önce onayını
+  bekle. Söylemediyse durma, 5. adıma geç — "istersen master'a da çıkarırım" diye teklif etme.
 
-## 5. master'a PR — aynı branch'ten
+## 5. master'a PR — aynı branch'ten, hemen
 
 ```bash
 gh pr create --base master --head <branch> --title "<dev PR'ıyla aynı>" --body-file <dosya>
@@ -67,8 +89,13 @@ gh pr checks <pr> --watch
 gh pr merge <pr> --merge
 ```
 
+- Bu adım dev merge'ünün **hemen ardından**, aynı oturumda yapılır. "Sonra yaparız" yok, soru yok.
 - Gövdenin ilk satırı: `Master PR. dev tarafı #<devPR> ile merge edildi; bu PR aynı branch'ten.`
   Ardından aynı Özet/Test planı, **`Closes #<no>`**, imza.
+- Branch `dev`'i içerdiği için PR, `dev`'de biriken başka işleri de master'a taşıyabilir: bu
+  beklenen davranıştır, gövdeye bir `Not:` satırıyla yazılır, durmak için sebep değildir.
+- `gh pr create --base master` bir izin uyarısına takılırsa durma sebebi budur — kullanıcıya
+  söyle, başka yolla dolanma.
 - master'da bu arada başka merge'ler olduysa ve PR `CONFLICTING` ise: branch'e
   `git merge --no-ff origin/master -m "Merge master into <branch> (<dosya> çakışması)"`, çakışmayı
   dev'deki çözümle aynı şekilde çöz, push et ve gövdeye bir `Not:` satırıyla yaz.
@@ -97,5 +124,8 @@ Sonra kullanıcıya kısa bir bildirim: issue, iki PR numarası, geri-merge comm
 
 - `--squash` / `--rebase` merge, `--force` push, `--delete-branch` ya da feature branch silmek
 - Branch'i `dev`'den açmak
+- İşi `dev`'de bırakıp master PR'ını açmamak ya da "açayım mı?" diye sormak — akış 6. adımda biter
+- Master'a çıkmamış bir işi başka bir branch'ten **kopya commit**'le terfi ettirmek (#138'de oldu):
+  iki branch aynı işin iki ayrı commit'ini taşır, `origin/master..origin/dev` temizlenmez
 - Geri-merge'i "sonra yaparım" diye bırakmak — atlanırsa sonraki PR'larda CI sessizce hiç çalışmaz
 - Geri-merge'i PowerShell'de `if ($?)` zinciriyle yapmak — git stderr'e yazınca merge sessizce atlanır; Bash kullan

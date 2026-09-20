@@ -331,6 +331,12 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
   çalışmaz** (kırmızı değil, hiç yok). Squash/rebase merge repo ayarlarında kapalıdır.
   **Bir issue'yu üstüne almaktan geri-merge'e kadar her git adımında `git-flow` skill'i
   ([git-flow/SKILL.md](git-flow/SKILL.md)) devreye girmeli** — komutlar ve dur-bildir durumları orada.
+  Skill her git adımından ÖNCE okunur (hatırladığın hâli değil, güncel hâli).
+  **Bir iş `dev`'e merge edilince bitmiş sayılmaz**: aynı oturumda aynı branch'ten `master` PR'ı
+  açılır, merge edilir ve `master` `dev`'e geri-merge edilir. "Master'a çıkayım mı?" diye
+  sorulmaz — karar verilmiştir. İşe başlamadan önce
+  `git log origin/master..origin/dev` ile `dev`'de master'a çıkmamış iş kalmış mı bakılır; kalmışsa
+  (kimin işi olursa olsun) önce onlar kendi branch'lerinden kronolojik sırayla terfi ettirilir.
 - **Seed data**: varsayılan/global egzersizler (`Exercise.UserId = null` olanlar — Bench Press,
   Squat vb.) EF Core migration'ında `HasData` ile seed edilir, elle INSERT atılmaz.
 - **Şifre hashleme**: kendi hash fonksiyonu yazılmaz; ASP.NET Core Identity'nin
