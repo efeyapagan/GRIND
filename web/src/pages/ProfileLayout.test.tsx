@@ -1,12 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
 import ProfileLayout from './ProfileLayout';
 
 /**
- * Issue #119: Profil kendi içinde rota-tabanlı sekmelerden oluşur (Rekorlar, Geçmiş, Ölçüler,
- * Hesap -- kullanıcı kararıyla bu sırada, Rekorlar varsayılan). Gerçek alt sayfalar yerine basit
- * yer tutucular kullanılır -- burada sınanan `ProfileLayout`'ın kendisi (sekme çubuğu + `Outlet`),
+ * Issue #119: Profil kendi içinde rota-tabanlı sekmelerden oluşur (#179'dan beri Hesap, Geçmiş,
+ * Ölçüler, Rekorlar -- kullanıcı kararıyla bu sırada, varsayılan yine Rekorlar). Gerçek alt
+ * sayfalar yerine basit yer tutucular kullanılır -- burada sınanan `ProfileLayout`'ın kendisi (sekme çubuğu + `Outlet`),
  * her sekmenin kendi içeriği değil.
  */
 function profiliOlustur(baslangicYolu = '/profile') {
@@ -57,4 +57,21 @@ test('aktif sekme aria-current tasir', async () => {
 
   expect(screen.getByRole('link', { name: 'Ölçüler' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('link', { name: 'Hesap' })).not.toHaveAttribute('aria-current');
+});
+
+/**
+ * Issue #179: sekme sırası kullanıcı kararıdır -- Hesap en sola, Rekorlar en sağa alındı.
+ * Yukarıdaki testler linklere tek tek baktığı için sıraya duyarlı değil; bu test sırayı sabitler.
+ */
+test('sekmeler soldan saga Hesap, Gecmis, Olculer, Rekorlar sirasinda gorunur', async () => {
+  profiliOlustur();
+
+  await screen.findByText('Rekorlar içeriği');
+
+  const sekmeCubugu = screen.getByRole('navigation', { name: 'Profil sekmeleri' });
+  const etiketler = within(sekmeCubugu)
+    .getAllByRole('link')
+    .map((link) => link.textContent);
+
+  expect(etiketler).toEqual(['Hesap', 'Geçmiş', 'Ölçüler', 'Rekorlar']);
 });
