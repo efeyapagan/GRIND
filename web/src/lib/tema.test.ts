@@ -74,8 +74,10 @@ test('sistem temasi degisince yalnizca "sistem" tercihinde ekran doner', () => {
 
   temizle();
   localStorage.setItem(TEMA_ANAHTARI, 'sistem');
-  sistemTemasiniAyarla(false);
-  // Dinleyici kaldirildi: DOM son uygulanan degerde kalir.
+  // Dinleyici kaldirildi: sistem "acik"a donse bile ekran donmemeli. Stimulus bilerek "acik"
+  // veriyor (mevcut DOM zaten "dark") -- dinleyici hala bagli olsaydi bu DOM'u "light"a
+  // cevirirdi, boylece assertion gercekten kaldirmayi kanitlar (ayni degere donmek degil).
+  sistemTemasiniAyarla(true);
   expect(document.documentElement.dataset.theme).toBe('dark');
 });
 
