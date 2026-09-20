@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import { matchMediaSifirla, matchMediaStubuKur } from './matchMedia';
 import { server } from './msw';
 
 // MSW: gercek ag cagrisi asla gitmesin -- tanimlanmamis bir istek gelirse test hemen patlasin
@@ -6,3 +7,7 @@ import { server } from './msw';
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
+
+// jsdom matchMedia tanimlamaz; tema kodu (#178) onsuz patlar.
+matchMediaStubuKur();
+afterEach(matchMediaSifirla);
