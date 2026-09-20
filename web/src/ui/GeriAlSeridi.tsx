@@ -21,8 +21,8 @@ interface Props {
  * yeniden monte edilmeli -- aksi halde ilk pencerenin bitis ani oldugu yerde kalir.
  *
  * `env(safe-area-inset-bottom)` keyfi deger olarak yazilir: Tailwind'de guvenli alan tokeni yok.
- * 5.75rem = sekme cubugu yuksekligi (App.tsx'teki h-16 = 4rem) + ortadaki "+" dugmesinin
- * tastigi 1.75rem (`-mt-7`) -- yalnizca 4rem kullanilirsa serit o dugmeyle CAKISIYORDU.
+ * 5.5rem = sekme cubugu yuksekligi (App.tsx'teki h-14 = 3.5rem) + ortadaki "+" dugmesinin
+ * halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa serit o dugmeyle CAKISIYORDU.
  */
 export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: Props) {
   const [bitisMs] = useState(() => Date.now() + sureMs);
@@ -43,7 +43,7 @@ export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: P
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-50 px-4"
+      className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 px-4"
     >
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-4 p-3">
         <div className="flex items-center justify-between gap-3">

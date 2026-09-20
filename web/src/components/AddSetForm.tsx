@@ -179,10 +179,10 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     // I1 (review bulgusu): `fixed` yerine `sticky` -- TodayPage'in koku bu bilesenin son cocugu
     // ve `mt-auto` tasir; boylece bu alan kendi akis icinde gercek yukseklik kaplar (dinlenme
     // sayaci acikken buyuyen satir dahil) ve altindaki listenin son satirini bir daha ORTMEZ.
-    // 5.75rem = sekme cubugu yuksekligi (App.tsx h-16 = 4rem) + ortadaki "+" dugmesinin tastigi
-    // 1.75rem (`-mt-7`) -- yalnizca 4rem kullanilirsa bu panel o dugmeyle CAKISIYORDU (kullanici
-    // bulgusu). `px-4` YOK -- `main` zaten `px-4 max-w-md`.
-    <div className="sticky bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
+    // 5.5rem = sekme cubugu yuksekligi (App.tsx h-14 = 3.5rem) + ortadaki "+" dugmesinin
+    // halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa bu panel o dugmeyle
+    // CAKISIYORDU (kullanici bulgusu). `px-4` YOK -- `main` zaten `px-4 max-w-md`.
+    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
       <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl">
         <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
         {!acik &&
