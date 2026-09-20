@@ -1,21 +1,57 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAddMeasurement, useDeleteMeasurement, useMeasurements } from '@grind/shared/api/queries';
+import {
+  useAddMeasurement,
+  useDeleteMeasurement,
+  useInfiniteMeasurements,
+  type OlcuSayfasi,
+} from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import MeasurementsScreen from '../../../../app/(tabs)/profile/measurements';
 
 jest.mock('@grind/shared/api/queries', () => ({
   useAddMeasurement: jest.fn(),
   useDeleteMeasurement: jest.fn(),
-  useMeasurements: jest.fn(),
+  useInfiniteMeasurements: jest.fn(),
 }));
 
 const useAddMeasurementMock = useAddMeasurement as jest.Mock;
 const useDeleteMeasurementMock = useDeleteMeasurement as jest.Mock;
-const useMeasurementsMock = useMeasurements as jest.Mock;
+const useInfiniteMeasurementsMock = useInfiniteMeasurements as jest.Mock;
+
+function ornekOlcu(gecersizler: Partial<OlcuSayfasi['items'][number]> = {}) {
+  return {
+    id: 1,
+    weight: 82.4,
+    heightCm: 180,
+    bodyFatPercent: null,
+    waistCm: null,
+    hipCm: null,
+    recordedAt: '2026-09-18T10:00:00Z',
+    ...gecersizler,
+  };
+}
+
+function sayfa(items: ReturnType<typeof ornekOlcu>[], gecersizler: Partial<OlcuSayfasi> = {}): OlcuSayfasi {
+  return { items, page: 1, pageSize: 25, totalCount: items.length, totalPages: 1, ...gecersizler };
+}
+
+/** `data`, `fetchNextPage` vb. gercekci bir `useInfiniteQuery` sonucunu taklit eder. */
+function sonsuzSorguSonucu(sayfalar: OlcuSayfasi[], gecersizler: Record<string, unknown> = {}) {
+  const sonSayfa = sayfalar[sayfalar.length - 1];
+  return {
+    data: { pages: sayfalar, pageParams: sayfalar.map((s) => s.page) },
+    isLoading: false,
+    isError: false,
+    fetchNextPage: jest.fn(),
+    hasNextPage: sonSayfa ? sonSayfa.page < sonSayfa.totalPages : false,
+    isFetchingNextPage: false,
+    ...gecersizler,
+  };
+}
 
 function bosSayfa() {
-  return { items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1 };
+  return sayfa([], { totalPages: 0 });
 }
 
 function ekraniOlustur() {
@@ -32,7 +68,7 @@ function ekraniOlustur() {
 beforeEach(() => {
   useAddMeasurementMock.mockReturnValue({ mutate: jest.fn(), isPending: false });
   useDeleteMeasurementMock.mockReturnValue({ mutate: jest.fn() });
-  useMeasurementsMock.mockReturnValue({ data: bosSayfa(), isLoading: false, isError: false });
+  useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([bosSayfa()]));
 });
 
 test('hic olcu yoksa bos durum gorunur', async () => {
@@ -93,17 +129,7 @@ test('409 hatasinda genel hata kutusu gosterilir, pencere acik kalir', async () 
 test('olcu silme once onay ister, Vazgec ile istek atilmaz', async () => {
   const mutate = jest.fn();
   useDeleteMeasurementMock.mockReturnValue({ mutate });
-  useMeasurementsMock.mockReturnValue({
-    data: {
-      items: [{ id: 1, weight: 82.4, heightCm: 180, bodyFatPercent: null, waistCm: null, hipCm: null, recordedAt: '2026-09-18T10:00:00Z' }],
-      page: 1,
-      pageSize: 20,
-      totalCount: 1,
-      totalPages: 1,
-    },
-    isLoading: false,
-    isError: false,
-  });
+  useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekOlcu()])]));
   await ekraniOlustur();
 
   await fireEvent.press(screen.getByRole('button', { name: 'Ölçüyü sil' }));
@@ -113,4 +139,39 @@ test('olcu silme once onay ister, Vazgec ile istek atilmaz', async () => {
 
   expect(screen.queryByText('Bu ölçü kalıcı olarak silinecek.')).toBeNull();
   expect(mutate).not.toHaveBeenCalled();
+});
+
+test('iki sayfanin olculeri birlikte, ust uste yazmadan listelenir', async () => {
+  useInfiniteMeasurementsMock.mockReturnValue(
+    sonsuzSorguSonucu([
+      sayfa([ornekOlcu({ id: 1, weight: 80 })], { page: 1, totalPages: 2 }),
+      sayfa([ornekOlcu({ id: 2, weight: 79 })], { page: 2, totalPages: 2 }),
+    ]),
+  );
+  await ekraniOlustur();
+
+  expect(await screen.findByText(/80 kg/)).toBeTruthy();
+  expect(screen.getByText(/79 kg/)).toBeTruthy();
+});
+
+test('listenin sonuna gelinince (onEndReached) hasNextPage true iken fetchNextPage cagrilir', async () => {
+  const sonuc = sonsuzSorguSonucu([sayfa([ornekOlcu()], { page: 1, totalPages: 2 })]);
+  useInfiniteMeasurementsMock.mockReturnValue(sonuc);
+  await ekraniOlustur();
+  await screen.findByText(/82\.4 kg/);
+
+  fireEvent(screen.getByTestId('olcu-liste'), 'endReached');
+
+  expect(sonuc.fetchNextPage).toHaveBeenCalledTimes(1);
+});
+
+test('son sayfadaysa (hasNextPage false) onEndReached tetiklense de fetchNextPage cagrilmaz', async () => {
+  const sonuc = sonsuzSorguSonucu([sayfa([ornekOlcu()], { page: 1, totalPages: 1 })]);
+  useInfiniteMeasurementsMock.mockReturnValue(sonuc);
+  await ekraniOlustur();
+  await screen.findByText(/82\.4 kg/);
+
+  fireEvent(screen.getByTestId('olcu-liste'), 'endReached');
+
+  expect(sonuc.fetchNextPage).not.toHaveBeenCalled();
 });

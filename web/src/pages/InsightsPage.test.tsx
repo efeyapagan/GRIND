@@ -7,6 +7,7 @@ import { server } from '../test/msw';
 import InsightsPage from './InsightsPage';
 import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
+import { sahteKesisimGozlemcisiKur } from '../test/kesisimGozlemcisi';
 
 type AiInsightResponse = components['schemas']['AiInsightResponse'];
 type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
@@ -54,12 +55,14 @@ function sayfaYaniti(
   return {
     items: yorumlar,
     page: 1,
-    pageSize: 20,
+    pageSize: 25,
     totalCount: yorumlar.length,
     totalPages: 1,
     ...zarf,
   };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 test('gecmise donus baglantisi /history\'e gider', async () => {
   server.use(http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))));
@@ -252,25 +255,48 @@ test('onaylaninca DELETE gider ve yorum listeden kalkar', async () => {
   expect(await screen.findByText('Henüz yorum yok')).toBeInTheDocument();
 });
 
-test('sayfalama sunucunun zarfindan surulur', async () => {
+test('listenin sonuna gelinince sonraki sayfa otomatik yuklenir ve iki sayfanin yorumlari birlikte gorunur', async () => {
   const aramalar: string[] = [];
   server.use(
     http.get('/api/insights', ({ request }) => {
       const url = new URL(request.url);
       aramalar.push(url.search);
+      const sayfa = Number(url.searchParams.get('Page') ?? '1');
       return HttpResponse.json(
-        sayfaYaniti([ornekYorum()], { page: Number(url.searchParams.get('Page') ?? '1'), totalCount: 40, totalPages: 2 }),
+        sayfaYaniti([ornekYorum({ id: sayfa })], { page: sayfa, totalCount: 40, totalPages: 2 }),
       );
     }),
   );
-  const kullanici = userEvent.setup();
+  const gozlemci = sahteKesisimGozlemcisiKur();
   ekraniOlustur();
 
   await screen.findAllByRole('listitem');
-  expect(screen.getByText('Sayfa 1 / 2')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Önceki' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Sonraki' })).not.toBeInTheDocument();
+  expect(aramalar).toEqual(['?Page=1&PageSize=25']);
 
-  await kullanici.click(screen.getByRole('button', { name: 'Sonraki' }));
+  gozlemci.tetikle();
 
-  await waitFor(() => expect(aramalar.some((a) => a.includes('Page=2'))).toBe(true));
+  await waitFor(() => expect(aramalar).toEqual(['?Page=1&PageSize=25', '?Page=2&PageSize=25']));
+  expect(await screen.findAllByRole('listitem')).toHaveLength(2);
+});
+
+test('son sayfadaysa gozlemci tekrar tetiklense bile yeni istek atilmaz', async () => {
+  const aramalar: string[] = [];
+  server.use(
+    http.get('/api/insights', ({ request }) => {
+      aramalar.push(new URL(request.url).search);
+      return HttpResponse.json(sayfaYaniti([ornekYorum()], { page: 1, totalCount: 1, totalPages: 1 }));
+    }),
+  );
+  const gozlemci = sahteKesisimGozlemcisiKur();
+  ekraniOlustur();
+
+  await screen.findAllByRole('listitem');
+  expect(aramalar).toHaveLength(1);
+
+  gozlemci.tetikle();
+  gozlemci.tetikle();
+
+  await new Promise((coz) => setTimeout(coz, 50));
+  expect(aramalar).toHaveLength(1);
 });

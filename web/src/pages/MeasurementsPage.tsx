@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Plus, Scale, Trash2 } from 'lucide-react';
-import { useAddMeasurement, useDeleteMeasurement, useMeasurements, type Olcu } from '../api/queries';
+import { useAddMeasurement, useDeleteMeasurement, useInfiniteMeasurements, type Olcu } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { formatTrDate, formatTrTime } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
@@ -11,9 +11,6 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import BosDurum from '../ui/BosDurum';
 import HataKutusu from '../ui/HataKutusu';
-
-const SAYFA_DUGMESI =
-  'flex h-13 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-label uppercase disabled:text-muted disabled:opacity-60';
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
 
@@ -27,8 +24,7 @@ const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hip
  */
 export default function MeasurementsPage() {
   usePageTitle('Ölçüler');
-  const [sayfa, setSayfa] = useState(1);
-  const { data, isLoading, isError } = useMeasurements(sayfa);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
   const silMutasyonu = useDeleteMeasurement();
 
@@ -96,6 +92,28 @@ export default function MeasurementsPage() {
       },
     });
   }
+
+  const tumOlculer = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
+
+  // Liste sonundaki gorunmez oge viewport'a girince bir sonraki sayfa cekilir (issue #147,
+  // HistoryPage ile ayni desen). `hasNextPage` false iken gozlemci hic KURULMAZ.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage) {
+      return;
+    }
+    const gozlemci = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    gozlemci.observe(sentinel);
+    return () => gozlemci.disconnect();
+  }, [hasNextPage, fetchNextPage]);
 
   return (
     <div className="flex flex-col gap-5 pb-4">
@@ -179,14 +197,14 @@ export default function MeasurementsPage() {
         </p>
       )}
 
-      {!isLoading && !isError && data && data.items.length === 0 && (
+      {!isLoading && !isError && data && tumOlculer.length === 0 && (
         <BosDurum ikon={Scale} baslik="Henüz ölçü yok" aciklama="Yukarıdan ilk ölçünü ekle." />
       )}
 
-      {!isLoading && !isError && data && data.items.length > 0 && (
+      {!isLoading && !isError && data && tumOlculer.length > 0 && (
         <>
           <ul className="flex flex-col gap-3">
-            {data.items.map((olcu) => (
+            {tumOlculer.map((olcu) => (
               <OlcuKarti
                 key={olcu.id}
                 olcu={olcu}
@@ -200,29 +218,9 @@ export default function MeasurementsPage() {
               />
             ))}
           </ul>
-          {data.totalPages > 1 && (
-            <div className="flex items-center justify-between gap-4">
-              <button
-                type="button"
-                onClick={() => setSayfa((s) => s - 1)}
-                disabled={data.page <= 1}
-                className={SAYFA_DUGMESI}
-              >
-                Önceki
-              </button>
-              <span className="text-label tabular-nums">
-                Sayfa {data.page} / {data.totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSayfa((s) => s + 1)}
-                disabled={data.page >= data.totalPages}
-                className={SAYFA_DUGMESI}
-              >
-                Sonraki
-              </button>
-            </div>
-          )}
+          {/* Gorunmez sentinel: `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
         </>
       )}
     </div>
