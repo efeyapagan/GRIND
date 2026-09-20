@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
+import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, X } from 'lucide-react-native';
@@ -10,7 +11,6 @@ import {
   useAddSessionExercise,
   useDeleteSession,
   useExercises,
-  useFinishSession,
   useOpenSession,
   useSessionSets,
   useStartSession,
@@ -25,7 +25,6 @@ import SetList from '../../src/components/SetList';
 import AddSetForm from '../../src/components/AddSetForm';
 import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
-import ZorlukSecici from '../../src/components/ZorlukSecici';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
@@ -52,13 +51,12 @@ export default function AntrenmanScreen() {
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
   const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
-  const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
   const iptalMutasyonu = useDeleteSession();
   const hareketEkleMutasyonu = useAddSessionExercise();
+  const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
-  const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
 
   const kaydiriciRef = useRef<ScrollView>(null);
   useEffect(() => {
@@ -184,14 +182,12 @@ export default function AntrenmanScreen() {
                 <X color={ikonRenk.danger} size={18} />
                 <Text className="text-label text-danger">Antrenmanı iptal et</Text>
               </Pressable>
-            ) : zorlukSoruluyor ? (
-              <ZorlukSecici
-                bekliyor={bitirMutasyonu.isPending}
-                onSec={(zorluk) => bitirMutasyonu.mutate({ sessionId: gorunenOturum.id, zorluk })}
-              />
             ) : (
+              // #153: bitirme burada kapanmaz, zorluk kadranının olduğu ekrana götürür -- antrenman
+              // oradan kapanır. `push` (replace değil): kullanıcı vazgeçip geri dönebilmeli.
               <Pressable
-                onPress={() => setZorlukSoruluyor(true)}
+                accessibilityRole="button"
+                onPress={() => router.push('/antrenman-bitir')}
                 className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
               >
                 <CircleCheck color={ikonRenk.muted} size={18} />
@@ -210,11 +206,6 @@ export default function AntrenmanScreen() {
             {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
             <Text className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</Text>
           </View>
-        )}
-        {bitirMutasyonu.isError && (
-          <Text accessibilityRole="alert" className="text-label text-danger">
-            Antrenman bitirilemedi. Lütfen tekrar deneyin.
-          </Text>
         )}
         {baslatMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
