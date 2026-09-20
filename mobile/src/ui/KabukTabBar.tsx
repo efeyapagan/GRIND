@@ -12,6 +12,11 @@ import { ikonRenk } from './renkler';
  * Expo Router'in kendi `Tabs` bilesenini KULLANMIYORUZ -- React Navigation'in tabBar prop
  * seklini (descriptors/state) web'in duz NavLink desenine zorlamak yerine, web'deki
  * `usePathname`/`Link` mantigi burada da BIREBIR ayni sekilde (aktif yol karsilastirmasi) kuruldu.
+ *
+ * Gorsel (issue #159, kullanici referansi): cubuk `surface-1` -- sayfanin `bg` renginden bir
+ * ton acik -- boylece "+" dugmesinin etrafina sarilan `bg` renkli halka (`p-1`) cubuktan
+ * GORUNUR bir seritle ayrilir, duz bir cubugun onune cikan yalin bir daireden daha estetik
+ * durur. Cubuk h-14'e indirilip yan dugmeler (Ana Sayfa/Profil) daha az dikey alan kaplar.
  */
 export default function KabukTabBar() {
   const router = useRouter();
@@ -23,29 +28,29 @@ export default function KabukTabBar() {
 
   return (
     <View style={{ paddingBottom: insets.bottom }} className="bg-bg">
-      <View className="h-16 flex-row items-center px-4">
+      <View className="h-14 flex-row items-center bg-surface-1 px-4">
         <View className="flex-1 items-center">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Ana sayfa"
             onPress={() => router.navigate('/')}
-            className="h-12 min-w-16 items-center justify-center"
+            className="h-11 min-w-16 items-center justify-center"
           >
             <Home color={anaSayfaAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
           </Pressable>
         </View>
 
         <View className="flex-1 items-center">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Antrenman başlat"
-            onPress={() => router.navigate('/antrenman')}
-            style={{ marginTop: -28 }}
-          >
-            <View className="size-16 items-center justify-center rounded-full bg-accent shadow-lg">
+          <View className="rounded-full bg-bg p-1" style={{ marginTop: -24 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Antrenman başlat"
+              onPress={() => router.navigate('/antrenman')}
+              className="size-16 items-center justify-center rounded-full bg-accent shadow-lg"
+            >
               <Plus color={ikonRenk.onAccent} size={28} />
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         </View>
 
         <View className="flex-1 items-center">
@@ -53,7 +58,7 @@ export default function KabukTabBar() {
             accessibilityRole="button"
             accessibilityLabel="Profil"
             onPress={() => router.navigate('/profile')}
-            className="h-12 min-w-16 items-center justify-center"
+            className="h-11 min-w-16 items-center justify-center"
           >
             <User color={profilAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
           </Pressable>
