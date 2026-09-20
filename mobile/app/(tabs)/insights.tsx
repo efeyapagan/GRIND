@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, FlatList } from 'react-native';
 import { Link } from 'expo-router';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react-native';
-import { useDeleteInsight, useGenerateInsight, useInsights, type Yorum } from '@grind/shared/api/queries';
+import { useDeleteInsight, useGenerateInsight, useInfiniteInsights, type Yorum } from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { formatTrDate, formatTrTime } from '@grind/shared/lib/format';
@@ -14,11 +14,14 @@ import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
 import { ikonRenk } from '../../src/ui/renkler';
 
-/** web/src/pages/InsightsPage.tsx ile ayni (issue #76). */
+/**
+ * web/src/pages/InsightsPage.tsx ile ayni (issue #76). Sayfalama Onceki/Sonraki dugmeleri
+ * yerine SONSUZ KAYDIRMA'dir (issue #147, Gecmis'in #142'siyle ayni desen): `FlatList`in
+ * `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi ceker.
+ */
 export default function InsightsScreen() {
   usePageTitle('AI yorumu');
-  const [sayfa, setSayfa] = useState(1);
-  const { data, isLoading, isError } = useInsights(sayfa);
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
   const silMutasyonu = useDeleteInsight();
 
@@ -55,96 +58,94 @@ export default function InsightsScreen() {
     setDurum('iptal-edildi');
   }
 
+  const tumYorumlar = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
+
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
-      <Link href="/profile/history" className="min-h-11 flex-row items-center gap-1">
-        <ChevronLeft color={ikonRenk.muted} size={18} />
-        <Text className="text-label text-muted">Geçmiş</Text>
-      </Link>
+    <FlatList
+      testID="yorum-liste"
+      data={tumYorumlar}
+      keyExtractor={(yorum) => String(yorum.id)}
+      renderItem={({ item }) => (
+        <YorumKarti
+          yorum={item}
+          onayAcik={silinecekId === item.id}
+          onSilmeyeBasla={() => setSilinecekId(item.id)}
+          onVazgec={() => setSilinecekId(null)}
+          onSil={() => {
+            silMutasyonu.mutate(item.id);
+            setSilinecekId(null);
+          }}
+        />
+      )}
+      ItemSeparatorComponent={() => <View className="h-3" />}
+      contentContainerClassName="px-4 pt-2 pb-4"
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      }}
+      ListHeaderComponent={
+        <View className="mb-5 flex-col gap-5">
+          <Link href="/profile/history" className="min-h-11 flex-row items-center gap-1">
+            <ChevronLeft color={ikonRenk.muted} size={18} />
+            <Text className="text-label text-muted">Geçmiş</Text>
+          </Link>
 
-      <Text className="text-body text-muted">
-        Son 30 güne kadarki antrenman verini yapay zekaya yorumlatır. Belirli bir aralık seçmek
-        şimdilik mümkün değil.
-      </Text>
-
-      <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
-        {!uretMutasyonu.isPending && (
-          <BirincilDugme yukseklik="normal" onPress={yorumIste}>
-            <Sparkles color={ikonRenk.onAccent} size={20} />
-            <Text className="text-body-lg font-bold text-on-accent">Yorum iste</Text>
-          </BirincilDugme>
-        )}
-
-        {uretMutasyonu.isPending && (
-          <View className="flex-col gap-3">
-            <Text className="text-body text-muted">Yorum hazırlanıyor... Bu birkaç dakika sürebilir.</Text>
-            <IkincilDugme onPress={iptalEt}>Vazgeç</IkincilDugme>
-          </View>
-        )}
-
-        {durum === 'iptal-edildi' && (
-          <Text className="text-label text-muted">
-            Beklemeyi durdurdun. Yorum yine de oluşturuluyor olabilir; birkaç dakika sonra listede
-            görünebilir.
+          <Text className="text-body text-muted">
+            Son 30 güne kadarki antrenman verini yapay zekaya yorumlatır. Belirli bir aralık
+            seçmek şimdilik mümkün değil.
           </Text>
-        )}
 
-        {durum === 'bilgi' && bilgiMesaji && <Text className="text-label text-muted">{bilgiMesaji}</Text>}
+          <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+            {!uretMutasyonu.isPending && (
+              <BirincilDugme yukseklik="normal" onPress={yorumIste}>
+                <Sparkles color={ikonRenk.onAccent} size={20} />
+                <Text className="text-body-lg font-bold text-on-accent">Yorum iste</Text>
+              </BirincilDugme>
+            )}
 
-        {durum === 'hata' && genelHata && <HataKutusu baslik="Yorum alınamadı" mesaj={genelHata} />}
-      </View>
+            {uretMutasyonu.isPending && (
+              <View className="flex-col gap-3">
+                <Text className="text-body text-muted">
+                  Yorum hazırlanıyor... Bu birkaç dakika sürebilir.
+                </Text>
+                <IkincilDugme onPress={iptalEt}>Vazgeç</IkincilDugme>
+              </View>
+            )}
 
-      {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+            {durum === 'iptal-edildi' && (
+              <Text className="text-label text-muted">
+                Beklemeyi durdurdun. Yorum yine de oluşturuluyor olabilir; birkaç dakika sonra
+                listede görünebilir.
+              </Text>
+            )}
 
-      {isError && (
-        <Text accessibilityRole="alert" className="text-body text-danger">
-          Yorumlar alınamadı. Lütfen sayfayı yenileyin.
-        </Text>
-      )}
+            {durum === 'bilgi' && bilgiMesaji && (
+              <Text className="text-label text-muted">{bilgiMesaji}</Text>
+            )}
 
-      {!isLoading && !isError && data && data.items.length === 0 && (
-        <BosDurum ikon={Brain} baslik="Henüz yorum yok" aciklama="Yukarıdan ilk yorumunu iste." />
-      )}
-
-      {!isLoading && !isError && data && data.items.length > 0 && (
-        <>
-          <View className="flex-col gap-3">
-            {data.items.map((yorum) => (
-              <YorumKarti
-                key={yorum.id}
-                yorum={yorum}
-                onayAcik={silinecekId === yorum.id}
-                onSilmeyeBasla={() => setSilinecekId(yorum.id)}
-                onVazgec={() => setSilinecekId(null)}
-                onSil={() => {
-                  silMutasyonu.mutate(yorum.id);
-                  setSilinecekId(null);
-                }}
-              />
-            ))}
+            {durum === 'hata' && genelHata && <HataKutusu baslik="Yorum alınamadı" mesaj={genelHata} />}
           </View>
-          <View className="mt-3 flex-row items-center justify-between gap-4">
-            <Pressable
-              onPress={() => setSayfa((s) => s - 1)}
-              disabled={data.page <= 1}
-              className={`h-13 flex-1 items-center justify-center rounded-xl bg-surface-2 ${data.page <= 1 ? 'opacity-60' : ''}`}
-            >
-              <Text className="text-label text-fg uppercase">Önceki</Text>
-            </Pressable>
-            <Text className="text-label text-fg">
-              Sayfa {data.page} / {data.totalPages}
+
+          {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+
+          {isError && (
+            <Text accessibilityRole="alert" className="text-body text-danger">
+              Yorumlar alınamadı. Lütfen sayfayı yenileyin.
             </Text>
-            <Pressable
-              onPress={() => setSayfa((s) => s + 1)}
-              disabled={data.page >= data.totalPages}
-              className={`h-13 flex-1 items-center justify-center rounded-xl bg-surface-2 ${data.page >= data.totalPages ? 'opacity-60' : ''}`}
-            >
-              <Text className="text-label text-fg uppercase">Sonraki</Text>
-            </Pressable>
-          </View>
-        </>
-      )}
-    </ScrollView>
+          )}
+        </View>
+      }
+      ListEmptyComponent={
+        !isLoading && !isError && data ? (
+          <BosDurum ikon={Brain} baslik="Henüz yorum yok" aciklama="Yukarıdan ilk yorumunu iste." />
+        ) : null
+      }
+      ListFooterComponent={
+        isFetchingNextPage ? <Text className="text-body text-muted">Yükleniyor...</Text> : null
+      }
+    />
   );
 }
 

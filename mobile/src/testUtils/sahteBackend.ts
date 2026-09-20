@@ -13,6 +13,7 @@ export function sahteBackendOlustur() {
   const state = {
     sablonlar: [] as any[],
     acikOturum: null as any,
+    bitmisOturumlar: [] as any[],
     setler: [] as any[],
     siradakiSablonId: 1,
     siradakiSetId: 1,
@@ -80,6 +81,18 @@ export function sahteBackendOlustur() {
         })),
       };
       return state.acikOturum;
+    }
+
+    if (method === 'POST' && /^\/sessions\/\d+\/finish$/.test(path)) {
+      const bitmis = {
+        ...state.acikOturum,
+        endedAt: new Date().toISOString(),
+        isOpen: false,
+        difficulty: govde?.difficulty ?? null,
+      };
+      state.bitmisOturumlar.push(bitmis);
+      state.acikOturum = null;
+      return bitmis;
     }
 
     if (method === 'POST' && path === '/sets') {

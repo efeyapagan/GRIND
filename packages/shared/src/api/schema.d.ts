@@ -3161,7 +3161,7 @@ export interface components {
             password: string;
         };
         /** @enum {string} */
-        SessionDifficulty: "Easy" | "Medium" | "Hard";
+        SessionDifficulty: "VeryEasy" | "Easy" | "Medium" | "Hard" | "Maximal";
         SessionProgressResponse: {
             /** Format: int64 */
             exerciseId?: number;
