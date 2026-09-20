@@ -8,8 +8,19 @@ type Dinleyici = (olay: MediaQueryListEvent) => void;
 const dinleyiciler = new Map<string, Set<Dinleyici>>();
 let acikMi = false;
 
+// Yalnizca tema'nin gercekten dinledigi iki renk-semasi sorgusunu yanitlar. Baska bir sorgu
+// (ornegin ileride bir `useMediaQuery('(min-width: 768px)')`) icin `true` donmek, o kodu her
+// testte yanlislikla "eslesiyor" dalina sokardi -- bilerek "eslesmiyor" (false) donuyoruz, cunku
+// bu stub'un bilmedigi bir sorgu icin sessizce eslesmis gibi davranmak testleri yanlis yesile
+// tasir.
 function eslesme(sorgu: string): boolean {
-  return sorgu.includes('light') ? acikMi : !acikMi;
+  if (sorgu === '(prefers-color-scheme: light)') {
+    return acikMi;
+  }
+  if (sorgu === '(prefers-color-scheme: dark)') {
+    return !acikMi;
+  }
+  return false;
 }
 
 export function matchMediaStubuKur(): void {

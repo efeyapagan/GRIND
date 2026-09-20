@@ -81,20 +81,49 @@ markadan koparırdı. Karar 2'nin "accent yalnızca şurada kullanılır" listes
 | Takvim ısı haritası `accent/20 · /40 · /60` üstünde `fg` | 11.83 / 9.50 / 7.75:1 |
 | Açık rozet zemini (`accent/20`) üstünde `accent-soft` | 4.82 – 5.28:1 |
 
-## Karar 3 — Odak halkası kendi token'ını alır: `focus`
+## Karar 3 — accent'in ön plan (foreground) kullanımları kendi token'ını alır: `accent-fg`
 
-Karar 7'nin görünür klavye odağı halkası bugün `accent` (2 px). Ölçüm, bu rengin **açık temada
-yetersiz** olduğunu gösterdi: açık yüzeylerde 2.43 – 3.00:1, metin dışı öğeler için gereken 3:1'in
-altında (en kötü hâl `surface-4` üstünde 2.43:1).
+İlk sürümde yalnızca Karar 7'nin görünür klavye odağı halkası `accent`'ten ayrılmış, `focus` adında
+dar bir token'a taşınmıştı. Whole-branch review'da (final inceleme, #178) `accent`'in METİN, İKON,
+KENARLIK ve GRAFİK ÇİZGİSİ olarak kullanıldığı **8 ayrı yer** daha bulundu — aktif alt-sekme
+etiketi/ikonu (`App.tsx`), aktif üst-sekme alt çizgisi (`ProfileLayout.tsx`, `SekmeDugmesi.tsx`),
+hareket geçmişi grafiğinin çizgisi/noktaları/degradesi (`CizgiGrafik.tsx`), "Geri al" şeridinin
+metni ve ilerleme dolgusu (`GeriAlSeridi.tsx`), seçili hareketin onay ikonu (`HareketSecici.tsx`).
+Bunların hepsi aynı sorunu taşıyordu: ölçüm, `accent`'in açık temada **ön plan işareti** olarak
+yetersiz kaldığını gösterdi — açık yüzeylerde 2.43 – 3.00:1, metin dışı öğeler için gereken 3:1'in
+altında (en kötü hâl `surface-4` üstünde 2.43:1); metin olarak kullanıldığı yerlerde (aktif sekme
+etiketi, "Geri al" metni) bu daha da düşüktü (ör. 2.43 – 2.85:1), oysa metin eşiği 4.5:1.
 
-Bu yüzden halka `--color-focus` token'ını kullanır:
+Bu yüzden dar `focus` token'ı **genelleştirildi**: `--color-accent-fg` — accent'in ön plan formu.
 
 | Token | Koyu | Açık |
 |---|---|---|
-| `focus` | #ff5722 (3.88 – 6.10:1) | #a03500 (5.36 – 6.99:1) |
+| `accent-fg` | #ff5722 (3.88 – 6.10:1 / 3:1 eşiğine göre) | #a03500 (5.36 – 6.99:1 / 3:1 eşiğine göre) |
 
-Koyu temada görünen hiçbir şey değişmez (değer `accent` ile aynı). Karar 2'nin accent kullanım
-listesi genişlemez — halka oradan çıkıp kendi token'ına taşınır.
+Metin olarak kullanıldığı üç yüzeyde (`bg`, `surface-1`, `surface-2`) ayrıca 4.5:1 ölçüldü: koyu
+5.87 / 5.43 / 5.19, açık 6.64 / 6.30 / 5.98 — ikisi de AA'yı geçiyor.
+
+### Kural: `accent` ne zaman kalır, `accent-fg` ne zaman devreye girer
+
+- **`accent` kalır**: üstünde `on-accent` metin taşıyan bir DOLGU olduğunda (birincil düğme, FAB,
+  rozet, ısı haritası, grafik değer-etiketi pill'i) veya bilinçli bir marka/dekoratif işaret
+  olduğunda (`AuthLayout`'taki dambıl logosu, `aria-hidden` dekoratif nokta).
+  Bu durumda `on-accent` üstünde 4.54:1 hâlâ geçerli, iki temada AYNI kalmaya devam ediyor.
+- **`accent-fg` devreye girer**: turuncu METİN, İKON, KENARLIK veya ÇİZGİ olarak kullanıldığında —
+  odak halkası, aktif sekme etiketi/ikonu, aktif sekme alt çizgisi, grafik çizgisi/nokta/degrade,
+  "Geri al" metni ve ilerleme dolgusu, seçili öğe onay ikonu.
+
+Koyu temada görünen hiçbir şey değişmez: `accent-fg`'nin koyu değeri (`#ff5722`) `accent` ile
+birebir aynı, yalnızca token adı değişti — render edilen piksel aynı kalıyor. Karar 2'nin accent
+kullanım listesi genişlemedi, yalnızca ön plan işaretleri oradan çıkıp kendi token'ına taşındı.
+
+### Kapsam dışı bırakılan, bilinen bir sorun
+
+Koyu temada `accent-fg` / `surface-4` = 3.88:1 — yani "Geri al" şeridinin metni (`bg-surface-4`
+zemininde) koyu temada BUGÜN BİLE AA metin eşiğinin (4.5:1) altında. Bu, bu branch'ten ÖNCE var
+olan bir koyu-tema sorunu; `accent-fg`'nin tanıtılması bunu ne yarattı ne kötüleştirdi (`accent`
+zaten aynı değeri taşıyordu). Kapsam dışı bırakıldı — ayrı bir issue'nun işi. `paletKontrast.test.ts`
+bunu bilerek 4.5:1 testinin dışında tutar ve neden dışarıda tutulduğunu yorumla belgeler.
 
 ## Karar 4 — Tema seçimi: sistem varsayılan, elle ezilebilir, cihazda saklanır
 
@@ -142,7 +171,7 @@ mobil işi başladığında iki varyantı oraya taşımak o issue'nun kararıdı
 
 | Dosya | Değişiklik |
 |---|---|
-| `web/src/index.css` | `--color-focus` eklenir; `:root[data-theme='light']` palet bloğu ve `color-scheme` kuralları; odak halkası `focus` token'ına geçer |
+| `web/src/index.css` | `--color-accent-fg` eklenir; `:root[data-theme='light']` palet bloğu ve `color-scheme` kuralları; odak halkası ve accent'in diğer ön plan kullanımları `accent-fg` token'ına geçer |
 | `web/index.html` | `<head>`'e sıçramayı önleyen satır içi script |
 | `web/src/lib/tema.ts` | yeni — tercih okuma/yazma, çözümleme, DOM'a uygulama, sistem dinleyicisi |
 | `web/src/components/GorunumSecici.tsx` | yeni — Profil › Hesap'taki Görünüm seçicisi |

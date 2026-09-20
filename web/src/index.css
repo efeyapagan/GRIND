@@ -49,8 +49,10 @@
   --color-danger-bg: #93000a;
   --color-on-danger-bg: #ffdad6;
 
-  /* Odak halkasi kendi tokenini kullanir (#178): accent, acik temada 3:1'in altina dusuyor. */
-  --color-focus: #ff5722;
+  /* accent'in ON PLAN (foreground) formu -- metin, ikon, kenarlik, grafik cizgisi, odak halkasi
+     (#178): duz accent bu rollerde acik temada 2.43-3.00:1'e dusuyor, WCAG'i gecmiyor. accent'in
+     kendisi hala DOLGU (fill) olarak kalir -- uzerinde `on-accent` metin tasiyan yerlerde. */
+  --color-accent-fg: #ff5722;
 
   --text-title: 26px;
   --text-title--line-height: 32px;
@@ -107,7 +109,7 @@
     --color-danger: #ba1a1a;
     --color-danger-bg: #ffdad6;
     --color-on-danger-bg: #410002;
-    --color-focus: #a03500;
+    --color-accent-fg: #a03500;
   }
 
   body {
@@ -118,9 +120,10 @@
   }
 
   /* Stitch'in `focus:outline-none`'i yerine: klavye odagi her zaman gorunur (Karar 7). Renk
-     `accent` degil `focus` (#178): accent acik temada 2.43:1'e kadar dusuyordu. */
+     `accent` degil `accent-fg` (#178): accent acik temada 2.43:1'e kadar dusuyordu, odak halkasi
+     da accent'in diger on plan kullanimlarindan biri. */
   :focus-visible {
-    outline: 2px solid var(--color-focus);
+    outline: 2px solid var(--color-accent-fg);
     outline-offset: 2px;
   }
 

@@ -51,7 +51,7 @@ export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: P
           <button
             type="button"
             onClick={onGeriAl}
-            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-label text-accent"
+            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-label text-accent-fg"
           >
             <Undo2 aria-hidden size={18} />
             Geri al
@@ -62,7 +62,7 @@ export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: P
           aria-hidden
           value={kalanMs}
           max={sureMs}
-          className="h-1 w-full appearance-none overflow-hidden rounded-full bg-surface-3 [&::-moz-progress-bar]:bg-accent [&::-webkit-progress-bar]:bg-surface-3 [&::-webkit-progress-value]:bg-accent"
+          className="h-1 w-full appearance-none overflow-hidden rounded-full bg-surface-3 [&::-moz-progress-bar]:bg-accent-fg [&::-webkit-progress-bar]:bg-surface-3 [&::-webkit-progress-value]:bg-accent-fg"
         />
       </div>
     </div>

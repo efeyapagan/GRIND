@@ -67,7 +67,7 @@ function Kabuk() {
               end
               aria-label="Ana sayfa"
               className={({ isActive }) =>
-                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
+                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
               }
             >
               <Home aria-hidden size={22} />
@@ -93,7 +93,7 @@ function Kabuk() {
               to="/profile"
               aria-label="Profil"
               className={({ isActive }) =>
-                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent' : 'text-muted'}`
+                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
               }
             >
               <User aria-hidden size={22} />

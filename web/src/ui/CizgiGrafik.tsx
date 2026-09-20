@@ -26,9 +26,12 @@ const VARSAYILAN_GENISLIK = 320;
 const ETIKET_YUKSEKLIGI = 22;
 
 /**
- * Veri bilmeyen cizgi grafik (dilim 3 spec Karar 4): hareket, oturum ya da API bilmez. Cizgi, noktalar,
- * alan degradesi ve deger etiketleri `accent` (spec Karar 3 -- `text-accent` + `currentColor`); izgara
- * ve eksen metni notr. Ayni veri ekran okuyucuya gizli bir listeyle verilir. Bos girdide `null`.
+ * Veri bilmeyen cizgi grafik (dilim 3 spec Karar 4): hareket, oturum ya da API bilmez. Cizgi, noktalar
+ * ve alan degradesi `accent-fg` (acik-tema spec Karar 3 -- accent bir CIZGI/CURRENTCOLOR olarak
+ * kullanildiginda foreground sayilir, acik temada 2.7:1'e dusuyordu; `text-accent-fg` + `currentColor`).
+ * Deger etiketi PILL'i ise `fill-accent` + `fill-on-accent` metinle kalir (dolgu + uzerindeki metin,
+ * 4.54:1 -- degismedi). Izgara ve eksen metni notr. Ayni veri ekran okuyucuya gizli bir listeyle
+ * verilir. Bos girdide `null`.
  */
 export default function CizgiGrafik({ noktalar, birim, baslik }: Props) {
   if (noktalar.length === 0) {
@@ -69,7 +72,7 @@ function Cizim({ noktalar, birim, baslik }: Props) {
 
   return (
     <div ref={kapRef} className="w-full">
-      <svg role="img" aria-label={baslik} width={genislik} height={YUKSEKLIK} className="block text-accent">
+      <svg role="img" aria-label={baslik} width={genislik} height={YUKSEKLIK} className="block text-accent-fg">
         <defs>
           <linearGradient id={degradeId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="currentColor" stopOpacity={0.45} />

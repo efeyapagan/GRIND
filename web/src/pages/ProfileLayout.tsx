@@ -28,7 +28,7 @@ export default function ProfileLayout() {
             to={to}
             className={({ isActive }) =>
               `flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-center text-label ${
-                isActive ? 'border-accent text-fg' : 'border-transparent text-muted'
+                isActive ? 'border-accent-fg text-fg' : 'border-transparent text-muted'
               }`
             }
           >

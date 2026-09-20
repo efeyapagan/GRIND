@@ -5,7 +5,8 @@ import { TEMA_RENKLERI } from './tema';
 /**
  * Paletin erisilebilirlik guvenlik agi (#178): index.css TEK dogruluk kaynagidir, bu test onu
  * okuyup kontrast oranlarini olcer. Ileride bir renk elle degistirilirse kontrast sessizce
- * bozulmasin diye var. Esikler WCAG 2.1 AA: metin 4.5:1, metin disi (odak halkasi) 3:1.
+ * bozulmasin diye var. Esikler WCAG 2.1 AA: metin 4.5:1, metin disi (odak halkasi, kenarlik,
+ * grafik cizgisi) 3:1.
  *
  * DIKKAT: `import.meta.url` degiskene atanmadan dogrudan `new URL(...)` icine yazilirsa,
  * Vite'in statik asset-URL analizi bu deseni yakalayip dev-server HTTP adresine cevirir --
@@ -34,12 +35,30 @@ function blokGovdesi(baslik: string): string {
   throw new Error(`"${baslik}" blogu kapanmamis`);
 }
 
-function renkler(baslik: string): Record<string, string> {
-  const bulunan: Record<string, string> = {};
-  for (const eslesme of blokGovdesi(baslik).matchAll(/--color-([\w-]+):\s*(#[0-9a-f]{6})/g)) {
-    bulunan[eslesme[1]] = eslesme[2];
+interface HarvestSonucu {
+  // Token adi -> normalize edilmis (kucuk harf) hex deger.
+  hex: Record<string, string>;
+  // "token: deger" formatinda, hex OLMAYAN degerler -- kontrast harness'i bunlari olcemez.
+  hexOlmayan: string[];
+}
+
+// Deger kismini `;`ye kadar genis yakalar (Bulgu 3): eskiden yalnizca kucuk harf #rrggbb'yi
+// yakalayan regex, buyuk harfli hex'i (#FFAA00) veya oklch(...) gibi baska bir formati
+// SESSIZCE atlardi -- "her token'in acik varyanti var" testi o tokeni hic gormeden gecerdi.
+// Simdi her --color-* degeri yakalanir, hex olup olmadigi asagida ayri kontrol edilir.
+function renkler(baslik: string): HarvestSonucu {
+  const hex: Record<string, string> = {};
+  const hexOlmayan: string[] = [];
+  for (const eslesme of blokGovdesi(baslik).matchAll(/--color-([\w-]+):\s*([^;]+);/g)) {
+    const token = eslesme[1];
+    const deger = eslesme[2].trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(deger)) {
+      hex[token] = deger.toLowerCase();
+    } else {
+      hexOlmayan.push(`${token}: ${deger}`);
+    }
   }
-  return bulunan;
+  return { hex, hexOlmayan };
 }
 
 function bagilParlaklik(renk: string): number {
@@ -53,8 +72,10 @@ function kontrast(a: string, b: string): number {
   return (yuksek + 0.05) / (dusuk + 0.05);
 }
 
-const koyu = renkler('@theme {');
-const acikEzmeler = renkler(":root[data-theme='light'] {");
+const koyuHarvest = renkler('@theme {');
+const acikHarvest = renkler(":root[data-theme='light'] {");
+const koyu = koyuHarvest.hex;
+const acikEzmeler = acikHarvest.hex;
 const acik = { ...koyu, ...acikEzmeler };
 const paletler = { koyu, acik };
 const ZEMINLER = ['bg', 'inset', 'surface-1', 'surface-2', 'surface-3', 'surface-4'];
@@ -62,6 +83,14 @@ const ZEMINLER = ['bg', 'inset', 'surface-1', 'surface-2', 'surface-3', 'surface
 // Bu ikisi marka renkleridir, iki temada AYNI -- bilerek acik blokta yoklar. Yeni bir token
 // iki temada da ayni kalacaksa buraya eklenir; aksi halde test acik varyantini ister.
 const IKI_TEMADA_AYNI = ['accent', 'on-accent'];
+
+test("index.css'teki her --color-* degeri hex formatinda", () => {
+  // Kontrast harness'i yalnizca #rrggbb hex degerlerini olcebilir. Bir token hex olmayan bir
+  // deger (buyuk harfli hex, oklch(...), rgb(...) vb.) alirsa asagidaki testler onu SESSIZCE
+  // atlamak yerine burada acikca patlamali -- ya tokeni hex'e cevir ya da bu harness'i genislet.
+  const hexOlmayanlar = [...koyuHarvest.hexOlmayan, ...acikHarvest.hexOlmayan];
+  expect(hexOlmayanlar).toEqual([]);
+});
 
 test('acik palet, iki temada ayni olanlar disindaki her tokeni ezer', () => {
   const beklenen = Object.keys(koyu).filter((token) => !IKI_TEMADA_AYNI.includes(token));
@@ -85,14 +114,38 @@ test('metin renkleri her iki temada her yuzeyde en az 4.5:1', () => {
   expect(dusukler).toEqual([]);
 });
 
-test('odak halkasi her iki temada her yuzeyde en az 3:1', () => {
+test('accent-fg her iki temada her yuzeyde en az 3:1 (odak halkasi, sekme alt cizgisi, grafik cizgisi, ilerleme dolgusu)', () => {
   const dusukler: string[] = [];
 
   for (const [temaAdi, palet] of Object.entries(paletler)) {
     for (const zemin of ZEMINLER) {
-      const oran = kontrast(palet.focus, palet[zemin]);
+      const oran = kontrast(palet['accent-fg'], palet[zemin]);
       if (oran < 3) {
-        dusukler.push(`${temaAdi}: focus / ${zemin} = ${oran.toFixed(2)}`);
+        dusukler.push(`${temaAdi}: accent-fg / ${zemin} = ${oran.toFixed(2)}`);
+      }
+    }
+  }
+
+  expect(dusukler).toEqual([]);
+});
+
+test('accent-fg metin olarak kullanildigi yuzeylerde (bg, surface-1, surface-2) her iki temada en az 4.5:1', () => {
+  // accent-fg sadece ince cizgi/halka degil, DUZ METIN olarak da kullanilir: alt menudeki aktif
+  // sekme etiketi ve simgesi (App.tsx, `bg` zemini), Profil sekme cubugu ve CizgiGrafik sekmeleri
+  // (`surface-1`), grafik zemini (CizgiGrafik, `surface-2`). Bu ucu 4.5:1'in altina dusmemeli.
+  // Olculen degerler: koyu 5.87 / 5.43 / 5.19, acik 6.64 / 6.30 / 5.98.
+  //
+  // BILEREK surface-3/surface-4'e GENISLETILMEDI: koyu temada accent-fg / surface-4 = 3.88:1,
+  // yani "Geri al" seridinin metni (bg-surface-4 uzerinde) koyu temada BUGUN BILE AA'nin altinda.
+  // Bu, bu branch'ten ONCE var olan koyu-tema sorunu -- kapsam disi, ayri bir issue'nun isi.
+  const METIN_ZEMINLERI = ['bg', 'surface-1', 'surface-2'];
+  const dusukler: string[] = [];
+
+  for (const [temaAdi, palet] of Object.entries(paletler)) {
+    for (const zemin of METIN_ZEMINLERI) {
+      const oran = kontrast(palet['accent-fg'], palet[zemin]);
+      if (oran < 4.5) {
+        dusukler.push(`${temaAdi}: accent-fg / ${zemin} = ${oran.toFixed(2)}`);
       }
     }
   }
@@ -107,8 +160,8 @@ test('accent dolgusu ve hata kutusu kendi metinleriyle 4.5:1 saglar', () => {
   }
 });
 
-test("odak halkasi index.css'te accent'i degil focus tokenini kullanir", () => {
-  expect(css).toContain('outline: 2px solid var(--color-focus)');
+test("odak halkasi index.css'te accent'i degil accent-fg tokenini kullanir", () => {
+  expect(css).toContain('outline: 2px solid var(--color-accent-fg)');
 });
 
 test('theme-color meta degerleri (tema.ts) ile index.css --color-bg tokenlari ayni kalir', () => {
