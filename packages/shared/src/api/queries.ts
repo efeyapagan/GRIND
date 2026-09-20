@@ -2,6 +2,7 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -79,6 +80,11 @@ export const queryKeys = {
   // `historyAll` ile ayni gerekce. Issue #147: sonsuz kaydirma -- `historyInfinite` ile ayni desen.
   insightsAll: ['insights'] as const,
   insightsInfinite: ['insights', 'infinite'] as const,
+  // Bir SORGU degil, yorum uretme MUTATION'inin anahtari (issue #148): devam eden uretim
+  // MutationCache'te bu anahtarla bulunur, boylece ekran degisse de "uretiliyor mu" okunabilir.
+  // `insightsAll` onekinin ALTINDA DEGIL -- invalidate mutation'lara dokunmasa da, sorgu ve
+  // mutation anahtarlarini ayri tutmak karisikligi onler.
+  insightGenerate: ['insightGenerate'] as const,
   // Onek: yeni bir olcu eklenince (ya da silinince) TUM sayfalar tazelensin (issue #119) --
   // `historyAll` ile ayni gerekce. Issue #147: sonsuz kaydirma -- `historyInfinite` ile ayni desen.
   measurementsAll: ['measurements'] as const,
@@ -984,22 +990,61 @@ export function useInfiniteInsights() {
  * `POST /api/insights`. Govde BILEREK gonderilmez: backend govdesiz istekte kendi varsayilanini
  * (son 30 gun) uygular (issue #76 Karar) -- istemci bu kurali TEKRARLAMAZ.
  *
- * `signal` cagiran tarafin AbortController'indan gelir (issue #76 Karar 3: "iptal edilebilir
- * bekleme"). DIKKAT -- bu SADECE istemcinin beklemeyi birakmasidir: backend, para harcanan LLM
+ * Degisken olarak cagiranin AbortController'i alinir (issue #76 Karar 3: "iptal edilebilir
+ * bekleme"). SIGNAL degil CONTROLLER gonderilir (issue #148): controller mutation'in
+ * degiskenlerinde durdugu icin, uretimi baslatan ekran kapansa bile YENI bir ekran ayni
+ * uretimi iptal edebilir -- iptal yetenegi de, "suruyor" bilgisi gibi, mount'a degil
+ * MutationCache'e bagli olur.
+ *
+ * DIKKAT -- iptal SADECE istemcinin beklemeyi birakmasidir: backend, para harcanan LLM
  * cagrisini istemci koptugunda BILEREK durdurmaz (AiInsightService.GenerateAsync, saglayiciyi
  * `CancellationToken.None` ile cagirir) -- odenen bir yanit bosa gitmesin diye. Yani iptal
  * edilen bir istek bile YORUM ureterek gecmise eklenmis olabilir; arayuz bunu acikca soylemeli,
  * "iptal ettim, hicbir sey olmadi" izlenimi vermemeli.
+ *
+ * `onSuccess` BILEREK mutation'in kendi secenegindedir (`mutate`in ikinci argumaninda degil):
+ * ekran kapansa bile calisir, yani uretim arka planda biterse liste yine de tazelenir.
  */
 export function useGenerateInsight() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (signal: AbortSignal): Promise<Yorum> =>
-      dogrulanmisYorum(await request<AiInsightResponse>('/insights', { method: 'POST', signal })),
+    mutationKey: queryKeys.insightGenerate,
+    mutationFn: async (controller: AbortController): Promise<Yorum> =>
+      dogrulanmisYorum(
+        await request<AiInsightResponse>('/insights', { method: 'POST', signal: controller.signal }),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.insightsAll });
     },
   });
+}
+
+export interface YorumUretimDurumu {
+  /** Su anda (bu ekranda ya da baska bir ekranda baslatilmis) bir uretim suruyor mu. */
+  uretiliyor: boolean;
+  /** Suren uretimlerin beklemesini durdurur; hicbiri yoksa bir sey yapmaz. */
+  iptalEt: () => void;
+}
+
+/**
+ * Issue #148: "yorum uretiliyor" bilgisi ekranin kendi `useMutation`'ina (`isPending`) BAGLI
+ * OLAMAZ -- o durum observer'la, yani mount'la birlikte yok olur; kullanici sekmeden cikip
+ * dondugunde uretim arka planda surerken arayuz "hic istenmemis" gibi gorunurdu (ve ikinci bir
+ * UCRETLI cagri baslatilabilirdi).
+ *
+ * Dogruluk kaynagi olarak ayri bir context/global state ACILMAZ: devam eden mutation zaten
+ * QueryClient'in MutationCache'inde yasiyor ve mount'tan bagimsiz. Burada yalnizca o cache
+ * `queryKeys.insightGenerate` anahtariyla okunur -- ikinci bir dogruluk kaynagi uretilmez.
+ */
+export function useInsightGenerationState(): YorumUretimDurumu {
+  const surenler = useMutationState({
+    filters: { mutationKey: queryKeys.insightGenerate, status: 'pending' },
+    select: (mutation) => mutation.state.variables as AbortController,
+  });
+  return {
+    uretiliyor: surenler.length > 0,
+    iptalEt: () => surenler.forEach((controller) => controller.abort()),
+  };
 }
 
 export function useDeleteInsight() {
