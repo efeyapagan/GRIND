@@ -1,17 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 const SEKMELER = [
-  { to: 'records', etiket: 'Rekorlar' },
+  { to: 'account', etiket: 'Hesap' },
   { to: 'history', etiket: 'Geçmiş' },
   { to: 'measurements', etiket: 'Ölçüler' },
-  { to: 'account', etiket: 'Hesap' },
+  { to: 'records', etiket: 'Rekorlar' },
 ];
 
 /**
- * Profil sayfasının sekme çubuğu (issue #119): Rekorlar, Geçmiş (alt menüden buraya taşındı,
- * issue #120), Ölçüler (yeni) ve Hesap (kullanıcı adı/şifre) rota-tabanlı sekmelerdir -- her
- * biri kendi `usePageTitle`'ını bildirir, burada ayrıca bir başlık YAZILMAZ. Sıra ve varsayılan
- * sekme (Rekorlar, en sık bakılan) kullanıcı kararı. Rota-tabanlı olduğu için ARIA `tab`/
+ * Profil sayfasının sekme çubuğu (issue #119): Hesap (kullanıcı adı/şifre), Geçmiş (alt menüden
+ * buraya taşındı, issue #120), Ölçüler ve Rekorlar rota-tabanlı sekmelerdir -- her biri kendi
+ * `usePageTitle`'ını bildirir, burada ayrıca bir başlık YAZILMAZ. Sıra kullanıcı kararı: issue
+ * #179'da Hesap ile Rekorlar yer değiştirdi. Varsayılan sekme ise Rekorlar OLARAK KALDI
+ * (`routes.tsx`) -- en sık bakılan sekme o; bu değişiklik yalnızca görsel konumla ilgili.
+ * Rota-tabanlı olduğu için ARIA `tab`/
  * `tablist` rolü BİLEREK kullanılmaz (o rol tek sayfalık bir panel değişimini ifade eder; burada
  * her sekme gerçek bir URL'e sahip ayrı bir sayfadır) -- alt menünün kendisiyle (`App.tsx`) aynı
  * düz `nav` deseni.
