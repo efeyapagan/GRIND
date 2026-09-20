@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureRequestClient } from '@grind/shared/api/client';
 import { session } from '../src/session';
 import { API_BASE_URL } from '../src/apiConfig';
+import { odakDinleyicisiniKur } from '../src/queryOdak';
 import { AuthProvider } from '../src/auth/AuthContext';
 
 const sorguIstemcisi = new QueryClient();
@@ -16,6 +17,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     configureRequestClient({ baseUrl: API_BASE_URL, session });
+    // #175: RN'de `visibilitychange` yok -- odak takibi AppState'e baglanmadan uygulama on plana
+    // dondugunde hicbir sorgu tazelenmez.
+    odakDinleyicisiniKur();
     session.hydrate().finally(() => setHazir(true));
   }, []);
 
