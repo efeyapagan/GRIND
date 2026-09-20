@@ -36,7 +36,9 @@ açık tema kullanıcısı her açılışta koyu bir kare görürdü. Bunu önle
 
 Asıl mantık `web/src/lib/tema.ts`'te yaşar; satır içi script onun minimal bir önceden-çalıştırmasıdır.
 Bu bilinçli bir tekrardır (başka çaresi yok) ve her iki tarafta da yorumla işaretlenir: anahtar adı
-(`grind-tema`) ve değerler tek yerde tanımlı olamaz, çünkü satır içi script bir modül içe aktaramaz.
+(`grind.tema`) ve değerler tek yerde tanımlı olamaz, çünkü satır içi script bir modül içe aktaramaz.
+Bir test, `index.html`'in anahtarı ve iki `theme-color` değerini `tema.ts`'teki sabitlerle aynı
+tuttuğunu doğrular (bkz. Karar 6).
 
 ## Karar 2 — Açık palet
 
@@ -97,7 +99,7 @@ listesi genişlemez — halka oradan çıkıp kendi token'ına taşınır.
 ## Karar 4 — Tema seçimi: sistem varsayılan, elle ezilebilir, cihazda saklanır
 
 - Tercihin üç değeri var: `sistem` (varsayılan) · `acik` · `koyu`. `localStorage` anahtarı
-  `grind-tema`; tanınmayan/eksik değer `sistem` sayılır.
+  `grind.tema` (mevcut `grind.oturum` deseniyle aynı); tanınmayan/eksik değer `sistem` sayılır.
 - Seçici Profil › **Hesap** sekmesinde, "Antrenman hedefi" bölümünün yanında bir **Görünüm**
   bölümüdür: mevcut `SecimKutusu` bileşeniyle üç seçenekli tek bir `<select>`
   (`HaftalikHedefSecici` deseni — seçim anında uygulanır, ayrı "Kaydet" düğmesi yok).
