@@ -20,10 +20,12 @@ export default function TabsLayout() {
     <PageTitleProvider>
       <View className="flex-1 bg-bg">
         <KabukBaslik />
-        {/* pb-8 (32px): KabukTabBar'daki ortadaki "+" dugmesi (hale + marginTop:-24 ile) kendi
-            cubugunun (h-14) 32px USTUNE tasar (issue #159) -- bu bosluk olmadan sayfa icerigi
-            tam o kadar asagiya kadar uzayabiliyor ve dugmeyle CAKISIYORDU (kullanici bulgusu). */}
-        <View className="flex-1 pb-8">
+        {/* Global bir alt bosluk BILEREK yok (issue #159, kullanici karari): "+" dugmesinin
+            halkasindan pay ayirmak icin TUM sayfalara rezerve edilen bosluk "olu alan" olarak
+            goruldu. Bunun yerine sadece halkanin KESINLIKLE ustune binmemesi gereken spesifik
+            bilesenler (bkz. `KabukTabBar`'daki `TABBAR_HALKA_TASMASI`) kendi payini alir; sıradan
+            kaydirilabilir icerik halkanin arkasina gecebilir. */}
+        <View className="flex-1">
           <Slot />
         </View>
         <KabukTabBar />
