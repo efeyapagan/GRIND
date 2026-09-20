@@ -1,3 +1,4 @@
+import DevamEdenAntrenman from '../components/DevamEdenAntrenman';
 import Takvim from '../components/Takvim';
 import { usePageTitle } from '../ui/PageTitleContext';
 
@@ -13,6 +14,8 @@ export default function AnaSayfaPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-2">
+      {/* #175: açık antrenman takvimin ÜSTÜNDE -- sekme yeniden açıldığında ilk görülen budur. */}
+      <DevamEdenAntrenman />
       <Takvim />
     </div>
   );
