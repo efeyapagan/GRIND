@@ -191,6 +191,27 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
     }
 
     /// <summary>
+    /// #153: kadran beş kademeli olduğu için enum iki yeni uç kazandı. Kolon <c>varchar(20)</c>
+    /// olduğundan migration gerekmez — ama yeni değerin gerçekten yazılıp okunabildiği burada sabitlenir.
+    /// </summary>
+    [Theory]
+    [InlineData(SessionDifficulty.VeryEasy)]
+    [InlineData(SessionDifficulty.Maximal)]
+    public async Task Yeni_zorluk_uclariyla_bitirme_zorlugu_kaydeder(SessionDifficulty zorluk)
+    {
+        var client = await AuthenticatedClientAsync();
+        var baslatma = await client.PostAsJsonAsync("/api/sessions", new StartSessionRequest(), Json);
+        var olusan = await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json);
+
+        var bitirme = await client.PostAsJsonAsync(
+            $"/api/sessions/{olusan!.Id}/finish", new FinishSessionRequest { Difficulty = zorluk }, Json);
+
+        Assert.Equal(HttpStatusCode.OK, bitirme.StatusCode);
+        var bitmis = await bitirme.Content.ReadFromJsonAsync<SessionResponse>(Json);
+        Assert.Equal(zorluk, bitmis!.Difficulty);
+    }
+
+    /// <summary>
     /// Gövdesiz (null gövde) bitirme — Content-Length: 0 durumundaki mevcut davranışla aynı —
     /// hâlâ 200 döner ve zorluk seçilmediği için null kalır.
     /// </summary>

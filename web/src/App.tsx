@@ -23,7 +23,9 @@ import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
  * `usePageTitle` ile bildirir, kendi govdesinde ayrica bir `<h1>` YAZMAZ (tek dogruluk kaynagi).
  *
  * `env(safe-area-inset-*)` hesaplari keyfi deger olarak yazilir: Tailwind'de guvenli alan tokeni
- * yok. 4rem = baslik ve sekme cubugu yuksekligi (h-16).
+ * yok. 4rem = baslik ve sekme cubugu yuksekligi (h-16); alt bosluk icin 5.75rem kullanilir --
+ * ortadaki "+" dugmesi sekme cubugunun 1.75rem (`-mt-7`) USTUNE tastigi icin (kullanici bulgusu:
+ * sayfa icerigi bu dugmeyle CAKISIYORDU), yalnizca 4rem yetmiyor.
  */
 export default function App() {
   return (
@@ -45,7 +47,7 @@ function Kabuk() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]">
+      <main className="mx-auto max-w-md px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
 

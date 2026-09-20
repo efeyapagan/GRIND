@@ -671,6 +671,38 @@ test('Antrenmani bitir once zorluk sorar, secilen zorluk govdeye girer ve oturum
   expect(ortam.bitirmeGovdeleri()).toEqual([{ difficulty: 'Hard' }]);
 });
 
+test('Nasil gecti sorusu carpiyla kapatilirsa antrenman bitmez, Devam ediyor ve bitir dugmesi geri gelir', async () => {
+  const acikOturum: SessionResponse = {
+    id: 7,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    isOpen: true,
+    templateId: null,
+    templateName: null,
+    notes: null,
+    progress: [],
+  };
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: acikOturum, baslangicSetleri: [girilmisSet(7)] });
+
+  const kullanici = userEvent.setup();
+  antrenmanSayfasiniOlustur();
+
+  expect(await screen.findByText('Devam ediyor')).toBeInTheDocument();
+  await kullanici.click(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+  // issue #151: "Nasil gecti?" acikken "Devam ediyor" rozeti yerini bir carpiya birakir.
+  expect(screen.queryByText('Devam ediyor')).not.toBeInTheDocument();
+  expect(screen.getByText('Nasıl geçti?')).toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Nasıl geçti sorusunu kapat' }));
+
+  // Vazgecme (iptal degil, geri donme): oturum hala acik, hicbir bitirme istegi gitmedi.
+  expect(await screen.findByText('Devam ediyor')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Antrenmanı bitir' })).toBeInTheDocument();
+  expect(screen.queryByText('Nasıl geçti?')).not.toBeInTheDocument();
+  expect(ortam.bitirmeGovdeleri()).toEqual([]);
+});
+
 test('zorluk atlanirsa antrenman zorluksuz biter', async () => {
   const acikOturum: SessionResponse = {
     id: 7,

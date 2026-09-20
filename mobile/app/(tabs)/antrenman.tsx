@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, X } from 'lucide-react-native';
@@ -10,7 +11,6 @@ import {
   useAddSessionExercise,
   useDeleteSession,
   useExercises,
-  useFinishSession,
   useOpenSession,
   useSessionSets,
   useStartSession,
@@ -25,7 +25,6 @@ import SetList from '../../src/components/SetList';
 import AddSetForm from '../../src/components/AddSetForm';
 import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
-import ZorlukSecici from '../../src/components/ZorlukSecici';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
@@ -52,25 +51,12 @@ export default function AntrenmanScreen() {
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
   const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
-  const bitirMutasyonu = useFinishSession();
   const baslatMutasyonu = useStartSession();
   const iptalMutasyonu = useDeleteSession();
   const hareketEkleMutasyonu = useAddSessionExercise();
+  const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
-  const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
-
-  const kaydiriciRef = useRef<ScrollView>(null);
-  useEffect(() => {
-    // BILINEN ACIK SORUN (simulator dokunma testinde bulundu): AddSetForm ekranin en altina
-    // yaslaniyor (mt-auto); klavye acilinca KeyboardAvoidingView icerigi kucultur ama otomatik
-    // kaydirmiyor, "Set ekle" dugmesi klavyenin arkasinda kalabiliyor. Bu scrollToEnd denemesi
-    // sorunu TAM cozmedi (simulatorde dogrulanmadi) -- gercek cozum icin ayri bir issue acilmali.
-    const gizlenince = Keyboard.addListener('keyboardDidShow', () => {
-      kaydiriciRef.current?.scrollToEnd({ animated: true });
-    });
-    return () => gizlenince.remove();
-  }, []);
 
   const queryClient = useQueryClient();
   const setSilmeyiTamamla = useCallback(
@@ -170,9 +156,17 @@ export default function AntrenmanScreen() {
   }
 
   return (
-    <EkranKaydirici ref={kaydiriciRef} contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
+    <EkranKaydirici contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
       <View className="flex-col gap-1">
-        <View className="flex-row items-center justify-end gap-2">
+        <View className="flex-row items-center justify-between gap-2">
+          {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
+              soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
+          {gorunenOturum?.isOpen && (
+            <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
+              <View className="size-2 rounded-full bg-muted" />
+              <Text className="text-label text-fg">Devam ediyor</Text>
+            </View>
+          )}
           {gorunenOturum?.isOpen &&
             setlerYuklendi &&
             (oturumBos ? (
@@ -184,14 +178,12 @@ export default function AntrenmanScreen() {
                 <X color={ikonRenk.danger} size={18} />
                 <Text className="text-label text-danger">Antrenmanı iptal et</Text>
               </Pressable>
-            ) : zorlukSoruluyor ? (
-              <ZorlukSecici
-                bekliyor={bitirMutasyonu.isPending}
-                onSec={(zorluk) => bitirMutasyonu.mutate({ sessionId: gorunenOturum.id, zorluk })}
-              />
             ) : (
+              // #153: bitirme burada kapanmaz, zorluk kadranının olduğu ekrana götürür -- antrenman
+              // oradan kapanır. `push` (replace değil): kullanıcı vazgeçip geri dönebilmeli.
               <Pressable
-                onPress={() => setZorlukSoruluyor(true)}
+                accessibilityRole="button"
+                onPress={() => router.push('/antrenman-bitir')}
                 className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
               >
                 <CircleCheck color={ikonRenk.muted} size={18} />
@@ -200,21 +192,10 @@ export default function AntrenmanScreen() {
             ))}
         </View>
         {gorunenOturum && (
-          <View className="mt-2 flex-row flex-wrap items-center gap-2">
-            {gorunenOturum.isOpen && (
-              <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-                <View className="size-2 rounded-full bg-muted" />
-                <Text className="text-label text-fg">Devam ediyor</Text>
-              </View>
-            )}
-            {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
+          <View className="mt-2 flex-row items-center justify-between gap-2">
+            <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
             <Text className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</Text>
           </View>
-        )}
-        {bitirMutasyonu.isError && (
-          <Text accessibilityRole="alert" className="text-label text-danger">
-            Antrenman bitirilemedi. Lütfen tekrar deneyin.
-          </Text>
         )}
         {baslatMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">

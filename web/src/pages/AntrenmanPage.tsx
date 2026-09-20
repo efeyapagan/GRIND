@@ -213,7 +213,26 @@ export default function AntrenmanPage() {
     // (`mt-auto` + `sticky`) her zaman sekme cubugunun hemen ustunde kalir (review bulgusu I1).
     <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-between gap-2">
+          {/* "Devam ediyor" rozeti "Antrenmanı bitir" ile AYNI satirda (issue #151); "Nasil
+              gecti?" sorusu acikken rozetin yerini bitirmeden VAZGECME (iptal degil, geri
+              donme) icin bir X alir. */}
+          {gorunenOturum?.isOpen &&
+            (zorlukSoruluyor ? (
+              <button
+                type="button"
+                aria-label="Nasıl geçti sorusunu kapat"
+                onClick={() => setZorlukSoruluyor(false)}
+                className="flex size-11 items-center justify-center"
+              >
+                <X aria-hidden size={18} />
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
+                <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
+                Devam ediyor
+              </span>
+            ))}
           {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
               dokunulan bir sablon kartinin geri alinmasi budur. "Bitir" bu durumda gecmise BOS bir
               antrenman birakirdi (sorunun ta kendisi). Set girilince iptal kaybolur, "bitir" doner:
@@ -251,14 +270,8 @@ export default function AntrenmanPage() {
             ))}
         </div>
         {gorunenOturum && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {gorunenOturum.isOpen && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
-                <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
-                Devam ediyor
-              </span>
-            )}
-            {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</div>
             <span className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</span>
           </div>
         )}

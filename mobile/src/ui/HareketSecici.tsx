@@ -84,6 +84,11 @@ export default function HareketSecici({
           placeholder={acik ? secilenAd : undefined}
           placeholderTextColor={ikonRenk.muted}
           onFocus={ac}
+          // Disariya (bu bilesenin DISINDA herhangi bir yere) dokununca acilir-liste kapanir --
+          // kullanici kullanici isteği: "hareket ekle"den cikacak baska bir yol yoktu. Ic
+          // dokunuslar (kategori haplari, sonuc satirlari) `stickyHeaderIndices` + tek
+          // `ScrollView`in `keyboardShouldPersistTaps="handled"`i sayesinde bu blur'u TETIKLEMEZ.
+          onBlur={kapat}
           onChangeText={(metin) => {
             setSorgu(metin);
             setAcik(true);
@@ -96,19 +101,19 @@ export default function HareketSecici({
         <View
           className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'}`}
         >
-          <View className="flex-row flex-wrap gap-1 border-b border-surface-4 p-1">
-            {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
-              <Pressable
-                key={etiket}
-                accessibilityState={{ selected: kategori === deger }}
-                onPress={() => setKategori(deger)}
-                className={`min-h-11 items-center justify-center rounded-full px-3 ${kategori === deger ? 'bg-surface-4' : ''}`}
-              >
-                <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>{etiket}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <ScrollView keyboardShouldPersistTaps="handled" className="max-h-64">
+          <ScrollView keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} className="max-h-64">
+            <View className="flex-row flex-wrap gap-1 rounded-t-lg border-b border-surface-4 bg-surface-3 p-1">
+              {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
+                <Pressable
+                  key={etiket}
+                  accessibilityState={{ selected: kategori === deger }}
+                  onPress={() => setKategori(deger)}
+                  className={`min-h-11 items-center justify-center rounded-full px-3 ${kategori === deger ? 'bg-surface-4' : ''}`}
+                >
+                  <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>{etiket}</Text>
+                </Pressable>
+              ))}
+            </View>
             {sonuclar.map((egzersiz) => {
               const secili = egzersiz.id === secilenId;
               const kapali = devreDisi.has(egzersiz.id);
