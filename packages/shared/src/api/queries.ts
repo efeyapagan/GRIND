@@ -351,6 +351,10 @@ export function useExercises() {
  * Sayfalama TAMAMEN sunucunun zarfindan (`page`/`totalPages`) surulur -- istemci ne toplam
  * sayfa sayisini ne de toplam kaydi kendisi HESAPLAR (spec). `PageSize` bilerek GONDERILMEZ:
  * bu dilim filtre/boyut secimi sunmuyor (KISS), sunucunun varsayilani (20) kullanilir.
+ *
+ * NOT (issue #138): web artik bunun yerine asagidaki `useInfiniteHistory`yi kullaniyor (sonsuz
+ * kaydirma). Bu hook mobil `history.tsx` hala Onceki/Sonraki dugmeleriyle calistigi icin
+ * BILEREK duruyor -- mobil kendi sonsuz kaydirma isini yapinca kaldirilacak.
  */
 export function useHistory(page: number) {
   return useQuery({
