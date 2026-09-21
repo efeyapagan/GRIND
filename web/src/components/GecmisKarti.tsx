@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '../api/queries';
 import { useKaydirma } from '../lib/kaydirma';
-import { formatTrDate, formatWeight } from '../lib/format';
+import { formatTarih, formatWeight } from '../lib/format';
 import { kalanSureMetni } from '../lib/dinlenme';
 import SetList from './SetList';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -23,6 +24,7 @@ interface Props {
  * disindadir -- ayni eylem ekran okuyucuya iki kez duyurulmaz (issue #46 erisilebilirlik maddesi).
  */
 export default function GecmisKarti({ oturum, onSil }: Props) {
+  const dil = useDil();
   const kaydirma = useKaydirma();
   const [onayAcik, setOnayAcik] = useState(false);
   const bos = oturum.setCount === 0;
@@ -37,7 +39,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
       <li className="overflow-hidden rounded-xl bg-surface-2">
         <div className="flex flex-col gap-3 p-4">
           <p className="text-body">
-            {formatTrDate(oturum.startedAt)} tarihli antrenman ve {oturum.setCount} seti silinecek.
+            {formatTarih(oturum.startedAt, dil)} tarihli antrenman ve {oturum.setCount} seti silinecek.
             Bu hareketlerin rekorları yeniden hesaplanır.
           </p>
           <div className="flex gap-2">
@@ -94,7 +96,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               <span className="flex flex-wrap items-center gap-2 text-label">
                 <span className="flex items-center gap-1">
                   <CalendarDays aria-hidden size={18} className="text-muted" />
-                  {formatTrDate(oturum.startedAt)}
+                  {formatTarih(oturum.startedAt, dil)}
                 </span>
                 <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
               </span>
@@ -107,7 +109,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
                 </span>
                 <span className="flex items-baseline gap-1">
                   <span className={`text-metric tabular-nums ${bos ? 'text-muted' : ''}`}>
-                    {formatWeight(oturum.totalVolume)}
+                    {formatWeight(oturum.totalVolume, dil)}
                   </span>{' '}
                   <span className="text-label-xs text-muted uppercase">kg</span>
                 </span>

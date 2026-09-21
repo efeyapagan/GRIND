@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
   useGenerateInsight,
@@ -10,7 +11,7 @@ import {
 } from '../api/queries';
 import { ApiError } from '../api/problem';
 import { apiHatasiniAyir } from '../lib/apiErrors';
-import { formatTrDate, formatTrTime } from '../lib/format';
+import { formatSaat, formatTarih } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -201,6 +202,7 @@ interface YorumKartiProps {
  * (ve yeni bir maliyet) uretir. Silme burada gercekten kalicidir, arayuz bunu gizlemez.
  */
 function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+  const dil = useDil();
   if (onayAcik) {
     return (
       <li className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -225,7 +227,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
     <li className="flex flex-col gap-2 rounded-xl bg-surface-2 p-4">
       <div className="flex items-start justify-between gap-2">
         <span className="text-label text-muted">
-          {formatTrDate(yorum.createdAt)} {formatTrTime(yorum.createdAt)}
+          {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
         </span>
         <IkonDugmesi etiket="Yorumu sil" onClick={onSilmeyeBasla}>
           <Trash2 aria-hidden size={18} />

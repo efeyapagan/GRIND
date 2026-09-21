@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Flame, Zap } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
@@ -35,6 +36,7 @@ interface EgzersizGrubu {
  * (ekran okuyucu ve testler), gorsel olarak ise birim ve "×" soluk kalsin.
  */
 export default function SetList(props: Props) {
+  const dil = useDil();
   const { sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
@@ -80,7 +82,7 @@ export default function SetList(props: Props) {
                       <div className="flex items-center gap-4">
                         <span className="w-5 text-label text-muted">{setSirasi + 1}</span>
                         <span className="text-body-lg tabular-nums">
-                          {formatWeight(kayit.weight)} kg{' '}
+                          {formatWeight(kayit.weight, dil)} kg{' '}
                           <span className="font-light text-muted">×</span> {kayit.reps}
                         </span>
                       </div>

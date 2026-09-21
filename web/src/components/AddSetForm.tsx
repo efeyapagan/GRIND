@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
@@ -68,6 +69,7 @@ interface Props {
  * boylece yazilanlar ve dinlenme sayaci korunur (dilim 3 spec Karar 6).
  */
 export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
+  const dil = useDil();
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
@@ -186,7 +188,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
       });
       // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
       // en sik akis (spec Karar 6). Odak agirlik alanina doner.
-      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
+      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik, dil)} kg × ${ayristirilmisTekrar}`);
       setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
       agirlikRef.current?.focus();
     } catch (hata) {

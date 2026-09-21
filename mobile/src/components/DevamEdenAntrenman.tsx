@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useOpenSession } from '@grind/shared/api/queries';
-import { formatTrTime } from '@grind/shared/lib/format';
+import { formatSaat } from '@grind/shared/lib/format';
 import BirincilDugme from '../ui/BirincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
 
@@ -28,7 +28,7 @@ export default function DevamEdenAntrenman() {
           <View className="size-2 rounded-full bg-muted" />
           <Text className="text-label text-fg">Devam ediyor</Text>
         </View>
-        <Text className="text-label text-muted">Başlangıç {formatTrTime(oturum.startedAt)}</Text>
+        <Text className="text-label text-muted">Başlangıç {formatSaat(oturum.startedAt)}</Text>
       </View>
       {oturum.templateName && <TurEtiketi>{oturum.templateName}</TurEtiketi>}
       <BirincilDugme yukseklik="normal" onPress={() => router.navigate('/antrenman')}>

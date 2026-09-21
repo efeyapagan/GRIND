@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useOpenSession } from '@grind/shared/api/queries';
-import { formatTrTime } from '@grind/shared/lib/format';
+import { formatSaat } from '@grind/shared/lib/format';
 import BirincilDugme from '../ui/BirincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
 
@@ -27,7 +27,7 @@ export default function DevamEdenAntrenman() {
           <span className="size-2 rounded-full bg-muted" />
           Devam ediyor
         </span>
-        <span className="text-label text-muted">Başlangıç {formatTrTime(oturum.startedAt)}</span>
+        <span className="text-label text-muted">Başlangıç {formatSaat(oturum.startedAt)}</span>
       </div>
       {oturum.templateName && (
         <div>

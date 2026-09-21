@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDil, type Dil } from '@grind/shared/i18n';
 import {
   useCalendar,
   useGunGecmisi,
@@ -54,9 +55,10 @@ function gunOzeti(
   kayit: TakvimGunu | undefined,
   oturumlar: GecmisOturum[] | undefined,
   gecmisHatali: boolean,
+  dil: Dil,
 ): string {
   if (!kayit) {
-    return `${gunBasligi(gun)} · antrenman yok`;
+    return `${gunBasligi(gun, dil)} · antrenman yok`;
   }
   const setliOturumlar = (oturumlar ?? [])
     .filter((oturum) => oturum.setCount > 0)
@@ -69,7 +71,7 @@ function gunOzeti(
   } else {
     sablonlar = setliOturumlar.map((oturum) => oturum.templateName ?? 'Şablonsuz').join(', ');
   }
-  return `${gunBasligi(gun)} · ${sablonlar} · ${kayit.setCount} set`;
+  return `${gunBasligi(gun, dil)} · ${sablonlar} · ${kayit.setCount} set`;
 }
 
 interface Props {
@@ -84,6 +86,7 @@ interface Props {
  * degisince bugune donulur; secim hatirlanmaz.
  */
 export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
+  const dil = useDil();
   const [gorunum, setGorunum] = useState<TakvimGorunumu>('ay');
   const [gosterilen, setGosterilen] = useState(bugun);
   const [secili, setSecili] = useState<string | null>(null);
@@ -97,7 +100,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const satirlar = gorunum === 'ay' ? ayIzgarasi(gosterilen) : [haftaGunleri(gosterilen)];
   const sonrakiKapali = gorunumAraligi(gorunum, kaydir(gorunum, gosterilen, 1)).from > bugun;
   const donemBasligi =
-    gorunum === 'ay' ? ayBasligi(gosterilen) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`);
+    gorunum === 'ay' ? ayBasligi(gosterilen, dil) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`, dil);
   const bosMetin = GORUNUMLER.find((aday) => aday.anahtar === gorunum)?.bosMetin;
 
   function gorunumSec(yeni: TakvimGorunumu) {
@@ -158,7 +161,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
               <button
                 key={gun}
                 type="button"
-                aria-label={`${gunBasligi(gun)}: ${kayit ? `${kayit.setCount} set` : 'antrenman yok'}`}
+                aria-label={`${gunBasligi(gun, dil)}: ${kayit ? `${kayit.setCount} set` : 'antrenman yok'}`}
                 aria-pressed={seciliMi}
                 aria-current={gun === bugun ? 'date' : undefined}
                 onClick={() => setSecili(gun)}
@@ -175,7 +178,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
         </div>
 
         <p aria-live="polite" className="min-h-5 text-body text-muted tabular-nums">
-          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali) : ''}
+          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali, dil) : ''}
         </p>
 
         {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}

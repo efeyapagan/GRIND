@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
@@ -72,6 +73,7 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
  * secici notr.
  */
 function HareketGrafigi({ exerciseId, exerciseName }: Props) {
+  const dil = useDil();
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
   const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
@@ -109,18 +111,18 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           <dl className="flex gap-8">
             <div className="flex flex-col gap-1">
               <dt className={DEGER_ETIKETI}>Şu anki</dt>
-              <dd className={DEGER}>{formatWeight(son.deger)}</dd>
+              <dd className={DEGER}>{formatWeight(son.deger, dil)}</dd>
             </div>
             {cizilecekler.length > 1 && (
               <div className="flex flex-col gap-1">
                 <dt className={DEGER_ETIKETI}>Fark</dt>
-                <dd className={DEGER}>{formatFark(son.deger - ilk.deger)}</dd>
+                <dd className={DEGER}>{formatFark(son.deger - ilk.deger, dil)}</dd>
               </div>
             )}
           </dl>
-          <p className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt)}</p>
+          <p className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt, dil)}</p>
           <CizgiGrafik
-            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt), deger }))}
+            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt, dil), deger }))}
             birim="kg"
             baslik={`${exerciseName} ${sekme.ozetAdi}, ${cizilecekler.length} antrenman`}
           />

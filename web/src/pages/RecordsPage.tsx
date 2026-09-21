@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import { useGuncelTakvimOzeti, useRecords } from '../api/queries';
-import { formatTrDate, formatWeight } from '../lib/format';
+import { formatTarih, formatWeight } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BosDurum from '../ui/BosDurum';
 import Rozet from '../ui/Rozet';
@@ -14,6 +15,7 @@ import Rozet from '../ui/Rozet';
  * `<h1>` YAZILMAZ. Alt aciklama ("Kişisel en iyiler") baslik degil, kalir.
  */
 export default function RecordsPage() {
+  const dil = useDil();
   usePageTitle('Rekorlar');
   const { data, isLoading, isError } = useRecords();
   // #117: en uzun seri Bugun'den buraya tasindi; tum gecmisten, sunucunun degeri.
@@ -56,21 +58,21 @@ export default function RecordsPage() {
                 <div className="flex flex-col gap-1 rounded-lg bg-surface-1 p-3">
                   <p className="flex items-center gap-1.5">
                     <Rozet>En ağır set</Rozet>
-                    <span className="text-label-xs text-muted">· {formatTrDate(rekor.bestWeightAt)}</span>
+                    <span className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</span>
                   </p>
                   <p className="flex items-baseline gap-1">
-                    <span className="text-metric tabular-nums">{formatWeight(rekor.bestWeight)} kg</span>
+                    <span className="text-metric tabular-nums">{formatWeight(rekor.bestWeight, dil)} kg</span>
                     <span className="text-body-lg font-bold text-accent-soft">× {rekor.bestWeightReps}</span>
                   </p>
                 </div>
                 <div className="flex flex-col gap-1 rounded-lg bg-surface-1 p-3">
                   <p className="flex items-center gap-1.5">
                     <Rozet ton="acik">En çok tekrar</Rozet>
-                    <span className="text-label-xs text-muted">· {formatTrDate(rekor.bestRepsAt)}</span>
+                    <span className="text-label-xs text-muted">· {formatTarih(rekor.bestRepsAt, dil)}</span>
                   </p>
                   <p className="flex items-baseline gap-1.5">
                     <span className="text-metric tabular-nums">{rekor.bestReps} tekrar</span>
-                    <span className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight)} kg</span>
+                    <span className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight, dil)} kg</span>
                   </p>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Flame, Zap } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { formatWeight } from '@grind/shared/lib/format';
 import { rekorRozetiMetni } from '@grind/shared/lib/rekor';
@@ -25,6 +26,7 @@ interface EgzersizGrubu {
 
 /** web/src/components/SetList.tsx ile ayni: setler egzersize gore gruplanir. */
 export default function SetList(props: Props) {
+  const dil = useDil();
   const { sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
@@ -72,7 +74,7 @@ export default function SetList(props: Props) {
                       <View className="flex-row items-center gap-4">
                         <Text className="w-5 text-label text-muted">{setSirasi + 1}</Text>
                         <Text className="text-body-lg text-fg">
-                          {formatWeight(kayit.weight)} kg{' '}
+                          {formatWeight(kayit.weight, dil)} kg{' '}
                           <Text className="font-light text-muted">×</Text> {kayit.reps}
                         </Text>
                       </View>

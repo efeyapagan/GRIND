@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Plus, Scale, Trash2 } from 'lucide-react';
+import { useDil } from '@grind/shared/i18n';
 import { useAddMeasurement, useDeleteMeasurement, useInfiniteMeasurements, type Olcu } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
-import { formatTrDate, formatTrTime } from '../lib/format';
+import { formatSaat, formatTarih } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import Modal from '../ui/Modal';
 import SayiAlani from '../ui/SayiAlani';
@@ -248,6 +249,7 @@ interface OlcuKartiProps {
 
 /** Silme onaysız yapılmaz, geri-alınabilir DEĞİLDİR -- ölçü kaydı geri getirilecek bir şey üretmez. */
 function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+  const dil = useDil();
   if (onayAcik) {
     return (
       <li className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -272,7 +274,7 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
     <li className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 p-4">
       <div className="flex flex-col gap-1">
         <span className="text-label text-muted">
-          {formatTrDate(olcu.recordedAt)} {formatTrTime(olcu.recordedAt)}
+          {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
         </span>
         <p className="text-body">{olcuMetni(olcu)}</p>
       </div>

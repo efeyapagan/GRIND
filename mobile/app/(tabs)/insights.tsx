@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { Link } from 'expo-router';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
   useGenerateInsight,
@@ -11,7 +12,7 @@ import {
 } from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
-import { formatTrDate, formatTrTime } from '@grind/shared/lib/format';
+import { formatSaat, formatTarih } from '@grind/shared/lib/format';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import IkincilDugme from '../../src/ui/IkincilDugme';
@@ -165,6 +166,7 @@ interface YorumKartiProps {
 }
 
 function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+  const dil = useDil();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -185,7 +187,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
     <View className="flex-col gap-2 rounded-xl bg-surface-2 p-4">
       <View className="flex-row items-start justify-between gap-2">
         <Text className="text-label text-muted">
-          {formatTrDate(yorum.createdAt)} {formatTrTime(yorum.createdAt)}
+          {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
         </Text>
         <IkonDugmesi etiket="Yorumu sil" onPress={onSilmeyeBasla}>
           <Trash2 color={ikonRenk.muted} size={18} />

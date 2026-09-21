@@ -14,7 +14,7 @@ import {
   useStartSession,
   type SetKaydi,
 } from '../api/queries';
-import { formatTrTime } from '../lib/format';
+import { formatSaat } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { varsayilanHareket } from '../lib/ilerleme';
@@ -272,7 +272,7 @@ export default function AntrenmanPage() {
         {gorunenOturum && (
           <div className="mt-2 flex items-center justify-between gap-2">
             <div>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</div>
-            <span className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</span>
+            <span className="text-label text-muted">Başlangıç {formatSaat(gorunenOturum.startedAt)}</span>
           </div>
         )}
         {bitirMutasyonu.isError && (
