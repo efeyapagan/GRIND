@@ -6,7 +6,14 @@ import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { ApiError } from '../api/problem';
 import { formatWeight } from '../lib/format';
-import { dinlenmeBaslat, dinlenmeSuresi, type Dinlenme } from '../lib/dinlenme';
+import {
+  DINLENME_DEPO_ANAHTARI,
+  dinlenmeBaslat,
+  dinlenmeKaydiAyristir,
+  dinlenmeKaydiUret,
+  dinlenmeSuresi,
+  type Dinlenme,
+} from '../lib/dinlenme';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '../lib/setGirdisi';
 import { sesiHazirla } from '../lib/uyari';
 import BirincilDugme from '../ui/BirincilDugme';
@@ -63,7 +70,7 @@ interface Props {
 export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
-  const { data: acikOturum } = useOpenSession();
+  const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
@@ -82,6 +89,40 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
 
   // Spec Karar 6: her basarili set sonrasi yeniden baslar; hareket secimini degistirmek durdurmaz.
   const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
+
+  // Issue #190: sayfa degisip geri donulunce (bilesen unmount/remount olunca) sayac kaybolmasin --
+  // `bitisMs` mutlak zaman damgasi oldugu icin kalici depodan (localStorage) okunan kayit dogru
+  // kalan sureyi kendiliginden verir. Bu oturum icin GERI YUKLEME yalnizca BIR KEZ denenir
+  // (`denenenOturum`) -- aksi halde her render'da depodan tekrar okunur ve kullanicinin "Atla"
+  // ile temizledigi bir sayaci geri getirebilir.
+  const denenenOturum = useRef<number | null>(null);
+  useEffect(() => {
+    if (oturumYukleniyor || !acikOturum || egzersizId === null) {
+      return;
+    }
+    if (denenenOturum.current === acikOturum.id) {
+      return;
+    }
+    denenenOturum.current = acikOturum.id;
+    const ham = localStorage.getItem(DINLENME_DEPO_ANAHTARI);
+    const geri = dinlenmeKaydiAyristir(ham, acikOturum.id, egzersizId, Date.now());
+    if (geri) {
+      setDinlenme(geri);
+    }
+  }, [oturumYukleniyor, acikOturum, egzersizId]);
+
+  // Sayac degistikce (baslayinca, +15sn'de, Atla/bitince) kalici depo guncellenir. Acik oturum
+  // yoksa (antrenman bitti/iptal edildi) kayit da silinir (issue #190 -- "kayit temizlensin").
+  useEffect(() => {
+    if (oturumYukleniyor) {
+      return;
+    }
+    if (!acikOturum || egzersizId === null || !dinlenme) {
+      localStorage.removeItem(DINLENME_DEPO_ANAHTARI);
+      return;
+    }
+    localStorage.setItem(DINLENME_DEPO_ANAHTARI, dinlenmeKaydiUret(acikOturum.id, egzersizId, dinlenme));
+  }, [oturumYukleniyor, acikOturum, egzersizId, dinlenme]);
 
   const agirlikRef = useRef<HTMLInputElement>(null);
   const acmaDugmesiRef = useRef<HTMLButtonElement>(null);
