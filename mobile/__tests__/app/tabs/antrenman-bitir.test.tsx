@@ -9,8 +9,9 @@ jest.mock('@grind/shared/api/queries', () => ({
 }));
 
 const mockReplace = jest.fn();
+const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, back: mockBack }),
   Redirect: ({ href }: { href: string }) =>
     require('react').createElement(require('react-native').Text, null, `yonlendirme:${href}`),
 }));
@@ -38,6 +39,7 @@ function ekraniOlustur() {
 
 beforeEach(() => {
   mockReplace.mockReset();
+  mockBack.mockReset();
   useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
   useFinishSessionMock.mockReturnValue({ mutate: jest.fn(), isPending: false, isError: false });
 });
@@ -104,4 +106,19 @@ test('bitirme hatasi ekranda gosterilir', async () => {
   await ekraniOlustur();
 
   expect(screen.getByText('Antrenman bitirilemedi. Lütfen tekrar deneyin.')).toBeTruthy();
+});
+
+/**
+ * #182: "Devam et" vazgeçmedir, iptal değil — istek gitmez, oturum açık kalır, antrenman ekranına
+ * geri dönülür (cihazın geri tuşuyla aynı iş, ama artık ekranda görünür bir eylem).
+ */
+test('devam et antrenmani bitirmeden geri doner', async () => {
+  const mutate = jest.fn();
+  useFinishSessionMock.mockReturnValue({ mutate, isPending: false, isError: false });
+  await ekraniOlustur();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Devam et' }));
+
+  expect(mockBack).toHaveBeenCalled();
+  expect(mutate).not.toHaveBeenCalled();
 });

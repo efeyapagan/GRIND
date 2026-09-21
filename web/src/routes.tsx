@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AnaSayfaPage from './pages/AnaSayfaPage';
 import AntrenmanPage from './pages/AntrenmanPage';
+import AntrenmanBitirPage from './pages/AntrenmanBitirPage';
 import HistoryPage from './pages/HistoryPage';
 import RecordsPage from './pages/RecordsPage';
 import SablonlarPage from './pages/SablonlarPage';
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <AnaSayfaPage /> },
       { path: 'antrenman', element: <AntrenmanPage /> },
+      { path: 'antrenman/bitir', element: <AntrenmanBitirPage /> },
       { path: 'templates', element: <SablonlarPage /> },
       { path: 'templates/new', element: <SablonDuzenlePage /> },
       { path: 'templates/:id', element: <SablonDuzenlePage /> },

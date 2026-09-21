@@ -37,7 +37,7 @@ export default function DevamEdenAntrenman() {
         </div>
       )}
       <BirincilDugme yukseklik="normal" onClick={() => navigate('/antrenman')}>
-        {t('antrenman.devamEt')}
+        {t('ortak.devamEt')}
       </BirincilDugme>
     </div>
   );

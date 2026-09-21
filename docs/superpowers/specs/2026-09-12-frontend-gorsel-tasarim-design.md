@@ -73,6 +73,11 @@ Renk kuralları:
   ısı haritası referansı):** Takvim hücrelerinin set kademesi tonları — `bg-accent/20`, `/40`, `/60` üstünde
   gün numarası `fg` (ölçülen 11.2 / 7.7 / 5.2:1), tam `accent` üstünde `on-accent` (4.54:1) — ve Takvim
   görünüm sekmelerinin aktif alt çizgisi; boş hücre (`surface-2`), bugün ve seçili gün halkaları nötr.
+  **#153/#182 genişlemesi (kullanıcı kararı):** zorluk kadranında yayın başından seçili durağa
+  kadar olan dolgu — sürat kadranı ibresi gibi — ve dolgunun geçtiği duraklar (`accent` dolgu +
+  `on-accent` rakam); o an bulunulan durak soluk kalır (`bg` zemin üstünde `accent/40` + `fg` rakam,
+  Takvim tonuyla aynı); yay zemini `surface-2`, henüz geçilmemiş duraklar `surface-4` + `muted` rakam
+  nötr kalır.
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.
