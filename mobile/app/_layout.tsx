@@ -5,12 +5,17 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Slot } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureRequestClient } from '@grind/shared/api/client';
+import { i18nBaslat } from '@grind/shared/i18n';
 import { session } from '../src/session';
 import { API_BASE_URL } from '../src/apiConfig';
 import { odakDinleyicisiniKur } from '../src/queryOdak';
 import { AuthProvider } from '../src/auth/AuthContext';
 
 const sorguIstemcisi = new QueryClient();
+
+// #177 dilim 1: paylasilan yardimcilar metni ortak i18n orneginden uretir; mobil arayuz dilim 3'e
+// kadar Turkce sabit.
+i18nBaslat('tr');
 
 export default function RootLayout() {
   const [hazir, setHazir] = useState(false);

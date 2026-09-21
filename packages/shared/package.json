@@ -19,11 +19,16 @@
     "./lib/format": "./src/lib/format.ts",
     "./lib/ilerleme": "./src/lib/ilerleme.ts",
     "./lib/setGirdisi": "./src/lib/setGirdisi.ts",
-    "./lib/takvim": "./src/lib/takvim.ts"
+    "./lib/takvim": "./src/lib/takvim.ts",
+    "./i18n": "./src/i18n/i18n.ts",
+    "./i18n/tr": "./src/i18n/tr.ts",
+    "./i18n/en": "./src/i18n/en.ts"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
-    "react": "^19.0.0"
+    "i18next": "^26.4.2",
+    "react": "^19.0.0",
+    "react-i18next": "^17.0.14"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
