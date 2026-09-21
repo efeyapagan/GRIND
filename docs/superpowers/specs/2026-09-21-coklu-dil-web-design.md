@@ -39,7 +39,7 @@ Her dilim kendi başına `dev` → `master` akışından geçer.
 
 ### `packages/shared/src/i18n/`
 
-- **`tr.ts`** — tek doğruluk kaynağı. Ekran/alan bazında gruplanmış iç içe bir nesne, `as const`.
+- **`tr.ts`** — tek doğruluk kaynağı. Ekran/alan bazında gruplanmış iç içe bir nesne (yaprakları `string`).
   Örnek gruplar: `ortak`, `giris`, `kayit`, `anaSayfa`, `antrenman`, `gecmis`, `rekorlar`,
   `sablonlar`, `olcumler`, `yorumlar`, `profil`, `takvim`, `grafik`, `hatalar`.
 - **`en.ts`** — tipi `tr`'den türetilir: `Katalog` = `tr`'nin yapısıyla aynı, yaprakları `string`.
@@ -47,17 +47,20 @@ Her dilim kendi başına `dev` → `master` akışından geçer.
 - **`i18n.ts`** — i18next örneği ve başlatıcı: `resources: { tr, en }`, `fallbackLng: 'tr'`,
   `supportedLngs: ['tr', 'en']`, `interpolation.escapeValue: false` (React zaten kaçırır).
   `CustomTypeOptions` modül genişletmesiyle `t('antrenman.bitir')` tiplidir; yanlış anahtar derlenmez.
-  Çoğul hâller i18next'in `_one` / `_other` son ekleriyle; Türkçede yalnızca `_other` gerekir.
+  Çoğul hâller i18next'in `_one` / `_other` son ekleriyle; `Intl.PluralRules('tr')` da `one`/`other`
+  ayırdığı için iki katalog aynı son ekleri taşır (Türkçede iki değer çoğu zaman aynı metindir).
 - **`dil.ts`** — `export type Dil = 'tr' | 'en'` ve saf `dilAlgila(diller: readonly string[]): Dil`:
   listede desteklenen (`tr*` ya da `en*`) **ilk** dil kazanır; hiçbiri desteklenmiyorsa `en`
   (uluslararası kullanıcı için makul varsayılan); boş liste → `tr`.
 
-### Paylaşılan yardımcılar metin değil anahtar döndürür
+### Paylaşılan yardımcılar metni ortak i18n örneğinden üretir
 
 Bugün Türkçe metin üreten `packages/shared` yardımcıları (`VARSAYILAN_MESAJ`, `setGirdisi`
-doğrulama mesajları, kategori etiketleri, takvim/grafik etiketleri, `ilerleme` metinleri) **anahtar**
-(gerekiyorsa anahtar + parametre) döndürecek şekilde değişir; çeviriyi çağıran arayüz yapar. Böylece
-paylaşılan mantık dil bilmez ve mobil de aynı anahtarları kullanır.
+doğrulama mesajları, `rekorRozetiMetni`) gömülü metin yerine ortak i18n örneğinin `t`'sini çağırır
+(`VARSAYILAN_MESAJ` sabiti `varsayilanMesaj()` fonksiyonu olur). Anahtar döndürmek yerine bunun
+seçilme sebebi: `setGirdisi` hataları sunucudan gelen alan hatalarıyla aynı `Record<string, string>`'te
+birleşiyor; anahtar döndürmek bu birleşmeyi iki ayrı tipe bölerdi. Mobil de aynı örneği başlattığı
+için aynı metni alır.
 
 ### Biçimlendirme (`packages/shared/src/lib/format.ts`)
 
@@ -67,15 +70,18 @@ değişince bir antrenman başka güne kaymamalı. Değişen yalnızca biçim:
 | Bugün | Sonra | tr | en |
 |---|---|---|---|
 | `formatTrDate(iso)` | `formatTarih(iso, dil)` | `12.09.2026` | `12 Sep 2026` (ay adı yazılır; `09/12` gün/ay belirsizliği olmaz) |
-| `formatTrTime(iso)` | `formatSaat(iso, dil)` | `18:05` | `18:05` (24 saat, iki dilde aynı) |
+| `formatTrTime(iso)` | `formatSaat(iso)` — dil almaz | `18:05` | `18:05` (24 saat, iki dilde aynı) |
 | `formatKisaTarih(iso)` | `formatKisaTarih(iso, dil)` | `12 Eyl` | `12 Sep` |
 | `formatAralik(a, b)` | `formatAralik(a, b, dil)` | `25 Ağu – 10 Eyl 2026` | `25 Aug – 10 Sep 2026` |
 | `formatWeight(kg)` | `formatWeight(kg, dil)` | `61,25` | `61.25` |
 | `formatFark(f)` | `formatFark(f, dil)` | `−32,5` | `−32.5` |
 
-İngilizce yerel ayar `en-GB`'dir (gün-ay sırası ve 24 saat; `en-US`'in `9/12` belirsizliği yok).
-`trBugundenOnce` API parametresi ürettiği için dilden bağımsız kalır. Takvim ay/gün adları da
-`Intl.DateTimeFormat`'tan gelir, katalogda elle yazılmaz.
+İngilizce tarihler gün-ay-yıl sırasıyla, `Intl`'in `formatToParts` parçalarından kurulur (ay kısaltması
+`en-US`'ten: `Sep`; `en-GB` yeni ICU sürümlerinde `Sept` verdiği için kullanılmaz). Ayraç ve ondalık
+için `en-US` sayı biçimi kullanılır. `trBugundenOnce` API parametresi ürettiği için dilden bağımsız
+kalır. Takvimin ay ve gün başlığı (`ayBasligi`, `gunBasligi`: `September 2026`, `14 September`)
+`Intl.DateTimeFormat`'tan gelir. Izgaradaki iki harfli hafta günü kısaltmaları (`Pt Sa Ça …` /
+`Mo Tu We …`) katalogdadır: `Intl`'in Türkçe kısaltmaları (`Pzt Sal`) bugünkü arayüzü değiştirirdi.
 
 ### Web
 
