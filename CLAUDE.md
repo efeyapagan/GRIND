@@ -61,6 +61,29 @@ Detaylı kurallar `solid-dry-kiss` skill'inde — kod yazmadan veya inceleme yap
 devreye girmeli. Bir tasarım kararı bu prensiplerden birine aykırıysa, kararı uygulamadan önce
 gerekçesini açıkla.
 
+## Çok Dil (Türkçe + İngilizce) — ZORUNLU
+Uygulama iki dillidir (#177); her geliştirme İngilizceyi de kapsar, "önce Türkçe, İngilizce sonra"
+yoktur (#202).
+- Kullanıcıya görünen yeni ya da değişen her metin — etiket, buton, boş durum, hata/uyarı, onay
+  diyaloğu, `aria-label`/`title`/`placeholder`, sayfa başlığı — satır içi yazılmaz;
+  `packages/shared/src/i18n/tr.ts` ve `en.ts`'e **aynı commit'te** eklenir ve `t(...)` ile kullanılır.
+  `tr.ts` tek kaynaktır, `en.ts` onun tipini taşır; bir dili boş ya da "sonra çevrilecek" bırakmak yok.
+- Anahtar ve grup kuralları (ASCII camelCase, ekran grubu, iki+ dosyada geçen metin `ortak`'ta,
+  sayıya bağlı metin `_one`/`_other` ile iki katalogda da, modül seviyesinde `t` çağrılmaz):
+  [docs/superpowers/plans/2026-09-21-coklu-dil-web.md](docs/superpowers/plans/2026-09-21-coklu-dil-web.md)
+  "Katalog kuralları".
+- Tarih/sayı gösterimi `useDil()`'den gelen `dil` ile `format*` yardımcılarından geçer; `tr-TR`
+  gibi sabit yerel ayar yazılmaz. Saat dilimi `Europe/Istanbul` kalır.
+- Bitti sayılmadan önce: `katalog.test.ts` ve `cevrilmemisMetin.test.ts` yeşil; yeni ekran/metin
+  İngilizcede de gözle kontrol edilir (Profil → Dil → English).
+- **Mobil** (dilim 3'e kadar arayüzü Türkçe sabit): yeni ya da değişen mobil metin de katalogdan
+  gelir ve İngilizcesiyle eklenir — dilim 3'ü büyütmemek için.
+- **Backend** (dilim 2'ye kadar): yeni hata mesajları bugünkü gibi Türkçe `detail` taşır; dilim 2
+  gelince `code` + `params`'a çevrilir. Yeni bir istemci-tarafı metin backend `detail`'ine
+  dayanmaz.
+- Kapsam dışı: AI yorumu içeriği ve export metninin dili (#199); kullanıcının girdiği veriler
+  (egzersiz/şablon adları, notlar) çevrilmez.
+
 ## Yetkilendirme Kuralı — ZORUNLU
 `Exercise.UserId` gibi nullable-sahiplik alanı olan her kaynakta, bir kullanıcı SADECE kendi
 kayıtlarına (`UserId = currentUserId`) veya global kayıtlara (`UserId = null`) erişebilir.
