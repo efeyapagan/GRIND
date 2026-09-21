@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, GripVertical, Plus, Trash2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   DndContext,
   closestCenter,
@@ -36,16 +38,18 @@ import HareketSecici from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
 import { usePageTitle } from '../ui/PageTitleContext';
 
-const DINLENME_SECENEKLERI = [
-  { deger: 0, etiket: 'Yok' },
-  { deger: 30, etiket: '30 sn' },
-  { deger: 60, etiket: '60 sn' },
-  { deger: 90, etiket: '90 sn' },
-  { deger: 120, etiket: '2 dk' },
-  { deger: 180, etiket: '3 dk' },
-  { deger: 240, etiket: '4 dk' },
-  { deger: 300, etiket: '5 dk' },
-];
+const DINLENME_SANIYELERI: readonly number[] = [0, 30, 60, 90, 120, 180, 240, 300];
+
+/** 0 -> "Yok/None"; <2 dk saniye, >=2 dk dakika olarak katalogdan bicimlenir (#177). */
+function dinlenmeEtiketi(t: TFunction, saniye: number): string {
+  if (saniye === 0) {
+    return t('sablonlar.dinlenmeYok');
+  }
+  if (saniye >= 120 && saniye % 60 === 0) {
+    return t('sablonlar.dinlenmeDk', { dakika: saniye / 60 });
+  }
+  return t('sablonlar.dinlenmeSn', { saniye });
+}
 
 const YENI_SATIR_HEDEF_SET = '3';
 const ALAN_ETIKETI = 'text-label text-muted';
@@ -66,12 +70,13 @@ interface Satir {
  * (yukleniyor/hata/yuklendi) zaten dogru baslik metnini geciyor, ayri ayri cagirmaya gerek yok.
  */
 function SayfaBasligi({ baslik }: { baslik: string }) {
+  const { t } = useTranslation();
   usePageTitle(baslik);
 
   return (
     <Link to="/templates" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
       <ChevronLeft aria-hidden size={18} />
-      Şablonlar
+      {t('sablonlar.baslik')}
     </Link>
   );
 }
@@ -81,6 +86,7 @@ function SayfaBasligi({ baslik }: { baslik: string }) {
  * `SablonFormu` sablon geldikten sonra ve id'ye gore `key`lenerek monte edilir, efektle kopyalama yok.
  */
 export default function SablonDuzenlePage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const sablonId = id === undefined ? null : Number(id);
   const { data: sablon, isLoading, isError } = useTemplate(sablonId);
@@ -91,17 +97,17 @@ export default function SablonDuzenlePage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5 pt-2 pb-4">
-        <SayfaBasligi baslik="Şablonu düzenle" />
-        <p className="text-body text-muted">Yükleniyor...</p>
+        <SayfaBasligi baslik={t('sablonlar.duzenleBaslik')} />
+        <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>
       </div>
     );
   }
   if (isError || !sablon) {
     return (
       <div className="flex flex-col gap-5 pt-2 pb-4">
-        <SayfaBasligi baslik="Şablonu düzenle" />
+        <SayfaBasligi baslik={t('sablonlar.duzenleBaslik')} />
         <p role="alert" className="text-body text-danger">
-          Şablon alınamadı.
+          {t('sablonlar.tekilHata')}
         </p>
       </div>
     );
@@ -110,6 +116,7 @@ export default function SablonDuzenlePage() {
 }
 
 function SablonFormu({ sablon }: { sablon: Sablon | null }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   // Issue #61 Karar 3: Bugun'un "+ Sablon oluştur" dugmesi buraya `state: { donus: '/' }` ile
   // gelir -- BURADAN olusturulan sablon kaydedilince Bugun'e doner. Sablonlar listesindeki "Yeni
@@ -225,13 +232,13 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
   function dogrula(): boolean {
     const kirpilmisAd = ad.trim();
     const yeniAdHatasi =
-      kirpilmisAd.length < 2 || kirpilmisAd.length > 100 ? 'Şablon adı 2-100 karakter olmalı.' : null;
+      kirpilmisAd.length < 2 || kirpilmisAd.length > 100 ? t('sablonlar.adiGecersiz') : null;
     const yeniSetHatalari: Record<number, string> = {};
     for (const satir of satirlar) {
       const metin = satir.plannedSets.trim();
       const sayi = Number(metin);
       if (metin === '' || !Number.isInteger(sayi) || sayi < 1 || sayi > 50) {
-        yeniSetHatalari[satir.anahtar] = 'Hedef set 1-50 arasında olmalı.';
+        yeniSetHatalari[satir.anahtar] = t('sablonlar.hedefSetGecersiz');
       }
     }
     setAdHatasi(yeniAdHatasi);
@@ -289,15 +296,15 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
 
   return (
     <form onSubmit={kaydet} noValidate className="flex flex-col gap-5 pt-2 pb-4">
-      <SayfaBasligi baslik={sablon ? 'Şablonu düzenle' : 'Yeni şablon'} />
+      <SayfaBasligi baslik={sablon ? t('sablonlar.duzenleBaslik') : t('sablonlar.yeniSablon')} />
 
-      {genelHata && <HataKutusu baslik="Şablon kaydedilemedi" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('sablonlar.kaydedilemedi')} mesaj={genelHata} />}
 
       <Alan
         id="sablon-adi"
-        etiket="Şablon adı"
+        etiket={t('sablonlar.adiEtiket')}
         ikon={ClipboardList}
-        placeholder="Push Day"
+        placeholder={t('sablonlar.adiPlaceholder')}
         value={ad}
         onChange={(e) => setAd(e.target.value)}
         hata={adHatasi ?? undefined}
@@ -305,9 +312,9 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
 
       <section aria-labelledby="hareketler-basligi" className="flex flex-col gap-3">
         <h2 id="hareketler-basligi" className="text-heading">
-          Hareketler
+          {t('sablonlar.hareketlerBasligi')}
         </h2>
-        {satirlar.length === 0 && <p className="text-body text-muted">Henüz hareket yok.</p>}
+        {satirlar.length === 0 && <p className="text-body text-muted">{t('sablonlar.hicHareketYok')}</p>}
         <DndContext
           sensors={surukleSensorleri}
           collisionDetection={closestCenter}
@@ -340,12 +347,12 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
         </DndContext>
         <IkincilDugme onClick={hareketEkle} disabled={!eklenebilirEgzersiz}>
           <Plus aria-hidden size={18} />
-          Hareket ekle
+          {t('antrenman.hareketEkle')}
         </IkincilDugme>
       </section>
 
       <BirincilDugme type="submit" yukseklik="normal" disabled={kaydediliyor}>
-        Kaydet
+        {t('ortak.kaydet')}
       </BirincilDugme>
 
       {sablon && (
@@ -358,9 +365,7 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
           {silmeOnayi ? (
             // Tarayicinin confirm()'u KULLANILMAZ (spec Karar 3): onay ayni yerde, iki adimda.
             <div className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
-              <p className="text-body">
-                Silmek istediğine emin misin? Bu şablonla yapılmış geçmiş antrenmanlar silinmez.
-              </p>
+              <p className="text-body">{t('sablonlar.silOnayMesaji')}</p>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -368,11 +373,11 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
                   disabled={silMutasyonu.isPending}
                   className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg disabled:opacity-60"
                 >
-                  Evet, sil
+                  {t('sablonlar.evetSil')}
                 </button>
                 <div className="flex-1">
                   <IkincilDugme ref={vazgecDugmesiRef} onClick={() => setSilmeOnayi(false)}>
-                    Vazgeç
+                    {t('ortak.vazgec')}
                   </IkincilDugme>
                 </div>
               </div>
@@ -385,7 +390,7 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
               className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
             >
               <Trash2 aria-hidden size={18} />
-              Şablonu sil
+              {t('sablonlar.sil')}
             </button>
           )}
         </div>
@@ -431,13 +436,12 @@ function HareketSatiri({
   onAsagi,
   onKaldir,
 }: HareketSatiriProps) {
-  const onEk = `${sira}. hareket`;
+  const { t } = useTranslation();
+  const onEk = t('sablonlar.hareketOnEki', { sira });
   const idOnEki = `hareket-${satir.anahtar}`;
-  const dinlenmeSecenekleri = DINLENME_SECENEKLERI.some((secenek) => secenek.deger === satir.restSeconds)
-    ? DINLENME_SECENEKLERI
-    : [...DINLENME_SECENEKLERI, { deger: satir.restSeconds, etiket: `${satir.restSeconds} sn` }].sort(
-        (a, b) => a.deger - b.deger,
-      );
+  const dinlenmeSecenekleri = DINLENME_SANIYELERI.includes(satir.restSeconds)
+    ? DINLENME_SANIYELERI
+    : [...DINLENME_SANIYELERI, satir.restSeconds].sort((a, b) => a - b);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: satir.anahtar,
@@ -471,16 +475,16 @@ function HareketSatiri({
           >
             {sira}
           </span>
-          {satir.isArchived && <Hap>Artık kullanılmıyor</Hap>}
+          {satir.isArchived && <Hap>{t('sablonlar.artikKullanilmiyor')}</Hap>}
         </span>
         <span className="flex shrink-0 items-center gap-1">
-          <IkonDugmesi etiket={`${onEk}: yukarı taşı`} onClick={onYukari} disabled={sira === 1}>
+          <IkonDugmesi etiket={`${onEk}: ${t('sablonlar.yukariTasi')}`} onClick={onYukari} disabled={sira === 1}>
             <ChevronUp aria-hidden size={20} />
           </IkonDugmesi>
-          <IkonDugmesi etiket={`${onEk}: aşağı taşı`} onClick={onAsagi} disabled={sonMu}>
+          <IkonDugmesi etiket={`${onEk}: ${t('sablonlar.asagiTasi')}`} onClick={onAsagi} disabled={sonMu}>
             <ChevronDown aria-hidden size={20} />
           </IkonDugmesi>
-          <IkonDugmesi etiket={`${onEk}: kaldır`} onClick={onKaldir}>
+          <IkonDugmesi etiket={`${onEk}: ${t('sablonlar.kaldir')}`} onClick={onKaldir}>
             <X aria-hidden size={20} />
           </IkonDugmesi>
         </span>
@@ -489,7 +493,7 @@ function HareketSatiri({
       <div className="flex flex-col gap-1">
         <label htmlFor={`${idOnEki}-egzersiz`} className={ALAN_ETIKETI}>
           <span className="sr-only">{onEk}: </span>
-          Egzersiz
+          {t('setler.egzersizEtiket')}
         </label>
         {/* Issue #48: yerel <select> yerine yazarak arama. Arsivlenmis hareket listede YOKTUR
             (GET /api/exercises arsivlileri dondurmez) ama satirda kalir: adi secicide gorunmeye
@@ -508,7 +512,7 @@ function HareketSatiri({
         <div className="flex flex-col gap-1">
           <label htmlFor={`${idOnEki}-set`} className={ALAN_ETIKETI}>
             <span className="sr-only">{onEk}: </span>
-            Hedef set
+            {t('sablonlar.hedefSetEtiket')}
           </label>
           <input
             id={`${idOnEki}-set`}
@@ -526,16 +530,16 @@ function HareketSatiri({
         <div className="flex flex-col gap-1">
           <label htmlFor={`${idOnEki}-dinlenme`} className={ALAN_ETIKETI}>
             <span className="sr-only">{onEk}: </span>
-            Dinlenme
+            {t('antrenman.dinlenme')}
           </label>
           <SecimKutusu
             id={`${idOnEki}-dinlenme`}
             value={satir.restSeconds}
             onChange={(e) => onDinlenme(Number(e.target.value))}
           >
-            {dinlenmeSecenekleri.map((secenek) => (
-              <option key={secenek.deger} value={secenek.deger}>
-                {secenek.etiket}
+            {dinlenmeSecenekleri.map((saniye) => (
+              <option key={saniye} value={saniye}>
+                {dinlenmeEtiketi(t, saniye)}
               </option>
             ))}
           </SecimKutusu>

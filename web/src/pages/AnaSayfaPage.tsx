@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import DevamEdenAntrenman from '../components/DevamEdenAntrenman';
 import Takvim from '../components/Takvim';
 import { usePageTitle } from '../ui/PageTitleContext';
@@ -10,7 +11,10 @@ import { usePageTitle } from '../ui/PageTitleContext';
  * belirsizliği yaratırdı.
  */
 export default function AnaSayfaPage() {
-  usePageTitle('Ana sayfa');
+  const { t } = useTranslation();
+  // #177: sekme cubugundaki "Ana sayfa" ile ayni metin -- ayri bir anahtar acmadan `kabuk` grubu
+  // yeniden kullanilir (DRY).
+  usePageTitle(t('kabuk.anaSayfa'));
 
   return (
     <div className="flex flex-col gap-5 pt-2">

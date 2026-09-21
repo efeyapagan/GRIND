@@ -16,10 +16,6 @@ const TURKCE_HARF = /[çğıöşüÇĞİÖŞÜ]/;
 
 // Henuz cevrilmemis dosyalar (Gorev 6-8 kendi dosyalarini cikarir, Gorev 8 listeyi siler).
 const BEKLEYEN = new Set<string>([
-  // Gorev 7
-  'pages/AnaSayfaPage.tsx', 'components/Takvim.tsx', 'components/SablonlaBasla.tsx',
-  'components/SablonOlusturCagrisi.tsx', 'pages/SablonlarPage.tsx', 'pages/SablonDuzenlePage.tsx',
-  'ui/SablonKarti.tsx',
   // Gorev 8
   'pages/HistoryPage.tsx', 'components/GecmisKarti.tsx', 'components/HareketGecmisi.tsx',
   'ui/CizgiGrafik.tsx', 'pages/RecordsPage.tsx', 'pages/MeasurementsPage.tsx',
