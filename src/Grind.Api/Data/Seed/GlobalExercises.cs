@@ -185,6 +185,10 @@ public static class GlobalExercises
         new { Id = 167L, UserId = (long?)null, Name = "Reverse Crunch",                                Category = ExerciseCategory.Other, IsArchived = false },
         new { Id = 168L, UserId = (long?)null, Name = "Plank",                                         Category = ExerciseCategory.Other, IsArchived = false },
         new { Id = 169L, UserId = (long?)null, Name = "Cable Pallof Press",                            Category = ExerciseCategory.Other, IsArchived = false },
-        new { Id = 170L, UserId = (long?)null, Name = "Russian Twist",                                 Category = ExerciseCategory.Other, IsArchived = false }
+        new { Id = 170L, UserId = (long?)null, Name = "Russian Twist",                                 Category = ExerciseCategory.Other, IsArchived = false },
+
+        // #207: göğüs destekli makine row varyasyonları.
+        new { Id = 171L, UserId = (long?)null, Name = "Chest-Supported Wide-Grip Machine Row",         Category = ExerciseCategory.Pull, IsArchived = false },
+        new { Id = 172L, UserId = (long?)null, Name = "Chest-Supported Close-Grip Machine Row",        Category = ExerciseCategory.Pull, IsArchived = false }
     ];
 }
