@@ -63,23 +63,26 @@ export default function MeasurementsPage() {
     setGenelHata(null);
     setAlanHatalari({});
 
+    const agirlik = sayiyaCevir(kilo);
+    const boyDegeri = sayiyaCevir(boy);
+
+    // Boy ve kilo ZORUNLU (kullanıcı kararı) -- sunucu da aynı kuralı uygular, burası sadece
+    // hızlı geri bildirim (RegisterPage'deki istemci-tarafı doğrulama deseninin aynısı).
+    if (agirlik === undefined || boyDegeri === undefined) {
+      const hatalar: Record<string, string> = {};
+      if (agirlik === undefined) hatalar.weight = 'Kilo gerekli.';
+      if (boyDegeri === undefined) hatalar.heightCm = 'Boy gerekli.';
+      setAlanHatalari(hatalar);
+      return;
+    }
+
     const govde = {
-      weight: sayiyaCevir(kilo),
-      heightCm: sayiyaCevir(boy),
+      weight: agirlik,
+      heightCm: boyDegeri,
       bodyFatPercent: sayiyaCevir(yagOrani),
       waistCm: sayiyaCevir(belCevresi),
       hipCm: sayiyaCevir(kalcaCevresi),
     };
-
-    // Boy ve kilo ZORUNLU (kullanıcı kararı) -- sunucu da aynı kuralı uygular, burası sadece
-    // hızlı geri bildirim (RegisterPage'deki istemci-tarafı doğrulama deseninin aynısı).
-    const hatalar: Record<string, string> = {};
-    if (govde.weight === undefined) hatalar.weight = 'Kilo gerekli.';
-    if (govde.heightCm === undefined) hatalar.heightCm = 'Boy gerekli.';
-    if (Object.keys(hatalar).length > 0) {
-      setAlanHatalari(hatalar);
-      return;
-    }
 
     ekleMutasyonu.mutate(govde, {
       onSuccess: () => {

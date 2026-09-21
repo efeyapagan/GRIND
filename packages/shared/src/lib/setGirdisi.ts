@@ -1,3 +1,5 @@
+import { i18n } from '../i18n/i18n';
+
 /** Set formlarinin (panel ve duzenleyici, #57) metin halindeki alanlari. */
 export interface SetGirdisiMetni {
   agirlik: string;
@@ -33,21 +35,21 @@ export function setGirdisiniDogrula({ agirlik, tekrar, rir }: SetGirdisiMetni): 
 
   const agirlikMetni = agirlik.trim();
   if (agirlikMetni === '') {
-    hatalar.weight = 'Ağırlık girilmeli.';
+    hatalar.weight = i18n.t('setGirdisi.agirlikGerekli');
   } else if (!Number.isFinite(Number(agirlikMetni.replace(',', '.')))) {
-    hatalar.weight = 'Ağırlık geçerli bir sayı olmalı.';
+    hatalar.weight = i18n.t('setGirdisi.agirlikSayiOlmali');
   }
 
   const tekrarMetni = tekrar.trim();
   if (tekrarMetni === '') {
-    hatalar.reps = 'Tekrar sayısı girilmeli.';
+    hatalar.reps = i18n.t('setGirdisi.tekrarGerekli');
   } else if (!Number.isInteger(Number(tekrarMetni))) {
-    hatalar.reps = 'Tekrar sayısı tam sayı olmalı.';
+    hatalar.reps = i18n.t('setGirdisi.tekrarTamSayiOlmali');
   }
 
   const rirMetni = rir.trim();
   if (rirMetni !== '' && !Number.isInteger(Number(rirMetni))) {
-    hatalar.rir = 'RIR tam sayı olmalı.';
+    hatalar.rir = i18n.t('setGirdisi.rirTamSayiOlmali');
   }
 
   return hatalar;

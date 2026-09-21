@@ -1,4 +1,4 @@
-import { ApiError, VARSAYILAN_MESAJ } from '../api/problem';
+import { ApiError, varsayilanMesaj } from '../api/problem';
 
 export interface ApiHatasiSonucu {
   genelHata: string | null;
@@ -30,7 +30,7 @@ export function apiHatasiniAyir(
   ozelMesaj?: (hata: ApiError) => string | null,
 ): ApiHatasiSonucu {
   if (!(hata instanceof ApiError)) {
-    return { genelHata: VARSAYILAN_MESAJ, alanHatalari: {} };
+    return { genelHata: varsayilanMesaj(), alanHatalari: {} };
   }
 
   const ozel = ozelMesaj?.(hata);

@@ -9,6 +9,17 @@ export const tr = {
   hatalar: {
     beklenmeyen: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
   },
+  rekor: {
+    agirlik: 'Ağırlık rekoru',
+    tekrar: 'Tekrar rekoru',
+  },
+  setGirdisi: {
+    agirlikGerekli: 'Ağırlık girilmeli.',
+    agirlikSayiOlmali: 'Ağırlık geçerli bir sayı olmalı.',
+    tekrarGerekli: 'Tekrar sayısı girilmeli.',
+    tekrarTamSayiOlmali: 'Tekrar sayısı tam sayı olmalı.',
+    rirTamSayiOlmali: 'RIR tam sayı olmalı.',
+  },
 };
 
 export type Katalog = typeof tr;

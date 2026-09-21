@@ -1,3 +1,5 @@
+import { i18n } from '../i18n/i18n';
+
 /**
  * Backend iki farkli RFC 7807 govdesi donuyor (Faz 5'te bilerek kabul edilmis bir durum):
  * DataAnnotations hatasi alan bazli `errors` tasir, servisin firlattigi is kurali hatasi ise
@@ -18,7 +20,10 @@ export class ApiError extends Error {
   }
 }
 
-export const VARSAYILAN_MESAJ = 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.';
+/** Istemcinin kendi urettigi genel hata metni; cagrildigi andaki arayuz dilinde. */
+export function varsayilanMesaj(): string {
+  return i18n.t('hatalar.beklenmeyen');
+}
 
 export function parseProblem(status: number, body: unknown): ApiError {
   if (body && typeof body === 'object') {
@@ -32,10 +37,10 @@ export function parseProblem(status: number, body: unknown): ApiError {
         ? govde.detail
         : typeof govde.title === 'string' && govde.title.length > 0
           ? govde.title
-          : VARSAYILAN_MESAJ;
+          : varsayilanMesaj();
 
     return new ApiError(status, detail, fieldErrors);
   }
 
-  return new ApiError(status, VARSAYILAN_MESAJ);
+  return new ApiError(status, varsayilanMesaj());
 }
