@@ -32,9 +32,14 @@ function AlinanRota() {
 
 // `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
 // saglar, testte de aynisi sarilmali.
-function antrenmanSayfasiniOlustur() {
-  render(
-    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+/**
+ * `client` opsiyoneldir: issue #190'daki "sayfa degisip geri donulunce" testi ayni query client'i
+ * ikinci kez gecirerek bir unmount/remount'u (sekme degisimi) benzetir -- gercek uygulamada
+ * QueryClient de, kalici depo (localStorage) da bilesenin unmount'undan ETKILENMEZ.
+ */
+function antrenmanSayfasiniOlustur(client: QueryClient = testeOzelSorguIstemcisi()) {
+  return render(
+    <QueryClientProvider client={client}>
       <AuthProvider>
         <PageTitleProvider>
           <MemoryRouter initialEntries={['/']}>
@@ -1380,6 +1385,7 @@ describe('dinlenme sayaci', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-13T10:00:00Z'));
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -1451,5 +1457,27 @@ describe('dinlenme sayaci', () => {
 
     expect(screen.getByText('1:30')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Atla' })).toBeInTheDocument();
+  });
+
+  test('sayfa degisip geri donulunce dinlenme sayaci kaldigi yerden devam eder', async () => {
+    // Issue #190: bilesen unmount/remount olunca (sekme degisimi, sayfa yenileme) sayac
+    // kaybolmamali -- kalici depoya (localStorage) yazilan mutlak bitis zamanindan dogru kalan
+    // sure kendiliginden cikmali.
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0, 120)]) });
+    const kullanici = userEvent.setup();
+    const client = testeOzelSorguIstemcisi();
+    const { unmount } = antrenmanSayfasiniOlustur(client);
+
+    await seciliKartaBekle('Bench Press');
+    await setEkle(kullanici, '60', '8');
+    expect(await screen.findByText('2:00')).toBeInTheDocument();
+
+    unmount();
+    vi.setSystemTime(new Date('2026-09-13T10:00:30Z')); // 30 saniye gecti
+
+    antrenmanSayfasiniOlustur(client);
+
+    await seciliKartaBekle('Bench Press');
+    expect(await screen.findByText('1:30')).toBeInTheDocument();
   });
 });

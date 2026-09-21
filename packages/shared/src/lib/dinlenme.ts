@@ -56,3 +56,54 @@ export function kalanSureMetni(ms: number): string {
 export function dinlenmeSuresi(ilerleme: readonly HareketIlerlemesi[], exerciseId: number): number {
   return ilerleme.find((hareket) => hareket.exerciseId === exerciseId)?.restSeconds ?? VARSAYILAN_DINLENME_SN;
 }
+
+/**
+ * Dinlenme sayacinin kalici depoda (web: localStorage, mobil: expo-secure-store) sakladigi
+ * anahtar -- her iki platform da AYNI anahtari kullanir, tek bir kayit yeter (issue #190):
+ * ayni anda en fazla bir acik antrenmanin bir sayaci olabilir.
+ */
+export const DINLENME_DEPO_ANAHTARI = 'grind.dinlenme';
+
+interface DinlenmeKaydi {
+  sessionId: number;
+  exerciseId: number;
+  dinlenme: Dinlenme;
+}
+
+/** Kalici depoya yazilacak JSON -- hangi antrenmana ve harekete ait oldugu da tasinir ki
+ * `dinlenmeKaydiAyristir` baska bir antrenman/harekete ait bir kaydi yanlislikla geri yuklemesin. */
+export function dinlenmeKaydiUret(sessionId: number, exerciseId: number, dinlenme: Dinlenme): string {
+  return JSON.stringify({ sessionId, exerciseId, dinlenme } satisfies DinlenmeKaydi);
+}
+
+/**
+ * Kalici depodan okunan ham degeri gecerli baglamla (guncel oturum + hareket) dogrular. `null`
+ * doner: kayit yok, bozuk, baska bir oturuma/harekete ait ya da suresi cotan dolmus (issue #190 --
+ * "gecen sureyi sayma" mantigi GEREKMEZ, `bitisMs` mutlak zaman damgasi oldugu icin suresi dolmus
+ * bir kayit basitce atilir).
+ */
+export function dinlenmeKaydiAyristir(
+  ham: string | null,
+  sessionId: number,
+  exerciseId: number,
+  simdiMs: number,
+): Dinlenme | null {
+  if (!ham) {
+    return null;
+  }
+  let kayit: Partial<DinlenmeKaydi>;
+  try {
+    kayit = JSON.parse(ham);
+  } catch {
+    return null;
+  }
+  if (
+    kayit.sessionId !== sessionId ||
+    kayit.exerciseId !== exerciseId ||
+    typeof kayit.dinlenme?.bitisMs !== 'number' ||
+    typeof kayit.dinlenme?.toplamMs !== 'number'
+  ) {
+    return null;
+  }
+  return bittiMi(kayit.dinlenme, simdiMs) ? null : kayit.dinlenme;
+}
