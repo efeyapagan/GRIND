@@ -10,9 +10,9 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Yuzyetmis_global_egzersiz_seed_edilmistir()
+    public void Yuzyetmisiki_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(170, Seed().Count);
+        Assert.Equal(172, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +28,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_yuzyetmise_kadar_benzersizdir()
+    public void Seed_id_leri_birden_yuzyetmisikiye_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 170).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 172).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -229,7 +229,11 @@ public class SeedDataTests
             ("Reverse Crunch", ExerciseCategory.Other),
             ("Plank", ExerciseCategory.Other),
             ("Cable Pallof Press", ExerciseCategory.Other),
-            ("Russian Twist", ExerciseCategory.Other)
+            ("Russian Twist", ExerciseCategory.Other),
+
+            // #207: göğüs destekli makine row varyasyonları.
+            ("Chest-Supported Wide-Grip Machine Row", ExerciseCategory.Pull),
+            ("Chest-Supported Close-Grip Machine Row", ExerciseCategory.Pull)
         ];
 
         var actual = Seed()
