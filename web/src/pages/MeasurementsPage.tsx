@@ -146,7 +146,7 @@ export default function MeasurementsPage() {
             <SayiAlani
               id="olcu-kilo"
               etiket={t('olcumler.kilo')}
-              ekranOkuyucuEki=" (kg)"
+              ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
               birim="kg"
               inputMode="decimal"
               placeholder="—"

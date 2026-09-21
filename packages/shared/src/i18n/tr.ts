@@ -80,7 +80,6 @@ export const tr = {
     zatenHesabinVarMi: 'Zaten hesabın var mı?',
   },
   profil: {
-    baslik: 'Hesap',
     guncellenemedi: 'Güncellenemedi',
     mevcutSifreGerekli: 'Mevcut şifre gerekli.',
     mevcutSifreYanlis: 'Mevcut şifre yanlış.',
@@ -182,7 +181,8 @@ export const tr = {
     hedefSerisi: 'Hedef serisi',
     gunSayisi_one: '{{count}} gün',
     gunSayisi_other: '{{count}} gün',
-    haftaHedefi: '{{yapilan}} / {{hedef}} gün',
+    haftaHedefi_one: '{{yapilan}} / {{count}} gün',
+    haftaHedefi_other: '{{yapilan}} / {{count}} gün',
     haftaSayisi_one: '{{count}} hafta',
     haftaSayisi_other: '{{count}} hafta',
   },
@@ -260,6 +260,8 @@ export const tr = {
     bosBaslik: 'Henüz rekor yok',
     enAgirSet: 'En ağır set',
     enCokTekrar: 'En çok tekrar',
+    tekrarSayisi_one: '{{count}} tekrar',
+    tekrarSayisi_other: '{{count}} tekrar',
   },
   olcumler: {
     kiloGerekli: 'Kilo gerekli.',

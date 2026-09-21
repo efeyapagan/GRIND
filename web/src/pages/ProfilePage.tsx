@@ -44,7 +44,7 @@ function sifreUzunlugunuDogrula(sifre: string): SifreUzunlukHatasiAnahtari | nul
  */
 export default function ProfilePage() {
   const { t } = useTranslation();
-  usePageTitle(t('profil.baslik'));
+  usePageTitle(t('kabuk.sekmeHesap'));
   const { username, updateProfile, logout } = useAuth();
 
   return (

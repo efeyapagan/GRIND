@@ -76,7 +76,7 @@ export default function RecordsPage() {
                   </p>
                   <p className="flex items-baseline gap-1.5">
                     <span className="text-metric tabular-nums">
-                      {rekor.bestReps} {t('setGirdisi.tekrarBirimi')}
+                      {t('rekorlar.tekrarSayisi', { count: rekor.bestReps })}
                     </span>
                     <span className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight, dil)} kg</span>
                   </p>

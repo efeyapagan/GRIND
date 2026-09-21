@@ -207,7 +207,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
               <>
                 <OzetDegeri
                   etiket={t('takvim.buHafta')}
-                  deger={t('takvim.haftaHedefi', { yapilan: ozet.thisWeekTrainedDays, hedef: ozet.weeklyTargetDays })}
+                  deger={t('takvim.haftaHedefi', { yapilan: ozet.thisWeekTrainedDays, count: ozet.weeklyTargetDays })}
                 />
                 <OzetDegeri
                   etiket={t('takvim.hedefSerisi')}

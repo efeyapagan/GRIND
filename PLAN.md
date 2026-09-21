@@ -1157,6 +1157,11 @@ Devreden notlar (bilerek yapılmadı):
   için gerekli) — geri kapatılmaz.
 - Tarama testi, ilk satırında Türkçe harf olan çok satırlı JSX yorumunu yanlış-pozitif olarak
   yakalar — bu tür yorumlar ASCII yazılır.
+- Dil değişince, önceden state'e yazılmış çevrilmiş metinler (form hataları, `sonEklenen`,
+  `baslatmaBilgisi`, React Query önbelleğindeki `ApiError.detail` içindeki `varsayilanMesaj()`)
+  eski dilde kalır; sayfa değişince düzelir, pratikte yalnızca Profil'de görünür.
+- Ölçümler listesindeki ağırlık/cm değerleri `formatWeight` yerine ham sayıyla yazılıyor
+  (Türkçede "72.5") — #177 öncesinden kalma, ayrı iş.
 
 ---
 
