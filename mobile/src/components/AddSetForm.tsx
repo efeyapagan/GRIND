@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react-native';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '@grind/shared/api/queries';
@@ -7,7 +8,14 @@ import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { ApiError } from '@grind/shared/api/problem';
 import { formatWeight } from '@grind/shared/lib/format';
-import { dinlenmeBaslat, dinlenmeSuresi, type Dinlenme } from '@grind/shared/lib/dinlenme';
+import {
+  DINLENME_DEPO_ANAHTARI,
+  dinlenmeBaslat,
+  dinlenmeKaydiAyristir,
+  dinlenmeKaydiUret,
+  dinlenmeSuresi,
+  type Dinlenme,
+} from '@grind/shared/lib/dinlenme';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -39,7 +47,7 @@ interface Props {
 export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
-  const { data: acikOturum } = useOpenSession();
+  const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
@@ -53,6 +61,48 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
   const [sonEklenen, setSonEklenen] = useState<string | null>(null);
   const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
+
+  // Issue #190: sayfa degisip geri donulunce (bilesen unmount/remount olunca -- sekme degisimi,
+  // uygulama arka plana atilip geri gelmesi) sayac kaybolmasin. `bitisMs` mutlak zaman damgasi
+  // oldugu icin kalici depodan (expo-secure-store -- zaten bir bagimlilik, yeni paket eklemeye
+  // gerek yok) okunan kayit dogru kalan sureyi kendiliginden verir. web/AddSetForm.tsx ile ayni
+  // mantik; tek fark expo-secure-store ASENKRON (localStorage senkron).
+  const denenenOturum = useRef<number | null>(null);
+  useEffect(() => {
+    if (oturumYukleniyor || !acikOturum || egzersizId === null) {
+      return;
+    }
+    if (denenenOturum.current === acikOturum.id) {
+      return;
+    }
+    denenenOturum.current = acikOturum.id;
+    let iptal = false;
+    void SecureStore.getItemAsync(DINLENME_DEPO_ANAHTARI).then((ham) => {
+      if (iptal) {
+        return;
+      }
+      const geri = dinlenmeKaydiAyristir(ham, acikOturum.id, egzersizId, Date.now());
+      if (geri) {
+        setDinlenme(geri);
+      }
+    });
+    return () => {
+      iptal = true;
+    };
+  }, [oturumYukleniyor, acikOturum, egzersizId]);
+
+  // Sayac degistikce (baslayinca, +15sn'de, Atla/bitince) kalici depo guncellenir. Acik oturum
+  // yoksa (antrenman bitti/iptal edildi) kayit da silinir (issue #190 -- "kayit temizlensin").
+  useEffect(() => {
+    if (oturumYukleniyor) {
+      return;
+    }
+    if (!acikOturum || egzersizId === null || !dinlenme) {
+      void SecureStore.deleteItemAsync(DINLENME_DEPO_ANAHTARI);
+      return;
+    }
+    void SecureStore.setItemAsync(DINLENME_DEPO_ANAHTARI, dinlenmeKaydiUret(acikOturum.id, egzersizId, dinlenme));
+  }, [oturumYukleniyor, acikOturum, egzersizId, dinlenme]);
 
   const agirlikRef = useRef<React.ComponentRef<typeof SayiAlani>>(null);
 

@@ -1,6 +1,8 @@
 import {
   bittiMi,
   dinlenmeBaslat,
+  dinlenmeKaydiAyristir,
+  dinlenmeKaydiUret,
   dinlenmeSuresi,
   gecenOran,
   kalanMs,
@@ -55,4 +57,37 @@ test('dinlenme suresi sablondaki hareketten gelir, plan disinda varsayilandir', 
   expect(dinlenmeSuresi(ilerleme, 2)).toBe(0);
   expect(dinlenmeSuresi(ilerleme, 99)).toBe(VARSAYILAN_DINLENME_SN);
   expect(dinlenmeSuresi([], 1)).toBe(VARSAYILAN_DINLENME_SN);
+});
+
+describe('dinlenme kaydi (issue #190 -- kalici depo)', () => {
+  test('eslesen oturum ve harekette, suresi dolmamis kayit geri yuklenir', () => {
+    const d = dinlenmeBaslat(T0, 90)!;
+    const ham = dinlenmeKaydiUret(7, 1, d);
+
+    expect(dinlenmeKaydiAyristir(ham, 7, 1, T0 + 30_000)).toEqual(d);
+  });
+
+  test('farkli oturum icin kayit geri yuklenmez', () => {
+    const ham = dinlenmeKaydiUret(7, 1, dinlenmeBaslat(T0, 90)!);
+
+    expect(dinlenmeKaydiAyristir(ham, 8, 1, T0)).toBeNull();
+  });
+
+  test('farkli hareket icin kayit geri yuklenmez', () => {
+    const ham = dinlenmeKaydiUret(7, 1, dinlenmeBaslat(T0, 90)!);
+
+    expect(dinlenmeKaydiAyristir(ham, 7, 2, T0)).toBeNull();
+  });
+
+  test('suresi dolmus kayit geri yuklenmez', () => {
+    const ham = dinlenmeKaydiUret(7, 1, dinlenmeBaslat(T0, 90)!);
+
+    expect(dinlenmeKaydiAyristir(ham, 7, 1, T0 + 90_000)).toBeNull();
+  });
+
+  test('bos veya bozuk kayit guvenle yok sayilir', () => {
+    expect(dinlenmeKaydiAyristir(null, 7, 1, T0)).toBeNull();
+    expect(dinlenmeKaydiAyristir('{ bozuk json', 7, 1, T0)).toBeNull();
+    expect(dinlenmeKaydiAyristir('{"sessionId":7}', 7, 1, T0)).toBeNull();
+  });
 });
