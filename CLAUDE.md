@@ -84,6 +84,20 @@ yoktur (#202).
 - Kapsam dışı: AI yorumu içeriği ve export metninin dili (#199); kullanıcının girdiği veriler
   (egzersiz/şablon adları, notlar) çevrilmez.
 
+## Web + Mobil — ZORUNLU
+Kullanıcıya görünen her geliştirme hem `web/` hem `mobile/` için **aynı işte** yapılır; "önce
+web, mobil sonra" (ya da tersi) yoktur (#211). Çok Dil kuralıyla aynı mantık.
+- Issue açarken kapsam iki platformu da yazar (dokunulacak web ve mobil dosyaları); bir platform
+  bilerek dışarıda bırakılacaksa gerekçesi issue'da yazılır ve kullanıcıya sorulur.
+- Platforma uygun etkileşim serbesttir (mobilde döner kadran, web'de seçenek satırı gibi); aynı
+  olması gereken şey özelliğin kendisi ve API'den gelen veridir — hesap iki istemcide de sunucudan
+  gelir.
+- Mevcut platform farkları kural değil, geçici durumdur: mobil tema koyu kalır (açık tema), mobil
+  arayüz dili dilim 3'e kadar Türkçe sabit (Çok Dil). Bunlar kendi dilimlerinde kapanır.
+- Yalnızca backend'e, dokümana ya da altyapıya dokunan işler bu kuralın dışındadır.
+- Bitti sayılmadan önce: iki platformun testleri ve tip kontrolü yeşil, özellik iki platformda da
+  gözle denenmiş.
+
 ## Yetkilendirme Kuralı — ZORUNLU
 `Exercise.UserId` gibi nullable-sahiplik alanı olan her kaynakta, bir kullanıcı SADECE kendi
 kayıtlarına (`UserId = currentUserId`) veya global kayıtlara (`UserId = null`) erişebilir.
