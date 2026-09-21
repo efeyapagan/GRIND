@@ -16,7 +16,7 @@ import {
   useStartSession,
   type SetKaydi,
 } from '@grind/shared/api/queries';
-import { formatTrTime } from '@grind/shared/lib/format';
+import { formatSaat } from '@grind/shared/lib/format';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { varsayilanHareket } from '@grind/shared/lib/ilerleme';
@@ -194,7 +194,7 @@ export default function AntrenmanScreen() {
         {gorunenOturum && (
           <View className="mt-2 flex-row items-center justify-between gap-2">
             <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
-            <Text className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</Text>
+            <Text className="text-label text-muted">Başlangıç {formatSaat(gorunenOturum.startedAt)}</Text>
           </View>
         )}
         {baslatMutasyonu.isError && (

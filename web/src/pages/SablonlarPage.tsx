@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTemplates } from '../api/queries';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BosDurum from '../ui/BosDurum';
@@ -11,25 +12,26 @@ import SablonKarti from '../ui/SablonKarti';
  * (Karar 2). Hata durumu bos durumdan AYRI ve ONCELIKLI gosterilir. Baslik ust kabukta (issue #65).
  */
 export default function SablonlarPage() {
-  usePageTitle('Şablonlar');
+  const { t } = useTranslation();
+  usePageTitle(t('sablonlar.baslik'));
   const navigate = useNavigate();
   const { data: sablonlar, isLoading, isError } = useTemplates();
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
+      {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
 
       {isError && (
         <p role="alert" className="text-body text-danger">
-          Şablonlar alınamadı. Lütfen sayfayı yenileyin.
+          {t('sablonlar.hataYenile')}
         </p>
       )}
 
       {sablonlar && sablonlar.length === 0 && (
         <BosDurum
           ikon={ClipboardList}
-          baslik="Henüz şablon yok"
-          aciklama="Bir gün tipinin hareketlerini bir kez kur, antrenmanı tek dokunuşla başlat."
+          baslik={t('sablonlar.hicSablonYokBaslik')}
+          aciklama={t('sablonlar.hicSablonYokAciklama')}
         />
       )}
 
@@ -45,7 +47,7 @@ export default function SablonlarPage() {
 
       <BirincilDugme yukseklik="normal" onClick={() => navigate('/templates/new')}>
         <Plus aria-hidden size={20} />
-        Yeni şablon
+        {t('sablonlar.yeniSablon')}
       </BirincilDugme>
     </div>
   );

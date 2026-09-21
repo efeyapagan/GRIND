@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useDil, type Dil } from '@grind/shared/i18n';
 import {
   useCalendar,
   useGunGecmisi,
@@ -52,9 +53,10 @@ function gunOzeti(
   kayit: TakvimGunu | undefined,
   oturumlar: GecmisOturum[] | undefined,
   gecmisHatali: boolean,
+  dil: Dil,
 ): string {
   if (!kayit) {
-    return `${gunBasligi(gun)} · antrenman yok`;
+    return `${gunBasligi(gun, dil)} · antrenman yok`;
   }
   const setliOturumlar = (oturumlar ?? [])
     .filter((oturum) => oturum.setCount > 0)
@@ -67,7 +69,7 @@ function gunOzeti(
   } else {
     sablonlar = setliOturumlar.map((oturum) => oturum.templateName ?? 'Şablonsuz').join(', ');
   }
-  return `${gunBasligi(gun)} · ${sablonlar} · ${kayit.setCount} set`;
+  return `${gunBasligi(gun, dil)} · ${sablonlar} · ${kayit.setCount} set`;
 }
 
 interface Props {
@@ -80,6 +82,7 @@ interface Props {
  * duz `flex-row` satirlariyla kurulur (web'deki `grid-cols-7` yerine).
  */
 export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
+  const dil = useDil();
   const [gorunum, setGorunum] = useState<TakvimGorunumu>('ay');
   const [gosterilen, setGosterilen] = useState(bugun);
   const [secili, setSecili] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const satirlar = gorunum === 'ay' ? ayIzgarasi(gosterilen) : [haftaGunleri(gosterilen)];
   const sonrakiKapali = gorunumAraligi(gorunum, kaydir(gorunum, gosterilen, 1)).from > bugun;
   const donemBasligi =
-    gorunum === 'ay' ? ayBasligi(gosterilen) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`);
+    gorunum === 'ay' ? ayBasligi(gosterilen, dil) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`, dil);
   const bosMetin = GORUNUMLER.find((aday) => aday.anahtar === gorunum)?.bosMetin;
 
   function gorunumSec(yeni: TakvimGorunumu) {
@@ -153,7 +156,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
                   <Pressable
                     key={gun}
                     accessibilityRole="button"
-                    accessibilityLabel={`${gunBasligi(gun)}: ${kayit ? `${kayit.setCount} set` : 'antrenman yok'}`}
+                    accessibilityLabel={`${gunBasligi(gun, dil)}: ${kayit ? `${kayit.setCount} set` : 'antrenman yok'}`}
                     accessibilityState={{ selected: seciliMi }}
                     onPress={() => setSecili(gun)}
                     className={`aspect-square flex-1 items-center justify-center rounded-md ${KADEME_SINIFI[kademe]} ${vurguSinifi}`}
@@ -167,7 +170,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
         </View>
 
         <Text className="min-h-5 text-body text-muted">
-          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali) : ''}
+          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali, dil) : ''}
         </Text>
 
         {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}

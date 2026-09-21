@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -14,7 +15,7 @@ import {
   useStartSession,
   type SetKaydi,
 } from '../api/queries';
-import { formatTrTime } from '../lib/format';
+import { formatSaat } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { varsayilanHareket } from '../lib/ilerleme';
@@ -28,8 +29,6 @@ import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import TurEtiketi from '../ui/TurEtiketi';
 import { usePageTitle } from '../ui/PageTitleContext';
-
-const SABLON_UYGULANMADI = 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
 /** Geri alma penceresinde bekleyen hareket kaldirma (#60): hangi antrenmandan hangi hareket. */
 interface BekleyenHareket {
@@ -64,11 +63,12 @@ interface BekleyenHareket {
  * olsa bile alt alan `mt-auto` ile en alta itilsin ve sekme cubugunun hemen ustunde kalsin.
  */
 export default function AntrenmanPage() {
+  const { t } = useTranslation();
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
   // Sayfa iki farkli isi gorur: baslatma (sablon sec) ve devam eden bir antrenman -- baslik hangisi
   // oldugunu yansitir (issue #119/#120).
-  usePageTitle(gorunenOturum ? 'Antrenman' : 'Antrenman başlat');
+  usePageTitle(gorunenOturum ? t('antrenman.baslik') : t('kabuk.antrenmanBaslat'));
   const {
     data: setler,
     isLoading: setlerYukleniyor,
@@ -201,7 +201,7 @@ export default function AntrenmanPage() {
         // request() durum kodunu vermez; anlam "sablon uygulanmadi" oldugu icin donen oturumun
         // sablonuna bakilir (plan: spec Karar 4'ten bilincli sapma).
         if (acilan.templateId !== templateId) {
-          setBaslatmaBilgisi(SABLON_UYGULANMADI);
+          setBaslatmaBilgisi(t('antrenman.sablonUygulanmadi'));
         }
       },
     });
@@ -214,14 +214,14 @@ export default function AntrenmanPage() {
     <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          {/* "Devam ediyor" rozeti "Antrenmanı bitir" ile AYNI satirda (issue #151); "Nasil
+          {/* "Devam ediyor" rozeti "Antrenmani bitir" ile AYNI satirda (issue #151); "Nasil
               gecti?" sorusu acikken rozetin yerini bitirmeden VAZGECME (iptal degil, geri
               donme) icin bir X alir. */}
           {gorunenOturum?.isOpen &&
             (zorlukSoruluyor ? (
               <button
                 type="button"
-                aria-label="Nasıl geçti sorusunu kapat"
+                aria-label={t('antrenman.nasilGectiKapat')}
                 onClick={() => setZorlukSoruluyor(false)}
                 className="flex size-11 items-center justify-center"
               >
@@ -230,7 +230,7 @@ export default function AntrenmanPage() {
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
                 <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
-                Devam ediyor
+                {t('antrenman.devamEdiyor')}
               </span>
             ))}
           {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
@@ -249,7 +249,7 @@ export default function AntrenmanPage() {
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-danger disabled:opacity-60"
               >
                 <X aria-hidden size={18} />
-                Antrenmanı iptal et
+                {t('antrenman.iptalEt')}
               </button>
             ) : zorlukSoruluyor ? (
               // #118: bitirme iki adim -- once "nasil gecti", sonra kapanis. Zorluk YALNIZCA burada
@@ -265,34 +265,36 @@ export default function AntrenmanPage() {
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
               >
                 <CircleCheck aria-hidden size={18} />
-                Antrenmanı bitir
+                {t('antrenman.bitir')}
               </button>
             ))}
         </div>
         {gorunenOturum && (
           <div className="mt-2 flex items-center justify-between gap-2">
             <div>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</div>
-            <span className="text-label text-muted">Başlangıç {formatTrTime(gorunenOturum.startedAt)}</span>
+            <span className="text-label text-muted">
+              {t('antrenman.baslangic', { saat: formatSaat(gorunenOturum.startedAt) })}
+            </span>
           </div>
         )}
         {bitirMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
-            Antrenman bitirilemedi. Lütfen tekrar deneyin.
+            {t('antrenman.bitirilemedi')}
           </p>
         )}
         {baslatMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
-            Antrenman başlatılamadı. Lütfen tekrar deneyin.
+            {t('antrenman.baslatilamadi')}
           </p>
         )}
         {iptalMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
-            Antrenman iptal edilemedi. Lütfen tekrar deneyin.
+            {t('antrenman.iptalEdilemedi')}
           </p>
         )}
         {hareketEkleMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
-            Hareket eklenemedi. Lütfen tekrar deneyin.
+            {t('antrenman.hareketEklenemedi')}
           </p>
         )}
         {/* F2 (review bulgusu): canli bolge HER ZAMAN monte edilir -- metniyle BIRLIKTE eklenirse
@@ -303,20 +305,20 @@ export default function AntrenmanPage() {
         </p>
       </header>
 
-      {oturumYukleniyor && <p className="text-body text-muted">Yükleniyor...</p>}
+      {oturumYukleniyor && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
 
       {oturumHataliMi && (
         <p role="alert" className="text-body text-danger">
-          Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.
+          {t('antrenman.oturumAlinamadi')}
         </p>
       )}
 
       {gorunenOturum && (
         <>
-          {setlerYukleniyor && <p className="text-body text-muted">Yükleniyor...</p>}
+          {setlerYukleniyor && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
           {setlerHataliMi && (
             <p role="alert" className="text-body text-danger">
-              Setler alınamadı. Lütfen sayfayı yenileyin.
+              {t('antrenman.setlerAlinamadi')}
             </p>
           )}
           {!setlerYukleniyor &&
@@ -352,7 +354,7 @@ export default function AntrenmanPage() {
         <GeriAlSeridi
           // `key`: ard arda iki silmede serit YENIDEN monte olsun, pencere bastan baslasin.
           key={`set-${setSilme.bekleyen.id}`}
-          mesaj="Set silindi"
+          mesaj={t('setler.setSilindi')}
           sureMs={GERI_AL_MS}
           onGeriAl={setSilme.geriAl}
           onSureDoldu={setSilme.sureDoldu}
@@ -361,7 +363,7 @@ export default function AntrenmanPage() {
       {hareketKaldirma.bekleyen && (
         <GeriAlSeridi
           key={`hareket-${hareketKaldirma.bekleyen.exerciseId}`}
-          mesaj="Hareket kaldırıldı"
+          mesaj={t('antrenman.hareketKaldirildi')}
           sureMs={GERI_AL_MS}
           onGeriAl={hareketKaldirma.geriAl}
           onSureDoldu={hareketKaldirma.sureDoldu}

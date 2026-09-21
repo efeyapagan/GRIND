@@ -125,7 +125,7 @@ test('Yorum iste govdesiz POST atar, basarili olunca liste tazelenir', async () 
   await screen.findByText('Henüz yorum yok');
   await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
 
-  await waitFor(() => expect(screen.getByRole('listitem')).toHaveTextContent(ornekYorum().content));
+  await waitFor(() => expect(screen.getByRole('listitem')).toHaveTextContent(ornekYorum().content ?? ''));
   // Govde BILEREK gonderilmez -- backend govdesiz istekte kendi varsayilanini (son 30 gun) uygular.
   expect(govde).toBeNull();
 });

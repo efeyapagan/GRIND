@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
-import { formatTrDate, formatWeight } from '@grind/shared/lib/format';
+import { formatTarih, formatWeight } from '@grind/shared/lib/format';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import SetList from './SetList';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -21,6 +22,7 @@ interface Props {
  * gibi HALA durur -- kaydirma ikincil bir kisayoldur, birincil yol degil.
  */
 export default function GecmisKarti({ oturum, onSil }: Props) {
+  const dil = useDil();
   const [acik, setAcik] = useState(false);
   const [onayAcik, setOnayAcik] = useState(false);
   const kaydirmaRef = useRef<KaydirilabilirSatirRef>(null);
@@ -36,7 +38,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
       <View className="overflow-hidden rounded-xl bg-surface-2 p-4">
         <View className="flex-col gap-3">
           <Text className="text-body text-fg">
-            {formatTrDate(oturum.startedAt)} tarihli antrenman ve {oturum.setCount} seti silinecek.
+            {formatTarih(oturum.startedAt, dil)} tarihli antrenman ve {oturum.setCount} seti silinecek.
             Bu hareketlerin rekorları yeniden hesaplanır.
           </Text>
           <View className="flex-row gap-2">
@@ -63,7 +65,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
             <View className="flex-row flex-wrap items-center gap-2">
               <View className="flex-row items-center gap-1">
                 <CalendarDays color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-fg">{formatTrDate(oturum.startedAt)}</Text>
+                <Text className="text-label text-fg">{formatTarih(oturum.startedAt, dil)}</Text>
               </View>
               <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
             </View>
@@ -74,7 +76,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               </View>
               <View className="flex-row items-baseline gap-1">
                 <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>
-                  {formatWeight(oturum.totalVolume)}
+                  {formatWeight(oturum.totalVolume, dil)}
                 </Text>
                 <Text className="text-label-xs text-muted uppercase">kg</Text>
               </View>

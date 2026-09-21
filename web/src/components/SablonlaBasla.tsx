@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTemplates } from '../api/queries';
 import SablonKarti from '../ui/SablonKarti';
 
@@ -16,22 +17,23 @@ interface Props {
  * ekranda iki kez durmasin.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
+  const { t } = useTranslation();
   const { data: sablonlar, isLoading, isError } = useTemplates();
 
   return (
     <section aria-labelledby="sablonla-basla-basligi" className="flex flex-col gap-3">
       <h2 id="sablonla-basla-basligi" className="text-heading">
-        Şablonla başla
+        {t('sablonlar.baslaBasligi')}
       </h2>
 
-      {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
+      {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
       {isError && (
         <p role="alert" className="text-body text-danger">
-          Şablonlar alınamadı.
+          {t('sablonlar.hata')}
         </p>
       )}
 
-      {sablonlar && sablonlar.length === 0 && <p className="text-body text-muted">Henüz şablon yok.</p>}
+      {sablonlar && sablonlar.length === 0 && <p className="text-body text-muted">{t('sablonlar.hicSablonYok')}</p>}
 
       {sablonlar && sablonlar.length > 0 && (
         <>
@@ -48,7 +50,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             ))}
           </ul>
           <Link to="/templates" className="flex min-h-11 w-fit items-center text-label text-muted underline">
-            Şablonları yönet
+            {t('sablonlar.yonet')}
           </Link>
         </>
       )}

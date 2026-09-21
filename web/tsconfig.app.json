@@ -7,6 +7,7 @@
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
+    "strictNullChecks": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

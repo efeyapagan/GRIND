@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const SEKMELER = [
-  { to: 'account', etiket: 'Hesap' },
-  { to: 'history', etiket: 'Geçmiş' },
-  { to: 'measurements', etiket: 'Ölçüler' },
-  { to: 'records', etiket: 'Rekorlar' },
-];
+  { to: 'account', etiketAnahtari: 'kabuk.sekmeHesap' },
+  { to: 'history', etiketAnahtari: 'kabuk.sekmeGecmis' },
+  { to: 'measurements', etiketAnahtari: 'kabuk.sekmeOlcumler' },
+  { to: 'records', etiketAnahtari: 'kabuk.sekmeRekorlar' },
+] as const;
 
 /**
  * Profil sayfasının sekme çubuğu (issue #119): Hesap (kullanıcı adı/şifre), Geçmiş (alt menüden
@@ -19,10 +20,12 @@ const SEKMELER = [
  * düz `nav` deseni.
  */
 export default function ProfileLayout() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-4">
-      <nav aria-label="Profil sekmeleri" className="flex border-b border-surface-3">
-        {SEKMELER.map(({ to, etiket }) => (
+      <nav aria-label={t('kabuk.profilSekmeleri')} className="flex border-b border-surface-3">
+        {SEKMELER.map(({ to, etiketAnahtari }) => (
           <NavLink
             key={to}
             to={to}
@@ -32,7 +35,7 @@ export default function ProfileLayout() {
               }`
             }
           >
-            {etiket}
+            {t(etiketAnahtari)}
           </NavLink>
         ))}
       </nav>

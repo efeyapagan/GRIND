@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Line, Path, Circle, Rect, Text as SvgText, G } from 'react-native-svg';
+import { useDil } from '@grind/shared/i18n';
 import { formatWeight } from '@grind/shared/lib/format';
 import { eksenDegerleri } from '@grind/shared/lib/grafik';
 import { renkler } from '@grind/shared/designTokens';
@@ -37,6 +38,7 @@ export default function CizgiGrafik({ noktalar, birim, baslik }: Props) {
 }
 
 function Cizim({ noktalar, baslik }: Props) {
+  const dil = useDil();
   const [genislik, setGenislik] = useState(VARSAYILAN_GENISLIK);
 
   function olcumAl(olay: LayoutChangeEvent) {
@@ -96,7 +98,7 @@ function Cizim({ noktalar, baslik }: Props) {
                 fill={renkler.muted}
                 fontSize={12}
               >
-                {formatWeight(deger)}
+                {formatWeight(deger, dil)}
               </SvgText>
             </G>
           ))}
@@ -125,7 +127,7 @@ function Cizim({ noktalar, baslik }: Props) {
             <Circle key={`nokta-${sira}`} cx={k.x} cy={k.y} r={5} stroke={renkler.accent} strokeWidth={2.5} fill={renkler.bg} />
           ))}
           {etiketliSiralar.map((sira) => {
-            const metin = formatWeight(noktalar[sira].deger);
+            const metin = formatWeight(noktalar[sira].deger, dil);
             const etiketGenisligi = metin.length * 8 + 16;
             const merkezX = Math.min(
               Math.max(koordinatlar[sira].x, etiketGenisligi / 2),

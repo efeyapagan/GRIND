@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import IkonDugmesi from './IkonDugmesi';
 
 interface Props {
@@ -24,6 +25,7 @@ const BASLIK_ID = 'modal-baslik';
  * yüzden "pencere kapalı" durumu ortamdan bağımsız olarak İÇERİĞİN YOKLUĞUYLA garanti edilir.
  */
 export default function Modal({ acik, onKapat, baslik, children }: Props) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function Modal({ acik, onKapat, baslik, children }: Props) {
         <h2 id={BASLIK_ID} className="text-heading">
           {baslik}
         </h2>
-        <IkonDugmesi etiket="Kapat" onClick={onKapat}>
+        <IkonDugmesi etiket={t('ortak.kapat')} onClick={onKapat}>
           <X aria-hidden size={20} />
         </IkonDugmesi>
       </div>

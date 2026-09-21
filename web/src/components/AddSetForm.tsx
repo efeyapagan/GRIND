@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
@@ -35,9 +37,6 @@ import HareketEklePaneli from './HareketEklePaneli';
  * tekrar denemeye ve sunucu tarafinda YINELENEN bir set olusturmaya -- ve o yinelenen setin
  * PR tespitini de etkilemeye -- iter); yerine kullaniciyi listeyi kontrol etmeye yonlendirir.
  */
-const BAGLANTI_HATASI_MESAJI =
-  'Sunucuya ulaşılamadı. Set kaydedilmemiş olabilir; tekrar denemeden önce listeyi kontrol edin.';
-
 const PANEL_ID = 'set-paneli';
 
 interface Props {
@@ -68,6 +67,8 @@ interface Props {
  * boylece yazilanlar ve dinlenme sayaci korunur (dilim 3 spec Karar 6).
  */
 export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
+  const { t } = useTranslation();
+  const dil = useDil();
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
@@ -186,7 +187,9 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
       });
       // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
       // en sik akis (spec Karar 6). Odak agirlik alanina doner.
-      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
+      setSonEklenen(
+        t('setler.eklendi', { agirlik: formatWeight(ayristirilmisAgirlik, dil), tekrar: ayristirilmisTekrar }),
+      );
       setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
       agirlikRef.current?.focus();
     } catch (hata) {
@@ -199,7 +202,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
         setGenelHata(sonuc.genelHata);
         setAlanHatalari(sonuc.alanHatalari);
       } else {
-        setGenelHata(BAGLANTI_HATASI_MESAJI);
+        setGenelHata(t('setler.baglantiHatasi'));
         // Istek sunucuya ulasip ulasmadigini BILEMEDIGIMIZ icin (R15), baglanti geri gelince
         // ekranin GERCEGI gostermesi icin acik oturumu ve o oturumun setlerini invalidate
         // ediyoruz -- set gercekte kaydedilmis olabilir, kullanici listeyi kontrol edebilsin.
@@ -246,7 +249,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
                 onClick={() => setHareketEkleAcik(true)}
               >
                 <Plus aria-hidden size={20} />
-                Hareket ekle
+                {t('antrenman.hareketEkle')}
               </BirincilDugme>
             )
           ) : (
@@ -262,17 +265,19 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
               }}
             >
               <Plus aria-hidden size={20} />
-              Set ekle
+              {t('setler.setEkle')}
             </BirincilDugme>
           ))}
         <form id={PANEL_ID} hidden={!acik} onSubmit={gonder} className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             {hareketEkleme ? (
-              <h2 className="pl-1 text-label text-muted uppercase">Yeni set: {seciliEgzersizAdi}</h2>
+              <h2 className="pl-1 text-label text-muted uppercase">
+                {t('setler.yeniSetIcin', { ad: seciliEgzersizAdi })}
+              </h2>
             ) : (
-              <span className="pl-1 text-label text-muted uppercase">Yeni set</span>
+              <span className="pl-1 text-label text-muted uppercase">{t('setler.yeniSet')}</span>
             )}
-            <IkonDugmesi etiket="Paneli kapat" onClick={() => onAcikDegis(false)}>
+            <IkonDugmesi etiket={t('setler.paneliKapat')} onClick={() => onAcikDegis(false)}>
               <X aria-hidden size={20} />
             </IkonDugmesi>
           </div>
@@ -280,7 +285,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
           {!hareketEkleme && (
             <div>
               <label htmlFor="set-egzersiz" className="sr-only">
-                Egzersiz
+                {t('setler.egzersizEtiket')}
               </label>
               <SecimKutusu
                 id="set-egzersiz"
@@ -298,8 +303,8 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
           <div className="grid grid-cols-3 gap-2">
             <SayiAlani
               id="set-agirlik"
-              etiket="Ağırlık"
-              ekranOkuyucuEki=" (kg)"
+              etiket={t('setGirdisi.agirlikEtiket')}
+              ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
               birim="kg"
               inputMode="decimal"
               placeholder="0"
@@ -310,8 +315,8 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
             />
             <SayiAlani
               id="set-tekrar"
-              etiket="Tekrar"
-              birim="tekrar"
+              etiket={t('setGirdisi.tekrarEtiket')}
+              birim={t('setGirdisi.tekrarBirimi')}
               inputMode="numeric"
               placeholder="0"
               value={tekrar}
@@ -320,9 +325,9 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
             />
             <SayiAlani
               id="set-rir"
-              etiket="RIR"
-              ekranOkuyucuEki=" (opsiyonel)"
-              birim="kalan"
+              etiket={t('setGirdisi.rirEtiket')}
+              ekranOkuyucuEki={t('setGirdisi.opsiyonelEki')}
+              birim={t('setGirdisi.kalanBirimi')}
               inputMode="numeric"
               placeholder="—"
               value={rir}
@@ -335,7 +340,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
           </p>
           <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
             <Plus aria-hidden size={24} />
-            Set ekle
+            {t('setler.setEkle')}
           </BirincilDugme>
         </form>
       </div>

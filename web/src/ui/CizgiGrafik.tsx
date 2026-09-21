@@ -1,4 +1,5 @@
 import { useId, useRef } from 'react';
+import { useDil } from '@grind/shared/i18n';
 import { formatWeight } from '../lib/format';
 import { eksenDegerleri } from '../lib/grafik';
 import { useGenislik } from '../lib/useGenislik';
@@ -43,6 +44,7 @@ export default function CizgiGrafik({ noktalar, birim, baslik }: Props) {
 }
 
 function Cizim({ noktalar, birim, baslik }: Props) {
+  const dil = useDil();
   const kapRef = useRef<HTMLDivElement>(null);
   const genislik = useGenislik(kapRef, VARSAYILAN_GENISLIK);
   // useId ":" / "«" gibi karakterler uretebilir; url(#...) icinde guvenli olsun diye temizlenir.
@@ -97,7 +99,7 @@ function Cizim({ noktalar, birim, baslik }: Props) {
                 dominantBaseline="middle"
                 className="fill-muted text-label tabular-nums"
               >
-                {formatWeight(deger)}
+                {formatWeight(deger, dil)}
               </text>
             </g>
           ))}
@@ -136,7 +138,7 @@ function Cizim({ noktalar, birim, baslik }: Props) {
             />
           ))}
           {etiketliSiralar.map((sira) => {
-            const metin = formatWeight(noktalar[sira].deger);
+            const metin = formatWeight(noktalar[sira].deger, dil);
             const etiketGenisligi = metin.length * 8 + 16;
             const merkezX = Math.min(
               Math.max(koordinatlar[sira].x, etiketGenisligi / 2),
@@ -169,7 +171,7 @@ function Cizim({ noktalar, birim, baslik }: Props) {
       </svg>
       <ul className="sr-only">
         {noktalar.map((nokta, sira) => (
-          <li key={`${nokta.etiket}-${sira}`}>{`${nokta.etiket}: ${formatWeight(nokta.deger)} ${birim}`}</li>
+          <li key={`${nokta.etiket}-${sira}`}>{`${nokta.etiket}: ${formatWeight(nokta.deger, dil)} ${birim}`}</li>
         ))}
       </ul>
     </div>

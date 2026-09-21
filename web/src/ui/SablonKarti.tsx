@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const KART =
   'flex min-h-16 w-full items-center justify-between gap-4 rounded-xl bg-surface-2 p-4 text-left disabled:opacity-60';
@@ -14,11 +15,14 @@ type Props = { ad: string; hareketSayisi: number } & (
  * antrenmani baslatan dugme. "N hareket" yanittaki listenin uzunlugudur (sunum).
  */
 export default function SablonKarti(props: Props) {
+  const { t } = useTranslation();
   const icerik = (
     <>
       <span className="flex min-w-0 flex-col gap-1">
         <span className="truncate text-body-lg font-semibold">{props.ad}</span>{' '}
-        <span className="text-label text-muted">{props.hareketSayisi} hareket</span>
+        <span className="text-label text-muted">
+          {t('sablonlar.hareketSayisi', { count: props.hareketSayisi })}
+        </span>
       </span>
       <ChevronRight aria-hidden size={20} className="shrink-0 text-muted" />
     </>

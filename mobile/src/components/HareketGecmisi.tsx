@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '@grind/shared/api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
 import CizgiGrafik from '../ui/CizgiGrafik';
@@ -61,6 +62,7 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
 }
 
 function HareketGrafigi({ exerciseId, exerciseName }: Props) {
+  const dil = useDil();
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
   const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
@@ -101,18 +103,18 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           <View className="flex-row gap-8">
             <View className="flex-col gap-1">
               <Text className="text-label text-muted">Şu anki</Text>
-              <Text className="text-metric text-fg">{formatWeight(son.deger)}</Text>
+              <Text className="text-metric text-fg">{formatWeight(son.deger, dil)}</Text>
             </View>
             {cizilecekler.length > 1 && (
               <View className="flex-col gap-1">
                 <Text className="text-label text-muted">Fark</Text>
-                <Text className="text-metric text-fg">{formatFark(son.deger - ilk.deger)}</Text>
+                <Text className="text-metric text-fg">{formatFark(son.deger - ilk.deger, dil)}</Text>
               </View>
             )}
           </View>
-          <Text className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt)}</Text>
+          <Text className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt, dil)}</Text>
           <CizgiGrafik
-            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt), deger }))}
+            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt, dil), deger }))}
             birim="kg"
             baslik={`${exerciseName} ${sekme.ozetAdi}, ${cizilecekler.length} antrenman`}
           />

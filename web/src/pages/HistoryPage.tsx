@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Brain, CalendarDays } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '../api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { sallamaIzniIste, useSallama } from '../lib/sallama';
@@ -30,7 +31,8 @@ import { usePageTitle } from '../ui/PageTitleContext';
  * tamamlanir: kullanici "sildim" dedi, geri almadi.
  */
 export default function HistoryPage() {
-  usePageTitle('Geçmiş');
+  const { t } = useTranslation();
+  usePageTitle(t('kabuk.sekmeGecmis'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
   // bagimlilik olarak kullanilabilir, ref'e kopyalanmasi gerekmez.
@@ -99,19 +101,19 @@ export default function HistoryPage() {
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-3 px-4 text-label text-fg"
       >
         <Brain aria-hidden size={18} />
-        AI yorumu
+        {t('yorumlar.baslik')}
       </Link>
 
-      {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
+      {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
 
       {isError && (
         <p role="alert" className="text-body text-danger">
-          Geçmiş alınamadı. Lütfen sayfayı yenileyin.
+          {t('gecmis.hata')}
         </p>
       )}
 
       {!isLoading && !isError && data && gorunenler.length === 0 && (
-        <BosDurum ikon={CalendarDays} baslik="Henüz antrenman geçmişi yok" />
+        <BosDurum ikon={CalendarDays} baslik={t('gecmis.bosBaslik')} />
       )}
 
       {!isLoading && !isError && data && gorunenler.length > 0 && (
@@ -128,7 +130,7 @@ export default function HistoryPage() {
           {/* Gorunmez sentinel: listenin sonuna gelinince (`IntersectionObserver`) bir sonraki
               sayfa otomatik cekilir -- `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
           <div ref={sentinelRef} aria-hidden className="h-px" />
-          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
+          {isFetchingNextPage && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
         </>
       )}
 
@@ -136,7 +138,7 @@ export default function HistoryPage() {
         <GeriAlSeridi
           // `key`: ard arda iki silmede serit YENIDEN monte olsun, pencere bastan baslasin.
           key={bekleyen.sessionId}
-          mesaj="Antrenman silindi"
+          mesaj={t('gecmis.silindi')}
           sureMs={GERI_AL_MS}
           onGeriAl={geriAl}
           onSureDoldu={sureDoldu}

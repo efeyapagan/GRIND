@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Timer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   bittiMi,
   EK_SURE_SN,
@@ -26,6 +27,7 @@ interface Props {
  * sonra satiri kaldirir. Calisirken ekran acik tutulur (Wake Lock; sayfa gorunur olunca yeniden).
  */
 export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
+  const { t } = useTranslation();
   const [simdi, setSimdi] = useState(() => Date.now());
   // Yeni bir sayac basladiginda `simdi` bir onceki tikten kalma olabilir; baslangic anindan once
   // olamaz (bkz. Dinlenme yorumu).
@@ -87,7 +89,7 @@ export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
     <>
       {/* Canli bolge HER ZAMAN var; yalnizca bitiste dolar. Geri sayim saniyeleri duyurulmaz. */}
       <p role="status" className="sr-only">
-        {bitti ? 'Dinlenme bitti' : ''}
+        {bitti ? t('antrenman.dinlenmeBitti') : ''}
       </p>
       {dinlenme && (
         <div className="flex flex-col gap-2 rounded-lg bg-surface-2 px-3 py-2">
@@ -96,11 +98,11 @@ export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
               <Timer aria-hidden size={18} className="text-muted" />
               {bitti ? (
                 <span aria-hidden className="text-body-lg font-semibold">
-                  Dinlenme bitti
+                  {t('antrenman.dinlenmeBitti')}
                 </span>
               ) : (
                 <>
-                  <span className="text-label text-muted uppercase">Dinlenme</span>
+                  <span className="text-label text-muted uppercase">{t('antrenman.dinlenme')}</span>
                   <span className="text-metric tabular-nums">{kalanSureMetni(kalanMs(dinlenme, etkinSimdi))}</span>
                 </>
               )}
@@ -108,10 +110,10 @@ export default function DinlenmeSayaci({ dinlenme, onDegis }: Props) {
             {!bitti && (
               <span className="flex items-center gap-1">
                 <button type="button" onClick={() => onDegis(sureEkle(dinlenme, EK_SURE_SN))} className={KUCUK_DUGME}>
-                  +15 sn
+                  {t('antrenman.dinlenmeEkleSure')}
                 </button>
                 <button type="button" onClick={() => onDegis(null)} className={KUCUK_DUGME}>
-                  Atla
+                  {t('ortak.atla')}
                 </button>
               </span>
             )}

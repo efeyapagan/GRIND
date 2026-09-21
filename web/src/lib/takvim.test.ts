@@ -1,4 +1,4 @@
-import { ayIzgarasi, haftaGunleri, setKademesi } from './takvim';
+import { ayBasligi, ayIzgarasi, gunBasligi, haftaGunleri, setKademesi } from './takvim';
 
 test('ay izgarasi Pazartesi baslar; ay disindaki hucreler bostur', () => {
   // 1 Eylul 2026 Salı, 30 Eylul Carsamba.
@@ -35,4 +35,14 @@ test('hafta Pazartesi baslar, Pazar biter ve ay gecisini asar (31 -> 1)', () => 
 
 test('set sayisi kademeye esiklerle cevrilir', () => {
   expect([0, 1, 8, 9, 16, 17, 24, 25, 60].map(setKademesi)).toEqual([0, 1, 1, 2, 2, 3, 3, 4, 4]);
+});
+
+test('ayBasligi ve gunBasligi TR baslik yazar', () => {
+  expect(ayBasligi('2026-09-14', 'tr')).toBe('Eylül 2026');
+  expect(gunBasligi('2026-09-14', 'tr')).toBe('14 Eylül');
+});
+
+test('Ingilizce ay ve gun basligi', () => {
+  expect(ayBasligi('2026-09-14', 'en')).toBe('September 2026');
+  expect(gunBasligi('2026-09-14', 'en')).toBe('14 September');
 });
