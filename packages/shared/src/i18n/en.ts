@@ -18,4 +18,9 @@ export const en: Katalog = {
     tekrarTamSayiOlmali: 'Reps must be a whole number.',
     rirTamSayiOlmali: 'RIR must be a whole number.',
   },
+  dil: {
+    etiket: 'Language',
+    turkce: 'Türkçe',
+    ingilizce: 'English',
+  },
 };

@@ -18,4 +18,5 @@ afterEach(matchMediaSifirla);
 i18nBaslat('tr');
 afterEach(() => {
   void i18n.changeLanguage('tr');
+  document.documentElement.lang = 'tr';
 });

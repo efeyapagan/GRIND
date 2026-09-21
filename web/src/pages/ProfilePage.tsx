@@ -7,6 +7,7 @@ import SifreAlani from '../ui/SifreAlani';
 import HataKutusu from '../ui/HataKutusu';
 import BirincilDugme from '../ui/BirincilDugme';
 import HaftalikHedefSecici from '../components/HaftalikHedefSecici';
+import DilSecici from '../components/DilSecici';
 
 const MIN_SIFRE_KARAKTER = 8;
 const MAKS_SIFRE_BAYT = 72;
@@ -53,6 +54,9 @@ export default function ProfilePage() {
           Antrenman hedefi
         </h2>
         <HaftalikHedefSecici />
+      </section>
+      <section className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
+        <DilSecici />
       </section>
       <button
         type="button"

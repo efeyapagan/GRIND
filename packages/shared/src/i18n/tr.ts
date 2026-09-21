@@ -20,6 +20,11 @@ export const tr = {
     tekrarTamSayiOlmali: 'Tekrar sayısı tam sayı olmalı.',
     rirTamSayiOlmali: 'RIR tam sayı olmalı.',
   },
+  dil: {
+    etiket: 'Dil',
+    turkce: 'Türkçe',
+    ingilizce: 'English',
+  },
 };
 
 export type Katalog = typeof tr;
