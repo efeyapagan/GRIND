@@ -10,9 +10,9 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Altmisbes_global_egzersiz_seed_edilmistir()
+    public void Yuzyetmis_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(65, Seed().Count);
+        Assert.Equal(170, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +28,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_altmisbese_kadar_benzersizdir()
+    public void Seed_id_leri_birden_yuzyetmise_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 65).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 170).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -114,7 +114,122 @@ public class SeedDataTests
             ("Side Plank Rotation", ExerciseCategory.Other),
             ("Single Arm Banded OHP", ExerciseCategory.Push),
             ("Single Arm Banded Row", ExerciseCategory.Pull),
-            ("Single Arm Barbell Hold", ExerciseCategory.Other)
+            ("Single Arm Barbell Hold", ExerciseCategory.Other),
+
+            // #121: Kapsamlı Gym Egzersiz ve Varyasyon Rehberi. Mevcut hareketin tekrarı olanlar
+            // eklenmedi; ağırlıklı varyasyonlar (Weighted Pull-up/Plank) ağırlık alanıyla kaydedilir.
+            // Göğüs/omuz/triceps Push, sırt/biceps/arka omuz Pull, bacak/kalça ve deadlift
+            // varyasyonları Legs (Deadlift gibi), karın/core Other.
+            ("Incline Barbell Bench Press", ExerciseCategory.Push),
+            ("Decline Barbell Bench Press", ExerciseCategory.Push),
+            ("Flat Dumbbell Bench Press", ExerciseCategory.Push),
+            ("Decline Dumbbell Bench Press", ExerciseCategory.Push),
+            ("Neutral Grip Dumbbell Press", ExerciseCategory.Push),
+            ("Flat Smith Machine Press", ExerciseCategory.Push),
+            ("Incline Smith Machine Press", ExerciseCategory.Push),
+            ("Decline Smith Machine Press", ExerciseCategory.Push),
+            ("Machine Chest Press", ExerciseCategory.Push),
+            ("Incline Machine Chest Press", ExerciseCategory.Push),
+            ("Converging Chest Press", ExerciseCategory.Push),
+            ("Flat Dumbbell Fly", ExerciseCategory.Push),
+            ("Incline Dumbbell Fly", ExerciseCategory.Push),
+            ("Decline Dumbbell Fly", ExerciseCategory.Push),
+            ("High-to-Low Cable Fly", ExerciseCategory.Push),
+            ("Mid-Pulley Cable Fly", ExerciseCategory.Push),
+            ("Low-to-High Cable Fly", ExerciseCategory.Push),
+            ("Pec Deck", ExerciseCategory.Push),
+            ("Push-up", ExerciseCategory.Push),
+            ("Incline Push-up", ExerciseCategory.Push),
+            ("Decline Push-up", ExerciseCategory.Push),
+            ("Deficit Push-up", ExerciseCategory.Push),
+
+            ("Close-Grip Lat Pulldown", ExerciseCategory.Pull),
+            ("Reverse Grip Lat Pulldown", ExerciseCategory.Pull),
+            ("Single-Arm Cable Lat Pulldown", ExerciseCategory.Pull),
+            ("Chin-up", ExerciseCategory.Pull),
+            ("Neutral Grip Pull-up", ExerciseCategory.Pull),
+            ("Yates Row", ExerciseCategory.Pull),
+            ("Pendlay Row", ExerciseCategory.Pull),
+            ("Single-Arm Dumbbell Row", ExerciseCategory.Pull),
+            ("Chest-Supported Incline Dumbbell Row", ExerciseCategory.Pull),
+            ("Wide-Grip Seated Cable Row", ExerciseCategory.Pull),
+            ("Single-Arm Seated Cable Row", ExerciseCategory.Pull),
+            ("T-Bar Row", ExerciseCategory.Pull),
+            ("Iso-Lateral Machine Row", ExerciseCategory.Pull),
+            ("Trap Bar Deadlift", ExerciseCategory.Legs),
+            ("Rack Pull", ExerciseCategory.Legs),
+            ("Straight-Arm Cable Pulldown", ExerciseCategory.Pull),
+
+            ("Seated Barbell Overhead Press", ExerciseCategory.Push),
+            ("Behind-the-Neck Press", ExerciseCategory.Push),
+            ("Standing Dumbbell Shoulder Press", ExerciseCategory.Push),
+            ("Arnold Press", ExerciseCategory.Push),
+            ("Seated Smith Machine Overhead Press", ExerciseCategory.Push),
+            ("Plate-Loaded Shoulder Press Machine", ExerciseCategory.Push),
+            ("Pin-Loaded Shoulder Press Machine", ExerciseCategory.Push),
+            ("Standing Dumbbell Lateral Raise", ExerciseCategory.Push),
+            ("Seated Dumbbell Lateral Raise", ExerciseCategory.Push),
+            ("Incline Lean-Away Lateral Raise", ExerciseCategory.Push),
+            ("Cuff Cable Lateral Raise", ExerciseCategory.Push),
+            ("Reverse Pec Deck", ExerciseCategory.Pull),
+            ("Chest-Supported Incline Dumbbell Rear Delt Fly", ExerciseCategory.Pull),
+            ("Bent-over Dumbbell Rear Delt Raise", ExerciseCategory.Pull),
+            ("Cable Rear Delt Crossover", ExerciseCategory.Pull),
+            ("Barbell Front Raise", ExerciseCategory.Push),
+            ("Dumbbell Front Raise", ExerciseCategory.Push),
+
+            ("Low-Bar Back Squat", ExerciseCategory.Legs),
+            ("Zercher Squat", ExerciseCategory.Legs),
+            ("Hack Squat", ExerciseCategory.Legs),
+            ("Pendulum Squat", ExerciseCategory.Legs),
+            ("Smith Machine Squat", ExerciseCategory.Legs),
+            ("Bulgarian Split Squat", ExerciseCategory.Legs),
+            ("Walking Lunge", ExerciseCategory.Legs),
+            ("Reverse Lunge", ExerciseCategory.Legs),
+            ("Dumbbell Step-Up", ExerciseCategory.Legs),
+            ("Seated Leg Extension", ExerciseCategory.Legs),
+            ("Sissy Squat", ExerciseCategory.Legs),
+            ("Smith Machine Hip Thrust", ExerciseCategory.Legs),
+            ("Glute Drive Machine", ExerciseCategory.Legs),
+            ("Single-Leg Hip Thrust", ExerciseCategory.Legs),
+            ("Dumbbell Romanian Deadlift", ExerciseCategory.Legs),
+            ("B-Stance Romanian Deadlift", ExerciseCategory.Legs),
+            ("Standing Single-Leg Curl", ExerciseCategory.Legs),
+            ("Standing Calf Raise", ExerciseCategory.Legs),
+            ("Leg Press Calf Raise", ExerciseCategory.Legs),
+
+            ("EZ-Bar Preacher Curl", ExerciseCategory.Pull),
+            ("Single-Arm Dumbbell Preacher Curl", ExerciseCategory.Pull),
+            ("Machine Preacher Curl", ExerciseCategory.Pull),
+            ("Incline Dumbbell Curl", ExerciseCategory.Pull),
+            ("Concentration Curl", ExerciseCategory.Pull),
+            ("Spider Curl", ExerciseCategory.Pull),
+            ("Standing Dumbbell Hammer Curl", ExerciseCategory.Pull),
+            ("Seated Dumbbell Hammer Curl", ExerciseCategory.Pull),
+            ("Cable Rope Hammer Curl", ExerciseCategory.Pull),
+            ("Reverse Grip Barbell Curl", ExerciseCategory.Pull),
+            ("Low Pulley Cable Curl", ExerciseCategory.Pull),
+            ("High Cable Curl", ExerciseCategory.Pull),
+            ("Cable Rope Pushdown", ExerciseCategory.Push),
+            ("Reverse Grip Cable Pushdown", ExerciseCategory.Push),
+            ("Skull Crusher", ExerciseCategory.Push),
+            ("Incline Skull Crusher", ExerciseCategory.Push),
+            ("Decline Skull Crusher", ExerciseCategory.Push),
+            ("Overhead Dumbbell Triceps Extension", ExerciseCategory.Push),
+            ("Close-Grip Bench Press", ExerciseCategory.Push),
+            ("Bench Dips", ExerciseCategory.Push),
+
+            ("Crunch", ExerciseCategory.Other),
+            ("Decline Bench Crunch", ExerciseCategory.Other),
+            ("Kneeling Cable Crunch", ExerciseCategory.Other),
+            ("Hanging Leg Raise", ExerciseCategory.Other),
+            ("Hanging Knee Raise", ExerciseCategory.Other),
+            ("Captain's Chair Leg Raise", ExerciseCategory.Other),
+            ("Lying Leg Raise", ExerciseCategory.Other),
+            ("Reverse Crunch", ExerciseCategory.Other),
+            ("Plank", ExerciseCategory.Other),
+            ("Cable Pallof Press", ExerciseCategory.Other),
+            ("Russian Twist", ExerciseCategory.Other)
         ];
 
         var actual = Seed()
