@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Undo2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   mesaj: string;
@@ -25,6 +26,7 @@ interface Props {
  * halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa serit o dugmeyle CAKISIYORDU.
  */
 export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: Props) {
+  const { t } = useTranslation();
   const [bitisMs] = useState(() => Date.now() + sureMs);
   const [simdi, setSimdi] = useState(() => Date.now());
   const kalanMs = Math.max(0, bitisMs - simdi);
@@ -54,7 +56,7 @@ export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: P
             className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-label text-accent-fg"
           >
             <Undo2 aria-hidden size={18} />
-            Geri al
+            {t('ortak.geriAl')}
           </button>
         </div>
         {/* Kalan sure: yerel <progress>, satir ici style gerektirmeden dolar (DinlenmeSayaci deseni). */}

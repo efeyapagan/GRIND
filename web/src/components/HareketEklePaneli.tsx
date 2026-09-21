@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Egzersiz } from '../api/queries';
 import HareketSecici from '../ui/HareketSecici';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -16,13 +17,14 @@ interface Props {
  * acilir acilmaz odaklanir ve listesi yukari acilir (panel ekranin altinda).
  */
 export default function HareketEklePaneli({ egzersizler, onSec, onKapat }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor="hareket-ekle" className="pl-1 text-label text-muted uppercase">
-          Hareket ekle
+          {t('antrenman.hareketEkle')}
         </label>
-        <IkonDugmesi etiket="Hareket eklemeyi kapat" onClick={onKapat}>
+        <IkonDugmesi etiket={t('antrenman.hareketEklemeyiKapat')} onClick={onKapat}>
           <X aria-hidden size={20} />
         </IkonDugmesi>
       </div>

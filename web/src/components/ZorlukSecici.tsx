@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { Zorluk } from '../api/queries';
 
 interface Props {
@@ -5,11 +6,11 @@ interface Props {
   bekliyor: boolean;
 }
 
-/** Sunucunun enum degerleri Ingilizce (`Easy`/`Medium`/`Hard`), kullaniciya gosterilen etiket Turkce. */
-const SECENEKLER: { deger: Zorluk; etiket: string }[] = [
-  { deger: 'Easy', etiket: 'Kolay' },
-  { deger: 'Medium', etiket: 'Orta' },
-  { deger: 'Hard', etiket: 'Zor' },
+/** Sunucunun enum degerleri Ingilizce (`Easy`/`Medium`/`Hard`); etiket katalogdan gelir (#177). */
+const SECENEKLER: { deger: Zorluk; anahtar: 'antrenman.zorluk.Easy' | 'antrenman.zorluk.Medium' | 'antrenman.zorluk.Hard' }[] = [
+  { deger: 'Easy', anahtar: 'antrenman.zorluk.Easy' },
+  { deger: 'Medium', anahtar: 'antrenman.zorluk.Medium' },
+  { deger: 'Hard', anahtar: 'antrenman.zorluk.Hard' },
 ];
 
 /**
@@ -20,10 +21,11 @@ const SECENEKLER: { deger: Zorluk; etiket: string }[] = [
  * esit -- dokunus antrenmani BITIRIR, bu yuzden bir "secili hap" hali hic olusmaz.
  */
 export default function ZorlukSecici({ onSec, bekliyor }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <span className="text-label text-muted">Nasıl geçti?</span>
-      {SECENEKLER.map(({ deger, etiket }) => (
+      <span className="text-label text-muted">{t('antrenman.nasilGecti')}</span>
+      {SECENEKLER.map(({ deger, anahtar }) => (
         <button
           key={deger}
           type="button"
@@ -31,7 +33,7 @@ export default function ZorlukSecici({ onSec, bekliyor }: Props) {
           disabled={bekliyor}
           className="min-h-11 rounded-full bg-surface-3 px-4 text-label text-fg disabled:opacity-60"
         >
-          {etiket}
+          {t(anahtar)}
         </button>
       ))}
       <button
@@ -40,7 +42,7 @@ export default function ZorlukSecici({ onSec, bekliyor }: Props) {
         disabled={bekliyor}
         className="min-h-11 rounded-lg px-2 text-label text-muted disabled:opacity-60"
       >
-        Atla
+        {t('ortak.atla')}
       </button>
     </div>
   );

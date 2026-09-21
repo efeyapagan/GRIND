@@ -1,4 +1,5 @@
 import { Timer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { kalanSureMetni } from '../lib/dinlenme';
 
 /**
@@ -7,6 +8,7 @@ import { kalanSureMetni } from '../lib/dinlenme';
  * once dinlenilmis gibi okunurdu. Geri sayim sayacinin hedef suresiyle karistirilmasin.
  */
 export default function DinlenmeHapi({ saniye }: { saniye: number | null }) {
+  const { t } = useTranslation();
   if (saniye === null) {
     return null;
   }
@@ -14,7 +16,7 @@ export default function DinlenmeHapi({ saniye }: { saniye: number | null }) {
   return (
     <span className="inline-flex shrink-0 items-center gap-1 text-label-xs text-muted tabular-nums">
       <Timer aria-hidden size={14} />
-      <span className="sr-only">Dinlenme </span>
+      <span className="sr-only">{t('antrenman.dinlenme')} </span>
       <span>{kalanSureMetni(saniye * 1000)}</span>
     </span>
   );
