@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -9,7 +10,6 @@ import {
   useAddSessionExercise,
   useDeleteSession,
   useExercises,
-  useFinishSession,
   useOpenSession,
   useSessionSets,
   useStartSession,
@@ -23,7 +23,6 @@ import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
 import HareketGecmisi from '../components/HareketGecmisi';
 import HareketKartlari from '../components/HareketKartlari';
-import ZorlukSecici from '../components/ZorlukSecici';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
@@ -80,14 +79,12 @@ export default function AntrenmanPage() {
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
   const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
-  const bitirMutasyonu = useFinishSession();
+  const navigate = useNavigate();
   const baslatMutasyonu = useStartSession();
   const iptalMutasyonu = useDeleteSession();
   const hareketEkleMutasyonu = useAddSessionExercise();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
-  // #118: "Antrenmani bitir"e dokunulduysa zorluk sorusu gosterilir; oturum henuz KAPANMAMISTIR.
-  const [zorlukSoruluyor, setZorlukSoruluyor] = useState(false);
 
   // Issue #57: set silme. Bekleyen set listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal
   // et" karari sunucu verisinden gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz.
@@ -214,25 +211,13 @@ export default function AntrenmanPage() {
     <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-5 pt-2">
       <header className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          {/* "Devam ediyor" rozeti "Antrenmani bitir" ile AYNI satirda (issue #151); "Nasil
-              gecti?" sorusu acikken rozetin yerini bitirmeden VAZGECME (iptal degil, geri
-              donme) icin bir X alir. */}
-          {gorunenOturum?.isOpen &&
-            (zorlukSoruluyor ? (
-              <button
-                type="button"
-                aria-label={t('antrenman.nasilGectiKapat')}
-                onClick={() => setZorlukSoruluyor(false)}
-                className="flex size-11 items-center justify-center"
-              >
-                <X aria-hidden size={18} />
-              </button>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
-                <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
-                {t('antrenman.devamEdiyor')}
-              </span>
-            ))}
+          {/* "Devam ediyor" rozeti "Antrenmani bitir" ile AYNI satirda (issue #151). */}
+          {gorunenOturum?.isOpen && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
+              <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
+              {t('antrenman.devamEdiyor')}
+            </span>
+          )}
           {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
               dokunulan bir sablon kartinin geri alinmasi budur. "Bitir" bu durumda gecmise BOS bir
               antrenman birakirdi (sorunun ta kendisi). Set girilince iptal kaybolur, "bitir" doner:
@@ -251,17 +236,12 @@ export default function AntrenmanPage() {
                 <X aria-hidden size={18} />
                 {t('antrenman.iptalEt')}
               </button>
-            ) : zorlukSoruluyor ? (
-              // #118: bitirme iki adim -- once "nasil gecti", sonra kapanis. Zorluk YALNIZCA burada
-              // alinir (sunucuda sonradan degistiren bir uc yok), bu yuzden soru bitirmenin onunde durur.
-              <ZorlukSecici
-                bekliyor={bitirMutasyonu.isPending}
-                onSec={(zorluk) => bitirMutasyonu.mutate({ sessionId: gorunenOturum.id, zorluk })}
-              />
             ) : (
+              // #182: oturumu burada KAPATMAZ -- zorluk kadraninin oldugu bitirme sayfasina goturur
+              // (zorluk yalnizca bitirirken alinir, sunucuda sonradan degistiren bir uc yok).
               <button
                 type="button"
-                onClick={() => setZorlukSoruluyor(true)}
+                onClick={() => navigate('/antrenman/bitir')}
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
               >
                 <CircleCheck aria-hidden size={18} />
@@ -276,11 +256,6 @@ export default function AntrenmanPage() {
               {t('antrenman.baslangic', { saat: formatSaat(gorunenOturum.startedAt) })}
             </span>
           </div>
-        )}
-        {bitirMutasyonu.isError && (
-          <p role="alert" className="text-label text-danger">
-            {t('antrenman.bitirilemedi')}
-          </p>
         )}
         {baslatMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Redirect, useRouter } from 'expo-router';
 import { useFinishSession, useOpenSession, type Zorluk } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
@@ -11,25 +12,41 @@ import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
 /** Kadran burada açılır: ortadaki kademe, hiç dokunmadan bitirenin göndereceği değerdir. */
 const VARSAYILAN_ZORLUK: Zorluk = 'Medium';
 
+function MetinEylemi({ etiket, disabled, onPress }: { etiket: string; disabled: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      className={`min-h-11 items-center justify-center rounded-lg px-4 ${disabled ? 'opacity-60' : ''}`}
+    >
+      <Text className="text-label text-muted">{etiket}</Text>
+    </Pressable>
+  );
+}
+
 /**
  * Antrenmanı kapatan ekran (#153). "Antrenmanı bitir" artık antrenman ekranında oturumu kapatmaz,
  * buraya getirir: kullanıcı zorluğu kadranı çevirerek seçer, sonra bitirir. Zorluk YALNIZCA
  * bitirirken alınır (sunucuda sonradan değiştiren bir uç yok), bu yüzden soru bitirmenin önünde durur.
  *
- * Seçim zorunlu değil: "Atla" antrenmanı zorluksuz kapatır (sunucuda alan nullable). Geri dönülürse
- * oturum açık kalır — bu ekran hiçbir şeyi kendiliğinden kapatmaz.
+ * Seçim zorunlu değil: "Atla" antrenmanı zorluksuz kapatır (sunucuda alan nullable). "Devam et" (#182)
+ * ya da cihazın geri tuşuyla dönülürse oturum açık kalır — bu ekran hiçbir şeyi kendiliğinden kapatmaz.
  */
 export default function AntrenmanBitirScreen() {
-  usePageTitle('Nasıl geçti?');
+  const { t } = useTranslation();
+  usePageTitle(t('antrenman.nasilGecti'));
   const router = useRouter();
   const { data: oturum, isLoading, isError } = useOpenSession();
   const bitirMutasyonu = useFinishSession();
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
+  // Kadran cevrilirken ekran kaymaz: iOS ScrollView jesti aksi halde dikey hareketi calar (#182).
+  const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
 
   if (isLoading) {
     return (
       <View className="flex-1 px-4 pt-2">
-        <Text className="text-body text-muted">Yükleniyor...</Text>
+        <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>
       </View>
     );
   }
@@ -48,35 +65,39 @@ export default function AntrenmanBitirScreen() {
   }
 
   return (
-    <EkranKaydirici contentContainerClassName="flex-grow items-center gap-6 px-4 pt-6 pb-4">
+    <EkranKaydirici
+      scrollEnabled={!kadranCevriliyor}
+      contentContainerClassName="flex-grow items-center gap-6 px-4 pt-6 pb-4"
+    >
       <Text className="text-center text-body text-muted">
-        Bu antrenman sana nasıl geldi? Kadranı çevirerek seç.
+        {t('antrenman.bitirmeSorusu')}
       </Text>
 
-      <ZorlukKadrani deger={zorluk} onDegis={setZorluk} />
+      {/* Kadran, soru ile alttaki dugmeler arasindaki bosluğun ortasinda durur (#182). */}
+      <View className="flex-1 items-center justify-center gap-4">
+        <ZorlukKadrani deger={zorluk} onDegis={setZorluk} onSurukleme={setKadranCevriliyor} />
 
-      {bitirMutasyonu.isError && (
-        <Text accessibilityRole="alert" className="text-label text-danger">
-          Antrenman bitirilemedi. Lütfen tekrar deneyin.
-        </Text>
-      )}
+        {bitirMutasyonu.isError && (
+          <Text accessibilityRole="alert" className="text-label text-danger">
+            {t('antrenman.bitirilemedi')}
+          </Text>
+        )}
+      </View>
 
-      <View className="mt-auto w-full items-center gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
+      <View className="w-full items-center gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
         <BirincilDugme
           yukseklik="buyuk"
           disabled={bitirMutasyonu.isPending}
           onPress={() => bitir(zorluk)}
         >
-          Antrenmanı bitir
+          {t('antrenman.bitir')}
         </BirincilDugme>
-        <Pressable
-          accessibilityRole="button"
-          disabled={bitirMutasyonu.isPending}
-          onPress={() => bitir(null)}
-          className={`min-h-11 items-center justify-center rounded-lg px-4 ${bitirMutasyonu.isPending ? 'opacity-60' : ''}`}
-        >
-          <Text className="text-label text-muted">Atla</Text>
-        </Pressable>
+        {/* #182: solda "Devam et" (bitirmeden geri doner, oturum acik kalir), sagda "Atla" (zorluksuz
+            kapatir) -- ikisi de ayni sessiz metin eylemi, dugme degil. */}
+        <View className="w-full flex-row items-center justify-between">
+          <MetinEylemi etiket={t('ortak.devamEt')} disabled={bitirMutasyonu.isPending} onPress={() => router.back()} />
+          <MetinEylemi etiket={t('ortak.atla')} disabled={bitirMutasyonu.isPending} onPress={() => bitir(null)} />
+        </View>
       </View>
     </EkranKaydirici>
   );

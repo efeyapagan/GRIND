@@ -163,8 +163,10 @@ Object Reference) açığıdır.
   `Difficulty` (nullable — antrenman ne kadar zor geldi; #118'de geldi, #153'te beş kademe oldu:
   `VeryEasy`/`Easy`/`Medium`/`Hard`/`Maximal`. Adıyla saklanır (`varchar(20)`), bu yüzden yeni uç
   eklemek migration gerektirmez ama var olan adı değiştirmek eski satırları okunamaz yapar. Yalnızca
-  `POST /api/sessions/{id}/finish` gövdesinde belirlenir, sonradan değiştiren bir uç yoktur; mobilde
-  bitirme ayrı bir ekranda döner kadranla sorulur, web'de üç seçenekli satır olarak kaldı)
+  `POST /api/sessions/{id}/finish` gövdesinde belirlenir, sonradan değiştiren bir uç yoktur. İki
+  platformda da bitirme ayrı bir ekranda (web `/antrenman/bitir`, mobil `antrenman-bitir`) alt kısmı
+  açık bir sürat kadranıyla sorulur — #182; geometri `packages/shared/src/lib/zorlukKadrani.ts`.
+  Altında "Devam et" oturumu açık bırakıp geri döner, "Atla" zorluksuz kapatır)
 - **SessionExercise** (#60/#62): `Id`, `WorkoutSessionId` (FK, CASCADE), `ExerciseId` (FK, RESTRICT),
   `OrderIndex`, `PlannedSets` (nullable — `null` = hedefsiz, antrenmana sonradan eklenen hareket),
   `RestSeconds` (0–900, varsayılan 90) — antrenmanın kendi hareket listesi; `(WorkoutSessionId, ExerciseId)`
