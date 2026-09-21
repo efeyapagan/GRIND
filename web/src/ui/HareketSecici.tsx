@@ -1,16 +1,20 @@
 import { useRef, useState } from 'react';
 import { Check, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Egzersiz, EgzersizKategorisi } from '../api/queries';
 import { egzersizAra } from '../lib/egzersizler';
 
-/** Kategori hapları (#77): `null` = Tümü. Push/Pull/Legs uygulamanın kendi terimleri, çevrilmez. */
-const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
-  { deger: null, etiket: 'Tümü' },
-  { deger: 'Push', etiket: 'Push' },
-  { deger: 'Pull', etiket: 'Pull' },
-  { deger: 'Legs', etiket: 'Legs' },
-  { deger: 'Other', etiket: 'Diğer' },
-];
+/**
+ * Kategori hapları (#77): `null` = Tümü. Push/Pull/Legs uygulamanın kendi terimleri, iki dilde de
+ * aynı kalır; etiket yine de katalogdan gelir (#177, `antrenman.kategori.<ad>`).
+ */
+const KATEGORI_HAPLARI = [
+  { deger: null as EgzersizKategorisi | null, anahtar: 'antrenman.kategoriTumu' },
+  { deger: 'Push' as EgzersizKategorisi | null, anahtar: 'antrenman.kategori.Push' },
+  { deger: 'Pull' as EgzersizKategorisi | null, anahtar: 'antrenman.kategori.Pull' },
+  { deger: 'Legs' as EgzersizKategorisi | null, anahtar: 'antrenman.kategori.Legs' },
+  { deger: 'Other' as EgzersizKategorisi | null, anahtar: 'antrenman.kategori.Other' },
+] as const;
 
 interface Props {
   id: string;
@@ -64,6 +68,7 @@ export default function HareketSecici({
   otomatikOdak = false,
   listeYukari = false,
 }: Props) {
+  const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
   const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
@@ -156,7 +161,7 @@ export default function HareketSecici({
 
       {/* Sonuc sayisi duyurulur: ekran okuyucu kullanicisi listeyi goremez, kac sonuc kaldigini bilmeli. */}
       <p role="status" className="sr-only">
-        {acik ? `${sonuclar.length} hareket bulundu` : ''}
+        {acik ? t('antrenman.hareketBulundu', { count: sonuclar.length }) : ''}
       </p>
 
       <div
@@ -168,9 +173,9 @@ export default function HareketSecici({
         {/* Kategori haplari (#77). Odak metin alaninda kalir (secenekler gibi pointerdown bastirilir):
             blur listeyi kapatirdi. Klavye kullanicisi zaten yazarak arar; haplar Tab sirasina girmez. */}
         <div className="flex flex-wrap gap-1 border-b border-surface-4 p-1">
-          {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
+          {KATEGORI_HAPLARI.map(({ deger, anahtar }) => (
             <button
-              key={etiket}
+              key={anahtar}
               type="button"
               tabIndex={-1}
               aria-pressed={kategori === deger}
@@ -183,14 +188,14 @@ export default function HareketSecici({
                 kategori === deger ? 'bg-surface-4 text-fg' : 'text-muted'
               }`}
             >
-              {etiket}
+              {t(anahtar)}
             </button>
           ))}
         </div>
         <ul
           id={listeId}
           role="listbox"
-          aria-label="Hareketler"
+          aria-label={t('antrenman.hareketlerListesi')}
           className="max-h-64 overflow-y-auto py-1"
         >
           {sonuclar.map((egzersiz, sira) => {
@@ -218,7 +223,7 @@ export default function HareketSecici({
           })}
           {acik && sonuclar.length === 0 && (
             <li role="presentation" className="px-4 py-3 text-body text-muted">
-              Eşleşen hareket yok.
+              {t('antrenman.eslesenYok')}
             </li>
           )}
         </ul>

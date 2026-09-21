@@ -209,6 +209,35 @@ test('mevcut sablon yuklenir: arsivli hareket hapi ve listede olmayan dinlenme d
   });
 });
 
+test('listede olmayan dinlenme degeri (600 sn) secenek etiketinde "sn" olarak kalir', async () => {
+  server.use(
+    http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
+    http.get('/api/templates/7', () =>
+      HttpResponse.json(
+        ornekSablon({
+          exercises: [
+            {
+              id: 1,
+              exerciseId: 1,
+              exerciseName: 'Bench Press',
+              category: 'Push',
+              isArchived: false,
+              orderIndex: 0,
+              plannedSets: 3,
+              restSeconds: 600,
+            },
+          ],
+        }),
+      ),
+    ),
+  );
+  duzenleyiciyiOlustur('/templates/7');
+
+  const secici = await screen.findByLabelText('1. hareket: Dinlenme');
+  expect(secici).toHaveValue('600');
+  expect(within(secici).getByRole('option', { name: '600 sn' })).toBeInTheDocument();
+});
+
 test('Bugun\'un "+ Sablon oluştur" dugmesinden gelen state ile kaydedince Bugun\'e donulur (issue #61 Karar 3)', async () => {
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),

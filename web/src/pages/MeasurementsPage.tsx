@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Plus, Scale, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { useDil } from '@grind/shared/i18n';
 import { useAddMeasurement, useDeleteMeasurement, useInfiniteMeasurements, type Olcu } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
-import { formatTrDate, formatTrTime } from '../lib/format';
+import { formatSaat, formatTarih } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import Modal from '../ui/Modal';
 import SayiAlani from '../ui/SayiAlani';
@@ -23,7 +26,8 @@ const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hip
  * `ExportTextFormatter`ındaki aynı mantığın istemci tarafı karşılığı).
  */
 export default function MeasurementsPage() {
-  usePageTitle('Ölçüler');
+  const { t } = useTranslation();
+  usePageTitle(t('kabuk.sekmeOlcumler'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
   const silMutasyonu = useDeleteMeasurement();
@@ -62,23 +66,26 @@ export default function MeasurementsPage() {
     setGenelHata(null);
     setAlanHatalari({});
 
+    const agirlik = sayiyaCevir(kilo);
+    const boyDegeri = sayiyaCevir(boy);
+
+    // Boy ve kilo ZORUNLU (kullanıcı kararı) -- sunucu da aynı kuralı uygular, burası sadece
+    // hızlı geri bildirim (RegisterPage'deki istemci-tarafı doğrulama deseninin aynısı).
+    if (agirlik === undefined || boyDegeri === undefined) {
+      const hatalar: Record<string, string> = {};
+      if (agirlik === undefined) hatalar.weight = t('olcumler.kiloGerekli');
+      if (boyDegeri === undefined) hatalar.heightCm = t('olcumler.boyGerekli');
+      setAlanHatalari(hatalar);
+      return;
+    }
+
     const govde = {
-      weight: sayiyaCevir(kilo),
-      heightCm: sayiyaCevir(boy),
+      weight: agirlik,
+      heightCm: boyDegeri,
       bodyFatPercent: sayiyaCevir(yagOrani),
       waistCm: sayiyaCevir(belCevresi),
       hipCm: sayiyaCevir(kalcaCevresi),
     };
-
-    // Boy ve kilo ZORUNLU (kullanıcı kararı) -- sunucu da aynı kuralı uygular, burası sadece
-    // hızlı geri bildirim (RegisterPage'deki istemci-tarafı doğrulama deseninin aynısı).
-    const hatalar: Record<string, string> = {};
-    if (govde.weight === undefined) hatalar.weight = 'Kilo gerekli.';
-    if (govde.heightCm === undefined) hatalar.heightCm = 'Boy gerekli.';
-    if (Object.keys(hatalar).length > 0) {
-      setAlanHatalari(hatalar);
-      return;
-    }
 
     ekleMutasyonu.mutate(govde, {
       onSuccess: () => {
@@ -119,15 +126,15 @@ export default function MeasurementsPage() {
     <div className="flex flex-col gap-5 pb-4">
       <BirincilDugme onClick={penceresiniAc} yukseklik="normal">
         <Plus aria-hidden size={20} />
-        Yeni ölçüm ekle
+        {t('olcumler.yeniOlcumEkle')}
       </BirincilDugme>
 
-      <Modal acik={modalAcik} onKapat={() => setModalAcik(false)} baslik="Yeni ölçüm">
+      <Modal acik={modalAcik} onKapat={() => setModalAcik(false)} baslik={t('olcumler.yeniOlcum')}>
         <form onSubmit={gonder} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2">
             <SayiAlani
               id="olcu-boy"
-              etiket="Boy"
+              etiket={t('olcumler.boy')}
               ekranOkuyucuEki=" (cm)"
               birim="cm"
               inputMode="decimal"
@@ -138,8 +145,8 @@ export default function MeasurementsPage() {
             />
             <SayiAlani
               id="olcu-kilo"
-              etiket="Kilo"
-              ekranOkuyucuEki=" (kg)"
+              etiket={t('olcumler.kilo')}
+              ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
               birim="kg"
               inputMode="decimal"
               placeholder="—"
@@ -149,7 +156,7 @@ export default function MeasurementsPage() {
             />
             <SayiAlani
               id="olcu-yag-orani"
-              etiket="Yağ oranı"
+              etiket={t('olcumler.yagOrani')}
               ekranOkuyucuEki=" (%)"
               birim="%"
               inputMode="decimal"
@@ -160,7 +167,7 @@ export default function MeasurementsPage() {
             />
             <SayiAlani
               id="olcu-bel-cevresi"
-              etiket="Bel çevresi"
+              etiket={t('olcumler.belCevresi')}
               ekranOkuyucuEki=" (cm)"
               birim="cm"
               inputMode="decimal"
@@ -171,7 +178,7 @@ export default function MeasurementsPage() {
             />
             <SayiAlani
               id="olcu-kalca-cevresi"
-              etiket="Kalça çevresi"
+              etiket={t('olcumler.kalcaCevresi')}
               ekranOkuyucuEki=" (cm)"
               birim="cm"
               inputMode="decimal"
@@ -181,24 +188,24 @@ export default function MeasurementsPage() {
               hata={alanHatalari.hipCm}
             />
           </div>
-          <p className="text-label text-muted">Boy ve kilo zorunlu; diğerleri opsiyonel.</p>
-          {genelHata && <HataKutusu baslik="Ölçü kaydedilemedi" mesaj={genelHata} />}
+          <p className="text-label text-muted">{t('olcumler.zorunluAciklama')}</p>
+          {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
           <BirincilDugme type="submit" yukseklik="normal" disabled={ekleMutasyonu.isPending}>
-            Kaydet
+            {t('ortak.kaydet')}
           </BirincilDugme>
         </form>
       </Modal>
 
-      {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
+      {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
 
       {isError && (
         <p role="alert" className="text-body text-danger">
-          Ölçüler alınamadı. Lütfen sayfayı yenileyin.
+          {t('olcumler.hata')}
         </p>
       )}
 
       {!isLoading && !isError && data && tumOlculer.length === 0 && (
-        <BosDurum ikon={Scale} baslik="Henüz ölçü yok" aciklama="Yukarıdan ilk ölçünü ekle." />
+        <BosDurum ikon={Scale} baslik={t('olcumler.bosBaslik')} aciklama={t('olcumler.bosAciklama')} />
       )}
 
       {!isLoading && !isError && data && tumOlculer.length > 0 && (
@@ -220,7 +227,7 @@ export default function MeasurementsPage() {
           </ul>
           {/* Gorunmez sentinel: `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
           <div ref={sentinelRef} aria-hidden className="h-px" />
-          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
+          {isFetchingNextPage && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
         </>
       )}
     </div>
@@ -228,13 +235,13 @@ export default function MeasurementsPage() {
 }
 
 /** Sadece DOLU olan ölçüleri, virgülle ayırarak yazar -- backend'in export metnindeki mantığın aynısı. */
-function olcuMetni(olcu: Olcu): string {
+function olcuMetni(olcu: Olcu, t: TFunction): string {
   const parcalar: string[] = [];
   if (olcu.weight !== null) parcalar.push(`${olcu.weight} kg`);
-  if (olcu.heightCm !== null) parcalar.push(`${olcu.heightCm} cm boy`);
-  if (olcu.bodyFatPercent !== null) parcalar.push(`%${olcu.bodyFatPercent} yağ`);
-  if (olcu.waistCm !== null) parcalar.push(`${olcu.waistCm} cm bel`);
-  if (olcu.hipCm !== null) parcalar.push(`${olcu.hipCm} cm kalça`);
+  if (olcu.heightCm !== null) parcalar.push(t('olcumler.boyDegeri', { cm: olcu.heightCm }));
+  if (olcu.bodyFatPercent !== null) parcalar.push(t('olcumler.yagDegeri', { yuzde: olcu.bodyFatPercent }));
+  if (olcu.waistCm !== null) parcalar.push(t('olcumler.belDegeri', { cm: olcu.waistCm }));
+  if (olcu.hipCm !== null) parcalar.push(t('olcumler.kalcaDegeri', { cm: olcu.hipCm }));
   return parcalar.join(', ');
 }
 
@@ -248,20 +255,22 @@ interface OlcuKartiProps {
 
 /** Silme onaysız yapılmaz, geri-alınabilir DEĞİLDİR -- ölçü kaydı geri getirilecek bir şey üretmez. */
 function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+  const { t } = useTranslation();
+  const dil = useDil();
   if (onayAcik) {
     return (
       <li className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
-        <p className="text-body">Bu ölçü kalıcı olarak silinecek.</p>
+        <p className="text-body">{t('olcumler.silmeOnayi')}</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onSil}
             className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg"
           >
-            Evet, sil
+            {t('ortak.evetSil')}
           </button>
           <div className="flex-1">
-            <IkincilDugme onClick={onVazgec}>Vazgeç</IkincilDugme>
+            <IkincilDugme onClick={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </div>
         </div>
       </li>
@@ -272,11 +281,11 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
     <li className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 p-4">
       <div className="flex flex-col gap-1">
         <span className="text-label text-muted">
-          {formatTrDate(olcu.recordedAt)} {formatTrTime(olcu.recordedAt)}
+          {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
         </span>
-        <p className="text-body">{olcuMetni(olcu)}</p>
+        <p className="text-body">{olcuMetni(olcu, t)}</p>
       </div>
-      <IkonDugmesi etiket="Ölçüyü sil" onClick={onSilmeyeBasla}>
+      <IkonDugmesi etiket={t('olcumler.olcuyuSil')} onClick={onSilmeyeBasla}>
         <Trash2 aria-hidden size={18} />
       </IkonDugmesi>
     </li>

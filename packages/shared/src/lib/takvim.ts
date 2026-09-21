@@ -1,3 +1,5 @@
+import type { Dil } from '../i18n/dil';
+
 /**
  * Takvim (#81) icin saf tarih hesaplari. Gunler "YYYY-MM-DD" metni olarak tasinir (API'nin `DateOnly`
  * bicimi, TR yerel gunu); aritmetik UTC gece yarisi uzerinden yapilir ki cihazin saat dilimi sonucu
@@ -70,17 +72,23 @@ export function setKademesi(setCount: number): SetKademesi {
   return Math.min(4, Math.ceil(setCount / KADEME_GENISLIGI)) as SetKademesi;
 }
 
-const AY_BICIMI = new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', month: 'long', year: 'numeric' });
-const GUN_BICIMI = new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', day: 'numeric', month: 'long' });
+const AY_BICIMI: Record<Dil, Intl.DateTimeFormat> = {
+  tr: new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', month: 'long', year: 'numeric' }),
+  en: new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }),
+};
+const GUN_BICIMI: Record<Dil, Intl.DateTimeFormat> = {
+  tr: new Intl.DateTimeFormat('tr-TR', { timeZone: 'UTC', day: 'numeric', month: 'long' }),
+  en: new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'long' }),
+};
 
-/** "Eylül 2026" */
-export function ayBasligi(gun: string): string {
-  return AY_BICIMI.format(tarihe(gun));
+/** "Eylül 2026" / "September 2026" */
+export function ayBasligi(gun: string, dil: Dil): string {
+  return AY_BICIMI[dil].format(tarihe(gun));
 }
 
-/** "14 Eylül" */
-export function gunBasligi(gun: string): string {
-  return GUN_BICIMI.format(tarihe(gun));
+/** "14 Eylül" / "14 September" */
+export function gunBasligi(gun: string, dil: Dil): string {
+  return GUN_BICIMI[dil].format(tarihe(gun));
 }
 
 /** Hucrenin icindeki numara: ayin gunu ("1" ... "31"). */

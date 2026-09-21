@@ -21,6 +21,12 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   (`paletKontrast.test.ts`) bunu ve sayılan metin/yüzey çiftlerinin eşik üstünde kalmasını zorlar.
   `mobile/` şimdilik koyu kalır. Ayrıntı:
   [docs/superpowers/specs/2026-09-20-acik-tema-design.md](docs/superpowers/specs/2026-09-20-acik-tema-design.md).
+- **Çok dilli arayüz dilim 1 (#177, 2026-09-21)** — `web/` Türkçe + İngilizce; katalog
+  `packages/shared/src/i18n/` (`tr.ts` tek kaynak, `en.ts` onun tipini taşır). Kullanıcıya görünen
+  yeni her metin katalogdan gelir (`t(...)`), `cevrilmemisMetin.test.ts` web'de Türkçe harfli metni
+  yakalar. Dil tercihi cihazda (`grind.dil`). Backend hata kodları dilim 2, mobil arayüz dilim 3;
+  AI/export dili #199. Ayrıntı:
+  [docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md](docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md).
 - İlk dilim antrenman çekirdeğidir: giriş/kayıt, bugünün oturumu, set ekleme, PR rozetleri, basit
   geçmiş. Şablonlar dilim 2'de geldi; istatistik, tartı, export ve AI ekranları sonraki dilimlere
   bırakıldı.
@@ -47,7 +53,7 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | ORM | Entity Framework Core — Code-First, Migrations |
 | Veritabanı | PostgreSQL (Npgsql provider) |
 | Mimari | Katmanlı: Controller → Service → Repository / Unit of Work |
-| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu |
+| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu, çeviri i18next + react-i18next |
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.

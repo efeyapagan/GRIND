@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import BirincilDugme from '../ui/BirincilDugme';
 
 /**
@@ -19,13 +20,14 @@ import BirincilDugme from '../ui/BirincilDugme';
  * yapisik kalir.
  */
 export default function SablonOlusturCagrisi() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
     <div className="pb-2">
       <BirincilDugme yukseklik="normal" onClick={() => navigate('/templates/new', { state: { donus: '/' } })}>
         <Plus aria-hidden size={20} />
-        Şablon oluştur
+        {t('sablonlar.olustur')}
       </BirincilDugme>
     </div>
   );

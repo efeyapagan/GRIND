@@ -1117,6 +1117,52 @@ Yalnızca web; backend değişmedi.
 - **Testler:** Takvim 1 güncellendi, hedef testi Profil'e taşındı; Rekorlar +1, Profil +1; `TodayPage` 2 test başlık yerine
   bölge arar. Web 214/214, `tsc -b` ve lint temiz. Görsel (Playwright) doğrulama yapılmadı.
 
+## Çok Dilli Arayüz Dilim 1 — Türkçe + İngilizce ✅ (2026-09-21)
+
+Issue: #177 · Spec: [docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md](docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md)
+· Plan: [docs/superpowers/plans/2026-09-21-coklu-dil-web.md](docs/superpowers/plans/2026-09-21-coklu-dil-web.md)
+
+`web/` Türkçe + İngilizce iki dilli oldu. Backend değişmedi; `mobile/` yalnızca altyapıyı başlatır
+(`i18nBaslat('tr')` — `mobile/app/_layout.tsx`, `mobile/jest.setup.js`; bileşenler biçimlendiricilere
+`useDil()` geçiriyor, `i18next`/`react-i18next`'e bağımlı oldu), arayüzü Türkçe sabit kaldı (dilim 3).
+
+- **Katalog:** `packages/shared/src/i18n/` altında `tr.ts` tek kaynak, `en.ts` onun tipini taşır —
+  TypeScript derleyicisi eksik anahtar/değişkeni yakalar. `i18next` + `react-i18next`; dil tercihi
+  `localStorage` anahtarı `grind.dil`, `fallbackLng: 'tr'`.
+- **Kapsam:** tüm web ekranları (giriş, kayıt, profil, antrenman, setler, ana sayfa, takvim,
+  şablonlar, geçmiş, hareket geçmişi, rekorlar, ölçümler, yorumlar) + ortak bileşenler çevrildi;
+  `aria-label`, `title`, `placeholder`, `alt`, onay diyaloğu metinleri, `usePageTitle(...)`
+  başlıkları dahil.
+- **Paylaşılan yardımcılar:** tarih/sayı biçimlendiricileri artık `dil` parametresi alıyor; ortak
+  yardımcılar `i18n.t` üzerinden metin üretiyor — bu, i18next'in tipli `t()`'si için
+  `web/tsconfig.app.json`'da `strictNullChecks: true`'yu gerektirdi (öncesinde kapalıydı).
+  Saat dilimi her biçimlendiricide `Europe/Istanbul` sabit kaldı.
+  Sunucudan gelen `ProblemDetails.detail` çevrilmedi, olduğu gibi gösteriliyor.
+- **Dil seçimi:** Profil sayfasında `DilSecici`; tercih yalnızca cihazda saklanır, `User` tablosuna
+  / API'ye dokunulmadı.
+- **Tarama testi:** `cevrilmemisMetin.test.ts` dosyaları baştan sona okuyup Türkçe harf (ör. ğ, ş, ı)
+  içeren çevrilmemiş metni yakalıyor.
+- **Test:** web **271** / **46 dosya**, mobile **72 test / 18 suite** (komutla doğrulandı).
+  `npm run typecheck` (`tsc -b`) temiz. Otomatik E2E yok; İngilizce arayüzün elle tarayıcı
+  kontrolü PR aşamasında yapılır.
+
+Devreden notlar (bilerek yapılmadı):
+- Backend hata kodları: `ProblemDetails`'e `code` + `params` eklenip istemci tarafında
+  çevrilmesi dilim 2.
+- Mobil arayüz metinleri ve mobil dil seçimi dilim 3.
+- AI yorumu içeriği ve export metninin dili #199.
+- `cevrilmemisMetin.test.ts` yalnızca Türkçe harfli metni yakalar — Türkçe karakter içermeyen
+  Türkçe kelimeler (`Kaydet`, `Sil`, `Ekle` gibi) otomatik yakalanmaz, elle taranıp çevrilmeli.
+- `web/tsconfig.app.json`'da `strictNullChecks: true` artık açık (i18next'in tipli anahtarları
+  için gerekli) — geri kapatılmaz.
+- Tarama testi, ilk satırında Türkçe harf olan çok satırlı JSX yorumunu yanlış-pozitif olarak
+  yakalar — bu tür yorumlar ASCII yazılır.
+- Dil değişince, önceden state'e yazılmış çevrilmiş metinler (form hataları, `sonEklenen`,
+  `baslatmaBilgisi`, React Query önbelleğindeki `ApiError.detail` içindeki `varsayilanMesaj()`)
+  eski dilde kalır; sayfa değişince düzelir, pratikte yalnızca Profil'de görünür.
+- Ölçümler listesindeki ağırlık/cm değerleri `formatWeight` yerine ham sayıyla yazılıyor
+  (Türkçede "72.5") — #177 öncesinden kalma, ayrı iş.
+
 ---
 
 ## Çalışma Kuralı

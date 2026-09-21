@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '@grind/shared/api/queries';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
@@ -45,6 +46,7 @@ interface Props {
  * web'e ozgu) atlandi -- `sesiHazirla()` cagrisi yok, geri kalan mantik birebir ayni.
  */
 export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegis, hareketEkleme }: Props) {
+  const dil = useDil();
   const queryClient = useQueryClient();
   const { data: egzersizler } = useExercises();
   const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
@@ -135,7 +137,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
         reps: ayristirilmisTekrar,
         rir: ayristirilmisRir,
       });
-      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik)} kg × ${ayristirilmisTekrar}`);
+      setSonEklenen(`Eklendi: ${formatWeight(ayristirilmisAgirlik, dil)} kg × ${ayristirilmisTekrar}`);
       setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
     } catch (hata) {
       if (hata instanceof ApiError) {

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
   useGenerateInsight,
@@ -10,7 +12,7 @@ import {
 } from '../api/queries';
 import { ApiError } from '../api/problem';
 import { apiHatasiniAyir } from '../lib/apiErrors';
-import { formatTrDate, formatTrTime } from '../lib/format';
+import { formatSaat, formatTarih } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -37,7 +39,8 @@ import HataKutusu from '../ui/HataKutusu';
  * zaten bu alanlari tasimiyor.
  */
 export default function InsightsPage() {
-  usePageTitle('AI yorumu');
+  const { t } = useTranslation();
+  usePageTitle(t('yorumlar.baslik'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
   // Issue #148: "uretiliyor mu" bilgisi bu bilesenin mutation'indan DEGIL, mount'tan bagimsiz
@@ -108,35 +111,31 @@ export default function InsightsPage() {
       {/* Sekme cubugunda degil (SablonDuzenlePage'deki "Geri" desenin ayni) -- Gecmis'ten acilir. */}
       <Link to="/history" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
         <ChevronLeft aria-hidden size={18} />
-        Geçmiş
+        {t('kabuk.sekmeGecmis')}
       </Link>
 
-      <p className="text-body text-muted">
-        Son 30 güne kadarki antrenman verini yapay zekaya yorumlatır. Belirli bir aralık seçmek
-        şimdilik mümkün değil.
-      </p>
+      <p className="text-body text-muted">{t('yorumlar.aciklama')}</p>
 
       <div className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
         {!uretiliyor && (
           <BirincilDugme yukseklik="normal" onClick={yorumIste}>
             <Sparkles aria-hidden size={20} />
-            Yorum iste
+            {t('yorumlar.yorumIste')}
           </BirincilDugme>
         )}
 
         {uretiliyor && (
           <div className="flex flex-col gap-3">
             <p role="status" className="text-body text-muted">
-              Yorum hazırlanıyor... Bu birkaç dakika sürebilir.
+              {t('yorumlar.hazirlaniyor')}
             </p>
-            <IkincilDugme onClick={iptalEt}>Vazgeç</IkincilDugme>
+            <IkincilDugme onClick={iptalEt}>{t('ortak.vazgec')}</IkincilDugme>
           </div>
         )}
 
         {durum === 'iptal-edildi' && (
           <p role="status" className="text-label text-muted">
-            Beklemeyi durdurdun. Yorum yine de oluşturuluyor olabilir; birkaç dakika sonra
-            listede görünebilir.
+            {t('yorumlar.iptalEdildi')}
           </p>
         )}
 
@@ -146,19 +145,19 @@ export default function InsightsPage() {
           </p>
         )}
 
-        {durum === 'hata' && genelHata && <HataKutusu baslik="Yorum alınamadı" mesaj={genelHata} />}
+        {durum === 'hata' && genelHata && <HataKutusu baslik={t('yorumlar.alinamadi')} mesaj={genelHata} />}
       </div>
 
-      {isLoading && <p className="text-body text-muted">Yükleniyor...</p>}
+      {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
 
       {isError && (
         <p role="alert" className="text-body text-danger">
-          Yorumlar alınamadı. Lütfen sayfayı yenileyin.
+          {t('yorumlar.hata')}
         </p>
       )}
 
       {!isLoading && !isError && data && tumYorumlar.length === 0 && (
-        <BosDurum ikon={Brain} baslik="Henüz yorum yok" aciklama="Yukarıdan ilk yorumunu iste." />
+        <BosDurum ikon={Brain} baslik={t('yorumlar.bosBaslik')} aciklama={t('yorumlar.bosAciklama')} />
       )}
 
       {!isLoading && !isError && data && tumYorumlar.length > 0 && (
@@ -180,7 +179,7 @@ export default function InsightsPage() {
           </ul>
           {/* Gorunmez sentinel: `<ul>`in DISINDA, `listitem` sayisini etkilemesin diye. */}
           <div ref={sentinelRef} aria-hidden className="h-px" />
-          {isFetchingNextPage && <p className="text-body text-muted">Yükleniyor...</p>}
+          {isFetchingNextPage && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
         </>
       )}
     </div>
@@ -201,20 +200,22 @@ interface YorumKartiProps {
  * (ve yeni bir maliyet) uretir. Silme burada gercekten kalicidir, arayuz bunu gizlemez.
  */
 function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+  const { t } = useTranslation();
+  const dil = useDil();
   if (onayAcik) {
     return (
       <li className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
-        <p className="text-body">Bu yorum kalıcı olarak silinecek.</p>
+        <p className="text-body">{t('yorumlar.silmeOnayi')}</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onSil}
             className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg"
           >
-            Evet, sil
+            {t('ortak.evetSil')}
           </button>
           <div className="flex-1">
-            <IkincilDugme onClick={onVazgec}>Vazgeç</IkincilDugme>
+            <IkincilDugme onClick={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </div>
         </div>
       </li>
@@ -225,9 +226,9 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
     <li className="flex flex-col gap-2 rounded-xl bg-surface-2 p-4">
       <div className="flex items-start justify-between gap-2">
         <span className="text-label text-muted">
-          {formatTrDate(yorum.createdAt)} {formatTrTime(yorum.createdAt)}
+          {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
         </span>
-        <IkonDugmesi etiket="Yorumu sil" onClick={onSilmeyeBasla}>
+        <IkonDugmesi etiket={t('yorumlar.yorumuSil')} onClick={onSilmeyeBasla}>
           <Trash2 aria-hidden size={18} />
         </IkonDugmesi>
       </div>

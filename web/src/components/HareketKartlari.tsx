@@ -1,4 +1,6 @@
 import { Check, CirclePlay, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { HareketIlerlemesi, SetKaydi } from '../api/queries';
 import HareketGecmisi from './HareketGecmisi';
 import SetSatiri from './SetSatiri';
@@ -15,10 +17,14 @@ interface Props {
 }
 
 /** Kartin sayaci: hedefliyse "2 / 4 set", hedefsizse (#62) yalnizca "2 set". */
-function setSayaci(hareket: HareketIlerlemesi): string {
+function setSayaci(hareket: HareketIlerlemesi, t: TFunction): string {
   return hareket.plannedSets === null
-    ? `${hareket.completedSets} set`
-    : `${hareket.completedSets} / ${hareket.plannedSets} set`;
+    ? t('setler.setSayisi', { count: hareket.completedSets })
+    : t('setler.setIlerlemesi', {
+        count: hareket.plannedSets,
+        completed: hareket.completedSets,
+        planned: hareket.plannedSets,
+      });
 }
 
 /**
@@ -31,13 +37,14 @@ function setSayaci(hareket: HareketIlerlemesi): string {
  * KULLANMADAN (notr halka) gosterilir. Tamamlandi isareti yalnizca hedefli kartta.
  */
 export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, onSetSil, onHareketKaldir }: Props) {
+  const { t } = useTranslation();
   return (
     <ol className="flex flex-col gap-4">
       {ilerleme.map((hareket, sira) => {
         const secili = hareket.exerciseId === secilenId;
         const tamamlandi = hareket.plannedSets !== null && hareket.completedSets >= hareket.plannedSets;
         const hareketSetleri = setler.filter((kayit) => kayit.exerciseId === hareket.exerciseId);
-        const sayac = setSayaci(hareket);
+        const sayac = setSayaci(hareket, t);
 
         return (
           <li
@@ -85,7 +92,7 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, on
                   className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
                 >
                   <Trash2 aria-hidden size={18} />
-                  Hareketi kaldır
+                  {t('antrenman.hareketiKaldir')}
                 </button>
               </>
             )}

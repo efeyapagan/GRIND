@@ -1,3 +1,5 @@
+import type { Dil } from '../i18n/dil';
+
 /**
  * Turkiye 2016'dan beri yaz saati uygulamiyor (sabit UTC+3), ama zaman dilimini yine de
  * cihazin ayarina degil acikca 'Europe/Istanbul'a baglıyoruz -- aksi halde bu fonksiyonlar
@@ -17,12 +19,19 @@ function tarihParcalariniAl(iso: string): { gun: string; ay: string; yil: string
   return { gun: bul('day'), ay: bul('month'), yil: bul('year') };
 }
 
-export function formatTrDate(iso: string): string {
+/** Sayi bicimi: Turkcede ondalik virgul, Ingilizcede nokta. */
+const SAYI_YERELI: Record<Dil, string> = { tr: 'tr-TR', en: 'en-US' };
+
+export function formatTarih(iso: string, dil: Dil): string {
   const { gun, ay, yil } = tarihParcalariniAl(iso);
-  return `${gun}.${ay}.${yil}`;
+  if (dil === 'tr') {
+    return `${gun}.${ay}.${yil}`;
+  }
+  // "09/12" gun/ay belirsizligi yerine ay adi (spec, Bicimlendirme).
+  return `${formatKisaTarih(iso, 'en')} ${yil}`;
 }
 
-export function formatTrTime(iso: string): string {
+export function formatSaat(iso: string): string {
   const bicimlendirici = new Intl.DateTimeFormat('en-GB', {
     timeZone: TR_ZAMAN_DILIMI,
     hour: '2-digit',
@@ -32,22 +41,34 @@ export function formatTrTime(iso: string): string {
   return bicimlendirici.format(new Date(iso));
 }
 
-/** Grafik ekseni icin kisa tarih ("12 Eyl"), TR gunune gore. */
-export function formatKisaTarih(iso: string): string {
-  return new Intl.DateTimeFormat('tr-TR', {
+/**
+ * Grafik ekseni icin kisa tarih ("12 Eyl" / "12 Sep"), TR gunune gore. Ingilizcede ay kisaltmasi
+ * `en-US`'ten alinir ve gun-ay sirasiyla elle dizilir: `en-GB` yeni ICU surumlerinde "Sept" verir.
+ */
+export function formatKisaTarih(iso: string, dil: Dil): string {
+  if (dil === 'tr') {
+    return new Intl.DateTimeFormat('tr-TR', {
+      timeZone: TR_ZAMAN_DILIMI,
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(iso));
+  }
+  const parcalar = new Intl.DateTimeFormat('en-US', {
     timeZone: TR_ZAMAN_DILIMI,
     day: 'numeric',
     month: 'short',
-  }).format(new Date(iso));
+  }).formatToParts(new Date(iso));
+  const bul = (tur: string) => parcalar.find((parca) => parca.type === tur)?.value ?? '';
+  return `${bul('day')} ${bul('month')}`;
 }
 
-export function formatWeight(kg: number): string {
+export function formatWeight(kg: number, dil: Dil): string {
   // TR ondalik ayraci virgul; gereksiz ",0" eklenmez (80 -> "80"), ama 0 gecerli bir
   // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil). Backend Weight'i
   // numeric(6,2) olarak saklar ve 2 ondalik kabul eder -- maximumFractionDigits burada 1
   // olsaydi 61.25 kg "61,3" olarak gosterilir, sunucudaki degeri istemcide SESSIZCE
   // degistirirdi (review bulgusu I2). Ust sinir ve ondalik hane sayisi sunucuya birakilir.
-  return kg.toLocaleString('tr-TR', {
+  return kg.toLocaleString(SAYI_YERELI[dil], {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
@@ -67,17 +88,18 @@ export function trBugundenOnce(gun: number, simdi: Date = new Date()): string {
  * tarihe de kendi yili eklenir -- aksi halde "20 Ara – 5 Oca 2027" okuyucuya iki tarihin de 2027'de
  * oldugunu dusundurur.
  */
-export function formatAralik(ilkIso: string, sonIso: string): string {
+export function formatAralik(ilkIso: string, sonIso: string, dil: Dil): string {
   const ilkYil = tarihParcalariniAl(ilkIso).yil;
   const sonYil = tarihParcalariniAl(sonIso).yil;
-  const ilkMetin = ilkYil === sonYil ? formatKisaTarih(ilkIso) : `${formatKisaTarih(ilkIso)} ${ilkYil}`;
-  return `${ilkMetin} – ${formatKisaTarih(sonIso)} ${sonYil}`;
+  const ilkMetin =
+    ilkYil === sonYil ? formatKisaTarih(ilkIso, dil) : `${formatKisaTarih(ilkIso, dil)} ${ilkYil}`;
+  return `${ilkMetin} – ${formatKisaTarih(sonIso, dil)} ${sonYil}`;
 }
 
 /** Isaretli fark: "+2,5", "−32,5" (U+2212 eksi isareti), "0". */
-export function formatFark(fark: number): string {
+export function formatFark(fark: number, dil: Dil): string {
   if (fark === 0) {
     return '0';
   }
-  return `${fark > 0 ? '+' : '−'}${formatWeight(Math.abs(fark))}`;
+  return `${fark > 0 ? '+' : '−'}${formatWeight(Math.abs(fark), dil)}`;
 }

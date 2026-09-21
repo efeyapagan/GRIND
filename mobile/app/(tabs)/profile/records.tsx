@@ -1,13 +1,15 @@
 import { View, Text, ScrollView } from 'react-native';
 import { Trophy } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import { useGuncelTakvimOzeti, useRecords } from '@grind/shared/api/queries';
-import { formatTrDate, formatWeight } from '@grind/shared/lib/format';
+import { formatTarih, formatWeight } from '@grind/shared/lib/format';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import Rozet from '../../../src/ui/Rozet';
 
 /** web/src/pages/RecordsPage.tsx ile ayni: her egzersiz icin en agir set ve en cok tekrar AYRI. */
 export default function RecordsScreen() {
+  const dil = useDil();
   usePageTitle('Rekorlar');
   const { data, isLoading, isError } = useRecords();
   const { data: takvimOzeti } = useGuncelTakvimOzeti();
@@ -49,10 +51,10 @@ export default function RecordsScreen() {
                 <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
                   <View className="flex-row items-center gap-1.5">
                     <Rozet>En ağır set</Rozet>
-                    <Text className="text-label-xs text-muted">· {formatTrDate(rekor.bestWeightAt)}</Text>
+                    <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</Text>
                   </View>
                   <View className="flex-row items-baseline gap-1">
-                    <Text className="text-metric text-fg">{formatWeight(rekor.bestWeight)} kg</Text>
+                    <Text className="text-metric text-fg">{formatWeight(rekor.bestWeight, dil)} kg</Text>
                     <Text className="text-body-lg font-bold text-accent-soft">
                       × {rekor.bestWeightReps}
                     </Text>
@@ -61,11 +63,11 @@ export default function RecordsScreen() {
                 <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
                   <View className="flex-row items-center gap-1.5">
                     <Rozet ton="acik">En çok tekrar</Rozet>
-                    <Text className="text-label-xs text-muted">· {formatTrDate(rekor.bestRepsAt)}</Text>
+                    <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestRepsAt, dil)}</Text>
                   </View>
                   <View className="flex-row items-baseline gap-1.5">
                     <Text className="text-metric text-fg">{rekor.bestReps} tekrar</Text>
-                    <Text className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight)} kg</Text>
+                    <Text className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight, dil)} kg</Text>
                   </View>
                 </View>
               </View>

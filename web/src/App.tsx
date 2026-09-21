@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Home, Plus, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
 
@@ -38,6 +39,7 @@ export default function App() {
 
 function Kabuk() {
   const baslik = useHeaderTitle();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
@@ -62,7 +64,7 @@ function Kabuk() {
           daha estetik durur. `nav` seffaf kalir (halka tasmasi kok `bg` ile kaynassin diye),
           renk yalnizca `ul` cubugunda. Cubuk h-14'e indirilip yan dugmeler h-11'e kuculdu. */}
       <nav
-        aria-label="Ana gezinme"
+        aria-label={t('kabuk.gezinme')}
         className="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]"
       >
         <ul className="mx-auto flex h-14 max-w-md items-center bg-surface-1/90 px-4 backdrop-blur-xl">
@@ -70,7 +72,7 @@ function Kabuk() {
             <NavLink
               to="/"
               end
-              aria-label="Ana sayfa"
+              aria-label={t('kabuk.anaSayfa')}
               className={({ isActive }) =>
                 `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
               }
@@ -84,7 +86,7 @@ function Kabuk() {
               `p-1`) cubuktan bir seritle ayirir; `-mt-6` mobildeki (`KabukTabBar`) ayni degerle
               birebir eslesir. */}
           <li className="flex flex-1 justify-center">
-            <NavLink to="/antrenman" aria-label="Antrenman başlat" className="flex items-center">
+            <NavLink to="/antrenman" aria-label={t('kabuk.antrenmanBaslat')} className="flex items-center">
               <span className="-mt-6 flex items-center justify-center rounded-full bg-bg p-1">
                 <span className="flex size-16 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg">
                   <Plus aria-hidden size={28} />
@@ -96,7 +98,7 @@ function Kabuk() {
           <li className="flex flex-1 justify-center">
             <NavLink
               to="/profile"
-              aria-label="Profil"
+              aria-label={t('kabuk.profil')}
               className={({ isActive }) =>
                 `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
               }

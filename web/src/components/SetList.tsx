@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Flame, Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
@@ -35,7 +37,9 @@ interface EgzersizGrubu {
  * (ekran okuyucu ve testler), gorsel olarak ise birim ve "×" soluk kalsin.
  */
 export default function SetList(props: Props) {
-  const { sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' } = props;
+  const { t } = useTranslation();
+  const dil = useDil();
+  const { sets, bosDurumMetni = t('setler.bosDurum') } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
     for (const kayit of sets) {
@@ -65,7 +69,7 @@ export default function SetList(props: Props) {
             <div className="flex items-center justify-between gap-2 px-1">
               <h3 className="truncate text-body-lg font-semibold">{grup.exerciseName}</h3>
               <span className="shrink-0 rounded bg-surface-1 px-2 py-0.5 text-label-xs text-muted uppercase">
-                {grup.sets.length} set
+                {t('setler.setSayisi', { count: grup.sets.length })}
               </span>
             </div>
             <ul className="flex flex-col gap-1">
@@ -80,7 +84,7 @@ export default function SetList(props: Props) {
                       <div className="flex items-center gap-4">
                         <span className="w-5 text-label text-muted">{setSirasi + 1}</span>
                         <span className="text-body-lg tabular-nums">
-                          {formatWeight(kayit.weight)} kg{' '}
+                          {formatWeight(kayit.weight, dil)} kg{' '}
                           <span className="font-light text-muted">×</span> {kayit.reps}
                         </span>
                       </div>
@@ -120,7 +124,9 @@ export default function SetList(props: Props) {
               </span>
               <h2 className="truncate text-heading">{grup.exerciseName}</h2>
             </div>
-            <span className="shrink-0 text-label-xs text-muted uppercase">{grup.sets.length} set</span>
+            <span className="shrink-0 text-label-xs text-muted uppercase">
+              {t('setler.setSayisi', { count: grup.sets.length })}
+            </span>
           </div>
           <ul className="flex flex-col gap-1">
             {grup.sets.map((kayit, setSirasi) => (

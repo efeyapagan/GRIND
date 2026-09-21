@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useGuncelTakvimOzeti, useSetWeeklyTarget } from '../api/queries';
 import SecimKutusu from '../ui/SecimKutusu';
 
@@ -9,6 +10,7 @@ const HEDEF_GUNLERI = [1, 2, 3, 4, 5, 6, 7];
  * tazelenince guncellenir. Deger gelene kadar secici kapali durur.
  */
 export default function HaftalikHedefSecici() {
+  const { t } = useTranslation();
   const { data: ozet, isError } = useGuncelTakvimOzeti();
   const hedefAyarla = useSetWeeklyTarget();
   const hedef = ozet?.weeklyTargetDays ?? null;
@@ -16,7 +18,7 @@ export default function HaftalikHedefSecici() {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor="haftalik-hedef" className="text-label text-muted">
-        Haftalık hedef
+        {t('profil.haftalikHedef')}
       </label>
       <SecimKutusu
         id="haftalik-hedef"
@@ -24,21 +26,21 @@ export default function HaftalikHedefSecici() {
         disabled={!ozet || hedefAyarla.isPending}
         onChange={(olay) => hedefAyarla.mutate(olay.target.value === '' ? null : Number(olay.target.value))}
       >
-        <option value="">Hedef yok</option>
+        <option value="">{t('profil.hedefYok')}</option>
         {HEDEF_GUNLERI.map((gun) => (
           <option key={gun} value={gun}>
-            {`Haftada ${gun} gün`}
+            {t('profil.haftadaGun', { count: gun })}
           </option>
         ))}
       </SecimKutusu>
       {isError && (
         <p role="alert" className="text-label text-danger">
-          Hedef alınamadı.
+          {t('profil.hedefAlinamadi')}
         </p>
       )}
       {hedefAyarla.isError && (
         <p role="alert" className="text-label text-danger">
-          Hedef kaydedilemedi.
+          {t('profil.hedefKaydedilemedi')}
         </p>
       )}
     </div>

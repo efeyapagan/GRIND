@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { Plus, Scale, Trash2 } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import { useAddMeasurement, useDeleteMeasurement, useInfiniteMeasurements, type Olcu } from '@grind/shared/api/queries';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
-import { formatTrDate, formatTrTime } from '@grind/shared/lib/format';
+import { formatSaat, formatTarih } from '@grind/shared/lib/format';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import Modal from '../../../src/ui/Modal';
 import SayiAlani from '../../../src/ui/SayiAlani';
@@ -236,6 +237,7 @@ interface OlcuKartiProps {
 }
 
 function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+  const dil = useDil();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -256,7 +258,7 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
     <View className="flex-row items-center justify-between gap-2 rounded-xl bg-surface-2 p-4">
       <View className="flex-col gap-1">
         <Text className="text-label text-muted">
-          {formatTrDate(olcu.recordedAt)} {formatTrTime(olcu.recordedAt)}
+          {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
         </Text>
         <Text className="text-body text-fg">{olcuMetni(olcu)}</Text>
       </View>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AtSign } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import AuthLayout from '../ui/AuthLayout';
@@ -9,20 +10,19 @@ import SifreAlani from '../ui/SifreAlani';
 import HataKutusu from '../ui/HataKutusu';
 import BirincilDugme from '../ui/BirincilDugme';
 
-/**
- * Login'in 401'i bilerek nötr: kullanıcı adının var olup olmadığını ya da hesabın
- * pasifleştirilmiş olup olmadığını sızdırmaz (spec Karar 4) -- backend de aynı nedenle
- * üç durumu (yanlış şifre / bulunmayan kullanıcı / pasif hesap) tek bir 401'de birleştirir.
- */
-const NOTR_GIRIS_HATASI = 'Kullanıcı adı veya şifre hatalı.';
-
 // `apiHatasiniAyir`e bu formun render ettigi alan adlarini bildiriyoruz (I3) -- yardimci bunu
 // kendi basina bilemez, hicbir anahtar bu listeyle eslesmezse genel bir hataya duser.
 const BILINEN_ALANLAR = ['username', 'password'];
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Login'in 401'i bilerek notr: kullanici adinin var olup olmadigini ya da hesabin
+  // pasiflestirilmis olup olmadigini sizdirmaz (spec Karar 4) -- backend de ayni nedenle
+  // uc durumu (yanlis sifre / bulunmayan kullanici / pasif hesap) tek bir 401'de birlestirir.
+  const NOTR_GIRIS_HATASI = t('giris.hatasi');
 
   const [kullaniciAdi, setKullaniciAdi] = useState('');
   const [sifre, setSifre] = useState('');
@@ -34,10 +34,10 @@ export default function LoginPage() {
     const hatalar: Record<string, string> = {};
 
     if (kullaniciAdi.length === 0) {
-      hatalar.username = 'Kullanıcı adı gerekli.';
+      hatalar.username = t('ortak.kullaniciAdiGerekli');
     }
     if (sifre.length === 0) {
-      hatalar.password = 'Şifre gerekli.';
+      hatalar.password = t('ortak.sifreGerekli');
     }
 
     setAlanHatalari(hatalar);
@@ -70,21 +70,21 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
-      baslik="Giriş yap"
+      baslik={t('ortak.girisYap')}
       altBaglanti={
         <>
-          Hesabın yok mu?{' '}
+          {t('giris.hesabinYokMu')}{' '}
           <Link to="/register" className="inline-flex min-h-11 items-center font-semibold text-accent-soft">
-            Kayıt ol
+            {t('ortak.kayitOl')}
           </Link>
         </>
       }
     >
-      {genelHata && <HataKutusu baslik="Giriş başarısız" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('giris.girisBasarisiz')} mesaj={genelHata} />}
       <form onSubmit={gonder} className="flex flex-col gap-4">
         <Alan
           id="username"
-          etiket="Kullanıcı adı"
+          etiket={t('ortak.kullaniciAdi')}
           ikon={AtSign}
           autoComplete="username"
           autoCapitalize="none"
@@ -95,14 +95,14 @@ export default function LoginPage() {
         />
         <SifreAlani
           id="password"
-          etiket="Şifre"
+          etiket={t('ortak.sifre')}
           autoComplete="current-password"
           value={sifre}
           onChange={(e) => setSifre(e.target.value)}
           hata={alanHatalari.password}
         />
         <BirincilDugme type="submit" yukseklik="normal" disabled={gonderiliyor}>
-          Giriş yap
+          {t('ortak.girisYap')}
         </BirincilDugme>
       </form>
     </AuthLayout>
