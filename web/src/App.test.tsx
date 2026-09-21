@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -125,8 +125,11 @@ test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince g
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hesap');
 });
 
-/** Issue #119/#120: hesap menusu kaldirildi -- ust kabukta artik sadece "GRIND" yazisi var. */
-test('sag ustte sadece GRIND yazisi var, hesap dugmesi yok', async () => {
+/**
+ * Issue #119/#120: hesap menusu kaldirildi. #194: sag ustte "GRIND" yazisi ve HEMEN SOLUNDA tema
+ * dugmesi var -- tema secimi Profil'den buraya tasindi.
+ */
+test('sag ustte GRIND yazisi ve hemen solunda tema dugmesi var, hesap dugmesi yok', async () => {
   render(
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
@@ -137,7 +140,11 @@ test('sag ustte sadece GRIND yazisi var, hesap dugmesi yok', async () => {
 
   await screen.findByText('Ic sayfa icerigi');
 
-  expect(screen.getByText('GRIND')).toBeInTheDocument();
+  const ustKabuk = screen.getByRole('banner');
+  const temaDugmesi = within(ustKabuk).getByRole('button', { name: /temaya geç$/ });
+  const grind = within(ustKabuk).getByText('GRIND');
+  // DOM sirasinda dugme GRIND'den ONCE gelir, yani gorsel olarak solunda durur.
+  expect(temaDugmesi.compareDocumentPosition(grind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Hesap menüsü' })).not.toBeInTheDocument();
   // Sol tarafta artik "GRIND" DEGIL, sayfa basligi var.
   expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('GRIND');

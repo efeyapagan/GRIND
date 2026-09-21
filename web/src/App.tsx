@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Home, Plus, User } from 'lucide-react';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
+import TemaDugmesi from './components/TemaDugmesi';
 
 /**
  * Korumali alanin ortak kabugu (spec Karar 8, issue #65 ile yeniden duzenlendi, #119/#120 ile
@@ -10,7 +11,7 @@ import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
  *
  * Hesap menusu KALDIRILDI (kullanici karari): Profil artik alt menude kendi sekmesi, "Cikis yap"
  * o sekmenin (Hesap) icinde en altta durur (bkz. ProfilePage) -- ust kabukta ayrica bir hesap
- * ikonuna/popover'a gerek kalmadi, sag ust sadece "GRIND" yazar.
+ * ikonuna/popover'a gerek kalmadi. Sag ustte "GRIND" yazisi ve hemen solunda tema dugmesi (#194).
  *
  * Alt menu (issue #119/#120): Ana Sayfa · (+) · Profil -- simetrik 1-1, ortada tasan buyuk bir "+"
  * dugmesi. UCU DE simgeden ibarettir, gorunur etiket YOK -- erisilebilir ad `aria-label`den gelir
@@ -43,7 +44,11 @@ function Kabuk() {
       <header className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-md items-center justify-between px-4">
           <h1 className="truncate text-heading">{baslik}</h1>
-          <span className="shrink-0 text-label text-muted uppercase">GRIND</span>
+          {/* #194: tema dugmesi GRIND'in hemen solunda (Profil > Hesap'tan buraya tasindi). */}
+          <div className="flex shrink-0 items-center gap-3">
+            <TemaDugmesi />
+            <span className="text-label text-muted uppercase">GRIND</span>
+          </div>
         </div>
       </header>
 
