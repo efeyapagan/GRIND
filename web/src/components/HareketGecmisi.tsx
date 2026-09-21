@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
@@ -8,30 +9,33 @@ import SekmeDugmesi from '../ui/SekmeDugmesi';
 
 type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar';
 
-interface Sekme {
-  anahtar: SekmeAnahtari;
-  etiket: string;
-  // Grafigin erisilebilir adinda kullanilir ("Bench Press ağırlık, 3 antrenman").
-  ozetAdi: string;
-  deger: (nokta: IlerlemeNoktasi) => number | null;
-}
-
-const SEKMELER: Sekme[] = [
-  { anahtar: 'agirlik', etiket: 'Ağırlık', ozetAdi: 'ağırlık', deger: (nokta) => nokta.topWeight },
-  { anahtar: 'antrenman', etiket: 'Antrenman', ozetAdi: 'antrenman hacmi', deger: (nokta) => nokta.volume },
+const SEKMELER = [
   {
-    anahtar: 'birTekrar',
-    etiket: 'Tahmini 1RM',
-    ozetAdi: 'tahmini 1RM',
-    deger: (nokta) => nokta.estimatedOneRepMax,
+    anahtar: 'agirlik' as SekmeAnahtari,
+    etiket: 'setGirdisi.agirlikEtiket',
+    // Grafigin erisilebilir adinda kullanilir ("Bench Press ağırlık, 3 antrenman").
+    ozetAdi: 'hareketGecmisi.ozetAgirlik',
+    deger: (nokta: IlerlemeNoktasi) => nokta.topWeight,
   },
-];
+  {
+    anahtar: 'antrenman' as SekmeAnahtari,
+    etiket: 'antrenman.baslik',
+    ozetAdi: 'hareketGecmisi.ozetAntrenman',
+    deger: (nokta: IlerlemeNoktasi) => nokta.volume,
+  },
+  {
+    anahtar: 'birTekrar' as SekmeAnahtari,
+    etiket: 'hareketGecmisi.tahminiBirTekrar',
+    ozetAdi: 'hareketGecmisi.ozetBirTekrar',
+    deger: (nokta: IlerlemeNoktasi) => nokta.estimatedOneRepMax,
+  },
+] as const;
 
-const ARALIKLAR: { anahtar: IlerlemeAraligi; etiket: string }[] = [
-  { anahtar: '1a', etiket: '1 Ay' },
-  { anahtar: '3a', etiket: '3 Ay' },
-  { anahtar: 'tum', etiket: 'Tüm' },
-];
+const ARALIKLAR = [
+  { anahtar: '1a' as IlerlemeAraligi, etiket: 'hareketGecmisi.aralikBirAy' },
+  { anahtar: '3a' as IlerlemeAraligi, etiket: 'hareketGecmisi.aralikUcAy' },
+  { anahtar: 'tum' as IlerlemeAraligi, etiket: 'hareketGecmisi.aralikTum' },
+] as const;
 
 const DEGER_ETIKETI = 'text-label text-muted';
 const DEGER = 'text-metric tabular-nums';
@@ -53,12 +57,13 @@ interface Props {
  * durmaz. Durum hatirlanmaz: her montajda kapali baslar.
  */
 export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
+  const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
 
   return (
     <details className="pt-2" onToggle={(olay) => setAcik(olay.currentTarget.open)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-label text-muted uppercase [&::-webkit-details-marker]:hidden">
-        Geçmiş
+        {t('kabuk.sekmeGecmis')}
         {acik ? <ChevronUp aria-hidden size={18} /> : <ChevronDown aria-hidden size={18} />}
       </summary>
       {acik && <HareketGrafigi exerciseId={exerciseId} exerciseName={exerciseName} />}
@@ -73,6 +78,7 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
  * secici notr.
  */
 function HareketGrafigi({ exerciseId, exerciseName }: Props) {
+  const { t } = useTranslation();
   const dil = useDil();
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
@@ -82,17 +88,17 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
 
   let icerik: ReactNode;
   if (isLoading) {
-    icerik = <p className="text-body text-muted">Yükleniyor...</p>;
+    icerik = <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>;
   } else if (isError || !noktalar) {
     icerik = (
       <p role="alert" className="text-body text-danger">
-        Geçmiş alınamadı.
+        {t('hareketGecmisi.hata')}
       </p>
     );
   } else if (noktalar.length === 0) {
     icerik = (
       <p className="text-body text-muted">
-        {aralik === 'tum' ? 'Bu hareketin ilk antrenmanı' : 'Bu aralıkta kayıt yok'}
+        {aralik === 'tum' ? t('hareketGecmisi.ilkAntrenman') : t('hareketGecmisi.aralikBos')}
       </p>
     );
   } else {
@@ -102,7 +108,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
     });
 
     if (cizilecekler.length === 0) {
-      icerik = <p className="text-body text-muted">Tahmini 1RM için 1–12 tekrarlı ve ağırlıklı set gerekir.</p>;
+      icerik = <p className="text-body text-muted">{t('hareketGecmisi.birTekrarAciklama')}</p>;
     } else {
       const ilk = cizilecekler[0];
       const son = cizilecekler[cizilecekler.length - 1];
@@ -110,12 +116,12 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
         <>
           <dl className="flex gap-8">
             <div className="flex flex-col gap-1">
-              <dt className={DEGER_ETIKETI}>Şu anki</dt>
+              <dt className={DEGER_ETIKETI}>{t('hareketGecmisi.suAnki')}</dt>
               <dd className={DEGER}>{formatWeight(son.deger, dil)}</dd>
             </div>
             {cizilecekler.length > 1 && (
               <div className="flex flex-col gap-1">
-                <dt className={DEGER_ETIKETI}>Fark</dt>
+                <dt className={DEGER_ETIKETI}>{t('hareketGecmisi.fark')}</dt>
                 <dd className={DEGER}>{formatFark(son.deger - ilk.deger, dil)}</dd>
               </div>
             )}
@@ -124,7 +130,11 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           <CizgiGrafik
             noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt, dil), deger }))}
             birim="kg"
-            baslik={`${exerciseName} ${sekme.ozetAdi}, ${cizilecekler.length} antrenman`}
+            baslik={t('hareketGecmisi.grafikBasligi', {
+              ad: exerciseName,
+              ozet: t(sekme.ozetAdi),
+              count: cizilecekler.length,
+            })}
           />
         </>
       );
@@ -133,7 +143,11 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
 
   return (
     <div className="flex flex-col gap-3 pt-1">
-      <div role="tablist" aria-label={`${exerciseName} grafiği`} className="flex border-b border-surface-3">
+      <div
+        role="tablist"
+        aria-label={t('hareketGecmisi.grafikEtiket', { ad: exerciseName })}
+        className="flex border-b border-surface-3"
+      >
         {SEKMELER.map((aday) => (
           <SekmeDugmesi
             key={aday.anahtar}
@@ -142,7 +156,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
             aria-controls={panelId}
             onClick={() => setSekmeAnahtari(aday.anahtar)}
           >
-            {aday.etiket}
+            {t(aday.etiket)}
           </SekmeDugmesi>
         ))}
       </div>
@@ -163,7 +177,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
               onClick={() => setAralik(aday.anahtar)}
               className={`min-h-11 flex-1 rounded-md text-label ${secili ? 'bg-surface-4 text-fg' : 'text-muted'}`}
             >
-              {aday.etiket}
+              {t(aday.etiket)}
             </button>
           );
         })}

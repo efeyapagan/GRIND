@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '../api/queries';
 import { useKaydirma } from '../lib/kaydirma';
@@ -24,6 +25,7 @@ interface Props {
  * disindadir -- ayni eylem ekran okuyucuya iki kez duyurulmaz (issue #46 erisilebilirlik maddesi).
  */
 export default function GecmisKarti({ oturum, onSil }: Props) {
+  const { t } = useTranslation();
   const dil = useDil();
   const kaydirma = useKaydirma();
   const [onayAcik, setOnayAcik] = useState(false);
@@ -39,8 +41,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
       <li className="overflow-hidden rounded-xl bg-surface-2">
         <div className="flex flex-col gap-3 p-4">
           <p className="text-body">
-            {formatTarih(oturum.startedAt, dil)} tarihli antrenman ve {oturum.setCount} seti silinecek.
-            Bu hareketlerin rekorları yeniden hesaplanır.
+            {t('gecmis.silmeOnayi', { tarih: formatTarih(oturum.startedAt, dil), count: oturum.setCount })}
           </p>
           <div className="flex gap-2">
             <button
@@ -48,10 +49,10 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               onClick={onSil}
               className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg"
             >
-              Evet, sil
+              {t('sablonlar.evetSil')}
             </button>
             <div className="flex-1">
-              <IkincilDugme onClick={() => setOnayAcik(false)}>Vazgeç</IkincilDugme>
+              <IkincilDugme onClick={() => setOnayAcik(false)}>{t('ortak.vazgec')}</IkincilDugme>
             </div>
           </div>
         </div>
@@ -70,7 +71,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
           className="flex w-24 flex-col items-center justify-center gap-1 bg-danger-bg text-label-xs text-on-danger-bg uppercase"
         >
           <Trash2 size={20} />
-          Sil
+          {t('gecmis.sil')}
         </button>
       </div>
 
@@ -98,14 +99,14 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
                   <CalendarDays aria-hidden size={18} className="text-muted" />
                   {formatTarih(oturum.startedAt, dil)}
                 </span>
-                <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
+                <TurEtiketi>{oturum.templateName ?? t('gecmis.serbest')}</TurEtiketi>
               </span>
               <span className="flex items-baseline gap-4">
                 <span className="flex items-baseline gap-1">
                   <span className={`text-metric tabular-nums ${bos ? 'text-muted' : ''}`}>
                     {oturum.setCount}
                   </span>{' '}
-                  <span className="text-label-xs text-muted uppercase">set</span>
+                  <span className="text-label-xs text-muted uppercase">{t('gecmis.setBirimi')}</span>
                 </span>
                 <span className="flex items-baseline gap-1">
                   <span className={`text-metric tabular-nums ${bos ? 'text-muted' : ''}`}>
@@ -119,7 +120,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
                     <span className="text-metric tabular-nums">
                       {kalanSureMetni(oturum.medianRestSeconds * 1000)}
                     </span>{' '}
-                    <span className="text-label-xs text-muted uppercase">dinlenme</span>
+                    <span className="text-label-xs text-muted uppercase">{t('gecmis.dinlenmeBirimi')}</span>
                   </span>
                 )}
               </span>
@@ -133,7 +134,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
             </span>
           </summary>
           <div className="flex flex-col gap-3 p-4">
-            <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni="Bu antrenmanda set yok." />
+            <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni={t('gecmis.bosDurumMetni')} />
             {/* Kaydirma yapamayan herkesin (klavye, ekran okuyucu) silme yolu. */}
             <button
               type="button"
@@ -141,7 +142,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
             >
               <Trash2 aria-hidden size={18} />
-              Antrenmanı sil
+              {t('gecmis.antrenmaniSil')}
             </button>
           </div>
         </details>
