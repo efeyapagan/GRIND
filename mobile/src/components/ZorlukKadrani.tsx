@@ -1,88 +1,51 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, PanResponder, type GestureResponderEvent } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import type { Zorluk } from '@grind/shared/api/queries';
 import { renkler } from '@grind/shared/designTokens';
+import {
+  altDurakDerinligi,
+  durakKonumu,
+  enYakinDurak,
+  yayYolu,
+  ZORLUK_KADEMELERI,
+} from '@grind/shared/lib/zorlukKadrani';
 
 interface Props {
   deger: Zorluk;
   onDegis: (zorluk: Zorluk) => void;
 }
 
-interface Kademe {
-  deger: Zorluk;
-  etiket: string;
-  cumle: string;
-}
-
-/**
- * Kolaydan zora sıralı — kadranın durak sırası ve artır/azalt yönü bu diziden gelir. Sunucunun enum
- * değerleri İngilizce, kullanıcıya gösterilen her şey Türkçe. Cümleler RPE mantığıyla yazıldı:
- * kullanıcı "kaç üzerinden kaç" diye düşünmek yerine antrenmanda ne hissettiğini seçer.
- */
-const KADEMELER: Kademe[] = [
-  { deger: 'VeryEasy', etiket: 'Çok kolay', cumle: 'Sohbet edebilirdim' },
-  { deger: 'Easy', etiket: 'Kolay', cumle: 'Birkaç tekrarım daha vardı' },
-  { deger: 'Medium', etiket: 'Orta', cumle: 'Zorlandım ama kontrollüydü' },
-  { deger: 'Hard', etiket: 'Zor', cumle: 'Nefesimi zor tutuyordum' },
-  { deger: 'Maximal', etiket: 'Maksimal', cumle: 'Son tekrarda tükendim' },
-];
-
-const BOYUT = 280;
-const MERKEZ = BOYUT / 2;
-const HALKA_YARICAP = 112;
-const HALKA_KALINLIK = 22;
+const GENISLIK = 280;
+const MERKEZ = GENISLIK / 2;
+const YAY_YARICAP = 112;
+const YAY_KALINLIK = 22;
 const DURAK_BOYUT = 44;
-/** İlk durak sol üstte; kalanlar saat yönünde eşit aralıklarla (kullanıcının çizimindeki yerleşim). */
-const BASLANGIC_ACI = -144;
-const ARALIK_ACI = 360 / KADEMELER.length;
-
-function aci(sira: number): number {
-  return BASLANGIC_ACI + sira * ARALIK_ACI;
-}
-
-function radyan(derece: number): number {
-  return (derece * Math.PI) / 180;
-}
-
-/** İki açı arasındaki en kısa mesafe (derece, 0–180) — kadran tam tur olduğu için sarma hesaplanır. */
-function aciFarki(a: number, b: number): number {
-  const fark = Math.abs(((a - b) % 360) + 360) % 360;
-  return fark > 180 ? 360 - fark : fark;
-}
-
-/** Dokunulan noktanın açısına EN YAKIN durağın sırası — parmağın halkaya tam oturması gerekmez. */
-function enYakinDurak(x: number, y: number): number {
-  const dokunusAcisi = (Math.atan2(y - MERKEZ, x - MERKEZ) * 180) / Math.PI;
-  let enYakin = 0;
-  for (let sira = 1; sira < KADEMELER.length; sira += 1) {
-    if (aciFarki(dokunusAcisi, aci(sira)) < aciFarki(dokunusAcisi, aci(enYakin))) {
-      enYakin = sira;
-    }
-  }
-  return enYakin;
-}
+/** Yay alti acik: kutu, en alttaki duraklarin bittigi yerde biter (tam kare degil). */
+const YUKSEKLIK = MERKEZ + altDurakDerinligi(YAY_YARICAP) + DURAK_BOYUT / 2 + 2;
+/** Ortadaki ad + cumle blogunun yaklasik yarisi -- blok yayin merkezine oturur. */
+const ORTA_BLOK_YARI_YUKSEKLIK = 32;
 
 /**
- * Antrenman zorluğunun beş duraklı döner kadranı (#153). Seçim üç yoldan yapılabilir: halkayı
- * parmakla çevirmek, bir durağa dokunmak, ya da ekran okuyucunun artır/azalt eylemi
- * (`accessibilityRole="adjustable"`). Üçü de aynı `sec` fonksiyonuna bağlanır (DRY).
+ * Antrenman zorlugunun bes durakli surat kadrani (#153, #182'de tam halkadan alti acik 240°'lik
+ * yaya dondu: 1 sol altta, 5 sag altta). Geometri web kadraniyla ORTAK (`lib/zorlukKadrani`).
+ * Secim uc yoldan yapilabilir: yayi parmakla cevirmek, bir duraga dokunmak, ya da ekran okuyucunun
+ * artir/azalt eylemi (`accessibilityRole="adjustable"`). Ucu de ayni fonksiyona baglanir (DRY).
  *
- * Kontrollü bileşen: seçili kademeyi kendisi TUTMAZ, `deger` ile alır — antrenmanı bitiren ekran
- * hangi değeri göndereceğini tek yerden bilir.
+ * Kontrollu bilesen: secili kademeyi kendisi TUTMAZ, `deger` ile alir -- antrenmani bitiren ekran
+ * hangi degeri gonderecegini tek yerden bilir.
  *
- * Renkler yalnızca tasarım token'larından gelir; seçili durak `accent` alır (gerçek bir "seçili"
- * hâl olduğu için `accent` kuralı sağlanır), diğerleri `surface-4`'te durur.
+ * Renkler yalnizca tasarim token'larindan gelir; secili durak `accent` alir (gercek bir "secili"
+ * hal oldugu icin `accent` kurali saglanir), digerleri `surface-4`te durur.
  */
 export default function ZorlukKadrani({ deger, onDegis }: Props) {
-  const seciliSira = Math.max(
-    0,
-    KADEMELER.findIndex((kademe) => kademe.deger === deger),
-  );
-  const secili = KADEMELER[seciliSira];
+  const { t } = useTranslation();
+  const seciliSira = Math.max(0, ZORLUK_KADEMELERI.indexOf(deger));
+  const secili = ZORLUK_KADEMELERI[seciliSira];
 
-  // PanResponder bir kez kurulur (her render'da yeniden kurmak süren jesti koparırdı), bu yüzden
-  // güncel `onDegis`e ref üzerinden ulaşır.
+  // PanResponder bir kez kurulur (her render'da yeniden kurmak suren jesti koparirdi), bu yuzden
+  // guncel `onDegis`e ref uzerinden ulasir.
   const onDegisRef = useRef(onDegis);
   useEffect(() => {
     onDegisRef.current = onDegis;
@@ -90,8 +53,8 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
 
   const cevirmeRef = useRef(
     PanResponder.create({
-      // Yalnızca non-capture: dokunuş önce en içteki bileşene sorulur, böylece durakların kendi
-      // onPress'i çalışmaya devam eder; halkanın boş yerinden başlayan sürükleme buraya düşer.
+      // Yalnizca non-capture: dokunus once en icteki bilesene sorulur, boylece duraklarin kendi
+      // onPress'i calismaya devam eder; yayin bos yerinden baslayan surukleme buraya duser.
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (olay: GestureResponderEvent) => cevir(olay),
@@ -101,12 +64,12 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
 
   function cevir(olay: GestureResponderEvent) {
     const { locationX, locationY } = olay.nativeEvent;
-    onDegisRef.current(KADEMELER[enYakinDurak(locationX, locationY)].deger);
+    onDegisRef.current(ZORLUK_KADEMELERI[enYakinDurak(locationX - MERKEZ, locationY - MERKEZ)]);
   }
 
   function sirayiSec(sira: number) {
-    if (sira >= 0 && sira < KADEMELER.length && sira !== seciliSira) {
-      onDegis(KADEMELER[sira].deger);
+    if (sira >= 0 && sira < ZORLUK_KADEMELERI.length && sira !== seciliSira) {
+      onDegis(ZORLUK_KADEMELERI[sira]);
     }
   }
 
@@ -114,8 +77,13 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
     <View
       accessible
       accessibilityRole="adjustable"
-      accessibilityLabel="Antrenman zorluğu"
-      accessibilityValue={{ min: 1, max: KADEMELER.length, now: seciliSira + 1, text: secili.etiket }}
+      accessibilityLabel={t('ortak.zorlukKadrani')}
+      accessibilityValue={{
+        min: 1,
+        max: ZORLUK_KADEMELERI.length,
+        now: seciliSira + 1,
+        text: t(`ortak.zorluk.${secili}`),
+      }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(olay) => {
         if (olay.nativeEvent.actionName === 'increment') {
@@ -124,41 +92,43 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
           sirayiSec(seciliSira - 1);
         }
       }}
-      style={{ width: BOYUT, height: BOYUT }}
-      className="items-center justify-center"
+      style={{ width: GENISLIK, height: YUKSEKLIK }}
       {...cevirmeRef.current.panHandlers}
     >
-      <Svg width={BOYUT} height={BOYUT} style={{ position: 'absolute' }}>
-        <Circle
-          cx={MERKEZ}
-          cy={MERKEZ}
-          r={HALKA_YARICAP}
+      <Svg width={GENISLIK} height={YUKSEKLIK} style={{ position: 'absolute' }}>
+        <Path
+          d={yayYolu(MERKEZ, YAY_YARICAP)}
           fill="none"
           stroke={renkler['surface-2']}
-          strokeWidth={HALKA_KALINLIK}
+          strokeWidth={YAY_KALINLIK}
+          strokeLinecap="round"
         />
       </Svg>
 
-      <View className="items-center gap-1 px-14">
-        <Text className="text-heading font-bold text-fg">{secili.etiket}</Text>
-        <Text className="text-center text-body text-muted">{secili.cumle}</Text>
+      <View
+        style={{ position: 'absolute', left: 0, right: 0, top: MERKEZ - ORTA_BLOK_YARI_YUKSEKLIK }}
+        className="items-center gap-1 px-14"
+      >
+        <Text className="text-heading font-bold text-fg">{t(`ortak.zorluk.${secili}`)}</Text>
+        <Text className="text-center text-body text-muted">{t(`ortak.zorlukCumlesi.${secili}`)}</Text>
       </View>
 
-      {KADEMELER.map((kademe, sira) => {
+      {ZORLUK_KADEMELERI.map((kademe, sira) => {
         const seciliMi = sira === seciliSira;
+        const { x, y } = durakKonumu(sira, MERKEZ, YAY_YARICAP);
         return (
           <Pressable
-            key={kademe.deger}
+            key={kademe}
             accessibilityRole="button"
-            accessibilityLabel={kademe.etiket}
+            accessibilityLabel={t(`ortak.zorluk.${kademe}`)}
             accessibilityState={{ selected: seciliMi }}
             onPress={() => sirayiSec(sira)}
             style={{
               position: 'absolute',
               width: DURAK_BOYUT,
               height: DURAK_BOYUT,
-              left: MERKEZ + HALKA_YARICAP * Math.cos(radyan(aci(sira))) - DURAK_BOYUT / 2,
-              top: MERKEZ + HALKA_YARICAP * Math.sin(radyan(aci(sira))) - DURAK_BOYUT / 2,
+              left: x - DURAK_BOYUT / 2,
+              top: y - DURAK_BOYUT / 2,
             }}
             className={`items-center justify-center rounded-full ${seciliMi ? 'bg-accent' : 'bg-surface-4'}`}
           >
