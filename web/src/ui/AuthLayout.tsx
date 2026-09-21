@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Dumbbell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   baslik: string;
@@ -13,12 +14,14 @@ interface Props {
  * GRIND + slogan, ortada kart, altta gecis baglantisi. Bu ekranlarda kabuk (baslik/sekme cubugu) yok.
  */
 export default function AuthLayout({ baslik, aciklama, children, altBaglanti }: Props) {
+  const { t } = useTranslation();
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
       <div className="mb-5 flex flex-col items-center text-center">
         <Dumbbell aria-hidden size={32} className="mb-2 text-accent" />
         <span className="text-title uppercase">GRIND</span>
-        <p className="mt-1 text-body text-muted">Güç antrenmanı günlüğü</p>
+        <p className="mt-1 text-body text-muted">{t('ortak.slogan')}</p>
       </div>
       <section className="flex flex-col gap-4 rounded-xl bg-surface-1 p-4">
         <div className="flex flex-col gap-1">

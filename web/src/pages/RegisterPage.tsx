@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AtSign, LockKeyhole, UserPlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import AuthLayout from '../ui/AuthLayout';
@@ -20,6 +21,7 @@ const MAKS_SIFRE_BAYT = 72;
 const BILINEN_ALANLAR = ['username', 'password'];
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -34,26 +36,25 @@ export default function RegisterPage() {
     const hatalar: Record<string, string> = {};
 
     if (kullaniciAdi.length === 0) {
-      hatalar.username = 'Kullanıcı adı gerekli.';
+      hatalar.username = t('ortak.kullaniciAdiGerekli');
     } else if (!KULLANICI_ADI_DESENI.test(kullaniciAdi)) {
-      hatalar.username =
-        'Kullanıcı adı 3-50 karakter olmalı; yalnızca İngilizce harf, rakam, _ ve - içerebilir.';
+      hatalar.username = t('kayit.kullaniciAdiDeseni');
     }
 
     if (sifre.length === 0) {
-      hatalar.password = 'Şifre gerekli.';
+      hatalar.password = t('ortak.sifreGerekli');
     } else if (sifre.length < MIN_SIFRE_KARAKTER) {
-      hatalar.password = 'Şifre en az 8 karakter olmalı.';
+      hatalar.password = t('ortak.sifreEnAz8Karakter');
     } else if (new TextEncoder().encode(sifre).length > MAKS_SIFRE_BAYT) {
       // Bayt olarak olculur, karakter olarak degil -- coklu bayt karakterler (orn. 'ğ')
       // karakter basina birden fazla bayt tutar, BCrypt sinirini bayt cinsinden asabilir.
-      hatalar.password = 'Şifre en fazla 72 bayt olabilir.';
+      hatalar.password = t('ortak.sifreEnFazla72Bayt');
     }
 
     // Spec davranis 1: sifre sifirlama olmadigi icin kayittaki yazim hatasi hesabi kalici kilitler.
     // Sifrenin kendisi zaten hataliysa ikinci bir mesaj eklenmez; sunucuya yalnizca `password` gider.
     if (!hatalar.password && sifreTekrari !== sifre) {
-      hatalar.passwordConfirm = 'Şifreler eşleşmiyor.';
+      hatalar.passwordConfirm = t('ortak.sifrelerEslesmiyor');
     }
 
     setAlanHatalari(hatalar);
@@ -83,46 +84,46 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout
-      baslik="Kayıt ol"
-      aciklama="Ağırlıklarını ve gelişimini anlık takip etmeye başla."
+      baslik={t('ortak.kayitOl')}
+      aciklama={t('kayit.aciklama')}
       altBaglanti={
         <>
-          Zaten hesabın var mı?{' '}
+          {t('kayit.zatenHesabinVarMi')}{' '}
           <Link to="/login" className="inline-flex min-h-11 items-center font-semibold text-accent-soft">
-            Giriş yap
+            {t('ortak.girisYap')}
           </Link>
         </>
       }
     >
-      {genelHata && <HataKutusu baslik="Kayıt başarısız" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('kayit.kayitBasarisiz')} mesaj={genelHata} />}
       <form onSubmit={gonder} className="flex flex-col gap-4">
         <Alan
           id="username"
-          etiket="Kullanıcı adı"
+          etiket={t('ortak.kullaniciAdi')}
           ikon={AtSign}
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="ornek_kullanici"
-          ipucu="3–50 karakter (harf, rakam, _ ve -)"
+          placeholder={t('kayit.kullaniciAdiPlaceholder')}
+          ipucu={t('kayit.kullaniciAdiIpucu')}
           value={kullaniciAdi}
           onChange={(e) => setKullaniciAdi(e.target.value)}
           hata={alanHatalari.username}
         />
         <SifreAlani
           id="password"
-          etiket="Şifre"
+          etiket={t('ortak.sifre')}
           autoComplete="new-password"
-          ipucu="En az 8 karakter"
+          ipucu={t('ortak.enAz8Karakter')}
           value={sifre}
           onChange={(e) => setSifre(e.target.value)}
           hata={alanHatalari.password}
         />
         <SifreAlani
           id="password-confirm"
-          etiket="Şifre tekrarı"
+          etiket={t('kayit.sifreTekrari')}
           ikon={LockKeyhole}
-          gosterEtiketi="Şifre tekrarını göster"
+          gosterEtiketi={t('kayit.sifreTekrariniGoster')}
           autoComplete="new-password"
           value={sifreTekrari}
           onChange={(e) => setSifreTekrari(e.target.value)}
@@ -130,7 +131,7 @@ export default function RegisterPage() {
         />
         <BirincilDugme type="submit" yukseklik="normal" disabled={gonderiliyor}>
           <UserPlus aria-hidden size={22} />
-          Kayıt ol
+          {t('ortak.kayitOl')}
         </BirincilDugme>
       </form>
     </AuthLayout>

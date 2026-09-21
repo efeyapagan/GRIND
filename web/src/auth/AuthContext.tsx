@@ -47,7 +47,9 @@ function dogrulanmisKimlikYaniti(yanit: AuthResponse): {
   username: string;
 } {
   if (!yanit.token || !yanit.expiresAtUtc || !yanit.username) {
-    throw new Error('Sunucudan eksik kimlik yanıtı alındı.');
+    // Kullaniciya hic gorunmez: apiHatasiniAyir bu Error'u ApiError olmadigi icin
+    // `hatalar.beklenmeyen`e cevirir (dev/log-only invariant ihlali).
+    throw new Error('Sunucudan eksik kimlik yanıtı alındı.'); // i18n-muaf
   }
   return { token: yanit.token, expiresAtUtc: yanit.expiresAtUtc, username: yanit.username };
 }
@@ -142,7 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth, AuthProvider içinde kullanılmalıdır.');
+    // Programci hatasi (Provider disinda kullanim), kullaniciya hic gorunmez.
+    throw new Error('useAuth, AuthProvider içinde kullanılmalıdır.'); // i18n-muaf
   }
   return context;
 }
