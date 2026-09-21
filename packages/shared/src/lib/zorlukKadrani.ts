@@ -50,11 +50,16 @@ export function enYakinDurak(dx: number, dy: number): number {
   return enYakin;
 }
 
-/** Ilk duraktan son duraga, tepe uzerinden giden yayin SVG yolu (web `<path>` ve react-native-svg `Path`). */
-export function yayYolu(merkez: number, yaricap: number): string {
+/**
+ * Ilk duraktan `sonSira`ya (varsayilan: son durak), tepe uzerinden giden yayin SVG yolu (web
+ * `<path>` ve react-native-svg `Path`). Tam yay kadranin zemini; secili duraga kadar olani dolgusu
+ * (#182, surat kadrani ibresi gibi).
+ */
+export function yayYolu(merkez: number, yaricap: number, sonSira = ZORLUK_KADEMELERI.length - 1): string {
   const bas = durakKonumu(0, merkez, yaricap);
-  const son = durakKonumu(ZORLUK_KADEMELERI.length - 1, merkez, yaricap);
-  return `M ${bas.x} ${bas.y} A ${yaricap} ${yaricap} 0 1 1 ${son.x} ${son.y}`;
+  const son = durakKonumu(sonSira, merkez, yaricap);
+  const buyukYay = sonSira * ARALIK_ACI > 180 ? 1 : 0;
+  return `M ${bas.x} ${bas.y} A ${yaricap} ${yaricap} 0 ${buyukYay} 1 ${son.x} ${son.y}`;
 }
 
 /** Merkezden en alttaki (ilk ve son) duraklarin merkezine dikey mesafe -- kadran kutusunun yuksekligi icin. */

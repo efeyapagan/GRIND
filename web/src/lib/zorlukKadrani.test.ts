@@ -1,4 +1,4 @@
-import { durakAcisi, enYakinDurak, ZORLUK_KADEMELERI } from './zorlukKadrani';
+import { durakAcisi, durakKonumu, enYakinDurak, yayYolu, ZORLUK_KADEMELERI } from './zorlukKadrani';
 
 /**
  * #182: zorluk kadrani tam halka degil, alti acik bir "surat kadrani" -- 1 solda, 5 sagda, yay
@@ -39,4 +39,14 @@ test('yayin altindaki bosluga dokunus en yakin uca duser', () => {
 
   expect(enYakinDurak(sagaYakin.x, sagaYakin.y)).toBe(4);
   expect(enYakinDurak(solaYakin.x, solaYakin.y)).toBe(0);
+});
+
+/** #182: yayin baslangicindan secili durağa kadar olan kismi dolgu olarak cizilir (surat kadrani ibresi). */
+test('dolgu yayi ilk duraktan verilen duraga kadar gider', () => {
+  const orta = yayYolu(140, 112, 2);
+  const tepe = durakKonumu(2, 140, 112);
+  expect(orta.endsWith(`${tepe.x} ${tepe.y}`)).toBe(true);
+  // 120° < 180°: kucuk yay; tam yay 240° oldugu icin buyuk yay bayragi tasir.
+  expect(orta).toContain(' 0 0 1 ');
+  expect(yayYolu(140, 112)).toContain(' 0 1 1 ');
 });

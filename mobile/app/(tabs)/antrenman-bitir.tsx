@@ -40,6 +40,8 @@ export default function AntrenmanBitirScreen() {
   const { data: oturum, isLoading, isError } = useOpenSession();
   const bitirMutasyonu = useFinishSession();
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
+  // Kadran cevrilirken ekran kaymaz: iOS ScrollView jesti aksi halde dikey hareketi calar (#182).
+  const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
 
   if (isLoading) {
     return (
@@ -63,20 +65,26 @@ export default function AntrenmanBitirScreen() {
   }
 
   return (
-    <EkranKaydirici contentContainerClassName="flex-grow items-center gap-6 px-4 pt-6 pb-4">
+    <EkranKaydirici
+      scrollEnabled={!kadranCevriliyor}
+      contentContainerClassName="flex-grow items-center gap-6 px-4 pt-6 pb-4"
+    >
       <Text className="text-center text-body text-muted">
         {t('antrenman.bitirmeSorusu')}
       </Text>
 
-      <ZorlukKadrani deger={zorluk} onDegis={setZorluk} />
+      {/* Kadran, soru ile alttaki dugmeler arasindaki bosluğun ortasinda durur (#182). */}
+      <View className="flex-1 items-center justify-center gap-4">
+        <ZorlukKadrani deger={zorluk} onDegis={setZorluk} onSurukleme={setKadranCevriliyor} />
 
-      {bitirMutasyonu.isError && (
-        <Text accessibilityRole="alert" className="text-label text-danger">
-          {t('antrenman.bitirilemedi')}
-        </Text>
-      )}
+        {bitirMutasyonu.isError && (
+          <Text accessibilityRole="alert" className="text-label text-danger">
+            {t('antrenman.bitirilemedi')}
+          </Text>
+        )}
+      </View>
 
-      <View className="mt-auto w-full items-center gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
+      <View className="w-full items-center gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
         <BirincilDugme
           yukseklik="buyuk"
           disabled={bitirMutasyonu.isPending}

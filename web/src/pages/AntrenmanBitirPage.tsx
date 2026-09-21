@@ -46,16 +46,20 @@ export default function AntrenmanBitirPage() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 pt-6">
+    // 8rem = ust baslik + alt sekme cubugu (AntrenmanPage ile ayni hesap): sayfa ekrani doldurur, kadran
+    // soru ile dugmeler arasindaki boslugun ortasinda, dugmeler en altta durur -- mobil ekranla ayni.
+    <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col items-center gap-6 pt-6 pb-4">
       <p className="text-center text-body text-muted">{t('antrenman.bitirmeSorusu')}</p>
 
-      <ZorlukKadrani deger={zorluk} onDegis={setZorluk} />
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-4">
+        <ZorlukKadrani deger={zorluk} onDegis={setZorluk} />
 
-      {bitirMutasyonu.isError && (
-        <p role="alert" className="text-label text-danger">
-          {t('antrenman.bitirilemedi')}
-        </p>
-      )}
+        {bitirMutasyonu.isError && (
+          <p role="alert" className="text-label text-danger">
+            {t('antrenman.bitirilemedi')}
+          </p>
+        )}
+      </div>
 
       <div className="flex w-full flex-col gap-2">
         <BirincilDugme yukseklik="buyuk" disabled={bitirMutasyonu.isPending} onClick={() => bitir(zorluk)}>

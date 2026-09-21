@@ -15,6 +15,11 @@ import {
 interface Props {
   deger: Zorluk;
   onDegis: (zorluk: Zorluk) => void;
+  /**
+   * Parmakla cevirme basladi/bitti. Kadrani saran ekran kaydiriliyorsa bununla kaydirmayi kapatir:
+   * iOS'ta ScrollView'un yerel kaydirma jesti aksi halde dikey hareketi calip cevirmeyi koparir.
+   */
+  onSurukleme?: (suruklemede: boolean) => void;
 }
 
 const GENISLIK = 280;
@@ -36,35 +41,62 @@ const ORTA_BLOK_YARI_YUKSEKLIK = 32;
  * Kontrollu bilesen: secili kademeyi kendisi TUTMAZ, `deger` ile alir -- antrenmani bitiren ekran
  * hangi degeri gonderecegini tek yerden bilir.
  *
- * Renkler yalnizca tasarim token'larindan gelir; secili durak `accent` alir (gercek bir "secili"
- * hal oldugu icin `accent` kurali saglanir), digerleri `surface-4`te durur.
+ * Renkler yalnizca tasarim token'larindan gelir: yayin basindan secili duraga kadar dolgu ve gecilen
+ * duraklar `accent`, bulunulan durak soluk `accent/40` (spec Karar 2, #182 genislemesi);
+ * gecilmemis duraklar `surface-4`te, yay zemini `surface-2`de durur.
  */
-export default function ZorlukKadrani({ deger, onDegis }: Props) {
+export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
   const { t } = useTranslation();
   const seciliSira = Math.max(0, ZORLUK_KADEMELERI.indexOf(deger));
   const secili = ZORLUK_KADEMELERI[seciliSira];
 
   // PanResponder bir kez kurulur (her render'da yeniden kurmak suren jesti koparirdi), bu yuzden
-  // guncel `onDegis`e ref uzerinden ulasir.
+  // guncel `onDegis`/`onSurukleme`ye ref uzerinden ulasir.
   const onDegisRef = useRef(onDegis);
+  const onSuruklemeRef = useRef(onSurukleme);
   useEffect(() => {
     onDegisRef.current = onDegis;
-  }, [onDegis]);
+    onSuruklemeRef.current = onSurukleme;
+  }, [onDegis, onSurukleme]);
+
+  const kutuRef = useRef<View>(null);
+  /** Kadranin penceredeki sol ust kosesi -- jest basinda olculur. */
+  const kutuKonumuRef = useRef<{ x: number; y: number } | null>(null);
 
   const cevirmeRef = useRef(
     PanResponder.create({
-      // Yalnizca non-capture: dokunus once en icteki bilesene sorulur, boylece duraklarin kendi
-      // onPress'i calismaya devam eder; yayin bos yerinden baslayan surukleme buraya duser.
+      // Baslangic non-capture: tek dokunus once en icteki bilesene sorulur, duraklarin onPress'i
+      // calisir. Hareket ise CAPTURE ile alinir -- parmak bir duraktan (ozellikle secili turuncu
+      // toptan) baslayip kayarsa jest duragin elinden alinir (#182, telefonda bulundu).
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (olay: GestureResponderEvent) => cevir(olay),
-      onPanResponderMove: (olay: GestureResponderEvent) => cevir(olay),
+      onMoveShouldSetPanResponderCapture: () => true,
+      // Surukleme surerken ne ScrollView ne baska bir jest onu koparabilir.
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (olay: GestureResponderEvent) => {
+        onSuruklemeRef.current?.(true);
+        const { pageX, pageY } = olay.nativeEvent;
+        kutuRef.current?.measureInWindow((x, y) => {
+          kutuKonumuRef.current = { x, y };
+          cevir(pageX, pageY);
+        });
+      },
+      onPanResponderMove: (olay: GestureResponderEvent) => cevir(olay.nativeEvent.pageX, olay.nativeEvent.pageY),
+      onPanResponderRelease: () => onSuruklemeRef.current?.(false),
+      onPanResponderTerminate: () => onSuruklemeRef.current?.(false),
     }),
   );
 
-  function cevir(olay: GestureResponderEvent) {
-    const { locationX, locationY } = olay.nativeEvent;
-    onDegisRef.current(ZORLUK_KADEMELERI[enYakinDurak(locationX - MERKEZ, locationY - MERKEZ)]);
+  /**
+   * Parmagin konumu PENCERE koordinatindan (pageX/Y) kadranin konumu cikarilarak hesaplanir:
+   * `locationX/Y` parmagin ilk degdigi cocuga (ortadaki yazi, bir durak) goredir ve aciyi bozar.
+   */
+  function cevir(pageX: number, pageY: number) {
+    const kutu = kutuKonumuRef.current;
+    if (!kutu) {
+      return;
+    }
+    const sira = enYakinDurak(pageX - kutu.x - MERKEZ, pageY - kutu.y - MERKEZ);
+    onDegisRef.current(ZORLUK_KADEMELERI[sira]);
   }
 
   function sirayiSec(sira: number) {
@@ -92,6 +124,7 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
           sirayiSec(seciliSira - 1);
         }
       }}
+      ref={kutuRef}
       style={{ width: GENISLIK, height: YUKSEKLIK }}
       {...cevirmeRef.current.panHandlers}
     >
@@ -103,6 +136,16 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
           strokeWidth={YAY_KALINLIK}
           strokeLinecap="round"
         />
+        {/* Surat kadrani ibresi gibi: yayin basindan secili duraga kadar dolar (#182). */}
+        {seciliSira > 0 && (
+          <Path
+            d={yayYolu(MERKEZ, YAY_YARICAP, seciliSira)}
+            fill="none"
+            stroke={renkler.accent}
+            strokeWidth={YAY_KALINLIK}
+            strokeLinecap="round"
+          />
+        )}
       </Svg>
 
       <View
@@ -115,7 +158,12 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
 
       {ZORLUK_KADEMELERI.map((kademe, sira) => {
         const seciliMi = sira === seciliSira;
+        const gecildi = sira < seciliSira;
         const { x, y } = durakKonumu(sira, MERKEZ, YAY_YARICAP);
+        // Gecilen durak tam accent, bulunulan durak soluk (#182, kullanici karari): zemin renginde dolu
+        // top + ustunde `accent/40` -- yoksa yari saydam ton altindaki turuncu yayla karisip alacali gorunurdu.
+        const dolgu = gecildi ? 'bg-accent' : seciliMi ? 'bg-bg' : 'bg-surface-4';
+        const rakam = gecildi ? 'text-on-accent' : seciliMi ? 'text-fg' : 'text-muted';
         return (
           <Pressable
             key={kademe}
@@ -130,9 +178,10 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
               left: x - DURAK_BOYUT / 2,
               top: y - DURAK_BOYUT / 2,
             }}
-            className={`items-center justify-center rounded-full ${seciliMi ? 'bg-accent' : 'bg-surface-4'}`}
+            className={`items-center justify-center overflow-hidden rounded-full ${dolgu}`}
           >
-            <Text className={`text-body font-bold ${seciliMi ? 'text-on-accent' : 'text-muted'}`}>
+            {seciliMi && <View className="absolute inset-0 bg-accent/40" />}
+            <Text className={`text-body font-bold ${rakam}`}>
               {sira + 1}
             </Text>
           </Pressable>

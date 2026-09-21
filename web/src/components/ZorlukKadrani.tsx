@@ -28,8 +28,9 @@ const YUKSEKLIK = MERKEZ + altDurakDerinligi(YAY_YARICAP) + DURAK_YARICAP + 2;
  * yayi surukleyerek (isaretcinin acisina en yakin durak), bir duraga tiklayarak ya da klavyeyle
  * (`role="slider"`: oklar, Home/End). Ucu de ayni `sirayiSec`e baglanir (DRY).
  *
- * Kontrollu bilesen: secili kademeyi kendisi TUTMAZ, `deger` ile alir. Secili durak `accent` alir
- * (gercek bir "secili" hal -- spec Karar 2), digerleri `surface-4`te durur.
+ * Kontrollu bilesen: secili kademeyi kendisi TUTMAZ, `deger` ile alir. Yayin basindan secili duraga
+ * kadar dolgu ve gecilen duraklar `accent`, bulunulan durak soluk `accent/40` (spec Karar 2, #182),
+ * gecilmemisler `surface-4`te, yay zemini `surface-2`de durur.
  */
 export default function ZorlukKadrani({ deger, onDegis }: Props) {
   const { t } = useTranslation();
@@ -101,9 +102,22 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
           strokeLinecap="round"
           className="stroke-surface-2"
         />
+        {/* Surat kadrani ibresi gibi: yayin basindan secili duraga kadar dolar (#182). */}
+        {seciliSira > 0 && (
+          <path
+            d={yayYolu(MERKEZ, YAY_YARICAP, seciliSira)}
+            fill="none"
+            strokeWidth={YAY_KALINLIK}
+            strokeLinecap="round"
+            className="stroke-accent"
+          />
+        )}
         {ZORLUK_KADEMELERI.map((kademe, sira) => {
           const seciliMi = sira === seciliSira;
+          const gecildi = sira < seciliSira;
           const { x, y } = durakKonumu(sira, MERKEZ, YAY_YARICAP);
+          const dolgu = gecildi ? 'fill-accent' : seciliMi ? 'fill-accent/40' : 'fill-surface-4';
+          const rakam = gecildi ? 'fill-on-accent' : seciliMi ? 'fill-fg' : 'fill-muted';
           return (
             // Klavye kaydiricidan gelir; duraklar fare/dokunma icin (tab sirasina girmez).
             <g
@@ -115,14 +129,11 @@ export default function ZorlukKadrani({ deger, onDegis }: Props) {
               onClick={() => sirayiSec(sira)}
               className="cursor-pointer"
             >
-              <circle cx={x} cy={y} r={DURAK_YARICAP} className={seciliMi ? 'fill-accent' : 'fill-surface-4'} />
-              <text
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                className={`text-body font-bold ${seciliMi ? 'fill-on-accent' : 'fill-muted'}`}
-              >
+              {/* Bulunulan durak soluk accent (#182, kullanici karari): once zemin renginde dolu daire, yoksa yari saydam
+                  ton altindaki turuncu yayla karisip topu alacali gosterirdi. Gecilen duraklar tam accent. */}
+              {seciliMi && <circle cx={x} cy={y} r={DURAK_YARICAP} className="fill-bg" />}
+              <circle cx={x} cy={y} r={DURAK_YARICAP} className={dolgu} />
+              <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className={`text-body font-bold ${rakam}`}>
                 {sira + 1}
               </text>
             </g>
