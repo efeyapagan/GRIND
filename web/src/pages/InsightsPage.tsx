@@ -212,7 +212,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
             onClick={onSil}
             className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg"
           >
-            {t('sablonlar.evetSil')}
+            {t('ortak.evetSil')}
           </button>
           <div className="flex-1">
             <IkincilDugme onClick={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>

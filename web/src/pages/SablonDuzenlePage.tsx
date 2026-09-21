@@ -378,7 +378,7 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
                   disabled={silMutasyonu.isPending}
                   className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg disabled:opacity-60"
                 >
-                  {t('sablonlar.evetSil')}
+                  {t('ortak.evetSil')}
                 </button>
                 <div className="flex-1">
                   <IkincilDugme ref={vazgecDugmesiRef} onClick={() => setSilmeOnayi(false)}>

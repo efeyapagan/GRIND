@@ -49,7 +49,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               onClick={onSil}
               className="h-12 flex-1 rounded-xl bg-danger-bg text-label text-on-danger-bg"
             >
-              {t('sablonlar.evetSil')}
+              {t('ortak.evetSil')}
             </button>
             <div className="flex-1">
               <IkincilDugme onClick={() => setOnayAcik(false)}>{t('ortak.vazgec')}</IkincilDugme>
