@@ -25,14 +25,10 @@ import {
 import IkonDugmesi from '../ui/IkonDugmesi';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
 
-const GORUNUMLER: {
-  anahtar: TakvimGorunumu;
-  etiket: 'takvim.aylik' | 'takvim.haftalik';
-  bosMetin: 'takvim.buAyYok' | 'takvim.buHaftaYok';
-}[] = [
-  { anahtar: 'ay', etiket: 'takvim.aylik', bosMetin: 'takvim.buAyYok' },
-  { anahtar: 'hafta', etiket: 'takvim.haftalik', bosMetin: 'takvim.buHaftaYok' },
-];
+const GORUNUMLER = [
+  { anahtar: 'ay' as TakvimGorunumu, etiket: 'takvim.aylik', bosMetin: 'takvim.buAyYok' },
+  { anahtar: 'hafta' as TakvimGorunumu, etiket: 'takvim.haftalik', bosMetin: 'takvim.buHaftaYok' },
+] as const;
 
 const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
 

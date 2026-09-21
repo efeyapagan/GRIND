@@ -40,12 +40,17 @@ import { usePageTitle } from '../ui/PageTitleContext';
 
 const DINLENME_SANIYELERI: readonly number[] = [0, 30, 60, 90, 120, 180, 240, 300];
 
-/** 0 -> "Yok/None"; <2 dk saniye, >=2 dk dakika olarak katalogdan bicimlenir (#177). */
+/**
+ * Sabit secenek etiketleri (#177 oncesiyle BIREBIR ayni): 0 -> Yok, 30/60/90 -> sn, 120/180/240/300 ->
+ * dk. Sabit listede OLMAYAN her deger (satirda korunan eski bir restSeconds) her zaman sn bicimindedir
+ * -- degeri 60'a tam bolunse bile (orn. 600 -> "600 sn", "10 dk" DEGIL). Bu, gorevden ONCEKI davranisin
+ * aynisi; formatlamayi tek yerde toplamak DRY icin ama cikti degismiyor.
+ */
 function dinlenmeEtiketi(t: TFunction, saniye: number): string {
   if (saniye === 0) {
     return t('sablonlar.dinlenmeYok');
   }
-  if (saniye >= 120 && saniye % 60 === 0) {
+  if (saniye >= 120 && DINLENME_SANIYELERI.includes(saniye)) {
     return t('sablonlar.dinlenmeDk', { dakika: saniye / 60 });
   }
   return t('sablonlar.dinlenmeSn', { saniye });

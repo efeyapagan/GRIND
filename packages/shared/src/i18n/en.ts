@@ -215,7 +215,7 @@ export const en: Katalog = {
     hareketSayisi_one: '{{count}} exercise',
     hareketSayisi_other: '{{count}} exercises',
     dinlenmeYok: 'None',
-    dinlenmeSn: '{{saniye}}s',
+    dinlenmeSn: '{{saniye}} sec',
     dinlenmeDk: '{{dakika}} min',
   },
 };
