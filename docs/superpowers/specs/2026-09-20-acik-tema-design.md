@@ -129,9 +129,18 @@ bunu bilerek 4.5:1 testinin dışında tutar ve neden dışarıda tutulduğunu y
 
 - Tercihin üç değeri var: `sistem` (varsayılan) · `acik` · `koyu`. `localStorage` anahtarı
   `grind.tema` (mevcut `grind.oturum` deseniyle aynı); tanınmayan/eksik değer `sistem` sayılır.
-- Seçici Profil › **Hesap** sekmesinde, "Antrenman hedefi" bölümünün yanında bir **Görünüm**
-  bölümüdür: mevcut `SecimKutusu` bileşeniyle üç seçenekli tek bir `<select>`
-  (`HaftalikHedefSecici` deseni — seçim anında uygulanır, ayrı "Kaydet" düğmesi yok).
+- **Güncelleme (#194, 2026-09-21, kullanıcı kararı):** seçim, üst kabukta sağdaki "GRIND" yazısının
+  hemen solundaki **tek bir düğmedir** (`TemaDugmesi`, mevcut `IkonDugmesi` ile). İlk sürümdeki
+  Profil › Hesap'taki üç seçenekli "Görünüm" `<select>`'i kaldırıldı.
+  - Düğme **iki durumludur**: her dokunuş etkin temanın tersini (`acik`/`koyu`) yazar. İkon basınca
+    olacak şeyi gösterir — koyu temada güneş ("Açık temaya geç"), açık temada ay ("Koyu temaya geç").
+  - `sistem` hâlâ varsayılandır ve hiç dokunulmadıysa ekran işletim sistemini izler; ama bir kez
+    dokunulduktan sonra arayüzden "sisteme geri dönme" yolu yoktur (kullanıcı bunu bilerek seçti).
+    Eskiden saklanmış bir `sistem` değeri geçerli kalır.
+  - Düğme temayı kendi state'inde **tutmaz**: `useEtkinTema` hook'u `<html data-theme>`'i
+    `useSyncExternalStore` + `MutationObserver` ile okur. Tema üç yoldan değişebilir (düğme, sistem
+    dinleyicisi, ilk boya script'i) ve hepsi aynı özniteliği yazar — özniteliği izlemek hiçbirini
+    atlamaz, ikinci bir doğruluk kaynağı oluşmaz.
 - Backend **değişmez**: migration yok, endpoint yok. Tema bir cihaz tercihidir; `User` tablosuna
   yazmak hem migration hem de açılışta API yanıtını bekleyen (yani yanıp sönen) bir tema demekti.
   Cihazlar arası taşınması istenirse ayrı bir issue'da ele alınır.
@@ -149,8 +158,9 @@ bunu bilerek 4.5:1 testinin dışında tutar ve neden dışarıda tutulduğunu y
 
 1. `web/src/lib/tema.test.ts` — saf mantık: tercih okuma (eksik/bozuk değer → `sistem`), yazma,
    `sistem` → etkin temaya çözümleme, sistem tercihi değişince etkin temanın değişmesi.
-2. Tema seçicinin bileşen testi — seçim `document.documentElement`'in `data-theme` değerini ve
-   saklanan tercihi değiştirir.
+2. Tema düğmesinin bileşen testi (#194) — dokunuş `document.documentElement`'in `data-theme`
+   değerini ve saklanan tercihi değiştirir; hiç dokunulmamışken sistem teması değişirse düğmenin
+   etiketi de döner. Kabuk testi düğmenin başlıkta, "GRIND"in solunda durduğunu doğrular.
 3. **Palet kontrast testi** — `index.css` okunur, iki token bloğu ayrıştırılır ve Karar 2/3'teki
    çiftler için kontrast oranları hesaplanarak eşiklerin (metin 4.5:1, halka 3:1) üstünde olduğu
    doğrulanır. Amaç: ileride bir renk elle değiştirilirse kontrast sessizce bozulmasın.
@@ -174,8 +184,9 @@ mobil işi başladığında iki varyantı oraya taşımak o issue'nun kararıdı
 | `web/src/index.css` | `--color-accent-fg` eklenir; `:root[data-theme='light']` palet bloğu ve `color-scheme` kuralları; odak halkası ve accent'in diğer ön plan kullanımları `accent-fg` token'ına geçer |
 | `web/index.html` | `<head>`'e sıçramayı önleyen satır içi script |
 | `web/src/lib/tema.ts` | yeni — tercih okuma/yazma, çözümleme, DOM'a uygulama, sistem dinleyicisi |
-| `web/src/components/GorunumSecici.tsx` | yeni — Profil › Hesap'taki Görünüm seçicisi |
-| `web/src/pages/ProfilePage.tsx` | "Görünüm" bölümü eklenir |
+| `web/src/components/TemaDugmesi.tsx` | yeni (#194) — üst kabuktaki iki durumlu tema düğmesi (ilk sürümdeki `GorunumSecici` kaldırıldı) |
+| `web/src/lib/useEtkinTema.ts` | yeni (#194) — `<html data-theme>`'i izleyen hook |
+| `web/src/App.tsx` | başlıkta "GRIND"in soluna tema düğmesi (#194) |
 | `web/src/main.tsx` | açılışta temayı uygular ve sistem dinleyicisini kurar |
 | `web/src/test/setup.ts` | `matchMedia` stub'ı |
 | `docs/.../2026-09-12-frontend-gorsel-tasarim-design.md` | Karar 5'e "bu belgeyle geçersiz kılındı" notu |
