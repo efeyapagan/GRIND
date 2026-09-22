@@ -811,7 +811,7 @@ public class WorkoutSessionServiceTests
 
     /// <summary>Gecmis antrenmani duzenlemek kapsam disi: bitmis oturum 409.</summary>
     [Fact]
-    public async Task Bitmis_oturuma_hareket_eklenemez_ve_kaldirilamaz_409_verir()
+    public async Task Bitmis_oturuma_hareket_eklenemez_kaldirilamaz_ve_siralanamaz_409_verir()
     {
         var (context, user, service, saat, transaction) = await CreateAsync();
         await using (transaction)
@@ -826,11 +826,13 @@ public class WorkoutSessionServiceTests
             await Assert.ThrowsAsync<ConflictException>(
                 () => service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = 2 }));
             await Assert.ThrowsAsync<ConflictException>(() => service.RemoveExerciseAsync(id, 1));
+            await Assert.ThrowsAsync<ConflictException>(
+                () => service.ReorderExercisesAsync(id, new ReorderSessionExercisesRequest { ExerciseIds = [1] }));
         }
     }
 
     [Fact]
-    public async Task Baskasinin_oturumuna_hareket_eklenemez_ve_kaldirilamaz_404_verir()
+    public async Task Baskasinin_oturumuna_hareket_eklenemez_kaldirilamaz_ve_siralanamaz_404_verir()
     {
         var (context, _, service, _, transaction) = await CreateAsync();
         await using (transaction)
@@ -843,6 +845,9 @@ public class WorkoutSessionServiceTests
             await Assert.ThrowsAsync<NotFoundException>(
                 () => service.AddExerciseAsync(digerOturum.Id, new AddSessionExerciseRequest { ExerciseId = 1 }));
             await Assert.ThrowsAsync<NotFoundException>(() => service.RemoveExerciseAsync(digerOturum.Id, 1));
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.ReorderExercisesAsync(
+                    digerOturum.Id, new ReorderSessionExercisesRequest { ExerciseIds = [] }));
         }
     }
 
@@ -927,6 +932,80 @@ public class WorkoutSessionServiceTests
             var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
 
             await Assert.ThrowsAsync<NotFoundException>(() => service.RemoveExerciseAsync(id, 2));
+        }
+    }
+
+    // ---- Hareket sirasi (#229) ----
+
+    /// <summary>
+    /// Yeni sira kalici yazilir ve ilerleme o sirayla doner. Seti girilmis hareket de tasinir; seti
+    /// ve sayaci yerinde kalir (sira setlere dokunmaz).
+    /// </summary>
+    [Fact]
+    public async Task Hareket_sirasi_degisince_ilerleme_yeni_sirayla_doner_setler_yerinde_kalir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var ikinci = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var ucuncu = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var sablon = new WorkoutTemplate
+            {
+                User = user,
+                Name = $"Sablon {Guid.NewGuid():N}",
+                CreatedAt = DateTime.UtcNow,
+                TemplateExercises =
+                {
+                    new TemplateExercise { ExerciseId = 1, OrderIndex = 0, PlannedSets = 3 },
+                    new TemplateExercise { Exercise = ikinci, OrderIndex = 1, PlannedSets = 3 },
+                    new TemplateExercise { Exercise = ucuncu, OrderIndex = 2, PlannedSets = 3 }
+                }
+            };
+            context.AddRange(ikinci, ucuncu, sablon);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+            context.Add(new SetEntry
+            {
+                WorkoutSessionId = id, ExerciseId = 1,
+                Weight = 60m, Reps = 8, RecordType = RecordType.Weight, CreatedAt = VarsayilanAn
+            });
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var yanit = await service.ReorderExercisesAsync(
+                id, new ReorderSessionExercisesRequest { ExerciseIds = [ucuncu.Id, 1, ikinci.Id] });
+
+            long[] beklenen = [ucuncu.Id, 1, ikinci.Id];
+            Assert.Equal(beklenen, yanit.Progress.Select(h => h.ExerciseId));
+            context.ChangeTracker.Clear();
+            var detay = await service.GetByIdAsync(id);
+            Assert.Equal(beklenen, detay.Progress.Select(h => h.ExerciseId));
+            Assert.Equal(1, detay.Progress.Single(h => h.ExerciseId == 1).CompletedSets);
+        }
+    }
+
+    /// <summary>
+    /// Liste antrenmandaki hareketlerle BIREBIR ayni olmali: eksik, fazla ya da tekrar eden id 400.
+    /// Kismi bir liste uygulansaydi iki hareket ayni siraya duser, hangisinin once geldigi belirsizlesirdi.
+    /// </summary>
+    [Fact]
+    public async Task Antrenmandaki_hareketlerle_birebir_eslesmeyen_sira_reddedilir_400_verir()
+    {
+        var (context, user, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = NewTemplate(user);   // ExerciseId = 1
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+            var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
+            await service.AddExerciseAsync(id, new AddSessionExerciseRequest { ExerciseId = 2 });
+
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.ReorderExercisesAsync(id, new ReorderSessionExercisesRequest { ExerciseIds = [1] }));
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.ReorderExercisesAsync(id, new ReorderSessionExercisesRequest { ExerciseIds = [2, 1, 3] }));
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.ReorderExercisesAsync(id, new ReorderSessionExercisesRequest { ExerciseIds = [1, 1] }));
         }
     }
 }

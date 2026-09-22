@@ -134,6 +134,8 @@ function sahteSunucuyuKur(
     baslangicSetleri?: SetEntryResponse[];
     recordTypeUret?: (govde: { exerciseId: number; weight: number; reps: number }) => RecordType;
     sablonlar?: TemplateResponse[];
+    // #229: PUT sira istegi 500 doner.
+    siraHatasi?: boolean;
   } = {},
 ) {
   let oturum: SessionResponse | null = opsiyonlar.baslangicOturumu ?? null;
@@ -148,6 +150,7 @@ function sahteSunucuyuKur(
   const eklenenHareketler: number[] = [];
   const kaldirilanHareketler: number[] = [];
   const bitirmeGovdeleri: unknown[] = [];
+  const siraGovdeleri: unknown[] = [];
 
   server.use(
     http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
@@ -297,6 +300,23 @@ function sahteSunucuyuKur(
       }
       return HttpResponse.json(oturum, { status: 201 });
     }),
+    // Gercek backend gibi: liste antrenmandakilerle birebir ayni olmali, guncel oturum 200 ile doner (#229).
+    // `siraHatasi` acikken 500 doner (iyimser sira geri alinmali).
+    http.put('/api/sessions/:id/exercises/order', async ({ request }) => {
+      const govde = (await request.json()) as { exerciseIds: number[] };
+      siraGovdeleri.push(govde);
+      if (opsiyonlar.siraHatasi) {
+        return HttpResponse.json({ title: 'Sunucu hatası', status: 500 }, { status: 500 });
+      }
+      if (oturum) {
+        const onceki = oturum.progress ?? [];
+        oturum = {
+          ...oturum,
+          progress: govde.exerciseIds.map((id) => onceki.find((h) => h.exerciseId === id)!),
+        };
+      }
+      return HttpResponse.json(oturum);
+    }),
     // Gercek backend gibi 204: hareket ve bu antrenmandaki setleri gider (#60).
     http.delete('/api/sessions/:id/exercises/:exerciseId', ({ params }) => {
       const exerciseId = Number(params.exerciseId);
@@ -318,6 +338,7 @@ function sahteSunucuyuKur(
     silinenSetler: () => silinenSetler,
     eklenenHareketler: () => eklenenHareketler,
     kaldirilanHareketler: () => kaldirilanHareketler,
+    siraGovdeleri: () => siraGovdeleri,
   };
 }
 
@@ -1453,5 +1474,40 @@ describe('sablonsuz antrenman ve sablon olarak kaydetme (#186, #209)', () => {
 
     expect(await screen.findByText('Devam ediyor')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Şablon olarak kaydet' })).not.toBeInTheDocument();
+  });
+
+  /**
+   * #229: secili kartin ok dugmeleri sirayi degistirir. Kartlar sunucu yanitini beklemeden yeni sirayla
+   * gorunur, PUT govdesi antrenmandaki TUM hareketlerin yeni sirasidir.
+   */
+  test('secili kartta yukari tasi kartlari yeni sirayla gosterir ve PUT ile tam listeyi gonderir', async () => {
+    const ortam = sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+    });
+    const kullanici = userEvent.setup();
+    antrenmanSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+    await kullanici.click(screen.getByRole('button', { name: 'Squat: yukarı taşı' }));
+
+    const kartlar = screen.getAllByRole('button', { name: HAREKET_KARTI_ADI });
+    expect(kartlar.map((kart) => kart.getAttribute('aria-label'))).toEqual(['Squat, 0 / 3 set', 'Bench Press, 0 / 4 set']);
+    await waitFor(() => expect(ortam.siraGovdeleri()).toEqual([{ exerciseIds: [2, 1] }]));
+  });
+
+  test('sira kaydedilemezse kartlar eski sirasina doner ve uyari gorunur', async () => {
+    sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0), ilerleme(2, 'Squat', 3, 0)]),
+      siraHatasi: true,
+    });
+    const kullanici = userEvent.setup();
+    antrenmanSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Squat, 0 / 3 set' }));
+    await kullanici.click(screen.getByRole('button', { name: 'Squat: yukarı taşı' }));
+
+    expect(await screen.findByText('Hareketlerin sırası kaydedilemedi.')).toBeInTheDocument();
+    const kartlar = screen.getAllByRole('button', { name: HAREKET_KARTI_ADI });
+    expect(kartlar.map((kart) => kart.getAttribute('aria-label'))).toEqual(['Bench Press, 0 / 4 set', 'Squat, 0 / 3 set']);
   });
 });
