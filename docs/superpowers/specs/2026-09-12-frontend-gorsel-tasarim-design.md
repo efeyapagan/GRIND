@@ -78,6 +78,11 @@ Renk kuralları:
   `on-accent` rakam); o an bulunulan durak soluk kalır (`bg` zemin üstünde `accent/40` + `fg` rakam,
   Takvim tonuyla aynı); yay zemini `surface-2`, henüz geçilmemiş duraklar `surface-4` + `muted` rakam
   nötr kalır.
+  **#243 genişlemesi (kullanıcının turuncu parıltı referansı):** aktif öğenin dekoratif parıltısı —
+  alt çizgili sekmelerde (Profil sekmeleri, grafik ve Takvim sekmeleri) alt çizgiden yukarı `accent/20`
+  → saydam doğrusal degrade, alt menüde aktif Ana Sayfa/Profil ikonunun arkasında `accent/30` → saydam
+  dairesel hale (48 px). Tek kaynak `Parilti` bileşeni (web `web/src/ui/Parilti.tsx`, mobil
+  `mobile/src/ui/Parilti.tsx`); metin taşımaz, kontrastı etkilemez, iki temada aynıdır.
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.

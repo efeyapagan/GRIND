@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import Parilti from '../ui/Parilti';
 
 const SEKMELER = [
   { to: 'account', etiketAnahtari: 'kabuk.sekmeHesap' },
@@ -30,12 +31,17 @@ export default function ProfileLayout() {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-center text-label ${
+              `relative flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-center text-label ${
                 isActive ? 'border-accent-fg text-fg' : 'border-transparent text-muted'
               }`
             }
           >
-            {t(etiketAnahtari)}
+            {({ isActive }) => (
+              <>
+                {isActive && <Parilti bicim="alt" />}
+                <span className="relative">{t(etiketAnahtari)}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

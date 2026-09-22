@@ -3,6 +3,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Plus, User } from 'lucide-react-native';
 import { ikonRenk } from './renkler';
+import Parilti from './Parilti';
 
 /**
  * App.tsx'teki alt menunun RN karsiligi (issue #119/#120): Ana Sayfa · (+) · Profil, simetrik
@@ -103,6 +104,7 @@ export default function KabukTabBar() {
               onPress={() => router.navigate('/')}
               className="h-10 min-w-16 items-center justify-center"
             >
+              {anaSayfaAktif && <Parilti bicim="daire" />}
               <Home color={anaSayfaAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
             </Pressable>
           </View>
@@ -116,6 +118,7 @@ export default function KabukTabBar() {
               onPress={() => router.navigate('/profile')}
               className="h-10 min-w-16 items-center justify-center"
             >
+              {profilAktif && <Parilti bicim="daire" />}
               <User color={profilAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
             </Pressable>
           </View>

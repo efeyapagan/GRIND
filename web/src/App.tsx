@@ -1,8 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Plus, User } from 'lucide-react';
+import { Home, Plus, User, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
+import Parilti from './ui/Parilti';
 import { useGeriKaydirma } from './lib/useGeriKaydirma';
 
 /**
@@ -78,16 +79,7 @@ function Kabuk() {
       >
         <ul className="mx-auto flex h-14 max-w-md items-center bg-surface-1/90 px-4 backdrop-blur-xl">
           <li className="flex flex-1 justify-center">
-            <NavLink
-              to="/"
-              end
-              aria-label={t('kabuk.anaSayfa')}
-              className={({ isActive }) =>
-                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
-              }
-            >
-              <Home aria-hidden size={22} />
-            </NavLink>
+            <AltMenuBaglantisi to="/" end etiket={t('kabuk.anaSayfa')} Ikon={Home} />
           </li>
 
           {/* Birincil eylem dugmesi (spec Karar 2 -- accent kullanim kurali "birincil dugme
@@ -105,18 +97,31 @@ function Kabuk() {
           </li>
 
           <li className="flex flex-1 justify-center">
-            <NavLink
-              to="/profile"
-              aria-label={t('kabuk.profil')}
-              className={({ isActive }) =>
-                `flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
-              }
-            >
-              <User aria-hidden size={22} />
-            </NavLink>
+            <AltMenuBaglantisi to="/profile" etiket={t('kabuk.profil')} Ikon={User} />
           </li>
         </ul>
       </nav>
     </div>
+  );
+}
+
+/** Alt menunun yan (ikon-yalnizca) baglantisi: aktifken ikon `accent-fg` ve arkasinda turuncu hale (#243). */
+function AltMenuBaglantisi({ to, end, etiket, Ikon }: { to: string; end?: boolean; etiket: string; Ikon: LucideIcon }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      aria-label={etiket}
+      className={({ isActive }) =>
+        `relative flex h-11 min-w-16 items-center justify-center ${isActive ? 'text-accent-fg' : 'text-muted'}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && <Parilti bicim="daire" />}
+          <Ikon aria-hidden size={22} className="relative" />
+        </>
+      )}
+    </NavLink>
   );
 }
