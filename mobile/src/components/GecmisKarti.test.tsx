@@ -60,3 +60,10 @@ test('sablonsuz antrenman "Serbest" gosterir', async () => {
 
   expect(screen.getByText('Serbest')).toBeTruthy();
 });
+
+test('son 24 saat icindeki antrenman mutlak tarih yerine goreli zaman gosterir (#218)', async () => {
+  const ucSaatOnce = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  await render(<GecmisKarti oturum={ornekOturum({ startedAt: ucSaatOnce })} onSil={jest.fn()} />);
+
+  expect(screen.getByText('3 saat önce')).toBeTruthy();
+});

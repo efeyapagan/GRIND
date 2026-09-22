@@ -73,3 +73,14 @@ test('kart ozeti sunucudan gelen medyan dinlenmeyi gosterir (#71)', () => {
 
   expect(ozet).toHaveTextContent('1:45');
 });
+
+test('son 24 saat icindeki antrenman mutlak tarih yerine goreli zaman gosterir (#218)', () => {
+  const ucSaatOnce = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  render(
+    <ul>
+      <GecmisKarti oturum={{ ...OTURUM, startedAt: ucSaatOnce }} onSil={vi.fn()} />
+    </ul>,
+  );
+
+  expect(screen.getByText('3 saat önce')).toBeInTheDocument();
+});
