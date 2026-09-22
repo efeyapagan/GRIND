@@ -38,8 +38,11 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
               />
             ))}
           </View>
-          <Link href="/templates" className="min-h-11 text-label text-muted underline">
-            Şablonları yönet
+          {/* `Link`in kendisine renk class'i vermek metne gecmez (RN'de Text renk MIRAS ALMAZ,
+              digger `Link` kullanimlarindaki gibi metin AYRI bir `Text`te olmali) -- yoksa
+              stilsiz metin RN varsayilani olan SIYAH renderlanir (kullanici bulgusu). */}
+          <Link href="/templates" className="min-h-11 justify-center">
+            <Text className="text-label text-muted underline">Şablonları yönet</Text>
           </Link>
         </>
       )}
