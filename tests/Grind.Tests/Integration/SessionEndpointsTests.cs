@@ -87,7 +87,7 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
 
     /// <summary>
     /// FIX 1 REGRESYON TESTİ: eskiden `GET /api/sessions/open`, `WorkoutSessionRepository
-    /// .GetOpenSessionStartedBetweenAsync`in Template'i Include etmemesi yüzünden
+    /// .GetOpenSessionStartedAfterAsync`in Template'i Include etmemesi yüzünden
     /// `templateName: null, progress: []` döndürüyordu — POST ile aynı oturum farklı bir
     /// gövde taşıyordu. Şablonsuz bir oturumla bu ayrım hiç görünmezdi, bu yüzden şablonlu
     /// başlatılıyor.

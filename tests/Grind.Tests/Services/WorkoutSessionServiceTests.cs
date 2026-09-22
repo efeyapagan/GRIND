@@ -133,12 +133,14 @@ public class WorkoutSessionServiceTests
     }
 
     /// <summary>
-    /// BU FAZIN MANŞET TESTİ. TR 23:00'te açılan oturum, ertesi gün TR 00:30'da
-    /// "bugünün açık oturumu" SAYILMAMALI — yoksa kullanıcı kapatmayı unuttuğunda
-    /// ertesi günün setleri dünkü oturuma (ve dünkü tarihe) düşer.
+    /// BU FAZIN MANŞET TESTİ (issue #191). Eskiden TR 23:00'te açılan bir oturum, ertesi gün TR
+    /// 00:30'da "bugünün açık oturumu" SAYILMIYORDU (takvim günü değişti diye) — kullanıcı gece
+    /// antrenmanına devam edemiyor, yeni seti yeni bir oturuma düşüp antrenman ikiye bölünüyordu.
+    /// Artık sınır takvim günü değil, süre penceresi (<see cref="WorkoutSessionService"/>'teki
+    /// `AcikOturumPenceresi`, 6 saat): 1.5 saat sonrası hâlâ pencerenin İÇİNDE, oturum AYNI kalmalı.
     /// </summary>
     [Fact]
-    public async Task Gece_yarisini_gecince_dunun_acik_oturumu_bugunun_sayilmaz()
+    public async Task Gece_yarisini_asan_acik_oturum_pencere_icindeyse_bulunur()
     {
         // TR 23:00 = UTC 20:00.
         var (_, _, service, saat, transaction) = await CreateAsync(new DateTime(2026, 3, 10, 20, 0, 0, DateTimeKind.Utc));
@@ -147,27 +149,52 @@ public class WorkoutSessionServiceTests
             var dun = await service.StartAsync(new StartSessionRequest());
             Assert.True(dun.Created);
 
-            // TR ertesi gün 00:30 = UTC 21:30.
+            // TR ertesi gün 00:30 = UTC 21:30 -- başlangıçtan 1.5 saat sonra, 6 saatlik pencere içinde.
             saat.UtcNow = new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc);
 
-            await Assert.ThrowsAsync<NotFoundException>(() => service.GetOpenAsync());
+            var acik = await service.GetOpenAsync();
+            Assert.Equal(dun.Session.Id, acik.Id);
 
-            var bugun = await service.StartAsync(new StartSessionRequest());
-            Assert.True(bugun.Created);
-            Assert.NotEqual(dun.Session.Id, bugun.Session.Id);
+            var tekrarBaslatma = await service.StartAsync(new StartSessionRequest());
+            Assert.False(tekrarBaslatma.Created);
+            Assert.Equal(dun.Session.Id, tekrarBaslatma.Session.Id);
         }
     }
 
-    /// <summary>Aynı TR gününde kalırken açık oturum bulunmaya devam etmeli.</summary>
+    /// <summary>
+    /// Pencerenin (6 saat) DIŞINDA kalan, kapatılmayı unutulmuş bir oturum yine de "açık" sayılıp
+    /// yeni setleri yutmamalı (CLAUDE.md'deki "unutulan açık session" korumasının süre bazlı hâli).
+    /// </summary>
     [Fact]
-    public async Task Ayni_TR_gununde_acik_oturum_bulunur()
+    public async Task Pencere_disinda_kalan_unutulmus_acik_oturum_bulunmaz_yeni_oturum_acilir()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync(new DateTime(2026, 3, 10, 10, 0, 0, DateTimeKind.Utc));
+        await using (transaction)
+        {
+            var eski = await service.StartAsync(new StartSessionRequest());
+            Assert.True(eski.Created);
+
+            // 8 saat sonra -- 6 saatlik pencerenin dışında.
+            saat.UtcNow = new DateTime(2026, 3, 10, 18, 0, 0, DateTimeKind.Utc);
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.GetOpenAsync());
+
+            var yeni = await service.StartAsync(new StartSessionRequest());
+            Assert.True(yeni.Created);
+            Assert.NotEqual(eski.Session.Id, yeni.Session.Id);
+        }
+    }
+
+    /// <summary>Pencere içinde kalırken açık oturum bulunmaya devam etmeli.</summary>
+    [Fact]
+    public async Task Pencere_icindeki_acik_oturum_bulunur()
     {
         var (_, _, service, saat, transaction) = await CreateAsync(new DateTime(2026, 3, 10, 19, 0, 0, DateTimeKind.Utc));
         await using (transaction)
         {
             var acilan = await service.StartAsync(new StartSessionRequest());
 
-            saat.UtcNow = new DateTime(2026, 3, 10, 20, 45, 0, DateTimeKind.Utc);   // TR 23:45, hâlâ aynı gün
+            saat.UtcNow = new DateTime(2026, 3, 10, 20, 45, 0, DateTimeKind.Utc);   // 1 saat 45 dk sonra
 
             var acik = await service.GetOpenAsync();
             Assert.Equal(acilan.Session.Id, acik.Id);
@@ -473,11 +500,12 @@ public class WorkoutSessionServiceTests
     }
 
     /// <summary>
-    /// Gün sınırı seam'de de geçerli: dün 23:00'te açılıp kapatılmayan oturum bugünün
-    /// setlerini YUTMAMALI. Bu tam olarak CLAUDE.md'nin "unutulan açık session" kararı.
+    /// Issue #191: takvim günü seam'i artık sınır DEĞİL. 23:00'te açılıp kapatılmayan oturum,
+    /// ertesi TR gününde de (pencere içindeyse) AYNI oturum olarak kullanılmaya devam etmeli --
+    /// bkz. <see cref="Gece_yarisini_asan_acik_oturum_pencere_icindeyse_bulunur"/>.
     /// </summary>
     [Fact]
-    public async Task Seam_dunden_kalan_acik_oturumu_kullanmaz()
+    public async Task Seam_dunden_kalan_acik_oturum_pencere_icindeyse_kullanilir()
     {
         // TR 10 Mart 23:00 = UTC 10 Mart 20:00
         var (_, _, service, saat, transaction) = await CreateAsync(
@@ -486,13 +514,13 @@ public class WorkoutSessionServiceTests
         {
             var dunku = await service.StartAsync(new StartSessionRequest());
 
-            // TR 11 Mart 00:30 = UTC 10 Mart 21:30 — ertesi TR günü.
+            // TR 11 Mart 00:30 = UTC 10 Mart 21:30 — ertesi TR günü, ama pencere (6 saat) içinde.
             saat.UtcNow = new DateTime(2026, 3, 10, 21, 30, 0, DateTimeKind.Utc);
 
             var (session, created) = await service.GetOrOpenTodayAsync(null, null);
 
-            Assert.True(created);
-            Assert.NotEqual(dunku.Session.Id, session.Id);
+            Assert.False(created);
+            Assert.Equal(dunku.Session.Id, session.Id);
         }
     }
 
@@ -842,7 +870,12 @@ public class WorkoutSessionServiceTests
                     new TemplateExercise { Exercise = kalacak, OrderIndex = 1, PlannedSets = 3 }
                 }
             };
+            // KAPALI: yalnizca rekor-yeniden-hesap testine bir "baska antrenman" konteyneri olarak
+            // lazim -- ayni kullanicinin AYNI ANDA iki acik oturumu olamaz, ve acik birakilirsa
+            // `service.StartAsync` asagida bunu (gercek DateTime.UtcNow ile olusturuldugu icin,
+            // sahte saatten bagimsiz olarak) "son pencerede acik oturum" sanip yanlislikla bulurdu.
             var baskaOturum = TestDatabase.NewSession(user);
+            baskaOturum.EndedAt = baskaOturum.StartedAt.AddMinutes(30);
             context.AddRange(kaldirilacak, kalacak, sablon, baskaOturum);
             await context.SaveChangesAsync();
             var id = (await service.StartAsync(new StartSessionRequest { TemplateId = sablon.Id })).Session.Id;
