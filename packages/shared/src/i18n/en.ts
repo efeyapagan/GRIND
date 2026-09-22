@@ -270,6 +270,9 @@ export const en: Katalog = {
     enCokTekrar: 'Most reps',
     tekrarSayisi_one: '{{count}} rep',
     tekrarSayisi_other: '{{count}} reps',
+    plato: 'Plateau',
+    platoAciklama_one: 'No progress for {{count}} week · est. 1RM {{kg}} kg',
+    platoAciklama_other: 'No progress for {{count}} weeks · est. 1RM {{kg}} kg',
   },
   olcumler: {
     kiloGerekli: 'Weight is required.',

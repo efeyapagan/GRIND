@@ -35,4 +35,10 @@ public interface IStatsService
     /// </summary>
     Task<DurationSummaryResponse> GetDurationSummaryAsync(
         StatsRangeQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Platodaki hareketler, en uzun platodan başlayarak (#72). Aralıktan BAĞIMSIZ, tüm geçmişten;
+    /// arşivli hareketler hariç. Kural <c>PlateauDetector</c>'da.
+    /// </summary>
+    Task<IReadOnlyList<PlateauResponse>> GetPlateausAsync(CancellationToken cancellationToken = default);
 }
