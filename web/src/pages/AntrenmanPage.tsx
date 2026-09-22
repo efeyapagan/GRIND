@@ -226,7 +226,7 @@ export default function AntrenmanPage() {
           {/* "Devam ediyor" rozeti "Antrenmani bitir" ile AYNI satirda (issue #151). */}
           {gorunenOturum?.isOpen && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label">
-              <span aria-hidden className="size-2 rounded-full bg-muted motion-safe:animate-pulse" />
+              <span aria-hidden className="size-2 rounded-full bg-success motion-safe:animate-pulse" />
               {t('antrenman.devamEdiyor')}
             </span>
           )}
