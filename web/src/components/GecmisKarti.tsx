@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '../api/queries';
 import { useKaydirma } from '../lib/kaydirma';
-import { formatTarih, formatWeight } from '../lib/format';
+import { formatGoreliTarih, formatTarih, formatWeight } from '../lib/format';
 import { kalanSureMetni } from '../lib/dinlenme';
 import SetList from './SetList';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -97,7 +97,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
               <span className="flex flex-wrap items-center gap-2 text-label">
                 <span className="flex items-center gap-1">
                   <CalendarDays aria-hidden size={18} className="text-muted" />
-                  {formatTarih(oturum.startedAt, dil)}
+                  {formatGoreliTarih(oturum.startedAt, dil)}
                 </span>
                 <TurEtiketi>{oturum.templateName ?? t('gecmis.serbest')}</TurEtiketi>
               </span>

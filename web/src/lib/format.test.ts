@@ -1,6 +1,7 @@
 import {
   formatAralik,
   formatFark,
+  formatGoreliTarih,
   formatKisaTarih,
   formatSaat,
   formatTarih,
@@ -78,4 +79,33 @@ test('Ingilizce sayilar nokta ondalikla yazilir', () => {
   expect(formatWeight(61.25, 'en')).toBe('61.25');
   expect(formatWeight(80, 'en')).toBe('80');
   expect(formatFark(-32.5, 'en')).toBe('−32.5');
+});
+
+describe('formatGoreliTarih (issue #218)', () => {
+  const SIMDI = new Date('2026-09-14T12:00:00Z');
+
+  test('1 dakikadan az gecmisse "az once" doner', () => {
+    expect(formatGoreliTarih('2026-09-14T11:59:30Z', 'tr', SIMDI)).toBe('az önce');
+    expect(formatGoreliTarih('2026-09-14T11:59:30Z', 'en', SIMDI)).toBe('just now');
+  });
+
+  test('1 saatin altinda dakika bazinda gosterir', () => {
+    expect(formatGoreliTarih('2026-09-14T11:48:00Z', 'tr', SIMDI)).toBe('12 dakika önce');
+    expect(formatGoreliTarih('2026-09-14T11:59:00Z', 'tr', SIMDI)).toBe('1 dakika önce');
+    expect(formatGoreliTarih('2026-09-14T11:48:00Z', 'en', SIMDI)).toBe('12 minutes ago');
+    expect(formatGoreliTarih('2026-09-14T11:59:00Z', 'en', SIMDI)).toBe('1 minute ago');
+  });
+
+  test('24 saatin altinda saat bazinda gosterir', () => {
+    expect(formatGoreliTarih('2026-09-14T09:00:00Z', 'tr', SIMDI)).toBe('3 saat önce');
+    expect(formatGoreliTarih('2026-09-14T11:00:00Z', 'tr', SIMDI)).toBe('1 saat önce');
+    expect(formatGoreliTarih('2026-09-14T09:00:00Z', 'en', SIMDI)).toBe('3 hours ago');
+    expect(formatGoreliTarih('2026-09-14T11:00:00Z', 'en', SIMDI)).toBe('1 hour ago');
+  });
+
+  test('tam 24 saat ve sonrasinda mutlak tarihe doner', () => {
+    // UTC 12:00, 13 Eylul -> TR 15:00, 13 Eylul.
+    expect(formatGoreliTarih('2026-09-13T12:00:00Z', 'tr', SIMDI)).toBe(formatTarih('2026-09-13T12:00:00Z', 'tr'));
+    expect(formatGoreliTarih('2026-09-01T08:00:00Z', 'tr', SIMDI)).toBe(formatTarih('2026-09-01T08:00:00Z', 'tr'));
+  });
 });
