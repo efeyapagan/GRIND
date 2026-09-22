@@ -1,4 +1,4 @@
-import { adaGoreSirala, aramaIcinSadelestir, egzersizAra } from './egzersizler';
+import { adaGoreSirala, aramaIcinSadelestir, egzersizAra, egzersizOner } from './egzersizler';
 import type { Egzersiz } from '../api/queries';
 
 const HAVUZ: Egzersiz[] = [
@@ -46,4 +46,49 @@ test('siralama Turkce alfabetik kalir', () => {
     'Incline Dumbbell Press',
     'Sırt Çekişi',
   ]);
+});
+
+// #231: arama bos donunce "Bunu mu demek istediniz?" onerileri.
+const ONERI_HAVUZU: Egzersiz[] = [
+  { id: 1, name: 'Bench Press', category: 'Push' },
+  { id: 2, name: 'Incline Bench Press', category: 'Push' },
+  { id: 3, name: 'Squat', category: 'Legs' },
+  { id: 4, name: 'Box Squat', category: 'Legs' },
+  { id: 5, name: 'Split Squat', category: 'Legs' },
+  { id: 6, name: 'Scott Curl', category: 'Pull' },
+  { id: 7, name: 'Sırt Çekişi', category: 'Pull' },
+];
+
+const oneriAdlari = (sorgu: string, kategori: Egzersiz['category'] | null = null) =>
+  egzersizOner(ONERI_HAVUZU, sorgu, kategori).map((eg) => eg.name);
+
+test('yazim hatasi adin ICINDEKI parcayla karsilastirilir: nench press iki Bench Press i de bulur', () => {
+  expect(oneriAdlari('nench press')).toEqual(['Bench Press', 'Incline Bench Press']);
+});
+
+test('yan yana iki harfin yer degistirmesi tek hata sayilir', () => {
+  // 'sqau' -> 'squa': duz Levenshtein'da 2 hata olurdu ve 4 harfli sorgunun 1 hatalik esigini asardi.
+  expect(oneriAdlari('sqau')).toEqual(['Squat', 'Box Squat', 'Split Squat']);
+});
+
+test('Turkce harfler oneride de sadelestirilerek karsilastirilir', () => {
+  expect(oneriAdlari('sırt çeksi')).toEqual(['Sırt Çekişi']);
+});
+
+test('esik: 2 harf ve alti oneri yok, 5+ harfte en fazla 2 hata', () => {
+  expect(oneriAdlari('bx')).toEqual([]);
+  expect(oneriAdlari('xyzqw')).toEqual([]);
+  // nanch -> bench 2 hata, prass -> press 1 hata: toplam 3, esik disi.
+  expect(oneriAdlari('nanch prass')).toEqual([]);
+});
+
+test('en fazla 3 oneri, once en az hatali; esitlikte uzunlugu sorguya en yakin', () => {
+  // Uc Squat da 1 hata: yazilana en cok benzeyen (uzunluk farki en az) Squat once gelir, alfabetik
+  // siraya birakilsa Box Squat onde olurdu. Scott Curl ('scot') 2 hata: alfabede once gelse de disarida kalir.
+  expect(oneriAdlari('squot')).toEqual(['Squat', 'Box Squat', 'Split Squat']);
+});
+
+test('kategori filtresi onerilere de uygulanir', () => {
+  expect(oneriAdlari('sqaut', 'Legs')).toContain('Squat');
+  expect(oneriAdlari('sqaut', 'Push')).toEqual([]);
 });

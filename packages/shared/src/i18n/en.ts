@@ -134,6 +134,9 @@ export const en: Katalog = {
     hareketBulundu_one: '{{count}} exercise found',
     hareketBulundu_other: '{{count}} exercises found',
     eslesenYok: 'No matching exercises.',
+    oneriBaslik: 'Did you mean?',
+    oneriBulundu_one: 'No matches, {{count}} suggestion',
+    oneriBulundu_other: 'No matches, {{count}} suggestions',
     kategoriTumu: 'All',
     kategori: {
       Push: 'Push',
