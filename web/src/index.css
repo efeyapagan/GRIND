@@ -54,6 +54,9 @@
      kendisi hala DOLGU (fill) olarak kalir -- uzerinde `on-accent` metin tasiyan yerlerde. */
   --color-accent-fg: #ff5722;
 
+  /* Durum gostergesi (#226): "Devam ediyor" rozetinin noktasi. Metin DEGIL, 3:1 esigi yeter. */
+  --color-success: #6fdc8c;
+
   --text-title: 26px;
   --text-title--line-height: 32px;
   --text-title--letter-spacing: -0.025em;
@@ -110,6 +113,7 @@
     --color-danger-bg: #ffdad6;
     --color-on-danger-bg: #410002;
     --color-accent-fg: #a03500;
+    --color-success: #1b7a36;
   }
 
   body {
