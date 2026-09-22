@@ -3,7 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
-import { formatTarih, formatWeight } from '@grind/shared/lib/format';
+import { formatGoreliTarih, formatTarih, formatWeight } from '@grind/shared/lib/format';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import SetList from './SetList';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -65,7 +65,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
             <View className="flex-row flex-wrap items-center gap-2">
               <View className="flex-row items-center gap-1">
                 <CalendarDays color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-fg">{formatTarih(oturum.startedAt, dil)}</Text>
+                <Text className="text-label text-fg">{formatGoreliTarih(oturum.startedAt, dil)}</Text>
               </View>
               <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
             </View>

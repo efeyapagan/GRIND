@@ -103,3 +103,29 @@ export function formatFark(fark: number, dil: Dil): string {
   }
   return `${fark > 0 ? '+' : '−'}${formatWeight(Math.abs(fark), dil)}`;
 }
+
+const DAKIKA_MS = 60_000;
+const SAAT_MS = 60 * DAKIKA_MS;
+const GUN_MS = 24 * SAAT_MS;
+
+/**
+ * Gecmis listesi karti icin (issue #218): son 24 saat icinde goreli ("3 saat once"), sonrasinda
+ * mutlak tarihe (`formatTarih`) doner -- gunler/haftalar once icin "127 saat once" okunaksiz olurdu.
+ * `simdi` parametreli: testler gercek saate bagli kalmasin.
+ */
+export function formatGoreliTarih(iso: string, dil: Dil, simdi: Date = new Date()): string {
+  const gecenMs = simdi.getTime() - new Date(iso).getTime();
+
+  if (gecenMs < DAKIKA_MS) {
+    return dil === 'tr' ? 'az önce' : 'just now';
+  }
+  if (gecenMs < SAAT_MS) {
+    const dakika = Math.floor(gecenMs / DAKIKA_MS);
+    return dil === 'tr' ? `${dakika} dakika önce` : `${dakika} minute${dakika === 1 ? '' : 's'} ago`;
+  }
+  if (gecenMs < GUN_MS) {
+    const saat = Math.floor(gecenMs / SAAT_MS);
+    return dil === 'tr' ? `${saat} saat önce` : `${saat} hour${saat === 1 ? '' : 's'} ago`;
+  }
+  return formatTarih(iso, dil);
+}
