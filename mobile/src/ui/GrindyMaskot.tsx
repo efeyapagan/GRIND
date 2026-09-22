@@ -5,18 +5,24 @@ import { renkler } from '@grind/shared/designTokens';
 
 interface Props {
   boyut?: number;
+  /** Yaninda zaten GRINDY yazan bir metin varsa (orn. bir baglanti) ekran okuyucudan gizlenir. */
+  dekoratif?: boolean;
 }
 
 /**
  * web/src/ui/GrindyMaskot.tsx ile ayni cizim (issue #239). SVG className'den renk alamadigi icin
  * (bkz. renkler.ts) renkler token'lardan dogrudan okunur.
  */
-export default function GrindyMaskot({ boyut = 56 }: Props) {
+export default function GrindyMaskot({ boyut = 56, dekoratif = false }: Props) {
   const { t } = useTranslation();
   const govde = renkler.accent;
   const yuz = renkler['on-accent'];
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel={t('yorumlar.maskotEtiketi')}>
+    <View
+      {...(dekoratif
+        ? { importantForAccessibility: 'no-hide-descendants' as const, accessibilityElementsHidden: true }
+        : { accessible: true, accessibilityRole: 'image' as const, accessibilityLabel: t('yorumlar.maskotEtiketi') })}
+    >
       <Svg viewBox="0 0 64 64" width={boyut} height={boyut}>
         <Path d="M22 26V17a10 10 0 0 1 20 0v9" fill="none" stroke={govde} strokeWidth={6} strokeLinecap="round" />
         <Ellipse cx={32} cy={41} rx={22} ry={20} fill={govde} />

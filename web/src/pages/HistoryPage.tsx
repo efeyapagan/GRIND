@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Brain, CalendarDays } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '../api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
@@ -10,6 +10,7 @@ import GecmisKarti from '../components/GecmisKarti';
 import BosDurum from '../ui/BosDurum';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
 import { usePageTitle } from '../ui/PageTitleContext';
+import GrindyMaskot from '../ui/GrindyMaskot';
 
 /**
  * "Gecmis" ekrani -- sunucunun sayfali zarfini oldugu gibi gosterir. Sira, toplam sayi ve hacim
@@ -100,7 +101,7 @@ export default function HistoryPage() {
         to="/insights"
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-3 px-4 text-label text-fg"
       >
-        <Brain aria-hidden size={18} />
+        <GrindyMaskot boyut={22} dekoratif />
         {t('yorumlar.baslik')}
       </Link>
 

@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   boyut?: number;
+  /** Yaninda zaten GRINDY yazan bir metin varsa (orn. bir baglanti) ekran okuyucudan gizlenir. */
+  dekoratif?: boolean;
 }
 
 /**
@@ -9,12 +11,11 @@ interface Props {
  * token siniflarindan gelir, iki temada da calisir. Kalici tasarim sonra ele alinacak;
  * mobile/src/ui/GrindyMaskot.tsx ayni cizimi tasir.
  */
-export default function GrindyMaskot({ boyut = 56 }: Props) {
+export default function GrindyMaskot({ boyut = 56, dekoratif = false }: Props) {
   const { t } = useTranslation();
   return (
     <svg
-      role="img"
-      aria-label={t('yorumlar.maskotEtiketi')}
+      {...(dekoratif ? { 'aria-hidden': true } : { role: 'img', 'aria-label': t('yorumlar.maskotEtiketi') })}
       viewBox="0 0 64 64"
       width={boyut}
       height={boyut}
