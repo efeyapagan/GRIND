@@ -631,4 +631,54 @@ public class StatsServiceTests
             Assert.Equal(0, ozet.SessionCount);
         }
     }
+
+    // ---- Plato (issue #72) — kuralın kendisi PlateauDetectorTests'te ----
+
+    /// <summary>
+    /// İlerleyen hareket listede yoktur; platodakiler en uzun platodan başlar. Tarih setin TR günüdür.
+    /// </summary>
+    [Fact]
+    public async Task Plato_listesi_yalnizca_platodakileri_en_uzun_platodan_baslayarak_doner()
+    {
+        var (context, user, sekizHafta, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var onHafta = TestDatabase.NewExercise(user, $"On hafta {Guid.NewGuid():N}");
+            var ilerleyen = TestDatabase.NewExercise(user, $"Ilerleyen {Guid.NewGuid():N}");
+            context.AddRange(onHafta, ilerleyen);
+
+            Seed(context, user, sekizHafta, Bugun.AddDays(-56), (100m, 5));
+            Seed(context, user, sekizHafta, Bugun.AddDays(-7), (100m, 4));
+            Seed(context, user, onHafta, Bugun.AddDays(-70), (80m, 5));
+            Seed(context, user, onHafta, Bugun.AddDays(-7), (80m, 3));
+            Seed(context, user, ilerleyen, Bugun.AddDays(-56), (100m, 5));
+            Seed(context, user, ilerleyen, Bugun.AddDays(-7), (100m, 6));
+            await context.SaveChangesAsync();
+
+            var platolar = await service.GetPlateausAsync();
+
+            Assert.Equal(
+                [
+                    new PlateauResponse(onHafta.Id, onHafta.Name, 90.00m, new DateOnly(2026, 1, 1), 10),
+                    new PlateauResponse(sekizHafta.Id, sekizHafta.Name, 112.50m, new DateOnly(2026, 1, 15), 8)
+                ],
+                platolar);
+        }
+    }
+
+    /// <summary>Arşivlenen hareket seçim listelerinden çıktığı gibi plato uyarısından da çıkar.</summary>
+    [Fact]
+    public async Task Arsivlenen_hareket_plato_listesinde_yer_almaz()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            exercise.IsArchived = true;
+            Seed(context, user, exercise, Bugun.AddDays(-56), (100m, 5));
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 4));
+            await context.SaveChangesAsync();
+
+            Assert.Empty(await service.GetPlateausAsync());
+        }
+    }
 }

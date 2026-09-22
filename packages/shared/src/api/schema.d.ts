@@ -2405,6 +2405,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/plateaus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlateauResponse"][];
+                        "application/json": components["schemas"]["PlateauResponse"][];
+                        "text/json": components["schemas"]["PlateauResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/exercises/{exerciseId}/progress": {
         parameters: {
             query?: never;
@@ -3143,6 +3180,17 @@ export interface components {
         PatchTemplateRequest: {
             name?: string | null;
             exercises?: components["schemas"]["TemplateExerciseRequest"][] | null;
+        };
+        PlateauResponse: {
+            /** Format: int64 */
+            exerciseId?: number;
+            exerciseName?: string | null;
+            /** Format: double */
+            bestOneRepMax?: number;
+            /** Format: date */
+            bestOn?: string;
+            /** Format: int32 */
+            weeks?: number;
         };
         ProblemDetails: {
             type?: string | null;

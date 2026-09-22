@@ -7,6 +7,7 @@ import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type PlateauResponse = components['schemas']['PlateauResponse'];
 
 function testeOzelSorguIstemcisi(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -44,7 +45,15 @@ function takvimSunucusu(longestWeekStreak: number) {
   );
 }
 
-beforeEach(() => takvimSunucusu(0));
+/** #72: plato listesi ayri uctan gelir; varsayilan bos -- diger testler rozetsiz kart gorur. */
+function platoSunucusu(platolar: PlateauResponse[]) {
+  server.use(http.get('/api/stats/plateaus', () => HttpResponse.json(platolar)));
+}
+
+beforeEach(() => {
+  takvimSunucusu(0);
+  platoSunucusu([]);
+});
 
 test('en uzun seri API degeriyle gosterilir, rekor olmasa da (#117)', async () => {
   takvimSunucusu(12);
@@ -145,4 +154,31 @@ test('rekorlar istegi basarisiz olursa hata gosterilir, bos durum metni GORUNMEZ
     'Rekorlar alınamadı. Lütfen sayfayı yenileyin.',
   );
   expect(screen.queryByText('Henüz rekor yok')).not.toBeInTheDocument();
+});
+
+test('platodaki hareketin kartinda plato rozeti ve sunucunun verdigi sure/1RM gorunur, digerlerinde gorunmez (#72)', async () => {
+  const rekor = (exerciseId: number, exerciseName: string): ExerciseRecordResponse => ({
+    exerciseId,
+    exerciseName,
+    category: 'Push',
+    bestWeight: 100,
+    bestWeightReps: 5,
+    bestWeightAt: '2026-07-15T10:00:00Z',
+    bestReps: 12,
+    bestRepsWeight: 60,
+    bestRepsAt: '2026-07-15T10:00:00Z',
+  });
+  server.use(http.get('/api/records', () => HttpResponse.json([rekor(1, 'Bench Press'), rekor(2, 'Squat')])));
+  platoSunucusu([
+    { exerciseId: 1, exerciseName: 'Bench Press', bestOneRepMax: 112.5, bestOn: '2026-07-15', weeks: 8 },
+  ]);
+
+  rekorlarSayfasiniOlustur();
+
+  const bench = within((await screen.findByRole('heading', { name: 'Bench Press' })).closest('li') as HTMLElement);
+  expect(await bench.findByText('Plato')).toBeInTheDocument();
+  expect(bench.getByText('8 haftadır ilerleme yok · tahmini 1RM 112,5 kg')).toBeInTheDocument();
+
+  const squat = within(screen.getByRole('heading', { name: 'Squat' }).closest('li') as HTMLElement);
+  expect(squat.queryByText('Plato')).not.toBeInTheDocument();
 });

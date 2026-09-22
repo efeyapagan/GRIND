@@ -65,6 +65,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
     [InlineData("/api/stats/calendar")]
     [InlineData("/api/stats/duration")]
     [InlineData("/api/stats/exercises/1/progress")]
+    [InlineData("/api/stats/plateaus")]
     public async Task Tokensiz_istekler_401_verir(string path)
     {
         var response = await factory.CreateClient().GetAsync(path);
