@@ -3,6 +3,7 @@ import { Home, Plus, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
+import { useGeriKaydirma } from './lib/useGeriKaydirma';
 
 /**
  * Korumali alanin ortak kabugu (spec Karar 8, issue #65 ile yeniden duzenlendi, #119/#120 ile
@@ -40,6 +41,7 @@ export default function App() {
 function Kabuk() {
   const baslik = useHeaderTitle();
   const { t } = useTranslation();
+  const { ref: geriKaydirmaRef, isaretciler: geriKaydirmaIsaretcileri } = useGeriKaydirma();
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
@@ -54,7 +56,14 @@ function Kabuk() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      {/* #232: sol kenardan saga kaydirinca bir onceki sayfa (useGeriKaydirma); kayarken yalnizca
+          `main` hareket eder. `touch-pan-y` + `touch-pinch-zoom`: dikey kaydirma ve yakinlastirma
+          tarayicida kalir, yatay hareket sayfaya gelir (tarayici pointercancel gondermez). */}
+      <main
+        ref={geriKaydirmaRef}
+        {...geriKaydirmaIsaretcileri}
+        className="mx-auto max-w-md touch-pan-y touch-pinch-zoom px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))]"
+      >
         <Outlet />
       </main>
 

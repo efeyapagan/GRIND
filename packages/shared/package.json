@@ -12,6 +12,7 @@
     "./api/schema": "./src/api/schema.d.ts",
     "./lib/dinlenme": "./src/lib/dinlenme.ts",
     "./lib/gecikmeliSilme": "./src/lib/gecikmeliSilme.ts",
+    "./lib/geriKaydirma": "./src/lib/geriKaydirma.ts",
     "./lib/grafik": "./src/lib/grafik.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",

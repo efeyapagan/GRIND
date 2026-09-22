@@ -1,4 +1,4 @@
-import { useImperativeHandle, forwardRef } from 'react';
+import { useImperativeHandle, forwardRef, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -28,6 +28,10 @@ interface Props {
  * Faz 3 cilalama). Web'de bu ZATEN ikincil bir kisayoldu (birincil yol icerik acilinca gorunen
  * "Antrenmanı sil" dugmesiydi, o GecmisKarti'nda aynen kalir) -- burada da ayni ikincil rolde:
  * kaydirma acar, dokunmak kapatir, "Sil" butonuna basmak siler.
+ *
+ * Satir kapaliyken hareket YALNIZCA sola aktiflesir (#232): saga kaydirma kabugun sol kenardan geri
+ * donme hareketine kalir -- satir ekranin kenarina kadar uzandigi icin aksi halde onu yutardi. Acik
+ * satirda bugunku gibi iki yon de satirindir (saga kaydirmak kapatir).
  */
 const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function KaydirilabilirSatir(
   { onSil, silEtiketi, children },
@@ -35,15 +39,22 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
 ) {
   const translateX = useSharedValue(0);
   const baslangicX = useSharedValue(0);
+  const [acik, setAcik] = useState(false);
 
   function kapat() {
     translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+    setAcik(false);
   }
 
   useImperativeHandle(ref, () => ({ kapat }));
 
-  const panHareketi = Gesture.Pan()
-    .activeOffsetX([-10, 10])
+  const pan = Gesture.Pan();
+  if (acik) {
+    pan.activeOffsetX([-10, 10]);
+  } else {
+    pan.activeOffsetX(-10).failOffsetX(10);
+  }
+  const panHareketi = pan
     .failOffsetY([-10, 10])
     .onStart(() => {
       baslangicX.value = translateX.value;
@@ -53,8 +64,9 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
       translateX.value = Math.min(0, Math.max(-ACILMA_GENISLIGI, yeni));
     })
     .onEnd(() => {
-      const acik = translateX.value < -ACILMA_ESIGI;
-      translateX.value = withSpring(acik ? -ACILMA_GENISLIGI : 0, { damping: 20, stiffness: 200 });
+      const acilsin = translateX.value < -ACILMA_ESIGI;
+      translateX.value = withSpring(acilsin ? -ACILMA_GENISLIGI : 0, { damping: 20, stiffness: 200 });
+      runOnJS(setAcik)(acilsin);
     });
 
   const satirStili = useAnimatedStyle(() => ({
