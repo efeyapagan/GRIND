@@ -70,6 +70,7 @@ export const tr = {
   },
   kabuk: {
     gezinme: 'Ana gezinme',
+    geri: 'Geri',
     anaSayfa: 'Ana sayfa',
     antrenmanBaslat: 'Antrenman başlat',
     profil: 'Profil',

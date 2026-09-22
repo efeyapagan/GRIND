@@ -69,15 +69,8 @@ function sayfaYaniti(
 
 afterEach(() => vi.unstubAllGlobals());
 
-test('gecmise donus baglantisi /history\'e gider', async () => {
-  server.use(http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))));
-  const kullanici = userEvent.setup();
-  ekraniOlustur();
-
-  await kullanici.click(screen.getByRole('link', { name: 'Geçmiş' }));
-
-  expect(await screen.findByText('Geçmiş sayfası')).toBeInTheDocument();
-});
+// Not: "Gecmis'e donus" baglantisi artik bu sayfada degil, ust kabuktaki paylasilan geri
+// dugmesinde (issue #255) -- bkz. `App.test.tsx`'teki ilgili testler.
 
 test('GRINDY maskotu erisilebilir adiyla gorunur (issue #239)', () => {
   server.use(http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))));
