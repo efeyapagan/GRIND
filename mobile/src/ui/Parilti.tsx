@@ -27,14 +27,14 @@ export default function Parilti({ bicim }: Props) {
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      className="absolute"
-      style={
-        daire
-          ? { width: DAIRE_BOYUTU, height: DAIRE_BOYUTU, left: '50%', top: '50%', marginLeft: -DAIRE_BOYUTU / 2, marginTop: -DAIRE_BOYUTU / 2 }
-          : { left: 0, right: 0, top: 0, bottom: 0 }
-      }
+      // Ebeveyni kaplar ve daireyi ortalar (#252): `left: '50%'` + negatif margin cihazda ikonun
+      // sagina kayiyordu; kaplayip ortalamak yuzde/margin hesabina dayanmaz.
+      className="absolute inset-0 items-center justify-center"
     >
-      <Svg width="100%" height="100%">
+      <Svg
+        width={daire ? DAIRE_BOYUTU : '100%'}
+        height={daire ? DAIRE_BOYUTU : '100%'}
+      >
         <Defs>
           {daire ? (
             <RadialGradient id={id} cx="50%" cy="50%" r="50%">
