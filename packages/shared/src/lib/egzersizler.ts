@@ -55,3 +55,67 @@ export function egzersizAra(
       (aranan === '' || aramaIcinSadelestir(eg.name).includes(aranan)),
   );
 }
+
+/** Oneri sayisi tavani: "Bunu mu demek istediniz?" altinda uzun bir liste aramanin yerini tutmaz. */
+const ONERI_TAVANI = 3;
+
+/**
+ * Sorgunun uzunluguna gore kabul edilen hata sayisi. Kisa sorguda tek hata bile neredeyse her ada
+ * uyar: 2 harf ve altinda oneri yok, 3-4 harfte 1, daha uzunlarda 2 hata.
+ */
+function hataEsigi(uzunluk: number): number {
+  if (uzunluk <= 2) {
+    return -1;
+  }
+  return uzunluk <= 4 ? 1 : 2;
+}
+
+/**
+ * Sorgunun metnin ICINDEKI en iyi uyan parcaya uzakligi (Sellers yontemi): metnin basindaki ve
+ * sonundaki fazlalik ucretsizdir, boylece "nench press" "Incline Bench Press"e 1 hata uzaktir.
+ * Bir harfi eklemek, silmek, degistirmek ve yan yana iki harfi yer degistirmek (OSA) birer hatadir
+ * -- yer degistirme parmak kaymasinin en sik bicimi ("bnech").
+ */
+function parcaMesafesi(sorgu: string, metin: string): number {
+  const m = sorgu.length;
+  const n = metin.length;
+  // d[i][j]: sorgunun ilk i harfinin, metinde j'de BITEN bir parcaya uzakligi.
+  const d: number[][] = Array.from({ length: m + 1 }, (_, i) => Array<number>(n + 1).fill(i));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const fark = sorgu[i - 1] === metin[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + fark);
+      if (i > 1 && j > 1 && sorgu[i - 1] === metin[j - 2] && sorgu[i - 2] === metin[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return Math.min(...d[m]);
+}
+
+/**
+ * Arama bos donunce gosterilecek "Bunu mu demek istediniz?" onerileri (#231): esik icinde kalan en
+ * fazla 3 hareket, once en az hatali. Esitlikte adi sorguya uzunlukca en yakin olan once gelir:
+ * gercek havuzda "... Bench Press" varyantlari coktur ve hepsi 1 hata alir, "nench press" yazan
+ * duz Bench Press'i ariyordur. Kalan esitlikte Turkce alfabetik. Kategori `egzersizAra` ile ayni
+ * sekilde uygulanir. Hesap istemcide: havuz birkac duzine satir, her adla karsilastirmak bir
+ * milisaniyenin cok altinda (bkz. `egzersizAra`).
+ */
+export function egzersizOner(
+  egzersizler: readonly Egzersiz[],
+  sorgu: string,
+  kategori: EgzersizKategorisi | null = null,
+): Egzersiz[] {
+  const aranan = aramaIcinSadelestir(sorgu.trim());
+  const esik = hataEsigi(aranan.length);
+  return egzersizler
+    .filter((eg) => kategori === null || eg.category === kategori)
+    .map((eg) => {
+      const ad = aramaIcinSadelestir(eg.name);
+      return { eg, hata: parcaMesafesi(aranan, ad), fark: Math.abs(ad.length - aranan.length) };
+    })
+    .filter(({ hata }) => hata <= esik)
+    .sort((a, b) => a.hata - b.hata || a.fark - b.fark || a.eg.name.localeCompare(b.eg.name, 'tr'))
+    .slice(0, ONERI_TAVANI)
+    .map(({ eg }) => eg);
+}

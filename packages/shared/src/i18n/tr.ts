@@ -136,6 +136,9 @@ export const tr = {
     hareketBulundu_one: '{{count}} hareket bulundu',
     hareketBulundu_other: '{{count}} hareket bulundu',
     eslesenYok: 'Eşleşen hareket yok.',
+    oneriBaslik: 'Bunu mu demek istediniz?',
+    oneriBulundu_one: 'Eşleşme yok, {{count}} öneri var',
+    oneriBulundu_other: 'Eşleşme yok, {{count}} öneri var',
     kategoriTumu: 'Tümü',
     kategori: {
       Push: 'Push',
