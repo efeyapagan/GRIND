@@ -4,8 +4,8 @@ import { CalendarDays, ChevronDown, ChevronUp, Trash2 } from 'lucide-react-nativ
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import { formatGoreliTarih, formatTarih, formatWeight } from '@grind/shared/lib/format';
-import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import SetList from './SetList';
+import AntrenmanSuresi from './AntrenmanSuresi';
 import IkincilDugme from '../ui/IkincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
 import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
@@ -80,12 +80,8 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
                 </Text>
                 <Text className="text-label-xs text-muted uppercase">kg</Text>
               </View>
-              {oturum.medianRestSeconds !== null && (
-                <View className="flex-row items-baseline gap-1">
-                  <Text className="text-metric text-fg">{kalanSureMetni(oturum.medianRestSeconds * 1000)}</Text>
-                  <Text className="text-label-xs text-muted uppercase">dinlenme</Text>
-                </View>
-              )}
+              {/* #246: medyan dinlenmenin (#71) yerini aldi. Acik antrenmanda sure yok, hicbir sey cizilmez. */}
+              {oturum.durationSeconds !== null && <AntrenmanSuresi saniye={oturum.durationSeconds} />}
             </View>
           </View>
           <View className="size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3">

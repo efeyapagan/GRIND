@@ -249,7 +249,8 @@ export const en: Katalog = {
     sil: 'Delete',
     serbest: 'No template',
     setBirimi: 'sets',
-    dinlenmeBirimi: 'rest',
+    saatBirimi: 'h',
+    dakikaBirimi: 'min',
     bosDurumMetni: 'No sets in this workout.',
   },
   hareketGecmisi: {

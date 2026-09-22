@@ -19,7 +19,7 @@ function ornekOturum(gecersizler: Partial<GecmisSayfasi['items'][number]> = {}) 
     templateName: null,
     totalVolume: 1000,
     setCount: 3,
-    medianRestSeconds: null,
+    durationSeconds: null,
     sets: [],
     ...gecersizler,
   };
