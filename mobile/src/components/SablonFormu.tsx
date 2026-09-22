@@ -15,6 +15,7 @@ import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { VARSAYILAN_DINLENME_SN } from '@grind/shared/lib/dinlenme';
 import { VARSAYILAN_HEDEF_SET, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
+import { yonleTasi } from '@grind/shared/lib/siralama';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
 import Hap from '../ui/Hap';
@@ -121,15 +122,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
   }
 
   function tasi(sira: number, yon: -1 | 1) {
-    setSatirlar((onceki) => {
-      const hedef = sira + yon;
-      if (hedef < 0 || hedef >= onceki.length) {
-        return onceki;
-      }
-      const yeni = [...onceki];
-      [yeni[sira], yeni[hedef]] = [yeni[hedef], yeni[sira]];
-      return yeni;
-    });
+    setSatirlar((onceki) => yonleTasi(onceki, sira, yon));
   }
 
   function dogrula(): boolean {

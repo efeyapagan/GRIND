@@ -188,6 +188,34 @@ public class WorkoutSessionService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<SessionResponse> ReorderExercisesAsync(
+        long id, ReorderSessionExercisesRequest request, CancellationToken cancellationToken = default)
+    {
+        // DataAnnotations [Required] MVC katmanında çalıştı; servis doğrudan çağrıldığında da aynı sözleşme.
+        var exerciseIds = request.ExerciseIds!;
+
+        var session = await OpenOwnedOrThrowAsync(id, "Bitmiş bir antrenmanın sırası değiştirilemez.", cancellationToken);
+        var rows = await sessionExerciseRepository.GetForSessionAsync(session.Id, cancellationToken);
+
+        // Birebir eşleşme: aynı sayı + tekrarsız + her id listede. Kısmi bir liste iki hareketi aynı sıraya düşürürdü.
+        var byExercise = rows.ToDictionary(row => row.ExerciseId);
+        if (exerciseIds.Count != rows.Count
+            || exerciseIds.Distinct().Count() != exerciseIds.Count
+            || !exerciseIds.All(byExercise.ContainsKey))
+        {
+            throw new ValidationException("Sıra, antrenmandaki hareketlerin tamamını birer kez içermeli.");
+        }
+
+        for (var index = 0; index < exerciseIds.Count; index++)
+        {
+            byExercise[exerciseIds[index]].OrderIndex = index;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToResponse(session, await ProgressAsync(session, cancellationToken));
+    }
+
     public async Task<StartSessionResult> StartAsync(
         StartSessionRequest request, CancellationToken cancellationToken = default)
     {

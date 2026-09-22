@@ -122,6 +122,19 @@ public class SessionsController(IWorkoutSessionService sessionService) : Control
         return NoContent();
     }
 
+    /// <summary>
+    /// Antrenmanın hareket sırasını değiştirir (#229): gövde antrenmandaki TÜM hareketlerin yeni sırası.
+    /// Yanıt güncel ilerlemeyi o sırayla taşır. Eşleşmeyen liste 400; bitmiş antrenman 409.
+    /// </summary>
+    [HttpPut("{id:long}/exercises/order")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SessionResponse>> ReorderExercises(
+        long id, ReorderSessionExercisesRequest request, CancellationToken cancellationToken)
+        => Ok(await sessionService.ReorderExercisesAsync(id, request, cancellationToken));
+
     /// <summary>Siler; bağlı setler CASCADE ile gider.</summary>
     [HttpDelete("{id:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

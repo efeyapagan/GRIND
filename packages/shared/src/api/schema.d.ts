@@ -1877,6 +1877,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{id}/exercises/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReorderSessionExercisesRequest"];
+                    "text/json": components["schemas"]["ReorderSessionExercisesRequest"];
+                    "application/*+json": components["schemas"]["ReorderSessionExercisesRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SessionResponse"];
+                        "application/json": components["schemas"]["SessionResponse"];
+                        "text/json": components["schemas"]["SessionResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sets": {
         parameters: {
             query?: never;
@@ -3207,6 +3285,9 @@ export interface components {
         RegisterRequest: {
             username: string;
             password: string;
+        };
+        ReorderSessionExercisesRequest: {
+            exerciseIds: number[];
         };
         /** @enum {string} */
         SessionDifficulty: "VeryEasy" | "Easy" | "Medium" | "Hard" | "Maximal";

@@ -760,6 +760,44 @@ export function useAddSessionExercise() {
 }
 
 /**
+ * `PUT /api/sessions/{id}/exercises/order` (#229): antrenmandaki TUM hareketlerin yeni sirasi. Iyimser:
+ * kartlar yanit beklenmeden yeni sirayla gorunur (ok dugmesine art arda basmak bekletmesin); istek
+ * basarisiz olursa onceki sira geri yazilir. Setler ve rekorlar siradan etkilenmez, baska sorgu bayatlamaz.
+ */
+export function useReorderSessionExercises() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sessionId, exerciseIds }: { sessionId: number; exerciseIds: number[] }): Promise<AcikOturum> => {
+      const yanit = await request<SessionResponse>(`/sessions/${sessionId}/exercises/order`, {
+        method: 'PUT',
+        body: JSON.stringify({ exerciseIds }),
+      });
+      return dogrulanmisOturum(yanit);
+    },
+    onMutate: async ({ exerciseIds }) => {
+      // Ucustaki bir tazeleme eski sirayi iyimser siranin ustune yazmasin.
+      await queryClient.cancelQueries({ queryKey: queryKeys.openSession });
+      const onceki = queryClient.getQueryData<AcikOturum | null>(queryKeys.openSession);
+      if (onceki) {
+        const hareketler = new Map(onceki.progress.map((hareket) => [hareket.exerciseId, hareket]));
+        queryClient.setQueryData<AcikOturum>(queryKeys.openSession, {
+          ...onceki,
+          progress: exerciseIds.flatMap((id) => hareketler.get(id) ?? []),
+        });
+      }
+      return { onceki };
+    },
+    onError: (_hata, _girdi, baglam) => {
+      if (baglam?.onceki) {
+        queryClient.setQueryData(queryKeys.openSession, baglam.onceki);
+      }
+    },
+    onSuccess: (oturum) => queryClient.setQueryData(queryKeys.openSession, oturum),
+  });
+}
+
+/**
  * `DELETE /api/sessions/{id}/exercises/{exerciseId}` (#60), govdesiz 204: hareket ve bu antrenmandaki
  * setleri gider. Hook degil duz fonksiyon: geri alma penceresi acikken sayfadan cikilirsa bilesen
  * kaldirildiktan sonra tamamlanir (bkz. `setiSil`). Sonrasinda `setDegistiTazele` yeterlidir.
