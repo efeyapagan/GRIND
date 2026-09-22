@@ -2,14 +2,15 @@ import { useCallback } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { Brain, CalendarDays } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { CalendarDays } from 'lucide-react-native';
 import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '@grind/shared/api/queries';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import GecmisKarti from '../../../src/components/GecmisKarti';
 import BosDurum from '../../../src/ui/BosDurum';
 import GeriAlSeridi from '../../../src/ui/GeriAlSeridi';
-import { ikonRenk } from '../../../src/ui/renkler';
+import GrindyMaskot from '../../../src/ui/GrindyMaskot';
 
 /**
  * web/src/pages/HistoryPage.tsx ile ayni (issue #46, sonsuz kaydirma #142). Sallama-ile-geri-alma
@@ -22,6 +23,7 @@ import { ikonRenk } from '../../../src/ui/renkler';
  * "biriktirilmis liste" state'i TUTMAZ.
  */
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   usePageTitle('Geçmiş');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   const queryClient = useQueryClient();
@@ -60,8 +62,8 @@ export default function HistoryScreen() {
         <View className="mb-5 flex-col gap-5">
           <Link href="/insights" asChild>
             <Pressable className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-4">
-              <Brain color={ikonRenk.fg} size={18} />
-              <Text className="text-label text-fg">AI yorumu</Text>
+              <GrindyMaskot boyut={22} dekoratif />
+              <Text className="text-label text-fg">{t('yorumlar.baslik')}</Text>
             </Pressable>
           </Link>
 

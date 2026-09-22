@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { Link } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
@@ -19,15 +20,17 @@ import IkincilDugme from '../../src/ui/IkincilDugme';
 import IkonDugmesi from '../../src/ui/IkonDugmesi';
 import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
+import GrindyMaskot from '../../src/ui/GrindyMaskot';
 import { ikonRenk } from '../../src/ui/renkler';
 
 /**
- * web/src/pages/InsightsPage.tsx ile ayni (issue #76). Sayfalama Onceki/Sonraki dugmeleri
+ * web/src/pages/InsightsPage.tsx ile ayni (issue #76; GRINDY adi ve maskotu #239). Sayfalama Onceki/Sonraki dugmeleri
  * yerine SONSUZ KAYDIRMA'dir (issue #147, Gecmis'in #142'siyle ayni desen): `FlatList`in
  * `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi ceker.
  */
 export default function InsightsScreen() {
-  usePageTitle('AI yorumu');
+  const { t } = useTranslation();
+  usePageTitle(t('yorumlar.baslik'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
   // Issue #148: web ile ayni -- "uretiliyor mu" bilgisi ekranin mutation'indan DEGIL, sekme
@@ -97,61 +100,56 @@ export default function InsightsScreen() {
         <View className="mb-5 flex-col gap-5">
           <Link href="/profile/history" className="min-h-11 flex-row items-center gap-1">
             <ChevronLeft color={ikonRenk.muted} size={18} />
-            <Text className="text-label text-muted">Geçmiş</Text>
+            <Text className="text-label text-muted">{t('kabuk.sekmeGecmis')}</Text>
           </Link>
 
-          <Text className="text-body text-muted">
-            Son 30 güne kadarki antrenman verini yapay zekaya yorumlatır. Belirli bir aralık
-            seçmek şimdilik mümkün değil.
-          </Text>
+          <View className="flex-row items-center gap-4">
+            <GrindyMaskot />
+            <Text className="flex-1 text-body text-muted">{t('yorumlar.aciklama')}</Text>
+          </View>
 
           <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
             {!uretiliyor && (
               <BirincilDugme yukseklik="normal" onPress={yorumIste}>
                 <Sparkles color={ikonRenk.onAccent} size={20} />
-                <Text className="text-body-lg font-bold text-on-accent">Yorum iste</Text>
+                <Text className="text-body-lg font-bold text-on-accent">{t('yorumlar.yorumIste')}</Text>
               </BirincilDugme>
             )}
 
             {uretiliyor && (
               <View className="flex-col gap-3">
-                <Text className="text-body text-muted">
-                  Yorum hazırlanıyor... Bu birkaç dakika sürebilir.
-                </Text>
-                <IkincilDugme onPress={iptalEt}>Vazgeç</IkincilDugme>
+                <Text className="text-body text-muted">{t('yorumlar.hazirlaniyor')}</Text>
+                <IkincilDugme onPress={iptalEt}>{t('ortak.vazgec')}</IkincilDugme>
               </View>
             )}
 
             {durum === 'iptal-edildi' && (
-              <Text className="text-label text-muted">
-                Beklemeyi durdurdun. Yorum yine de oluşturuluyor olabilir; birkaç dakika sonra
-                listede görünebilir.
-              </Text>
+              <Text className="text-label text-muted">{t('yorumlar.iptalEdildi')}</Text>
             )}
 
             {durum === 'bilgi' && bilgiMesaji && (
               <Text className="text-label text-muted">{bilgiMesaji}</Text>
             )}
 
-            {durum === 'hata' && genelHata && <HataKutusu baslik="Yorum alınamadı" mesaj={genelHata} />}
+            {durum === 'hata' && genelHata && <HataKutusu baslik={t('yorumlar.alinamadi')} mesaj={genelHata} />}
           </View>
 
-          {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
           {isError && (
             <Text accessibilityRole="alert" className="text-body text-danger">
-              Yorumlar alınamadı. Lütfen sayfayı yenileyin.
+              {t('yorumlar.hata')}
             </Text>
           )}
         </View>
       }
       ListEmptyComponent={
         !isLoading && !isError && data ? (
-          <BosDurum ikon={Brain} baslik="Henüz yorum yok" aciklama="Yukarıdan ilk yorumunu iste." />
+          <BosDurum ikon={Brain} baslik={t('yorumlar.bosBaslik')} aciklama={t('yorumlar.bosAciklama')} />
         ) : null
       }
       ListFooterComponent={
-        isFetchingNextPage ? <Text className="text-body text-muted">Yükleniyor...</Text> : null
+        isFetchingNextPage ? <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text> : null
       }
     />
   );
@@ -166,17 +164,18 @@ interface YorumKartiProps {
 }
 
 function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+  const { t } = useTranslation();
   const dil = useDil();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
-        <Text className="text-body text-fg">Bu yorum kalıcı olarak silinecek.</Text>
+        <Text className="text-body text-fg">{t('yorumlar.silmeOnayi')}</Text>
         <View className="flex-row gap-2">
           <Pressable onPress={onSil} className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg">
-            <Text className="text-label text-on-danger-bg">Evet, sil</Text>
+            <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
           </Pressable>
           <View className="flex-1">
-            <IkincilDugme onPress={onVazgec}>Vazgeç</IkincilDugme>
+            <IkincilDugme onPress={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </View>
         </View>
       </View>
@@ -189,7 +188,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
         <Text className="text-label text-muted">
           {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
         </Text>
-        <IkonDugmesi etiket="Yorumu sil" onPress={onSilmeyeBasla}>
+        <IkonDugmesi etiket={t('yorumlar.yorumuSil')} onPress={onSilmeyeBasla}>
           <Trash2 color={ikonRenk.muted} size={18} />
         </IkonDugmesi>
       </View>

@@ -67,10 +67,16 @@ beforeEach(() => {
   useInsightGenerationStateMock.mockReturnValue({ uretiliyor: false, iptalEt: jest.fn() });
 });
 
+test('GRINDY maskotu erisilebilir adiyla gorunur (issue #239)', async () => {
+  await ekraniOlustur();
+
+  expect(screen.getByLabelText('GRINDY, antrenman koçun')).toBeTruthy();
+});
+
 test('hic yorum yoksa bos durum gorunur', async () => {
   await ekraniOlustur();
 
-  expect(await screen.findByText('Henüz yorum yok')).toBeTruthy();
+  expect(await screen.findByText('GRINDY henüz bir şey demedi')).toBeTruthy();
 });
 
 /**
@@ -78,12 +84,12 @@ test('hic yorum yoksa bos durum gorunur', async () => {
  * degisse de yasayan paylasilan duruma bagli. Ekrana yeni girilmis bir mount'ta mutation bos
  * (`isPending: false`) ama uretim suruyor olabilir.
  */
-test('baska bir ekranda baslatilmis uretim surerken gosterge gorunur, "Yorum iste" gizlenir', async () => {
+test('baska bir ekranda baslatilmis uretim surerken gosterge gorunur, sor dugmesi gizlenir', async () => {
   useInsightGenerationStateMock.mockReturnValue({ uretiliyor: true, iptalEt: jest.fn() });
   await ekraniOlustur();
 
-  expect(await screen.findByText(/Yorum hazırlanıyor/)).toBeTruthy();
-  expect(screen.queryByText('Yorum iste')).toBeNull();
+  expect(await screen.findByText(/GRINDY düşünüyor/)).toBeTruthy();
+  expect(screen.queryByText("GRINDY'ye sor")).toBeNull();
 });
 
 test('Vazgec devam eden uretimin beklemesini durdurur', async () => {

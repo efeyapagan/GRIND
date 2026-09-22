@@ -373,12 +373,12 @@ function salla(ivme: { x: number; y: number; z: number }) {
   });
 }
 
-test('AI yorumu baglantisi /insights\'a gider (issue #76)', async () => {
+test('GRINDY ne diyor? baglantisi /insights\'a gider (issue #76, #239)', async () => {
   server.use(http.get('/api/history', () => HttpResponse.json(sayfaYaniti([]))));
   const kullanici = userEvent.setup();
   gecmisSayfasiniOlustur();
 
-  await kullanici.click(await screen.findByRole('link', { name: 'AI yorumu' }));
+  await kullanici.click(await screen.findByRole('link', { name: 'GRINDY ne diyor?' }));
 
   expect(await screen.findByText('AI yorumu sayfasi')).toBeInTheDocument();
 });

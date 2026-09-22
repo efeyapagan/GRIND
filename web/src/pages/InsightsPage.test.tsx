@@ -79,11 +79,18 @@ test('gecmise donus baglantisi /history\'e gider', async () => {
   expect(await screen.findByText('Geçmiş sayfası')).toBeInTheDocument();
 });
 
+test('GRINDY maskotu erisilebilir adiyla gorunur (issue #239)', () => {
+  server.use(http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))));
+  ekraniOlustur();
+
+  expect(screen.getByRole('img', { name: 'GRINDY, antrenman koçun' })).toBeInTheDocument();
+});
+
 test('hic yorum yoksa bos durum gorunur', async () => {
   server.use(http.get('/api/insights', () => HttpResponse.json(sayfaYaniti([]))));
   ekraniOlustur();
 
-  expect(await screen.findByText('Henüz yorum yok')).toBeInTheDocument();
+  expect(await screen.findByText('GRINDY henüz bir şey demedi')).toBeInTheDocument();
 });
 
 test('yorumlar listelenir, en yeniden eskiye sunucunun sirasiyla', async () => {
@@ -122,8 +129,8 @@ test('Yorum iste govdesiz POST atar, basarili olunca liste tazelenir', async () 
   const kullanici = userEvent.setup();
   ekraniOlustur();
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
 
   await waitFor(() => expect(screen.getByRole('listitem')).toHaveTextContent(ornekYorum().content ?? ''));
   // Govde BILEREK gonderilmez -- backend govdesiz istekte kendi varsayilanini (son 30 gun) uygular.
@@ -141,11 +148,11 @@ test('uretim surerken Vazgec cikar; tiklaninca "beklemeyi durdurdun" mesaji gost
   const kullanici = userEvent.setup();
   ekraniOlustur();
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
 
-  expect(await screen.findByText(/Yorum hazırlanıyor/)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Yorum iste' })).not.toBeInTheDocument();
+  expect(await screen.findByText(/GRINDY düşünüyor/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: "GRINDY'ye sor" })).not.toBeInTheDocument();
 
   await kullanici.click(screen.getByRole('button', { name: 'Vazgeç' }));
 
@@ -154,7 +161,7 @@ test('uretim surerken Vazgec cikar; tiklaninca "beklemeyi durdurdun" mesaji gost
   expect(
     await screen.findByText(/Beklemeyi durdurdun\. Yorum yine de oluşturuluyor olabilir/),
   ).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Yorum iste' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: "GRINDY'ye sor" })).toBeInTheDocument();
 });
 
 test('uretim surerken sayfadan cikilip geri donulurse "hazirlaniyor" gostergesi hala durur', async () => {
@@ -169,18 +176,18 @@ test('uretim surerken sayfadan cikilip geri donulurse "hazirlaniyor" gostergesi 
   const kullanici = userEvent.setup();
   const { unmount } = ekraniOlustur(istemci);
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
-  await screen.findByText(/Yorum hazırlanıyor/);
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
+  await screen.findByText(/GRINDY düşünüyor/);
 
   // Issue #148: sayfadan cikmak (unmount) uretimi durdurmaz -- backend odenen LLM cagrisini
   // zaten surdurur. Geri donuldugunde arayuz "hic istenmemis" gibi gorunmemeli.
   unmount();
   ekraniOlustur(istemci);
 
-  expect(await screen.findByText(/Yorum hazırlanıyor/)).toBeInTheDocument();
+  expect(await screen.findByText(/GRINDY düşünüyor/)).toBeInTheDocument();
   // Ikinci (ucretli) bir cagri baslatilamasin diye dugme hala gizli.
-  expect(screen.queryByRole('button', { name: 'Yorum iste' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: "GRINDY'ye sor" })).not.toBeInTheDocument();
 });
 
 test('geri donuldugunde Vazgec devam eden uretimin beklemesini durdurur', async () => {
@@ -195,16 +202,16 @@ test('geri donuldugunde Vazgec devam eden uretimin beklemesini durdurur', async 
   const kullanici = userEvent.setup();
   const { unmount } = ekraniOlustur(istemci);
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
-  await screen.findByText(/Yorum hazırlanıyor/);
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
+  await screen.findByText(/GRINDY düşünüyor/);
   unmount();
   ekraniOlustur(istemci);
 
   await kullanici.click(await screen.findByRole('button', { name: 'Vazgeç' }));
 
-  expect(await screen.findByRole('button', { name: 'Yorum iste' })).toBeInTheDocument();
-  expect(screen.queryByText(/Yorum hazırlanıyor/)).not.toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: "GRINDY'ye sor" })).toBeInTheDocument();
+  expect(screen.queryByText(/GRINDY düşünüyor/)).not.toBeInTheDocument();
 });
 
 test('AI kapaliyken (503) yumusak bir bilgi mesaji gosterilir, HataKutusu DEGIL', async () => {
@@ -217,8 +224,8 @@ test('AI kapaliyken (503) yumusak bir bilgi mesaji gosterilir, HataKutusu DEGIL'
   const kullanici = userEvent.setup();
   ekraniOlustur();
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
 
   expect(await screen.findByText('AI yorumlama şu an kapalı.')).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -241,8 +248,8 @@ test('haftalik sinir asilirsa (429) sunucunun dinamik mesaji yumusak bilgi olara
   const kullanici = userEvent.setup();
   ekraniOlustur();
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
 
   // Issue #76: sunucunun DINAMIK (tarih iceren) mesaji AYNEN gosterilir -- sabit bir metinle
   // ezilmez, cunku tarih her kullanicida/durumda farkli olur.
@@ -265,8 +272,8 @@ test('bu araliktaki yorumlanacak veri yoksa (400) genel hata gosterilir', async 
   const kullanici = userEvent.setup();
   ekraniOlustur();
 
-  await screen.findByText('Henüz yorum yok');
-  await kullanici.click(screen.getByRole('button', { name: 'Yorum iste' }));
+  await screen.findByText('GRINDY henüz bir şey demedi');
+  await kullanici.click(screen.getByRole('button', { name: "GRINDY'ye sor" }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Bu aralıkta yorumlanacak kayıt yok.');
 });
@@ -307,7 +314,7 @@ test('onaylaninca DELETE gider ve yorum listeden kalkar', async () => {
   await kullanici.click(await screen.findByRole('button', { name: 'Yorumu sil' }));
   await kullanici.click(screen.getByRole('button', { name: 'Evet, sil' }));
 
-  expect(await screen.findByText('Henüz yorum yok')).toBeInTheDocument();
+  expect(await screen.findByText('GRINDY henüz bir şey demedi')).toBeInTheDocument();
 });
 
 test('listenin sonuna gelinince sonraki sayfa otomatik yuklenir ve iki sayfanin yorumlari birlikte gorunur', async () => {

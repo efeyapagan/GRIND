@@ -68,6 +68,13 @@ test('hic oturum yoksa bos durum gorunur, Onceki/Sonraki dugmesi yok', async () 
   expect(screen.queryByText('Sonraki')).toBeNull();
 });
 
+test('yorum ekranina giden baglanti GRINDY adini tasir (issue #239)', async () => {
+  useInfiniteHistoryMock.mockReturnValue(sonsuzSorguSonucu([sayfa([], { totalPages: 0 })]));
+  await ekraniOlustur();
+
+  expect(await screen.findByText('GRINDY ne diyor?')).toBeTruthy();
+});
+
 test('iki sayfanin oturumlari birlikte, ust uste yazmadan listelenir', async () => {
   useInfiniteHistoryMock.mockReturnValue(
     sonsuzSorguSonucu([
