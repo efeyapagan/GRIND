@@ -122,3 +122,72 @@ test('devam et antrenmani bitirmeden geri doner', async () => {
   expect(mockBack).toHaveBeenCalled();
   expect(mutate).not.toHaveBeenCalled();
 });
+
+describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
+  const SABLONSUZ_HAREKETLI = {
+    ...ACIK_OTURUM,
+    progress: [
+      { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: null, completedSets: 3, restSeconds: 90 },
+      { exerciseId: 2, exerciseName: 'Squat', plannedSets: null, completedSets: 2, restSeconds: 120 },
+    ],
+  };
+
+  beforeEach(() => {
+    useOpenSessionMock.mockReturnValue({ data: SABLONSUZ_HAREKETLI, isLoading: false, isError: false });
+    useFinishSessionMock.mockReturnValue({
+      mutate: jest.fn((_govde, { onSuccess }) => onSuccess()),
+      isPending: false,
+      isError: false,
+    });
+  });
+
+  test('sablonsuz ve hareketli antrenman bitince sablon sorusu cikar', async () => {
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(await screen.findByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  test('sorudaki Sablon olarak kaydet antrenmanin hareketleriyle sablon formuna gider', async () => {
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Şablon olarak kaydet' }));
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/templates/new',
+      params: {
+        donus: '/',
+        hareketler: JSON.stringify([
+          { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+          { exerciseId: 2, exerciseName: 'Squat', plannedSets: 3, restSeconds: 120 },
+        ]),
+      },
+    });
+  });
+
+  test('sorudaki Simdi degil ana sayfaya doner', async () => {
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Şimdi değil' }));
+
+    expect(mockReplace).toHaveBeenCalledWith('/');
+  });
+
+  test('sablonlu antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
+    useOpenSessionMock.mockReturnValue({
+      data: { ...SABLONSUZ_HAREKETLI, templateId: 10, templateName: 'Push Day' },
+      isLoading: false,
+      isError: false,
+    });
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(screen.queryByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeNull();
+  });
+});

@@ -43,6 +43,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   itibaren her iş GitHub issue ile başlar (CONTRIBUTING.md).
 - **Takvim (2026-09-15, issue #81)** — Bugün sayfasında antrenman yokken "Şablonla başla"nın üstünde
   Aylık/Haftalık ısı haritası; veri `GET /api/stats/calendar`, backend değişmedi. Ayrıntı PLAN.md'de.
+- **Antrenmandan şablon + boş antrenman (2026-09-22, #209/#186)** — "Şablonla başla" birincil yol, altında
+  ikincil "Boş antrenman başlat" (#61 kararı tamamlandı, geri alınmadı); açık antrenmanda "Şablon olarak
+  kaydet" ve şablonsuz antrenmanı bitirince aynı soru, dolu şablon formunu açar. Ayrıntı PLAN.md'de.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

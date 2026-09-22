@@ -1117,6 +1117,28 @@ Yalnızca web; backend değişmedi.
 - **Testler:** Takvim 1 güncellendi, hedef testi Profil'e taşındı; Rekorlar +1, Profil +1; `TodayPage` 2 test başlık yerine
   bölge arar. Web 214/214, `tsc -b` ve lint temiz. Görsel (Playwright) doğrulama yapılmadı.
 
+### İstek #209 + #186 — Antrenmandan şablon, şablonsuz antrenman (2026-09-22)
+Backend değişmedi; iki platformda aynı işte (web + mobil).
+- **Boş antrenman (#186):** antrenman yokken "Şablonla başla"nın altında ikincil "Boş antrenman başlat"
+  (`POST /api/sessions { templateId: null }`, `useStartSession` artık `number | null` alır). #61'in kararı
+  geri alınmadı, tamamlandı: şablonla başlamak birincil yol kalır, set yine antrenmana girilmeden eklenmez.
+- **Şablon olarak kaydet (#209):** hareketi olan açık antrenmanda başlığın altında; set girilmemiş olsa da
+  listeyi önceden doldurulmuş şablon formuna (`/templates/new`) taşır, kaydedince antrenmana dönülür.
+  Web'de satırlar router state'iyle (`hareketler`), mobilde JSON rota parametresiyle gider.
+- **Bitirince soru (#186):** yalnızca ŞABLONSUZ ve hareketi olan antrenman kapanınca bitirme sayfası ikinci
+  adıma geçer: "Bu antrenman şablon olarak kaydedilsin mi?" → dolu şablon formu (dönüş `/`) ya da
+  "Şimdi değil". Liste bitirmeden önce alınır; bu adımda "açık antrenman yok" yönlendirmesi çalışmaz.
+- Ortak `packages/shared/src/lib/sablonTaslagi.ts`: `oturumdanSablonHareketleri` — hedefsiz hareket
+  (`plannedSets = null`) formun yeni satır varsayılanını (`VARSAYILAN_HEDEF_SET = 3`) alır; gerçekleşen
+  set sayısı hedef yapılmaz (plan ≠ performans). Kaynak şablonun adı önerilmez, ad boş gelir.
+
+Devreden notlar (bilerek yapılmadı):
+- Taslakta arşiv bilgisi yok: antrenmandaki bir hareket sonradan arşivlendiyse form onu normal gösterir,
+  kaydederken sunucu 400 verir (genel hata kutusunda görünür).
+- Kaynak şablonu güncelleme ("bu listeyle şablonu güncelle") ve bitmiş antrenmandan şablon çıkarma yok.
+- Hareketi olmayan boş antrenmanda ekran eski "hareket listesi boş oturum" dalına düşer (ilk alfabetik
+  hareketin geçmişi + "henüz set eklenmedi"); #60/#62 öncesi oturumlar için yazılmıştı, ayrı bir iş.
+
 ## Çok Dilli Arayüz Dilim 1 — Türkçe + İngilizce ✅ (2026-09-21)
 
 Issue: #177 · Spec: [docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md](docs/superpowers/specs/2026-09-21-coklu-dil-web-design.md)
