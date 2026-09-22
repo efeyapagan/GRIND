@@ -19,9 +19,10 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import BosDurum from '../ui/BosDurum';
 import HataKutusu from '../ui/HataKutusu';
+import GrindyMaskot from '../ui/GrindyMaskot';
 
 /**
- * "AI yorumu" ekrani (issue #76). Backend'in `POST /api/insights`'i bir TARIH ARALIGINA gore
+ * "GRINDY ne diyor?" ekrani (issue #76; GRINDY adi ve maskotu #239). Backend'in `POST /api/insights`'i bir TARIH ARALIGINA gore
  * calisir (belirli bir oturuma degil, govde gondermezsek son 30 gun) -- bu yuzden Gecmis
  * sekmesinden acilir, kendi ayri rotasindadir (`/insights`).
  *
@@ -114,7 +115,10 @@ export default function InsightsPage() {
         {t('kabuk.sekmeGecmis')}
       </Link>
 
-      <p className="text-body text-muted">{t('yorumlar.aciklama')}</p>
+      <div className="flex items-center gap-4">
+        <GrindyMaskot />
+        <p className="text-body text-muted">{t('yorumlar.aciklama')}</p>
+      </div>
 
       <div className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
         {!uretiliyor && (
