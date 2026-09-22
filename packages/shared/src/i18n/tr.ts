@@ -272,6 +272,9 @@ export const tr = {
     enCokTekrar: 'En çok tekrar',
     tekrarSayisi_one: '{{count}} tekrar',
     tekrarSayisi_other: '{{count}} tekrar',
+    plato: 'Plato',
+    platoAciklama_one: '{{count}} haftadır ilerleme yok · tahmini 1RM {{kg}} kg',
+    platoAciklama_other: '{{count}} haftadır ilerleme yok · tahmini 1RM {{kg}} kg',
   },
   olcumler: {
     kiloGerekli: 'Kilo gerekli.',

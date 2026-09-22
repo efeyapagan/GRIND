@@ -20,6 +20,7 @@ type PatchSetRequest = components['schemas']['PatchSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type PlateauResponse = components['schemas']['PlateauResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
@@ -52,6 +53,9 @@ export const queryKeys = {
   sessionSets: (sessionId: number | null) => ['sessionSets', sessionId] as const,
   exercises: ['exercises'] as const,
   records: ['records'] as const,
+  // #72: `records` ONEKI altinda -- rekorlari tazeleyen her akis (set ekle/duzelt/sil, oturum sil)
+  // platoyu da tazeler, ayri bir invalidate satiri gerekmez.
+  plateaus: ['records', 'plateaus'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
   // Issue #138: web'in sonsuz kaydirmasi -- TUM biriktirilmis sayfalar TEK bir query key altinda
@@ -587,6 +591,31 @@ export function useRecords() {
     queryFn: async (): Promise<EgzersizRekoru[]> => {
       const yanit = await request<ExerciseRecordResponse[]>('/records');
       return yanit.map(dogrulanmisRekor);
+    },
+  });
+}
+
+/** Platodaki bir hareket (#72): hafta ve 1RM sunucunun hesabidir, istemci yeniden hesaplamaz. */
+export interface Plato {
+  exerciseId: number;
+  bestOneRepMax: number;
+  weeks: number;
+}
+
+function dogrulanmisPlato(yanit: PlateauResponse): Plato {
+  if (yanit.exerciseId === undefined || yanit.bestOneRepMax === undefined || yanit.weeks === undefined) {
+    throw new Error('Sunucudan eksik plato yaniti alindi.');
+  }
+  return { exerciseId: yanit.exerciseId, bestOneRepMax: yanit.bestOneRepMax, weeks: yanit.weeks };
+}
+
+/** Rekorlar ekraninin kart rozetleri (#72); `records` onekiyle birlikte tazelenir. */
+export function usePlatolar() {
+  return useQuery({
+    queryKey: queryKeys.plateaus,
+    queryFn: async (): Promise<Plato[]> => {
+      const yanit = await request<PlateauResponse[]>('/stats/plateaus');
+      return yanit.map(dogrulanmisPlato);
     },
   });
 }

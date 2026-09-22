@@ -1,3 +1,4 @@
+using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Stats;
@@ -136,6 +137,30 @@ public class StatsService(
         return new DurationSummaryResponse(
             query.From, query.To,
             summary.MedianSeconds, summary.TotalSeconds, summary.SessionCount, summary.LikelyForgottenCount);
+    }
+
+    public async Task<IReadOnlyList<PlateauResponse>> GetPlateausAsync(CancellationToken cancellationToken = default)
+    {
+        // Rekorlar ucuyla aynı okuma: kullanıcının tüm setleri, gruplama bellekte (TR günü kuralının SQL'de
+        // ikinci kopyası yazılmaz — Faz 9 Karar 6).
+        var sets = await setEntryRepository.GetAllForUserAsync(currentUser.UserId, cancellationToken);
+        var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
+
+        return sets
+            .Where(s => !s.Exercise.IsArchived)
+            .GroupBy(s => s.ExerciseId)
+            .Select(g => (
+                Exercise: g.First().Exercise,
+                Plateau: PlateauDetector.Detect(
+                    g.Select(s => (TurkeyDay.LocalDateOf(s.CreatedAt), s.Weight, s.Reps)), today)))
+            .Where(x => x.Plateau is not null)
+            .Select(x => new PlateauResponse(
+                x.Exercise.Id, x.Exercise.Name, x.Plateau!.Value.BestOneRepMax, x.Plateau.Value.BestOn,
+                x.Plateau.Value.Weeks))
+            .OrderByDescending(p => p.Weeks)
+            .ThenBy(p => p.ExerciseName)
+            .ThenBy(p => p.ExerciseId)
+            .ToList();
     }
 
     /// <summary>

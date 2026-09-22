@@ -61,6 +61,15 @@ public class StatsController(IStatsService statsService, IExerciseProgressServic
         => Ok(await statsService.GetDurationSummaryAsync(query, cancellationToken));
 
     /// <summary>
+    /// Platodaki hareketler (#72): tahmini 1RM'i son 6 haftada geçilmemiş, son 6 haftada çalışılmış
+    /// hareketler, en uzun platodan başlayarak. Aralıktan bağımsız.
+    /// </summary>
+    [HttpGet("plateaus")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PlateauResponse>>> GetPlateaus(CancellationToken cancellationToken)
+        => Ok(await statsService.GetPlateausAsync(cancellationToken));
+
+    /// <summary>
     /// Bir hareketin oturum başına en ağır seti, hacmi ve tahmini 1RM'i, eskiden yeniye (dilim 3).
     /// Egzersiz görünmüyorsa nötr 404.
     /// </summary>
