@@ -13,6 +13,7 @@ import {
   useDeleteSession,
   useExercises,
   useOpenSession,
+  useReorderSessionExercises,
   useSessionSets,
   useStartSession,
   type SetKaydi,
@@ -61,6 +62,7 @@ export default function AntrenmanScreen() {
   const baslatMutasyonu = useStartSession();
   const iptalMutasyonu = useDeleteSession();
   const hareketEkleMutasyonu = useAddSessionExercise();
+  const siraMutasyonu = useReorderSessionExercises();
   const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
@@ -132,6 +134,15 @@ export default function AntrenmanScreen() {
       { sessionId: gorunenOturum.id, exerciseId },
       { onSuccess: () => setSecim(exerciseId) },
     );
+  }
+
+  // #229: web ile ayni -- kaldirilmayi bekleyen hareket sunucuda hala listede, sona eklenir.
+  function siraDegistir(exerciseIds: number[]) {
+    if (!gorunenOturum) {
+      return;
+    }
+    const tamListe = kaldirilanHareketId === undefined ? exerciseIds : [...exerciseIds, kaldirilanHareketId];
+    siraMutasyonu.mutate({ sessionId: gorunenOturum.id, exerciseIds: tamListe });
   }
 
   function setiSilmeyeBasla(kayit: SetKaydi) {
@@ -232,6 +243,11 @@ export default function AntrenmanScreen() {
             Antrenman iptal edilemedi. Lütfen tekrar deneyin.
           </Text>
         )}
+        {siraMutasyonu.isError && (
+          <Text accessibilityRole="alert" className="text-label text-danger">
+            {t('antrenman.siraKaydedilemedi')}
+          </Text>
+        )}
         {hareketEkleMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
             Hareket eklenemedi. Lütfen tekrar deneyin.
@@ -266,6 +282,7 @@ export default function AntrenmanScreen() {
                 onSec={kartSec}
                 onSetSil={setiSilmeyeBasla}
                 onHareketKaldir={hareketiKaldirmayaBasla}
+                onSiraDegis={siraDegistir}
               />
             ) : (
               <>

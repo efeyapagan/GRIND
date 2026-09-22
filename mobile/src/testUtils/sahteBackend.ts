@@ -96,6 +96,15 @@ export function sahteBackendOlustur() {
       return state.acikOturum;
     }
 
+    // #229: gercek backend gibi liste antrenmandakilerle birebir; guncel oturum doner.
+    if (method === 'PUT' && /^\/sessions\/\d+\/exercises\/order$/.test(path)) {
+      const onceki = state.acikOturum.progress;
+      state.acikOturum.progress = (govde.exerciseIds as number[]).map((id) =>
+        onceki.find((h: any) => h.exerciseId === id),
+      );
+      return state.acikOturum;
+    }
+
     if (method === 'POST' && /^\/sessions\/\d+\/finish$/.test(path)) {
       const bitmis = {
         ...state.acikOturum,

@@ -1,8 +1,11 @@
 import { View, Text, Pressable } from 'react-native';
-import { Check, CirclePlay, Plus, Trash2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, ChevronUp, CirclePlay, Plus, Trash2 } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import HareketGecmisi from './HareketGecmisi';
+import { yonleTasi } from '@grind/shared/lib/siralama';
 import SetSatiri from './SetSatiri';
+import IkonDugmesi from '../ui/IkonDugmesi';
 import { ikonRenk } from '../ui/renkler';
 
 interface Props {
@@ -12,6 +15,8 @@ interface Props {
   onSec: (exerciseId: number) => void;
   onSetSil: (kayit: SetKaydi) => void;
   onHareketKaldir: (exerciseId: number) => void;
+  // #229: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur.
+  onSiraDegis: (exerciseIds: number[]) => void;
 }
 
 function setSayaci(hareket: HareketIlerlemesi): string {
@@ -20,8 +25,21 @@ function setSayaci(hareket: HareketIlerlemesi): string {
     : `${hareket.completedSets} / ${hareket.plannedSets} set`;
 }
 
-/** web/src/components/HareketKartlari.tsx ile ayni (spec Karar 5; #60/#62). */
-export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, onSetSil, onHareketKaldir }: Props) {
+/**
+ * web/src/components/HareketKartlari.tsx ile ayni (spec Karar 5; #60/#62). #229: sira secili kartin
+ * yukari/asagi dugmeleriyle degisir -- sablon formundaki gibi mobilde surukleme yok.
+ */
+export default function HareketKartlari({
+  ilerleme,
+  setler,
+  secilenId,
+  onSec,
+  onSetSil,
+  onHareketKaldir,
+  onSiraDegis,
+}: Props) {
+  const { t } = useTranslation();
+  const idler = ilerleme.map((hareket) => hareket.exerciseId);
   return (
     <View className="flex-col gap-4">
       {ilerleme.map((hareket, sira) => {
@@ -66,13 +84,29 @@ export default function HareketKartlari({ ilerleme, setler, secilenId, onSec, on
             {secili && (
               <>
                 <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
-                <Pressable
-                  onPress={() => onHareketKaldir(hareket.exerciseId)}
-                  className="h-12 flex-row items-center justify-center gap-2 rounded-xl"
-                >
-                  <Trash2 color={ikonRenk.danger} size={18} />
-                  <Text className="text-label text-danger">Hareketi kaldır</Text>
-                </Pressable>
+                <View className="flex-row items-center gap-1">
+                  <IkonDugmesi
+                    etiket={`${hareket.exerciseName}: ${t('ortak.yukariTasi')}`}
+                    onPress={() => onSiraDegis(yonleTasi(idler, sira, -1))}
+                    disabled={sira === 0}
+                  >
+                    <ChevronUp color={ikonRenk.muted} size={20} />
+                  </IkonDugmesi>
+                  <IkonDugmesi
+                    etiket={`${hareket.exerciseName}: ${t('ortak.asagiTasi')}`}
+                    onPress={() => onSiraDegis(yonleTasi(idler, sira, 1))}
+                    disabled={sira === ilerleme.length - 1}
+                  >
+                    <ChevronDown color={ikonRenk.muted} size={20} />
+                  </IkonDugmesi>
+                  <Pressable
+                    onPress={() => onHareketKaldir(hareket.exerciseId)}
+                    className="h-12 flex-1 flex-row items-center justify-center gap-2 rounded-xl"
+                  >
+                    <Trash2 color={ikonRenk.danger} size={18} />
+                    <Text className="text-label text-danger">Hareketi kaldır</Text>
+                  </Pressable>
+                </View>
               </>
             )}
           </View>

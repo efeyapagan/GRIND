@@ -59,6 +59,14 @@ public interface IWorkoutSessionService
     Task RemoveExerciseAsync(long id, long exerciseId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Antrenmanin hareket sirasini degistirir (#229): <c>OrderIndex</c> gonderilen listeye gore yeniden
+    /// yazilir, setler ve rekorlar degismez — tek commit. Liste antrenmandaki hareketlerle birebir ayni
+    /// olmali (eksik/fazla/tekrar ValidationException, 400). Baskasinin antrenmani 404; bitmis antrenman 409.
+    /// </summary>
+    Task<SessionResponse> ReorderExercisesAsync(
+        long id, ReorderSessionExercisesRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Bugüne ait açık oturum varsa onu döndürür (<c>Created = false</c>), yoksa yeni açar.
     /// İdempotent: iki kez tıklanan "Antrenmana Başla" hata üretmez.
     /// </summary>

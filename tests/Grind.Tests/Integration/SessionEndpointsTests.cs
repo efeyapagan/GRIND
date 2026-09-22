@@ -296,4 +296,25 @@ public class SessionEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
         var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
         Assert.Equal(2, Assert.Single(acik!.Progress).ExerciseId);
     }
+
+    /// <summary>#229: PUT sira 200 + yeni sirayla ilerleme; listesiz govde DataAnnotations ile 400.</summary>
+    [Fact]
+    public async Task Hareket_sirasi_PUT_200_yeni_sirayi_dondurur_listesiz_govde_400()
+    {
+        var client = await AuthenticatedClientAsync();
+        var sablon = await CreateTemplateAsync(client);   // ExerciseId = 1
+        var baslatma = await client.PostAsJsonAsync("/api/sessions",
+            new StartSessionRequest { TemplateId = sablon.Id }, Json);
+        var oturum = (await baslatma.Content.ReadFromJsonAsync<SessionResponse>(Json))!;
+        await client.PostAsJsonAsync($"/api/sessions/{oturum.Id}/exercises", new { exerciseId = 2 }, Json);
+
+        var siralama = await client.PutAsJsonAsync(
+            $"/api/sessions/{oturum.Id}/exercises/order", new { exerciseIds = new[] { 2, 1 } }, Json);
+        var listesiz = await client.PutAsJsonAsync($"/api/sessions/{oturum.Id}/exercises/order", new { }, Json);
+
+        Assert.Equal(HttpStatusCode.OK, siralama.StatusCode);
+        var yanit = (await siralama.Content.ReadFromJsonAsync<SessionResponse>(Json))!;
+        Assert.Equal([2L, 1L], yanit.Progress.Select(h => h.ExerciseId));
+        Assert.Equal(HttpStatusCode.BadRequest, listesiz.StatusCode);
+    }
 }
