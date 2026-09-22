@@ -14,6 +14,7 @@ import {
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { VARSAYILAN_DINLENME_SN } from '@grind/shared/lib/dinlenme';
+import { VARSAYILAN_HEDEF_SET, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
 import Hap from '../ui/Hap';
@@ -35,8 +36,6 @@ const DINLENME_SECENEKLERI = [
   { deger: 300, etiket: '5 dk' },
 ];
 
-const YENI_SATIR_HEDEF_SET = '3';
-
 interface Satir {
   anahtar: number;
   exerciseId: number;
@@ -49,6 +48,8 @@ interface Satir {
 interface Props {
   sablon: Sablon | null;
   donusYolu: string;
+  /** #209/#186: antrenmandan gelen yeni sablonun baslangic satirlari; `sablon` doluysa yok sayilir. */
+  baslangicHareketleri?: SablonTaslakHareketi[];
 }
 
 /**
@@ -56,7 +57,7 @@ interface Props {
  * surukleme (dnd-kit, web'e ozgu) BILEREK atlandi -- web'de ZATEN erisilebilirlik icin var olan
  * yukari/asagi dugmeleri (`tasi`) burada TEK reorder yoludur, ikinci sinif bir alternatif degil.
  */
-export default function SablonFormu({ sablon, donusYolu }: Props) {
+export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }: Props) {
   const router = useRouter();
   const { data: egzersizler } = useExercises();
   const olusturMutasyonu = useCreateTemplate();
@@ -66,16 +67,18 @@ export default function SablonFormu({ sablon, donusYolu }: Props) {
   const siraliEgzersizler = adaGoreSirala(egzersizler ?? []);
 
   const [ad, setAd] = useState(sablon?.name ?? '');
-  const [satirlar, setSatirlar] = useState<Satir[]>(() =>
-    (sablon?.exercises ?? []).map((hareket, sira) => ({
+  const [satirlar, setSatirlar] = useState<Satir[]>(() => {
+    // Antrenmandan gelen taslakta arsiv bilgisi yok; arsivli hareketi kaydederken sunucu reddeder.
+    const baslangic: (SablonTaslakHareketi & { isArchived?: boolean })[] = sablon?.exercises ?? baslangicHareketleri ?? [];
+    return baslangic.map((hareket, sira) => ({
       anahtar: sira,
       exerciseId: hareket.exerciseId,
       exerciseName: hareket.exerciseName,
-      isArchived: hareket.isArchived,
+      isArchived: hareket.isArchived ?? false,
       plannedSets: String(hareket.plannedSets),
       restSeconds: hareket.restSeconds,
-    })),
-  );
+    }));
+  });
   const siradakiAnahtar = useRef(satirlar.length);
 
   const [adHatasi, setAdHatasi] = useState<string | null>(null);
@@ -100,7 +103,7 @@ export default function SablonFormu({ sablon, donusYolu }: Props) {
         exerciseId: eklenebilirEgzersiz.id,
         exerciseName: eklenebilirEgzersiz.name,
         isArchived: false,
-        plannedSets: YENI_SATIR_HEDEF_SET,
+        plannedSets: String(VARSAYILAN_HEDEF_SET),
         restSeconds: VARSAYILAN_DINLENME_SN,
       },
     ]);

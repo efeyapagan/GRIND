@@ -809,12 +809,13 @@ export function useDeleteSession() {
 /**
  * `POST /api/sessions { templateId }`. Bugun acik oturum varsa sunucu onu 200 ile oldugu gibi doner
  * ve `templateId` UYGULANMAZ (Faz 7 karari) -- cagiran taraf donen oturumun `templateId`'sine bakar.
+ * `templateId: null` bos (sablonsuz) antrenman acar (#186).
  */
 export function useStartSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (templateId: number): Promise<AcikOturum> => {
+    mutationFn: async (templateId: number | null): Promise<AcikOturum> => {
       const govde: StartSessionRequest = { templateId };
       const yanit = await request<SessionResponse>('/sessions', {
         method: 'POST',

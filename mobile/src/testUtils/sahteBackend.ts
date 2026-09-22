@@ -64,15 +64,16 @@ export function sahteBackendOlustur() {
     }
 
     if (method === 'POST' && path === '/sessions') {
-      const sablon = state.sablonlar.find((s) => s.id === govde.templateId);
+      // templateId null = bos (sablonsuz) antrenman (#186).
+      const sablon = state.sablonlar.find((s) => s.id === govde?.templateId);
       state.acikOturum = {
         id: state.siradakiOturumId++,
         startedAt: new Date().toISOString(),
         endedAt: null,
         isOpen: true,
-        templateId: sablon.id,
-        templateName: sablon.name,
-        progress: sablon.exercises.map((h: any) => ({
+        templateId: sablon?.id ?? null,
+        templateName: sablon?.name ?? null,
+        progress: (sablon?.exercises ?? []).map((h: any) => ({
           exerciseId: h.exerciseId,
           exerciseName: h.exerciseName,
           plannedSets: h.plannedSets,
@@ -80,6 +81,18 @@ export function sahteBackendOlustur() {
           restSeconds: h.restSeconds,
         })),
       };
+      return state.acikOturum;
+    }
+
+    // #62: antrenmana sonradan eklenen hareket hedefsiz (plannedSets null) sona eklenir.
+    if (method === 'POST' && /^\/sessions\/\d+\/exercises$/.test(path)) {
+      state.acikOturum.progress.push({
+        exerciseId: govde.exerciseId,
+        exerciseName: EGZERSIZ.name,
+        plannedSets: null,
+        completedSets: 0,
+        restSeconds: 90,
+      });
       return state.acikOturum;
     }
 

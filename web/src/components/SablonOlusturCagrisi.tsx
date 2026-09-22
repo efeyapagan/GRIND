@@ -5,7 +5,8 @@ import BirincilDugme from '../ui/BirincilDugme';
 
 /**
  * Bugun'un alt alani, ACIK ANTRENMAN YOKKEN (issue #61). "+ Set ekle"nin yerini alir: serbest
- * (sablonsuz) antrenman artik arayuzden baslatilamaz -- her antrenman bir sablonla baslar.
+ * (sablonsuz) antrenman artik arayuzden baslatilamaz -- her antrenman bir sablonla baslar. (#186 bunu
+ * tamamladi: ikincil "Bos antrenman baslat" AntrenmanPage'de; bu dugme yine sablon olusturur.)
  * Backend'e dokunulmadi: `POST /api/sets`in oturumu kendiliginden acmasi API'de duruyor, arayuz
  * artik onu KULLANMIYOR.
  *

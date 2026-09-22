@@ -26,8 +26,14 @@ function testeOzelSorguIstemcisi(): QueryClient {
 /** SablonOlusturCagrisi'nin (issue #61) `state.donus`unu ekrana yazar -- gercek SablonDuzenlePage
  * yerine sahte bir hedef, sadece navigasyonun DOGRU state'i tasidigini dogrulamak icin. */
 function AlinanRota() {
-  const donus = (useLocation().state as { donus?: string } | null)?.donus;
-  return <p>{`donus=${donus}`}</p>;
+  const state = useLocation().state as { donus?: string; hareketler?: unknown } | null;
+  return (
+    <>
+      <p>{`donus=${state?.donus}`}</p>
+      {/* #209: "Sablon olarak kaydet" formun baslangic satirlarini da tasir. */}
+      {state?.hareketler !== undefined && <p>{`hareketler=${JSON.stringify(state.hareketler)}`}</p>}
+    </>
+  );
 }
 
 // `usePageTitle` (issue #65) bir `PageTitleProvider` ister -- App.tsx'in gercek kabugu bunu
@@ -46,6 +52,7 @@ function antrenmanSayfasiniOlustur(client: QueryClient = testeOzelSorguIstemcisi
             <Routes>
               <Route path="/" element={<AntrenmanPage />} />
               <Route path="/antrenman/bitir" element={<p>bitirme sayfasi</p>} />
+              <Route path="/templates/new" element={<AlinanRota />} />
             </Routes>
           </MemoryRouter>
         </PageTitleProvider>
@@ -1390,5 +1397,48 @@ describe('dinlenme sayaci', () => {
 
     await seciliKartaBekle('Bench Press');
     expect(await screen.findByText('1:30')).toBeInTheDocument();
+  });
+});
+
+describe('sablonsuz antrenman ve sablon olarak kaydetme (#186, #209)', () => {
+  /** #186: "Sablonla basla" birincil yol olarak kalir; bos antrenman ikincil bir secenektir. */
+  test('antrenman yokken Bos antrenman baslat sablonsuz oturum acar', async () => {
+    const ortam = sahteSunucuyuKur({ sablonlar: [PUSH_DAY] });
+    const kullanici = userEvent.setup();
+    antrenmanSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Boş antrenman başlat' }));
+
+    await waitFor(() => expect(ortam.baslatmaGovdeleri()).toEqual([{ templateId: null }]));
+    expect(await screen.findByRole('button', { name: 'Hareket ekle' })).toBeInTheDocument();
+  });
+
+  /** #209: set girilmemis olsa da listedeki hareketler, sirasiyla, sablon formuna tasinir. */
+  test('Sablon olarak kaydet antrenmanin hareketleriyle sablon formuna gider', async () => {
+    sahteSunucuyuKur({
+      baslangicOturumu: sablonluOturum([ilerleme(2, 'Squat', 5, 0, 180), ilerleme(1, 'Bench Press', null, 0)]),
+    });
+    const kullanici = userEvent.setup();
+    antrenmanSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Şablon olarak kaydet' }));
+
+    expect(await screen.findByText('donus=/antrenman')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `hareketler=${JSON.stringify([
+          { exerciseId: 2, exerciseName: 'Squat', plannedSets: 5, restSeconds: 180 },
+          { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+        ])}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test('hareketi olmayan antrenmanda Sablon olarak kaydet gorunmez', async () => {
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([]) });
+    antrenmanSayfasiniOlustur();
+
+    expect(await screen.findByText('Devam ediyor')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Şablon olarak kaydet' })).not.toBeInTheDocument();
   });
 });

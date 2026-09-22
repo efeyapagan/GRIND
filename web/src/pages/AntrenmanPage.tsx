@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, X } from 'lucide-react';
+import { CircleCheck, ClipboardList, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,6 +19,7 @@ import { formatSaat } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { varsayilanHareket } from '../lib/ilerleme';
+import { oturumdanSablonHareketleri } from '../lib/sablonTaslagi';
 import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
 import HareketGecmisi from '../components/HareketGecmisi';
@@ -26,6 +27,7 @@ import HareketKartlari from '../components/HareketKartlari';
 import SablonlaBasla from '../components/SablonlaBasla';
 import SablonOlusturCagrisi from '../components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../ui/GeriAlSeridi';
+import IkincilDugme from '../ui/IkincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
 import { usePageTitle } from '../ui/PageTitleContext';
 
@@ -41,9 +43,15 @@ interface BekleyenHareket {
  * bir oturumda gruplu set listesi; oturum yoksa "Sablonla basla" (#81, #87 -- Takvim burada DEGIL,
  * Ana Sayfa'da: iki ekran ayri kayguya sahip, biri antrenmanin kendisi, digeri genel bakis). Alt
  * alan oturum durumuna gore degisir: acik antrenmanda AddSetForm ("Hareket ekle", #62), YOKKEN
- * SablonOlusturCagrisi ("+ Sablon olustur", #61) -- serbest antrenman artik arayuzden
- * BASLATILAMAZ, her antrenman bir sablonla baslar. Backend'e dokunulmadi: POST /api/sets'in
- * oturumu kendiliginden acmasi API'de duruyor, arayuz artik KULLANMIYOR.
+ * SablonOlusturCagrisi ("+ Sablon olustur", #61).
+ *
+ * #186: #61'in "her antrenman bir sablonla baslar" karari geri alinmadi, TAMAMLANDI -- "Sablonla
+ * basla" birincil yol olarak kalir, altinda ikincil "Bos antrenman baslat" durur (`POST /api/sessions
+ * { templateId: null }`); hareketler acik antrenmanda "Hareket ekle" ile eklenir. POST /api/sets'in
+ * oturumu kendiliginden acmasi hala KULLANILMAZ: set, antrenmana girilmeden eklenmez.
+ *
+ * #209: hareketi olan acik antrenmanda "Sablon olarak kaydet", listeyi (set girilmemis olsa da)
+ * onceden doldurulmus sablon formuna tasir; kaydedince antrenmana donulur.
  *
  * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
@@ -191,6 +199,10 @@ export default function AntrenmanPage() {
     }
   }
 
+  function sablonOlarakKaydet() {
+    navigate('/templates/new', { state: { donus: '/antrenman', hareketler: oturumdanSablonHareketleri(gorunenIlerleme) } });
+  }
+
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
     baslatMutasyonu.mutate(templateId, {
@@ -257,6 +269,17 @@ export default function AntrenmanPage() {
             </span>
           </div>
         )}
+        {/* #209: bos listeden sablon olmaz -- eylem yalnizca hareket varken gorunur. */}
+        {gorunenOturum && gorunenIlerleme.length > 0 && (
+          <button
+            type="button"
+            onClick={sablonOlarakKaydet}
+            className="-ml-2 flex min-h-11 w-fit items-center gap-1 rounded-lg px-2 text-label text-muted"
+          >
+            <ClipboardList aria-hidden size={18} />
+            {t('antrenman.sablonOlarakKaydet')}
+          </button>
+        )}
         {baslatMutasyonu.isError && (
           <p role="alert" className="text-label text-danger">
             {t('antrenman.baslatilamadi')}
@@ -322,7 +345,13 @@ export default function AntrenmanPage() {
       )}
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
-        <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+        <>
+          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+          {/* #186: ikincil yol -- sablonsuz antrenman; hareketler acildiktan sonra eklenir. */}
+          <IkincilDugme onClick={() => baslatMutasyonu.mutate(null)} disabled={baslatMutasyonu.isPending}>
+            {t('antrenman.bosBaslat')}
+          </IkincilDugme>
+        </>
       )}
 
       {setSilme.bekleyen && (

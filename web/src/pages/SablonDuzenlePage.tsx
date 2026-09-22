@@ -27,6 +27,7 @@ import {
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { VARSAYILAN_DINLENME_SN } from '../lib/dinlenme';
+import { VARSAYILAN_HEDEF_SET, type SablonTaslakHareketi } from '../lib/sablonTaslagi';
 import { anahtaraGoreTasi } from '../lib/siralama';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
@@ -56,7 +57,6 @@ function dinlenmeEtiketi(t: TFunction, saniye: number): string {
   return t('sablonlar.dinlenmeSn', { saniye });
 }
 
-const YENI_SATIR_HEDEF_SET = '3';
 const ALAN_ETIKETI = 'text-label text-muted';
 
 interface Satir {
@@ -127,7 +127,10 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
   // gelir -- BURADAN olusturulan sablon kaydedilince Bugun'e doner. Sablonlar listesindeki "Yeni
   // sablon" dugmesi state VERMEZ, yani `donus` `undefined` kalir ve varsayilan (/templates)
   // korunur -- iki giris noktasi ayni bileseni farkli bir kayit sonrasi hedefle kullanir.
-  const donusYolu = (useLocation().state as { donus?: string } | null)?.donus ?? '/templates';
+  // #209/#186: antrenmandan gelinirse state antrenmanin hareketlerini de tasir -- yeni sablon onlarla
+  // dolu acilir. Duzenlenen sablonda (`sablon` dolu) yok sayilir.
+  const girisDurumu = useLocation().state as { donus?: string; hareketler?: SablonTaslakHareketi[] } | null;
+  const donusYolu = girisDurumu?.donus ?? '/templates';
   const { data: egzersizler } = useExercises();
   const olusturMutasyonu = useCreateTemplate();
   const guncelleMutasyonu = useUpdateTemplate();
@@ -136,16 +139,18 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
 
   const [ad, setAd] = useState(sablon?.name ?? '');
-  const [satirlar, setSatirlar] = useState<Satir[]>(() =>
-    (sablon?.exercises ?? []).map((hareket, sira) => ({
+  const [satirlar, setSatirlar] = useState<Satir[]>(() => {
+    // Antrenmandan gelen taslakta arsiv bilgisi yok; arsivli hareketi kaydederken sunucu reddeder.
+    const baslangic: (SablonTaslakHareketi & { isArchived?: boolean })[] = sablon?.exercises ?? girisDurumu?.hareketler ?? [];
+    return baslangic.map((hareket, sira) => ({
       anahtar: sira,
       exerciseId: hareket.exerciseId,
       exerciseName: hareket.exerciseName,
-      isArchived: hareket.isArchived,
+      isArchived: hareket.isArchived ?? false,
       plannedSets: String(hareket.plannedSets),
       restSeconds: hareket.restSeconds,
-    })),
-  );
+    }));
+  });
   const siradakiAnahtar = useRef(satirlar.length);
 
   const [adHatasi, setAdHatasi] = useState<string | null>(null);
@@ -187,7 +192,7 @@ function SablonFormu({ sablon }: { sablon: Sablon | null }) {
         exerciseId: eklenebilirEgzersiz.id,
         exerciseName: eklenebilirEgzersiz.name,
         isArchived: false,
-        plannedSets: YENI_SATIR_HEDEF_SET,
+        plannedSets: String(VARSAYILAN_HEDEF_SET),
         restSeconds: VARSAYILAN_DINLENME_SN,
       },
     ]);

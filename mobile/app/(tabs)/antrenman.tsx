@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, X } from 'lucide-react-native';
+import { CircleCheck, ClipboardList, X } from 'lucide-react-native';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -20,6 +21,7 @@ import { formatSaat } from '@grind/shared/lib/format';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { varsayilanHareket } from '@grind/shared/lib/ilerleme';
+import { oturumdanSablonHareketleri } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import SetList from '../../src/components/SetList';
 import AddSetForm from '../../src/components/AddSetForm';
@@ -28,6 +30,7 @@ import HareketKartlari from '../../src/components/HareketKartlari';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
+import IkincilDugme from '../../src/ui/IkincilDugme';
 import TurEtiketi from '../../src/ui/TurEtiketi';
 import { ikonRenk } from '../../src/ui/renkler';
 
@@ -38,8 +41,12 @@ interface BekleyenHareket {
   exerciseId: number;
 }
 
-/** web/src/pages/AntrenmanPage.tsx ile ayni (issue #119/#120). */
+/**
+ * web/src/pages/AntrenmanPage.tsx ile ayni (issue #119/#120). #186: "Sablonla basla"nin altinda
+ * ikincil "Bos antrenman baslat"; #209: hareketi olan acik antrenmanda "Sablon olarak kaydet".
+ */
 export default function AntrenmanScreen() {
+  const { t } = useTranslation();
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
   usePageTitle(gorunenOturum ? 'Antrenman' : 'Antrenman başlat');
@@ -144,6 +151,13 @@ export default function AntrenmanScreen() {
     }
   }
 
+  function sablonOlarakKaydet() {
+    router.push({
+      pathname: '/templates/new',
+      params: { donus: '/antrenman', hareketler: JSON.stringify(oturumdanSablonHareketleri(gorunenIlerleme)) },
+    });
+  }
+
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
     baslatMutasyonu.mutate(templateId, {
@@ -196,6 +210,17 @@ export default function AntrenmanScreen() {
             <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
             <Text className="text-label text-muted">Başlangıç {formatSaat(gorunenOturum.startedAt)}</Text>
           </View>
+        )}
+        {/* #209: bos listeden sablon olmaz -- eylem yalnizca hareket varken gorunur. */}
+        {gorunenOturum && gorunenIlerleme.length > 0 && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={sablonOlarakKaydet}
+            className="-ml-2 min-h-11 flex-row items-center gap-1 self-start rounded-lg px-2"
+          >
+            <ClipboardList color={ikonRenk.muted} size={18} />
+            <Text className="text-label text-muted">{t('antrenman.sablonOlarakKaydet')}</Text>
+          </Pressable>
         )}
         {baslatMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
@@ -254,7 +279,13 @@ export default function AntrenmanScreen() {
       )}
 
       {!oturumYukleniyor && !oturumHataliMi && !oturum && (
-        <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+        <>
+          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+          {/* #186: ikincil yol -- sablonsuz antrenman; hareketler acildiktan sonra eklenir. */}
+          <IkincilDugme onPress={() => baslatMutasyonu.mutate(null)} disabled={baslatMutasyonu.isPending}>
+            {t('antrenman.bosBaslat')}
+          </IkincilDugme>
+        </>
       )}
 
       {setSilme.bekleyen && (

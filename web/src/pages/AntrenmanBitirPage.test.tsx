@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
@@ -25,7 +25,7 @@ const ACIK_OTURUM: SessionResponse = {
 
 /** Acik oturumu ve bitirme ucunu taklit eder; bitirme govdelerini toplar. */
 function sahteSunucuyuKur(opsiyonlar: { oturum?: SessionResponse | null; bitirmeHatasi?: boolean } = {}) {
-  const oturum = opsiyonlar.oturum === undefined ? ACIK_OTURUM : opsiyonlar.oturum;
+  let oturum = opsiyonlar.oturum === undefined ? ACIK_OTURUM : opsiyonlar.oturum;
   const bitirmeGovdeleri: unknown[] = [];
   server.use(
     http.get('/api/sessions/open', () =>
@@ -38,10 +38,19 @@ function sahteSunucuyuKur(opsiyonlar: { oturum?: SessionResponse | null; bitirme
       if (opsiyonlar.bitirmeHatasi) {
         return HttpResponse.json({ title: 'Hata', status: 500 }, { status: 500 });
       }
-      return HttpResponse.json({ ...ACIK_OTURUM, isOpen: false, endedAt: new Date().toISOString() });
+      // Gercek backend gibi: bitmis antrenman artik "acik oturum" degildir.
+      const bitmis = { ...oturum!, isOpen: false, endedAt: new Date().toISOString() };
+      oturum = null;
+      return HttpResponse.json(bitmis);
     }),
   );
   return { bitirmeGovdeleri: () => bitirmeGovdeleri };
+}
+
+/** #186: sablon formunun aldigi state'i ekrana yazar -- gercek SablonDuzenlePage yerine sahte hedef. */
+function SablonFormuRotasi() {
+  const state = useLocation().state as { donus?: string; hareketler?: unknown } | null;
+  return <p>{`sablon formu donus=${state?.donus} hareketler=${JSON.stringify(state?.hareketler)}`}</p>;
 }
 
 /** Sayfaya antrenman ekranindan gelinmis gibi acar (gecmiste `/antrenman` var) -- "Devam et" oraya doner. */
@@ -56,6 +65,7 @@ function sayfayiOlustur() {
               <Route path="/" element={<p>ana sayfa</p>} />
               <Route path="/antrenman" element={<p>antrenman sayfasi</p>} />
               <Route path="/antrenman/bitir" element={<AntrenmanBitirPage />} />
+              <Route path="/templates/new" element={<SablonFormuRotasi />} />
             </Routes>
           </MemoryRouter>
         </PageTitleProvider>
@@ -125,4 +135,64 @@ test('bitirme hatasi sayfada gosterilir', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Antrenman bitirilemedi. Lütfen tekrar deneyin.');
+});
+
+describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
+  const SABLONSUZ_HAREKETLI: SessionResponse = {
+    ...ACIK_OTURUM,
+    progress: [
+      { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: null, completedSets: 3, restSeconds: 90 },
+      { exerciseId: 2, exerciseName: 'Squat', plannedSets: null, completedSets: 2, restSeconds: 120 },
+    ],
+  };
+
+  /** Soru antrenman KAPANDIKTAN sonra gelir: acik oturum artik yok ama sayfa antrenman sayfasina kacmaz. */
+  test('sablonsuz ve hareketli antrenman bitince sablon sorusu cikar', async () => {
+    const ortam = sahteSunucuyuKur({ oturum: SABLONSUZ_HAREKETLI });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(await screen.findByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeInTheDocument();
+    expect(ortam.bitirmeGovdeleri()).toEqual([{ difficulty: 'Medium' }]);
+    expect(screen.queryByText('antrenman sayfasi')).not.toBeInTheDocument();
+  });
+
+  test('sorudaki Sablon olarak kaydet antrenmanin hareketleriyle sablon formuna gider', async () => {
+    sahteSunucuyuKur({ oturum: SABLONSUZ_HAREKETLI });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Atla' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Şablon olarak kaydet' }));
+
+    expect(
+      await screen.findByText(
+        `sablon formu donus=/ hareketler=${JSON.stringify([
+          { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+          { exerciseId: 2, exerciseName: 'Squat', plannedSets: 3, restSeconds: 120 },
+        ])}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test('sorudaki Simdi degil ana sayfaya doner', async () => {
+    sahteSunucuyuKur({ oturum: SABLONSUZ_HAREKETLI });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Şimdi değil' }));
+
+    expect(await screen.findByText('ana sayfa')).toBeInTheDocument();
+  });
+
+  /** Sablonla baslamis antrenmanin listesi zaten bir sablondan geldi: soru sorulmaz. */
+  test('sablonlu antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
+    sahteSunucuyuKur({ oturum: { ...SABLONSUZ_HAREKETLI, templateId: 10, templateName: 'Push Day' } });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(await screen.findByText('ana sayfa')).toBeInTheDocument();
+    expect(screen.queryByText('Bu antrenman şablon olarak kaydedilsin mi?')).not.toBeInTheDocument();
+  });
 });

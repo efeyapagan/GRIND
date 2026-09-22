@@ -145,6 +145,11 @@ export const en: Katalog = {
     dinlenmeBitti: 'Rest finished',
     dinlenmeEkleSure: '+15 sec',
     sablonUygulanmadi: 'You already have an open workout today; the template was not applied.',
+    bosBaslat: 'Start empty workout',
+    sablonOlarakKaydet: 'Save as template',
+    sablonSorusu: 'Save this workout as a template?',
+    sablonSorusuAciklama: 'You can start these exercises with one tap next time.',
+    simdiDegil: 'Not now',
   },
   setler: {
     bosDurum: 'No sets added today yet.',
