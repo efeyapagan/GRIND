@@ -74,6 +74,15 @@ export function formatWeight(kg: number, dil: Dil): string {
   });
 }
 
+/**
+ * Antrenman suresini (sn) en yakin dakikaya yuvarlayip saat + dakikaya boler (#246). Once toplam
+ * dakika yuvarlanir, sonra bolunur -- 59,5 dk "0 sa 60 dk" degil "1 sa 0 dk" olur.
+ */
+export function saatDakika(saniye: number): { saat: number; dakika: number } {
+  const toplamDakika = Math.round(saniye / 60);
+  return { saat: Math.floor(toplamDakika / 60), dakika: toplamDakika % 60 };
+}
+
 /** "YYYY-MM-DD": TR bugununden `gun` gun onceki TR gunu (API'nin DateOnly `From` parametresi icin). */
 export function trBugundenOnce(gun: number, simdi: Date = new Date()): string {
   const { gun: ayinGunu, ay, yil } = tarihParcalariniAl(

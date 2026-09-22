@@ -9,7 +9,7 @@ function ornekOturum(gecersizler: Partial<GecmisOturum> = {}): GecmisOturum {
     templateName: 'Push Day',
     setCount: 12,
     totalVolume: 3400,
-    medianRestSeconds: 90,
+    durationSeconds: null,
     sets: [],
     ...gecersizler,
   };
@@ -66,4 +66,14 @@ test('son 24 saat icindeki antrenman mutlak tarih yerine goreli zaman gosterir (
   await render(<GecmisKarti oturum={ornekOturum({ startedAt: ucSaatOnce })} onSil={jest.fn()} />);
 
   expect(screen.getByText('3 saat önce')).toBeTruthy();
+});
+
+test('ozet medyan dinlenme yerine antrenman suresini saat ve dakikayla gosterir (#246)', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: 3900 })} onSil={jest.fn()} />);
+
+  expect(screen.getByText('1')).toBeTruthy();
+  expect(screen.getByText('sa')).toBeTruthy();
+  expect(screen.getByText('5')).toBeTruthy();
+  expect(screen.getByText('dk')).toBeTruthy();
+  expect(screen.queryByText('dinlenme')).toBeNull();
 });

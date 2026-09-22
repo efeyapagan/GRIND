@@ -251,7 +251,8 @@ export const tr = {
     sil: 'Sil',
     serbest: 'Serbest',
     setBirimi: 'set',
-    dinlenmeBirimi: 'dinlenme',
+    saatBirimi: 'sa',
+    dakikaBirimi: 'dk',
     bosDurumMetni: 'Bu antrenmanda set yok.',
   },
   hareketGecmisi: {
