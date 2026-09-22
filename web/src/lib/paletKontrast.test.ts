@@ -153,6 +153,21 @@ test('accent-fg metin olarak kullanildigi yuzeylerde (bg, surface-1, surface-2) 
   expect(dusukler).toEqual([]);
 });
 
+test('success her iki temada her yuzeyde en az 3:1 ("Devam ediyor" rozetinin noktasi, #226)', () => {
+  const dusukler: string[] = [];
+
+  for (const [temaAdi, palet] of Object.entries(paletler)) {
+    for (const zemin of ZEMINLER) {
+      const oran = kontrast(palet.success, palet[zemin]);
+      if (!(oran >= 3)) {
+        dusukler.push(`${temaAdi}: success / ${zemin} = ${oran.toFixed(2)}`);
+      }
+    }
+  }
+
+  expect(dusukler).toEqual([]);
+});
+
 test('accent dolgusu ve hata kutusu kendi metinleriyle 4.5:1 saglar', () => {
   for (const palet of Object.values(paletler)) {
     expect(kontrast(palet['on-accent'], palet.accent)).toBeGreaterThanOrEqual(4.5);

@@ -177,7 +177,7 @@ export default function AntrenmanScreen() {
               soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
           {gorunenOturum?.isOpen && (
             <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-              <View className="size-2 rounded-full bg-muted" />
+              <View className="size-2 rounded-full bg-success" />
               <Text className="text-label text-fg">Devam ediyor</Text>
             </View>
           )}

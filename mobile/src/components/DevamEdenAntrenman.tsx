@@ -25,7 +25,7 @@ export default function DevamEdenAntrenman() {
     <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-          <View className="size-2 rounded-full bg-muted" />
+          <View className="size-2 rounded-full bg-success" />
           <Text className="text-label text-fg">Devam ediyor</Text>
         </View>
         <Text className="text-label text-muted">Başlangıç {formatSaat(oturum.startedAt)}</Text>

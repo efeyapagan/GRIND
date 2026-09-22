@@ -26,7 +26,7 @@ export default function DevamEdenAntrenman() {
     <div className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 text-label text-fg">
-          <span className="size-2 rounded-full bg-muted" />
+          <span className="size-2 rounded-full bg-success" />
           {t('antrenman.devamEdiyor')}
         </span>
         <span className="text-label text-muted">{t('antrenman.baslangic', { saat: formatSaat(oturum.startedAt) })}</span>

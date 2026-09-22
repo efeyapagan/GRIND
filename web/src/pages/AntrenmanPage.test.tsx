@@ -1082,7 +1082,9 @@ test('set paneli kapali baslar; karta dokunmak acar, Paneli kapat kapatir, yazil
   await kullanici.click(screen.getByRole('button', { name: 'Paneli kapat' }));
 
   expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
-  expect(screen.getByRole('button', { name: 'Hareket ekle' })).toHaveFocus();
+  // #226: odak paneli acan karta doner -- "Hareket ekle" artik listenin sonunda, oraya donmek sayfayi
+  // en alta atlatirdi.
+  expect(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' })).toHaveFocus();
 
   await kullanici.click(screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' }));
   expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
@@ -1250,6 +1252,17 @@ describe('antrenman hareketleri (#60, #62)', () => {
 
     await waitFor(() => expect(ortam.eklenenHareketler()).toEqual([2]));
     expect(await screen.findByRole('button', { name: 'Squat, 0 set' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('Hareket ekle alta yapisik panelde degil, hareket kartlarindan sonra akisin icinde durur (#226)', async () => {
+    sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
+    antrenmanSayfasiniOlustur();
+
+    const dugme = await screen.findByRole('button', { name: 'Hareket ekle' });
+    const kart = screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' });
+
+    expect(kart.compareDocumentPosition(dugme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(dugme.closest('.sticky')).toBeNull();
   });
 
   test('Hareketi kaldir: kart hemen gizlenir ve geri al seridi cikar; geri alinca kart doner, DELETE gitmez', async () => {

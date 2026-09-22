@@ -134,8 +134,13 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   // set edilir; asagidaki efekt onu TUKETIR (okuyup sifirlar).
   const acButonuylaAcildiRef = useRef(false);
 
+  // #226: paneli acan eleman (acik antrenmanda hareket karti) -- kapaninca odak ona doner. "Hareket
+  // ekle" listenin sonunda oldugu icin odagi oraya dondurmek sayfayi en alta atlatirdi.
+  const acanElemanRef = useRef<HTMLElement | null>(null);
+
   // Odak yalnizca durum GERCEKTEN degistiginde tasinir (ilk render'da ve StrictMode'un cift efektinde
-  // calinmaz): acilinca (ve yalniz dugmeyle acildiysa) agirlik alanina, kapaninca "Set ekle" dugmesine.
+  // calinmaz): acilinca (ve yalniz dugmeyle acildiysa) agirlik alanina, kapaninca paneli acan elemana
+  // (yoksa "Set ekle" dugmesine).
   const oncekiAcik = useRef(acik);
   useEffect(() => {
     if (oncekiAcik.current === acik) {
@@ -143,12 +148,19 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     }
     oncekiAcik.current = acik;
     if (acik) {
+      acanElemanRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       if (acButonuylaAcildiRef.current) {
         agirlikRef.current?.focus();
       }
       acButonuylaAcildiRef.current = false;
     } else {
-      acmaDugmesiRef.current?.focus();
+      const acan = acanElemanRef.current;
+      acanElemanRef.current = null;
+      if (acan?.isConnected && acan !== document.body) {
+        acan.focus();
+      } else {
+        acmaDugmesiRef.current?.focus();
+      }
     }
   }, [acik]);
 
@@ -219,40 +231,47 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     }
   }
 
+  // #226: alta yapisik kutu yalnizca bir sey gosterirken cizilir (sayac calisiyor ya da set paneli
+  // acik). Sarmalayici yine de kalir -- DinlenmeSayaci'nin canli bolgesi hep bagli olmali.
+  const altPanelGorunur = !hareketEkleme || acik || dinlenme !== null;
+
   return (
-    // I1 (review bulgusu): `fixed` yerine `sticky` -- TodayPage'in koku bu bilesenin son cocugu
-    // ve `mt-auto` tasir; boylece bu alan kendi akis icinde gercek yukseklik kaplar (dinlenme
-    // sayaci acikken buyuyen satir dahil) ve altindaki listenin son satirini bir daha ORTMEZ.
-    // 5.5rem = sekme cubugu yuksekligi (App.tsx h-14 = 3.5rem) + ortadaki "+" dugmesinin
-    // halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa bu panel o dugmeyle
-    // CAKISIYORDU (kullanici bulgusu). `px-4` YOK -- `main` zaten `px-4 max-w-md`.
-    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
-      <div className="mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl">
-        <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
-        {!acik &&
-          (hareketEkleme ? (
-            // #62: acik antrenmanda alt alan "Hareket ekle"dir; set ekleme karta dokununca acilir.
-            hareketEkleAcik ? (
-              <HareketEklePaneli
-                egzersizler={hareketEkleme.egzersizler}
-                onSec={(exerciseId) => {
-                  setHareketEkleAcik(false);
-                  hareketEkleme.onEkle(exerciseId);
-                }}
-                onKapat={() => setHareketEkleAcik(false)}
-              />
-            ) : (
-              <BirincilDugme
-                ref={acmaDugmesiRef}
-                yukseklik="normal"
-                aria-expanded={false}
-                onClick={() => setHareketEkleAcik(true)}
-              >
-                <Plus aria-hidden size={20} />
-                {t('antrenman.hareketEkle')}
-              </BirincilDugme>
-            )
+    <>
+      {hareketEkleme && (
+        // #62: acik antrenmanda set ekleme karta dokununca acilir. #226: "Hareket ekle" alta yapisik
+        // DEGIL, kartlarin hemen ardinda akisin icindedir -- uzun listede ekrani ortuyordu.
+        <div className="flex flex-col gap-2">
+          {hareketEkleAcik ? (
+            <HareketEklePaneli
+              egzersizler={hareketEkleme.egzersizler}
+              onSec={(exerciseId) => {
+                setHareketEkleAcik(false);
+                hareketEkleme.onEkle(exerciseId);
+              }}
+              onKapat={() => setHareketEkleAcik(false)}
+            />
           ) : (
+            <BirincilDugme yukseklik="normal" aria-expanded={false} onClick={() => setHareketEkleAcik(true)}>
+              <Plus aria-hidden size={20} />
+              {t('antrenman.hareketEkle')}
+            </BirincilDugme>
+          )}
+        </div>
+      )}
+      {/* I1 (review bulgusu): `fixed` yerine `sticky` -- TodayPage'in koku bu bilesenin son cocugu
+          ve `mt-auto` tasir; boylece bu alan kendi akis icinde gercek yukseklik kaplar (dinlenme
+          sayaci acikken buyuyen satir dahil) ve altindaki listenin son satirini bir daha ORTMEZ.
+          5.5rem = sekme cubugu yuksekligi (App.tsx h-14 = 3.5rem) + ortadaki "+" dugmesinin
+          halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa bu panel o dugmeyle
+          CAKISIYORDU (kullanici bulgusu). `px-4` YOK -- `main` zaten `px-4 max-w-md`. */}
+      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
+        <div
+          className={
+            altPanelGorunur ? 'mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl' : undefined
+          }
+        >
+          <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
+          {!acik && !hareketEkleme && (
             <BirincilDugme
               ref={acmaDugmesiRef}
               yukseklik="normal"
@@ -267,83 +286,84 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
               <Plus aria-hidden size={20} />
               {t('setler.setEkle')}
             </BirincilDugme>
-          ))}
-        <form id={PANEL_ID} hidden={!acik} onSubmit={gonder} className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            {hareketEkleme ? (
-              <h2 className="pl-1 text-label text-muted uppercase">
-                {t('setler.yeniSetIcin', { ad: seciliEgzersizAdi })}
-              </h2>
-            ) : (
-              <span className="pl-1 text-label text-muted uppercase">{t('setler.yeniSet')}</span>
-            )}
-            <IkonDugmesi etiket={t('setler.paneliKapat')} onClick={() => onAcikDegis(false)}>
-              <X aria-hidden size={20} />
-            </IkonDugmesi>
-          </div>
-          {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
-          {!hareketEkleme && (
-            <div>
-              <label htmlFor="set-egzersiz" className="sr-only">
-                {t('setler.egzersizEtiket')}
-              </label>
-              <SecimKutusu
-                id="set-egzersiz"
-                value={egzersizId ?? ''}
-                onChange={(e) => onEgzersizSec(Number(e.target.value))}
-              >
-                {siraliEgzersizler.map((eg) => (
-                  <option key={eg.id} value={eg.id}>
-                    {eg.name}
-                  </option>
-                ))}
-              </SecimKutusu>
-            </div>
           )}
-          <div className="grid grid-cols-3 gap-2">
-            <SayiAlani
-              id="set-agirlik"
-              etiket={t('setGirdisi.agirlikEtiket')}
-              ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
-              birim="kg"
-              inputMode="decimal"
-              placeholder="0"
-              value={agirlik}
-              onChange={setAgirlik}
-              hata={alanHatalari.weight}
-              girdiRef={agirlikRef}
-            />
-            <SayiAlani
-              id="set-tekrar"
-              etiket={t('setGirdisi.tekrarEtiket')}
-              birim={t('setGirdisi.tekrarBirimi')}
-              inputMode="numeric"
-              placeholder="0"
-              value={tekrar}
-              onChange={setTekrar}
-              hata={alanHatalari.reps}
-            />
-            <SayiAlani
-              id="set-rir"
-              etiket={t('setGirdisi.rirEtiket')}
-              ekranOkuyucuEki={t('setGirdisi.opsiyonelEki')}
-              birim={t('setGirdisi.kalanBirimi')}
-              inputMode="numeric"
-              placeholder="—"
-              value={rir}
-              onChange={setRir}
-              hata={alanHatalari.rir}
-            />
-          </div>
-          <p role="status" className="min-h-4 text-label text-muted">
-            {sonEklenen}
-          </p>
-          <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
-            <Plus aria-hidden size={24} />
-            {t('setler.setEkle')}
-          </BirincilDugme>
-        </form>
+          <form id={PANEL_ID} hidden={!acik} onSubmit={gonder} className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              {hareketEkleme ? (
+                <h2 className="pl-1 text-label text-muted uppercase">
+                  {t('setler.yeniSetIcin', { ad: seciliEgzersizAdi })}
+                </h2>
+              ) : (
+                <span className="pl-1 text-label text-muted uppercase">{t('setler.yeniSet')}</span>
+              )}
+              <IkonDugmesi etiket={t('setler.paneliKapat')} onClick={() => onAcikDegis(false)}>
+                <X aria-hidden size={20} />
+              </IkonDugmesi>
+            </div>
+            {genelHata && <p role="alert" className="text-label text-danger">{genelHata}</p>}
+            {!hareketEkleme && (
+              <div>
+                <label htmlFor="set-egzersiz" className="sr-only">
+                  {t('setler.egzersizEtiket')}
+                </label>
+                <SecimKutusu
+                  id="set-egzersiz"
+                  value={egzersizId ?? ''}
+                  onChange={(e) => onEgzersizSec(Number(e.target.value))}
+                >
+                  {siraliEgzersizler.map((eg) => (
+                    <option key={eg.id} value={eg.id}>
+                      {eg.name}
+                    </option>
+                  ))}
+                </SecimKutusu>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              <SayiAlani
+                id="set-agirlik"
+                etiket={t('setGirdisi.agirlikEtiket')}
+                ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
+                birim="kg"
+                inputMode="decimal"
+                placeholder="0"
+                value={agirlik}
+                onChange={setAgirlik}
+                hata={alanHatalari.weight}
+                girdiRef={agirlikRef}
+              />
+              <SayiAlani
+                id="set-tekrar"
+                etiket={t('setGirdisi.tekrarEtiket')}
+                birim={t('setGirdisi.tekrarBirimi')}
+                inputMode="numeric"
+                placeholder="0"
+                value={tekrar}
+                onChange={setTekrar}
+                hata={alanHatalari.reps}
+              />
+              <SayiAlani
+                id="set-rir"
+                etiket={t('setGirdisi.rirEtiket')}
+                ekranOkuyucuEki={t('setGirdisi.opsiyonelEki')}
+                birim={t('setGirdisi.kalanBirimi')}
+                inputMode="numeric"
+                placeholder="—"
+                value={rir}
+                onChange={setRir}
+                hata={alanHatalari.rir}
+              />
+            </div>
+            <p role="status" className="min-h-4 text-label text-muted">
+              {sonEklenen}
+            </p>
+            <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
+              <Plus aria-hidden size={24} />
+              {t('setler.setEkle')}
+            </BirincilDugme>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
