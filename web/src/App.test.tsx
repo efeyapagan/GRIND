@@ -107,6 +107,21 @@ test('aktif sayfanin baglantisi aria-current=page tasir', async () => {
   expect(screen.getByRole('link', { name: 'Profil' })).not.toHaveAttribute('aria-current');
 });
 
+test('alt menude yalnizca aktif baglantinin ikonu turuncu parilti tasir (issue #243)', async () => {
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+
+  expect(screen.getByRole('link', { name: 'Ana sayfa' }).querySelector('[data-parilti]')).not.toBeNull();
+  expect(screen.getByRole('link', { name: 'Profil' }).querySelector('[data-parilti]')).toBeNull();
+});
+
 test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince gunceller (issue #65)', async () => {
   const kullanici = userEvent.setup();
   render(
