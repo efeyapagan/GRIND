@@ -3,9 +3,11 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useRouter } from 'expo-router';
 import { useFinishSession, useOpenSession, type Zorluk } from '@grind/shared/api/queries';
+import { oturumdanSablonHareketleri, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
+import IkincilDugme from '../../src/ui/IkincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
 import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
 
@@ -32,6 +34,10 @@ function MetinEylemi({ etiket, disabled, onPress }: { etiket: string; disabled: 
  *
  * Seçim zorunlu değil: "Atla" antrenmanı zorluksuz kapatır (sunucuda alan nullable). "Devam et" (#182)
  * ya da cihazın geri tuşuyla dönülürse oturum açık kalır — bu ekran hiçbir şeyi kendiliğinden kapatmaz.
+ *
+ * #186: web/src/pages/AntrenmanBitirPage.tsx ile ayni -- ŞABLONSUZ ve hareketi olan antrenman kapanınca
+ * ekran "şablon olarak kaydedilsin mi?" adımına geçer. Liste bitirmeden ÖNCE alınır; bu adımdayken
+ * "açık antrenman yok" yönlendirmesi çalışmaz.
  */
 export default function AntrenmanBitirScreen() {
   const { t } = useTranslation();
@@ -42,6 +48,33 @@ export default function AntrenmanBitirScreen() {
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
   // Kadran cevrilirken ekran kaymaz: iOS ScrollView jesti aksi halde dikey hareketi calar (#182).
   const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
+  const [kaydetSorusu, setKaydetSorusu] = useState<SablonTaslakHareketi[] | null>(null);
+
+  if (kaydetSorusu) {
+    return (
+      <EkranKaydirici contentContainerClassName="flex-grow gap-6 px-4 pt-6 pb-4">
+        <View className="flex-1 items-center justify-center gap-2">
+          <Text className="text-center text-heading text-fg">{t('antrenman.sablonSorusu')}</Text>
+          <Text className="text-center text-body text-muted">{t('antrenman.sablonSorusuAciklama')}</Text>
+        </View>
+        <View className="w-full gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
+          {/* replace: geri tuşu kapanmış antrenmanın bitirme ekranına dönmesin. */}
+          <BirincilDugme
+            yukseklik="buyuk"
+            onPress={() =>
+              router.replace({
+                pathname: '/templates/new',
+                params: { donus: '/', hareketler: JSON.stringify(kaydetSorusu) },
+              })
+            }
+          >
+            {t('antrenman.sablonOlarakKaydet')}
+          </BirincilDugme>
+          <IkincilDugme onPress={() => router.replace('/')}>{t('antrenman.simdiDegil')}</IkincilDugme>
+        </View>
+      </EkranKaydirici>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -58,9 +91,19 @@ export default function AntrenmanBitirScreen() {
   }
 
   function bitir(secilen: Zorluk | null) {
+    const sablonsuzHareketler =
+      oturum!.templateId === null && oturum!.progress.length > 0 ? oturumdanSablonHareketleri(oturum!.progress) : null;
     bitirMutasyonu.mutate(
       { sessionId: oturum!.id, zorluk: secilen },
-      { onSuccess: () => router.replace('/') },
+      {
+        onSuccess: () => {
+          if (sablonsuzHareketler) {
+            setKaydetSorusu(sablonsuzHareketler);
+          } else {
+            router.replace('/');
+          }
+        },
+      },
     );
   }
 

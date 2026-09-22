@@ -14,6 +14,8 @@ geçerliliğini korur.
 Kullanıcı kararları:
 - Model: **antrenmana kopyala** (şablon hareketleri antrenman başlarken antrenmana kopyalanır).
 - Her antrenman bir şablonla başlar (#61'de karar verildi); şablonsuz antrenman arayüzden başlatılmaz.
+  **Güncelleme (#186, 2026-09-22):** karar geri alınmadı, tamamlandı — "Şablonla başla" birincil yol,
+  altında ikincil "Boş antrenman başlat" var. Ayrıntı PLAN.md "İstek #209 + #186".
 - İş akışı: önce yalnızca gerekli testler yazılır ve sunulur, onaydan sonra kod.
 
 ---

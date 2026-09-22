@@ -147,6 +147,11 @@ export const tr = {
     dinlenmeBitti: 'Dinlenme bitti',
     dinlenmeEkleSure: '+15 sn',
     sablonUygulanmadi: 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.',
+    bosBaslat: 'Boş antrenman başlat',
+    sablonOlarakKaydet: 'Şablon olarak kaydet',
+    sablonSorusu: 'Bu antrenman şablon olarak kaydedilsin mi?',
+    sablonSorusuAciklama: 'Hareketleri bir sonraki antrenmanda tek dokunuşla başlatabilirsin.',
+    simdiDegil: 'Şimdi değil',
   },
   setler: {
     bosDurum: 'Bugün henüz set eklenmedi.',

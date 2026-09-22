@@ -272,3 +272,46 @@ test('Sablonlar listesinden acilan yeni sablon state tasimaz, kaydedince /templa
 
   expect(await screen.findByText('Sablon listesi')).toBeInTheDocument();
 });
+
+/**
+ * #209/#186: antrenmandan gelen form, antrenmanin hareketleriyle dolu acilir; kullanici yalnizca ad
+ * verip kaydedebilir. Ad bos gelir (kaynak sablonun adi onerilmez -- ayni adla 409 alinirdi).
+ */
+test('antrenmandan gelen hareketlerle form dolu acilir ve kaydedince bu satirlar gonderilir', async () => {
+  let gonderilen: unknown = null;
+  server.use(
+    http.get('/api/exercises', () => HttpResponse.json(EGZERSIZLER)),
+    http.post('/api/templates', async ({ request }) => {
+      gonderilen = await request.json();
+      return HttpResponse.json(ornekSablon(), { status: 201 });
+    }),
+  );
+  const kullanici = userEvent.setup();
+  duzenleyiciyiOlustur({
+    pathname: '/templates/new',
+    state: {
+      donus: '/',
+      hareketler: [
+        { exerciseId: 2, exerciseName: 'Squat', plannedSets: 5, restSeconds: 180 },
+        { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+      ],
+    },
+  });
+
+  expect(screen.getByLabelText('Şablon adı')).toHaveValue('');
+  expect(screen.getByLabelText('1. hareket: Egzersiz')).toHaveValue('Squat');
+  expect(screen.getByLabelText('1. hareket: Hedef set')).toHaveValue('5');
+  expect(screen.getByLabelText('2. hareket: Egzersiz')).toHaveValue('Bench Press');
+
+  await kullanici.type(screen.getByLabelText('Şablon adı'), 'Bacak Günü');
+  await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+  expect(await screen.findByText('Bugün ekranı')).toBeInTheDocument();
+  expect(gonderilen).toEqual({
+    name: 'Bacak Günü',
+    exercises: [
+      { exerciseId: 2, plannedSets: 5, restSeconds: 180 },
+      { exerciseId: 1, plannedSets: 3, restSeconds: 90 },
+    ],
+  });
+});
