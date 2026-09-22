@@ -6,14 +6,14 @@ namespace Grind.Api.Repositories;
 public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
 {
     /// <summary>
-    /// Kullanıcının verilen UTC aralığında başlamış ve hâlâ açık (EndedAt null) oturumu.
-    /// Aralığı TR yerel gününden hesaplamak servisin işidir — saat dilimi politikası
-    /// bu katmana ait değildir.
+    /// Kullanıcının eşik andan SONRA (dahil) başlamış ve hâlâ açık (EndedAt null) en son oturumu.
+    /// Üst sınır YOK — az önce başlamış bir oturumu hariç tutmak için hiçbir sebep yok. Eşiği
+    /// hesaplamak (issue #191: "bugün" değil "son N saat") servisin işidir — süre politikası bu
+    /// katmana ait değildir.
     /// </summary>
-    Task<WorkoutSession?> GetOpenSessionStartedBetweenAsync(
+    Task<WorkoutSession?> GetOpenSessionStartedAfterAsync(
         long userId,
-        DateTime fromUtcInclusive,
-        DateTime toUtcExclusive,
+        DateTime thresholdUtcInclusive,
         CancellationToken cancellationToken = default);
 
     /// <summary>Kullanıcının tüm oturumları, yeniden eskiye.</summary>

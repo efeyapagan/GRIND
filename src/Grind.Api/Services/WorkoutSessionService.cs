@@ -28,6 +28,13 @@ public class WorkoutSessionService(
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
     private const string ExerciseNotFound = "Egzersiz bulunamadı.";
 
+    /// <summary>
+    /// "Açık oturum" olarak sayılmanın süre sınırı (issue #191). Issue'nun kendi önerdiği örnek
+    /// değer: bir antrenman genelde bundan çok kısa sürer, ama gece yarısını (hatta birkaç saatlik
+    /// bir molayı) rahatça kapsar. CLAUDE.md'deki "unutulan açık session" kararı bu sabitle günceldi.
+    /// </summary>
+    private static readonly TimeSpan AcikOturumPenceresi = TimeSpan.FromHours(6);
+
     public async Task<IReadOnlyList<SessionResponse>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
@@ -47,10 +54,10 @@ public class WorkoutSessionService(
 
     public async Task<SessionResponse> GetOpenAsync(CancellationToken cancellationToken = default)
     {
-        // FindOpenTodayAsync bilerek yalın (Template Include'suz) — Faz 8 bunu her set
+        // FindRecentOpenSessionAsync bilerek yalın (Template Include'suz) — Faz 8 bunu her set
         // eklemede çağıracak ve şablon grafiğini sürüklememeli. Yanıt için burada şablon
         // adını taşıyan sahiplik sorgusuyla yeniden okunuyor.
-        var found = await FindOpenTodayAsync(cancellationToken)
+        var found = await FindRecentOpenSessionAsync(cancellationToken)
                     ?? throw new NotFoundException(OpenSessionNotFound);
         var session = await OwnedOrThrowAsync(found.Id, cancellationToken);
 
@@ -60,7 +67,7 @@ public class WorkoutSessionService(
     public async Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
         long? templateId, string? notes, CancellationToken cancellationToken = default)
     {
-        var existing = await FindOpenTodayAsync(cancellationToken);
+        var existing = await FindRecentOpenSessionAsync(cancellationToken);
 
         if (existing is not null)
         {
@@ -192,7 +199,7 @@ public class WorkoutSessionService(
             // İdempotent: iki kez tıklanan "Antrenmana Başla" hata değil aynı oturum.
             // Gövdedeki şablon/not bilerek UYGULANMAZ — açık bir oturumu sessizce
             // değiştirmek, kullanıcının fark etmediği bir veri kaybı olurdu.
-            // FindOpenTodayAsync yalın (Template Include'suz) döndüğü için burada şablon
+            // FindRecentOpenSessionAsync yalın (Template Include'suz) döndüğü için burada şablon
             // adı için sahiplik sorgusuyla yeniden okunuyor.
             var reloaded = await OwnedOrThrowAsync(session.Id, cancellationToken);
             return new StartSessionResult(
@@ -262,16 +269,21 @@ public class WorkoutSessionService(
     }
 
     /// <summary>
-    /// "Bugüne ait açık oturum": <c>EndedAt IS NULL</c> YETMEZ, <c>StartedAt</c> TR yerel
-    /// gününde de olmalı. Aksi halde kapatılmayı unutulan dünkü oturum bugünün setlerini
-    /// yutar ve onlar dünkü tarihe yazılır (CLAUDE.md). Eski oturum zorla kapatılmaz.
+    /// Issue #191 öncesi burada "TR yerel gününde başlamış" şartı vardı: <c>EndedAt IS NULL</c>
+    /// YETMEZ, <c>StartedAt</c> bugünün TR takvim gününde de olmalıydı. Sebep hâlâ geçerli
+    /// (CLAUDE.md): kapatılmayı unutulan eski bir oturum yeni setleri yutup onları eski tarihe
+    /// yazmamalı. AMA takvim günü sınırı gece yarısını cezalandırıyordu: 23:50'de başlayan bir
+    /// antrenman 00:05'te (15 dakika sonra!) "bugüne ait değil" sayılıp erişilemez oluyordu.
+    /// Çözüm: "bugün" yerine "son <see cref="AcikOturumPenceresi"/> saat içinde başlamış" --
+    /// gece yarısını doğal olarak aşar, gerçekten unutulmuş (saatler önce başlamış) bir oturumu
+    /// yine de yutmaz.
     /// </summary>
-    private Task<WorkoutSession?> FindOpenTodayAsync(CancellationToken cancellationToken)
+    private Task<WorkoutSession?> FindRecentOpenSessionAsync(CancellationToken cancellationToken)
     {
-        var (fromUtc, toUtc) = TurkeyDay.RangeFor(timeProvider.GetUtcNow().UtcDateTime);
+        var esikUtc = timeProvider.GetUtcNow().UtcDateTime - AcikOturumPenceresi;
 
-        return sessionRepository.GetOpenSessionStartedBetweenAsync(
-            currentUser.UserId, fromUtc, toUtc, cancellationToken);
+        return sessionRepository.GetOpenSessionStartedAfterAsync(
+            currentUser.UserId, esikUtc, cancellationToken);
     }
 
     private async Task<WorkoutSession> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)

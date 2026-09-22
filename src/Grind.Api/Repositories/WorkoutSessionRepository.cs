@@ -8,16 +8,14 @@ namespace Grind.Api.Repositories;
 public class WorkoutSessionRepository(AppDbContext context)
     : Repository<WorkoutSession>(context), IWorkoutSessionRepository
 {
-    public Task<WorkoutSession?> GetOpenSessionStartedBetweenAsync(
+    public Task<WorkoutSession?> GetOpenSessionStartedAfterAsync(
         long userId,
-        DateTime fromUtcInclusive,
-        DateTime toUtcExclusive,
+        DateTime thresholdUtcInclusive,
         CancellationToken cancellationToken = default)
         => Set
             .Where(s => s.UserId == userId
                         && s.EndedAt == null
-                        && s.StartedAt >= fromUtcInclusive
-                        && s.StartedAt < toUtcExclusive)
+                        && s.StartedAt >= thresholdUtcInclusive)
             .OrderByDescending(s => s.StartedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
