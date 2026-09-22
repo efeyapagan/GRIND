@@ -291,11 +291,23 @@ Object Reference) açığıdır.
 >   etkilenen egzersizlerin distinct listesi çıkarılıp her biri için BİR KERE
 >   `RecalculateRecords` çağrılmalı (her set için ayrı ayrı değil — performans, DRY).
 
-> Karar (unutulan açık session): "açık session" ararken sadece `EndedAt IS NULL` yetmez —
-> `StartedAt`'in (Türkiye yerel saatiyle) bugünle aynı gün olması da kontrol edilmeli. Aksi
-> halde kullanıcı bir session'ı kapatmayı unutursa, günler sonra eklediği yeni bir set
-> yanlışlıkla o eski session'a (ve eski tarihe) eklenmiş olur. Bugüne ait açık session yoksa
-> yeni bir session açılır; eski açık session zorla kapatılmaz, öylece kalır.
+> Karar (unutulan açık session — issue #191 ile güncellendi): "açık session" ararken sadece
+> `EndedAt IS NULL` yetmez — `StartedAt`'in yeterince YAKIN zamanda olması da kontrol edilmeli.
+> Aksi halde kullanıcı bir session'ı kapatmayı unutursa, günler sonra eklediği yeni bir set
+> yanlışlıkla o eski session'a (ve eski tarihe) eklenmiş olur. **İlk sürümde bu sınır "TR yerel
+> takvim günü" idi (bkz. eski `TurkeyDay.RangeFor` kullanımı) — ama gece yarısını gerçek bir
+> sorun hâline getiriyordu: 23:50'de başlayan bir antrenman 00:05'te "bugüne ait değil" sayılıp
+> erişilemez oluyordu (issue #191).** Sınır artık takvim günü değil, süre penceresi:
+> `WorkoutSessionService.AcikOturumPenceresi` (6 saat) içinde başlamış ve hâlâ `EndedAt IS NULL`
+> olan en son session açık sayılır (`WorkoutSessionRepository.GetOpenSessionStartedAfterAsync` —
+> tek eşikli, üst sınırsız). Pencere gece yarısını doğal olarak aşar ama gerçekten unutulmuş
+> (saatler önce başlamış) bir session'ı yine de yutmaz. Pencere dışında açık session yoksa yeni
+> bir session açılır; eski açık session zorla kapatılmaz, öylece kalır.
+>
+> Not (bu kararla karıştırılmasın): bir antrenmanın **hangi güne ait sayılacağı** (geçmiş,
+> takvim, seri/istatistik) bu pencereden ETKİLENMEZ — her zaman `StartedAt`'in kendi TR yerel
+> günüdür. 23:30'da başlayıp 00:30'da biten bir antrenman, ne zaman kapatılırsa kapatılsın,
+> geçmişte 23:30'un günü (T) altında görünür, T+1'de değil.
 
 ## Veritabanı Tasarım Kuralları
 Şema en az **3NF (Üçüncü Normal Form)**'a uygun olmalı:

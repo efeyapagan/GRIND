@@ -9,7 +9,7 @@ namespace Grind.Tests.Repositories;
 public class WorkoutSessionRepositoryTests
 {
     [Fact]
-    public async Task Araliktaki_acik_oturumu_dondurur()
+    public async Task Esikten_sonra_baslayan_acik_oturumu_dondurur()
     {
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -21,8 +21,7 @@ public class WorkoutSessionRepositoryTests
         context.WorkoutSessions.Add(session);
         await context.SaveChangesAsync();
 
-        var found = await repository.GetOpenSessionStartedBetweenAsync(
-            user.Id, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddHours(1));
+        var found = await repository.GetOpenSessionStartedAfterAsync(user.Id, DateTime.UtcNow.AddHours(-1));
 
         Assert.NotNull(found);
         Assert.Equal(session.Id, found.Id);
@@ -43,18 +42,17 @@ public class WorkoutSessionRepositoryTests
         context.WorkoutSessions.Add(session);
         await context.SaveChangesAsync();
 
-        var found = await repository.GetOpenSessionStartedBetweenAsync(
-            user.Id, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddHours(1));
+        var found = await repository.GetOpenSessionStartedAfterAsync(user.Id, DateTime.UtcNow.AddHours(-1));
 
         Assert.Null(found);
         await transaction.RollbackAsync();
     }
 
     [Fact]
-    public async Task Aralik_disindaki_acik_oturumu_dondurmez()
+    public async Task Esikten_once_baslayan_acik_oturumu_dondurmez()
     {
         // Unutulmuş açık session senaryosu: günler önce açılmış, hâlâ kapanmamış.
-        // Bugünün aralığında aranınca çıkmamalı, yoksa yeni set eski tarihe düşer.
+        // Eşikten önce aranınca çıkmamalı, yoksa yeni set eski oturuma (ve tarihine) düşer.
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
         var repository = new WorkoutSessionRepository(context);
@@ -66,59 +64,34 @@ public class WorkoutSessionRepositoryTests
         context.WorkoutSessions.Add(oldSession);
         await context.SaveChangesAsync();
 
-        var found = await repository.GetOpenSessionStartedBetweenAsync(
-            user.Id, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddHours(1));
+        var found = await repository.GetOpenSessionStartedAfterAsync(user.Id, DateTime.UtcNow.AddHours(-1));
 
         Assert.Null(found);
         await transaction.RollbackAsync();
     }
 
     [Fact]
-    public async Task Alt_sinirdaki_oturumu_dondurur()
+    public async Task Esikte_baslayan_oturumu_dondurur()
     {
-        // >= from sınırını sabitler: from ile TAM AYNI anda başlayan oturum bulunmalı.
-        // Üst sınır (< to) ayrı testte (Ust_sinirdaki_oturumu_dondurmez).
+        // >= esik sınırını sabitler: eşikle TAM AYNI anda başlayan oturum bulunmalı. Üst sınır
+        // YOK (issue #191) -- az önce başlamış bir oturumu hariç tutmak için sebep yok.
         await using var context = TestDatabase.CreateContext();
         await using var transaction = await context.Database.BeginTransactionAsync();
         var repository = new WorkoutSessionRepository(context);
 
         var user = TestDatabase.NewUser();
         context.Users.Add(user);
-        var from = DateTime.UtcNow.AddHours(-1);
-        var to = DateTime.UtcNow.AddHours(1);
+        var esik = DateTime.UtcNow.AddHours(-1);
 
-        var atFrom = TestDatabase.NewSession(user);
-        atFrom.StartedAt = from;
-        context.WorkoutSessions.Add(atFrom);
+        var atEsik = TestDatabase.NewSession(user);
+        atEsik.StartedAt = esik;
+        context.WorkoutSessions.Add(atEsik);
         await context.SaveChangesAsync();
 
-        var found = await repository.GetOpenSessionStartedBetweenAsync(user.Id, from, to);
+        var found = await repository.GetOpenSessionStartedAfterAsync(user.Id, esik);
 
         Assert.NotNull(found);
-        Assert.Equal(atFrom.Id, found.Id);
-        await transaction.RollbackAsync();
-    }
-
-    [Fact]
-    public async Task Ust_sinirdaki_oturumu_dondurmez()
-    {
-        await using var context = TestDatabase.CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        var repository = new WorkoutSessionRepository(context);
-
-        var user = TestDatabase.NewUser();
-        context.Users.Add(user);
-        var from = DateTime.UtcNow.AddHours(-1);
-        var to = DateTime.UtcNow.AddHours(1);
-
-        var atTo = TestDatabase.NewSession(user);
-        atTo.StartedAt = to;
-        context.WorkoutSessions.Add(atTo);
-        await context.SaveChangesAsync();
-
-        var found = await repository.GetOpenSessionStartedBetweenAsync(user.Id, from, to);
-
-        Assert.Null(found);
+        Assert.Equal(atEsik.Id, found.Id);
         await transaction.RollbackAsync();
     }
 
@@ -135,8 +108,7 @@ public class WorkoutSessionRepositoryTests
         context.WorkoutSessions.Add(TestDatabase.NewSession(owner));
         await context.SaveChangesAsync();
 
-        var found = await repository.GetOpenSessionStartedBetweenAsync(
-            stranger.Id, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow.AddHours(1));
+        var found = await repository.GetOpenSessionStartedAfterAsync(stranger.Id, DateTime.UtcNow.AddHours(-1));
 
         Assert.Null(found);
         await transaction.RollbackAsync();

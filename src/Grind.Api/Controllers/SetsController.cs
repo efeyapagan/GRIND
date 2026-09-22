@@ -15,8 +15,8 @@ namespace Grind.Api.Controllers;
 public class SetsController(ISetEntryService setEntryService) : ControllerBase
 {
     /// <summary>
-    /// Set kaydeder. Oturum belirtilmez: servis bugüne ait açık oturumu bulur, yoksa açar
-    /// (CLAUDE.md). Hangi oturuma düştüğü yanıttaki <c>sessionId</c>'dedir.
+    /// Set kaydeder. Oturum belirtilmez: servis yakın zamanda açılmış açık oturumu bulur, yoksa
+    /// açar (CLAUDE.md, issue #191). Hangi oturuma düştüğü yanıttaki <c>sessionId</c>'dedir.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
