@@ -256,6 +256,16 @@ test('kart ozetinde sablon adi ya da Serbest gorunur', async () => {
   expect(satirlar[1]).toHaveTextContent('Serbest');
 });
 
+test('sunucunun verdigi antrenman suresi kart ozetine ulasir (#246)', async () => {
+  server.use(
+    http.get('/api/history', () => HttpResponse.json(sayfaYaniti([ornekOturum({ durationSeconds: 3480 })]))),
+  );
+
+  gecmisSayfasiniOlustur();
+
+  expect(await screen.findByRole('listitem')).toHaveTextContent('58 dk');
+});
+
 // --- Silme akisi (issue #46) ---
 
 /**

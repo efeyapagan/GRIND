@@ -8,7 +8,7 @@ const OTURUM: GecmisOturum = {
   templateName: 'Push Day',
   totalVolume: 1000,
   setCount: 3,
-  medianRestSeconds: null,
+  durationSeconds: null,
   sets: [],
 };
 
@@ -63,15 +63,21 @@ test('kart icindeki silme yolu once onay sorar, onay onSil cagirir', () => {
   expect(onSil).toHaveBeenCalledTimes(1);
 });
 
-test('kart ozeti sunucudan gelen medyan dinlenmeyi gosterir (#71)', () => {
+test('kart ozeti medyan dinlenme yerine antrenman suresini saat ve dakikayla gosterir (#246)', () => {
   render(
     <ul>
-      <GecmisKarti oturum={{ ...OTURUM, medianRestSeconds: 105 }} onSil={vi.fn()} />
+      <GecmisKarti oturum={{ ...OTURUM, durationSeconds: 4320 }} onSil={vi.fn()} />
     </ul>,
   );
   const ozet = screen.getByText('10.09.2026').closest('summary');
 
-  expect(ozet).toHaveTextContent('1:45');
+  expect(ozet).toHaveTextContent('1 sa 12 dk');
+});
+
+test('suresi olmayan (hala acik) antrenmanda sure gosterilmez (#246)', () => {
+  const { ozet } = kartiOlustur();
+
+  expect(ozet).not.toHaveTextContent('dk');
 });
 
 test('son 24 saat icindeki antrenman mutlak tarih yerine goreli zaman gosterir (#218)', () => {

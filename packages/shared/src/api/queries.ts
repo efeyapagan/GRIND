@@ -217,8 +217,8 @@ export interface GecmisOturum {
   templateName: string | null;
   totalVolume: number;
   setCount: number;
-  // #71: gosterilen setlerin dinlenme medyani (sn), sunucudan; hic dinlenme yoksa null.
-  medianRestSeconds: number | null;
+  // #246: antrenman suresi (sn), sunucudan; acik antrenmanda null.
+  durationSeconds: number | null;
   sets: SetKaydi[];
 }
 
@@ -250,7 +250,7 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
     templateName: yanit.templateName ?? null,
     totalVolume: yanit.totalVolume,
     setCount: yanit.setCount,
-    medianRestSeconds: yanit.medianRestSeconds ?? null,
+    durationSeconds: yanit.durationSeconds ?? null,
     sets: (yanit.sets ?? []).map(dogrulanmisSet),
   };
 }

@@ -6,6 +6,7 @@ import {
   formatSaat,
   formatTarih,
   formatWeight,
+  saatDakika,
   trBugundenOnce,
 } from './format';
 
@@ -108,4 +109,11 @@ describe('formatGoreliTarih (issue #218)', () => {
     expect(formatGoreliTarih('2026-09-13T12:00:00Z', 'tr', SIMDI)).toBe(formatTarih('2026-09-13T12:00:00Z', 'tr'));
     expect(formatGoreliTarih('2026-09-01T08:00:00Z', 'tr', SIMDI)).toBe(formatTarih('2026-09-01T08:00:00Z', 'tr'));
   });
+});
+
+test('saatDakika sureyi en yakin dakikaya yuvarlar, 60 dakikayi saate tasir (#246)', () => {
+  expect(saatDakika(4350)).toEqual({ saat: 1, dakika: 13 }); // 72,5 dk -> 73 dk
+  expect(saatDakika(3480)).toEqual({ saat: 0, dakika: 58 });
+  // 59,5 dk "60 dk" diye degil "1 sa 0 dk" diye okunmali.
+  expect(saatDakika(3570)).toEqual({ saat: 1, dakika: 0 });
 });
