@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Check, Search } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
-import { egzersizAra } from '@grind/shared/lib/egzersizler';
+import { useTranslation } from 'react-i18next';
+import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
 import { ikonRenk } from './renkler';
 
 const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
@@ -39,13 +40,17 @@ export default function HareketSecici({
   otomatikOdak = false,
   listeYukari = false,
 }: Props) {
+  const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
   const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
   const alanRef = useRef<TextInput>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
 
-  const sonuclar = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
+  const eslesenler = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
+  // Eslesme yoksa yazim hatasi olabilir: benzeyenler "Bunu mu demek istediniz?" altinda sunulur (#231).
+  const oneriler = acik && eslesenler.length === 0 ? egzersizOner(egzersizler, sorgu, kategori) : [];
+  const sonuclar = eslesenler.length > 0 ? eslesenler : oneriler;
 
   function ac() {
     setSorgu('');
@@ -114,6 +119,9 @@ export default function HareketSecici({
                 </Pressable>
               ))}
             </View>
+            {oneriler.length > 0 && (
+              <Text className="px-4 pt-2 pb-1 text-label text-muted">{t('antrenman.oneriBaslik')}</Text>
+            )}
             {sonuclar.map((egzersiz) => {
               const secili = egzersiz.id === secilenId;
               const kapali = devreDisi.has(egzersiz.id);

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Check, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Egzersiz, EgzersizKategorisi } from '../api/queries';
-import { egzersizAra } from '../lib/egzersizler';
+import { egzersizAra, egzersizOner } from '../lib/egzersizler';
 
 /**
  * Kategori hapları (#77): `null` = Tümü. Push/Pull/Legs uygulamanın kendi terimleri, iki dilde de
@@ -76,7 +76,11 @@ export default function HareketSecici({
   const alanRef = useRef<HTMLInputElement>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
 
-  const sonuclar = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
+  const eslesenler = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
+  // Eslesme yoksa yazim hatasi olabilir: benzeyenler ayni satirlarla "Bunu mu demek istediniz?"
+  // altinda sunulur (#231); ok tuslari ve Enter onlarda da calissin diye tek listede tutulur.
+  const oneriler = acik && eslesenler.length === 0 ? egzersizOner(egzersizler, sorgu, kategori) : [];
+  const sonuclar = eslesenler.length > 0 ? eslesenler : oneriler;
   const listeId = `${id}-liste`;
   const secenekId = (exerciseId: number) => `${id}-secenek-${exerciseId}`;
 
@@ -161,7 +165,11 @@ export default function HareketSecici({
 
       {/* Sonuc sayisi duyurulur: ekran okuyucu kullanicisi listeyi goremez, kac sonuc kaldigini bilmeli. */}
       <p role="status" className="sr-only">
-        {acik ? t('antrenman.hareketBulundu', { count: sonuclar.length }) : ''}
+        {!acik
+          ? ''
+          : oneriler.length > 0
+            ? t('antrenman.oneriBulundu', { count: oneriler.length })
+            : t('antrenman.hareketBulundu', { count: sonuclar.length })}
       </p>
 
       <div
@@ -198,6 +206,11 @@ export default function HareketSecici({
           aria-label={t('antrenman.hareketlerListesi')}
           className="max-h-64 overflow-y-auto py-1"
         >
+          {oneriler.length > 0 && (
+            <li role="presentation" className="px-4 pt-2 pb-1 text-label text-muted">
+              {t('antrenman.oneriBaslik')}
+            </li>
+          )}
           {sonuclar.map((egzersiz, sira) => {
             const secili = egzersiz.id === secilenId;
             const kapali = devreDisi.has(egzersiz.id);

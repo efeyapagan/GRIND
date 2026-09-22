@@ -57,6 +57,8 @@ test('yazmak listeyi daraltir ve sonuc sayisi duyurulur', async () => {
 
   const secenekler = within(screen.getByRole('listbox')).getAllByRole('option');
   expect(secenekler.map((s) => s.textContent)).toEqual(['Bench Press', 'Incline Dumbbell Press']);
+  // Sonuc varken oneri bolumu yok (#231).
+  expect(screen.queryByText('Bunu mu demek istediniz?')).not.toBeInTheDocument();
   // Ekran okuyucu kullanicisi listeyi goremez: kac sonuc kaldigi duyurulmali.
   expect(screen.getByRole('status')).toHaveTextContent('2 hareket bulundu');
 });
@@ -131,4 +133,20 @@ test('eslesme yoksa acik bir bos durum gosterilir', async () => {
 
   expect(screen.getByText('Eşleşen hareket yok.')).toBeInTheDocument();
   expect(within(screen.getByRole('listbox')).queryAllByRole('option')).toHaveLength(0);
+});
+
+test('yazim hatasinda Bunu mu demek istediniz? onerisi gosterilir ve dokununca secilir (#231)', async () => {
+  const { alan, kullanici } = seciciyiOlustur();
+
+  await kullanici.click(alan);
+  await kullanici.type(alan, 'sqaut');
+
+  expect(screen.getByText('Bunu mu demek istediniz?')).toBeInTheDocument();
+  expect(screen.queryByText('Eşleşen hareket yok.')).not.toBeInTheDocument();
+  // Ekran okuyucu "1 hareket bulundu" duyarsa yaniltir: eslesme yok, oneri var.
+  expect(screen.getByRole('status')).toHaveTextContent('Eşleşme yok, 1 öneri var');
+
+  await kullanici.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Squat' }));
+
+  expect(alan).toHaveValue('Squat');
 });
