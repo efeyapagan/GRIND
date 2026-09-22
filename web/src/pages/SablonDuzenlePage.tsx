@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
@@ -61,20 +61,14 @@ interface Satir {
 }
 
 /**
- * Baslik artik ust kabukta (issue #65) -- burada ayrica bir `<h1>` YAZILMAZ, yalnizca geri
- * baglantisi kalir. `usePageTitle` burada, TEK yerde cagrilir: bu bilesenin uc cagiri yeri de
- * (yukleniyor/hata/yuklendi) zaten dogru baslik metnini geciyor, ayri ayri cagirmaya gerek yok.
+ * Baslik ust kabukta (issue #65); geri dugmesi de artik ust kabukta (issue #255, `altEkranMi`).
+ * Bu bileşen gorunur bir sey RENDERLAMAZ, yalnizca `usePageTitle`i tek yerden cagirir -- bu
+ * bilesenin uc cagiri yeri de (yukleniyor/hata/yuklendi) zaten dogru baslik metnini geciyor,
+ * ayri ayri cagirmaya gerek yok.
  */
 function SayfaBasligi({ baslik }: { baslik: string }) {
-  const { t } = useTranslation();
   usePageTitle(baslik);
-
-  return (
-    <Link to="/templates" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
-      <ChevronLeft aria-hidden size={18} />
-      {t('sablonlar.baslik')}
-    </Link>
-  );
+  return null;
 }
 
 /**

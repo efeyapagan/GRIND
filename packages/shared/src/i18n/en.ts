@@ -68,6 +68,7 @@ export const en: Katalog = {
   },
   kabuk: {
     gezinme: 'Main navigation',
+    geri: 'Back',
     anaSayfa: 'Home',
     antrenmanBaslat: 'Start workout',
     profil: 'Profile',

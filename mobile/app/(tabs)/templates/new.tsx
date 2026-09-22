@@ -1,11 +1,8 @@
-import { Text } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import type { SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
 import SablonFormu from '../../../src/components/SablonFormu';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
-import { ikonRenk } from '../../../src/ui/renkler';
 
 /** Rota parametresi metindir: bozuk ya da eksik JSON bos form acar, ekran cokmez. */
 function hareketleriAyristir(ham: string | undefined): SablonTaslakHareketi[] | undefined {
@@ -22,7 +19,8 @@ function hareketleriAyristir(ham: string | undefined): SablonTaslakHareketi[] | 
 
 /**
  * web/src/pages/SablonDuzenlePage.tsx (`sablon === null` dali) ile ayni. #209/#186: antrenmandan
- * gelinirse `hareketler` parametresi (JSON) formun baslangic satirlaridir.
+ * gelinirse `hareketler` parametresi (JSON) formun baslangic satirlaridir. Geri baglantisi artik
+ * ust kabukta (issue #255, `altEkranMi`) -- burada ayrica bir tane yazilmaz.
  */
 export default function YeniSablonScreen() {
   usePageTitle('Yeni şablon');
@@ -30,10 +28,6 @@ export default function YeniSablonScreen() {
 
   return (
     <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
-      <Link href="/templates" className="min-h-11 flex-row items-center gap-1">
-        <ChevronLeft color={ikonRenk.muted} size={18} />
-        <Text className="text-label text-muted">Şablonlar</Text>
-      </Link>
       <SablonFormu
         sablon={null}
         donusYolu={donus ?? '/templates'}

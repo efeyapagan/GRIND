@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
+import { Brain, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import {
@@ -109,12 +108,6 @@ export default function InsightsPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      {/* Sekme cubugunda degil (SablonDuzenlePage'deki "Geri" desenin ayni) -- Gecmis'ten acilir. */}
-      <Link to="/history" className="flex min-h-11 w-fit items-center gap-1 text-label text-muted">
-        <ChevronLeft aria-hidden size={18} />
-        {t('kabuk.sekmeGecmis')}
-      </Link>
-
       <div className="flex items-center gap-4">
         <GrindyMaskot />
         <p className="text-body text-muted">{t('yorumlar.aciklama')}</p>
