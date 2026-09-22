@@ -1,10 +1,11 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Plus, User, type LucideIcon } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Home, Plus, User, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
 import Parilti from './ui/Parilti';
 import { useGeriKaydirma } from './lib/useGeriKaydirma';
+import { altEkranMi, geriHedefi } from './lib/geriKaydirma';
 
 /**
  * Korumali alanin ortak kabugu (spec Karar 8, issue #65 ile yeniden duzenlendi, #119/#120 ile
@@ -42,13 +43,40 @@ export default function App() {
 function Kabuk() {
   const baslik = useHeaderTitle();
   const { t } = useTranslation();
+  const konum = useLocation();
+  const navigate = useNavigate();
   const { ref: geriKaydirmaRef, isaretciler: geriKaydirmaIsaretcileri } = useGeriKaydirma();
+
+  /** #255: kaydirmaya (#232) EK bir erisim yolu -- ayni karar mantigini (`geriHedefi`) kullanir. */
+  function geriGit() {
+    const hedef = geriHedefi(konum.pathname, konum.key !== 'default');
+    if (hedef === 'geri') {
+      navigate(-1);
+    } else if (hedef === 'anaSayfa') {
+      navigate('/');
+    }
+  }
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <header className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-md items-center justify-between px-4">
-          <h1 className="truncate text-heading">{baslik}</h1>
+        <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* #255: kok sekmeler ve Profil'in kendi alt sekmeleri DISINDAKI her ekranda (sablonlar,
+                GRINDY, antrenman bitirme...) tutarli bir geri dugmesi -- daha once her ekran kendi
+                ad-hoc "ChevronLeft + metin" baglantisini tekrarliyordu. */}
+            {altEkranMi(konum.pathname) && (
+              <button
+                type="button"
+                aria-label={t('kabuk.geri')}
+                onClick={geriGit}
+                className="-ml-2 flex size-11 shrink-0 items-center justify-center text-fg"
+              >
+                <ChevronLeft aria-hidden size={22} />
+              </button>
+            )}
+            <h1 className="truncate text-heading">{baslik}</h1>
+          </div>
           {/* #194: tema dugmesi GRIND'in hemen solunda (Profil > Hesap'tan buraya tasindi). */}
           <div className="flex shrink-0 items-center gap-3">
             <TemaDugmesi />

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
-import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Brain, ChevronLeft, Sparkles, Trash2 } from 'lucide-react-native';
+import { Brain, Sparkles, Trash2 } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
@@ -98,11 +97,6 @@ export default function InsightsScreen() {
       }}
       ListHeaderComponent={
         <View className="mb-5 flex-col gap-5">
-          <Link href="/profile/history" className="min-h-11 flex-row items-center gap-1">
-            <ChevronLeft color={ikonRenk.muted} size={18} />
-            <Text className="text-label text-muted">{t('kabuk.sekmeGecmis')}</Text>
-          </Link>
-
           <View className="flex-row items-center gap-4">
             <GrindyMaskot />
             <Text className="flex-1 text-body text-muted">{t('yorumlar.aciklama')}</Text>

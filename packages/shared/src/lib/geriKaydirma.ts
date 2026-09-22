@@ -46,3 +46,24 @@ export function geriHedefi(konum: string, gecmisVar: boolean): 'yok' | 'geri' | 
   }
   return gecmisVar ? 'geri' : 'anaSayfa';
 }
+
+/**
+ * Ust basliktaki geri dugmesi icin (issue #255): sekme cubugundaki KOK sekmeler (Ana Sayfa,
+ * Antrenman, Profil) ve Profil'in KENDI alt sekmeleri (Rekorlar/Gecmis/Olcumler/Hesap -- bunlar
+ * segment kontroludur, drill-down DEGIL) dugmeyi ALMAZ; baska her yol (sablonlar, GRINDY, antrenman
+ * bitirme...) "alt ekran" sayilir. Web'de `/antrenman/bitir`, mobilde `/antrenman-bitir` -- ikisi de
+ * bu listede olmadigi icin ayrica eklenmelerine gerek yok.
+ */
+const KOK_YOLLAR = new Set([
+  '/',
+  '/antrenman',
+  '/profile',
+  '/profile/account',
+  '/profile/measurements',
+  '/profile/history',
+  '/profile/records',
+]);
+
+export function altEkranMi(konum: string): boolean {
+  return !KOK_YOLLAR.has(konum);
+}

@@ -1,4 +1,4 @@
-import { geriGidilsinMi, geriHedefi, kenardanMi, yonKarari } from './geriKaydirma';
+import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, yonKarari } from './geriKaydirma';
 
 /**
  * #232: sol kenardan saga kaydirarak geri donme karari -- web ve mobil ayni saf fonksiyonlari
@@ -36,4 +36,25 @@ test('Ana Sayfada hareket kapali, gecmis varsa geri, yoksa Ana Sayfaya', () => {
   expect(geriHedefi('/', true)).toBe('yok');
   expect(geriHedefi('/profile/history', true)).toBe('geri');
   expect(geriHedefi('/profile/history', false)).toBe('anaSayfa');
+});
+
+describe('altEkranMi (issue #255 -- ust basliktaki geri dugmesi)', () => {
+  test('kok sekmeler ve Profilin kendi alt sekmeleri dugmeyi almaz', () => {
+    expect(altEkranMi('/')).toBe(false);
+    expect(altEkranMi('/antrenman')).toBe(false);
+    expect(altEkranMi('/profile')).toBe(false);
+    expect(altEkranMi('/profile/account')).toBe(false);
+    expect(altEkranMi('/profile/measurements')).toBe(false);
+    expect(altEkranMi('/profile/history')).toBe(false);
+    expect(altEkranMi('/profile/records')).toBe(false);
+  });
+
+  test('sablonlar, GRINDY ve antrenman bitirme alt ekran sayilir, dugmeyi alir', () => {
+    expect(altEkranMi('/templates')).toBe(true);
+    expect(altEkranMi('/templates/new')).toBe(true);
+    expect(altEkranMi('/templates/42')).toBe(true);
+    expect(altEkranMi('/insights')).toBe(true);
+    expect(altEkranMi('/antrenman/bitir')).toBe(true);
+    expect(altEkranMi('/antrenman-bitir')).toBe(true);
+  });
 });

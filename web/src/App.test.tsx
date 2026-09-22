@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, Link, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
@@ -38,9 +38,20 @@ function testRouterOlustur() {
           </ProtectedRoute>
         ),
         children: [
-          { index: true, element: <SayfaGovdesi baslik="Ana sayfa" metin="Ic sayfa icerigi" /> },
+          {
+            index: true,
+            element: (
+              <>
+                <SayfaGovdesi baslik="Ana sayfa" metin="Ic sayfa icerigi" />
+                {/* #255 testi icin: sekme cubugunda olmayan bir "alt ekran"a gercek gecmis
+                    olusturarak gitmenin yolu. */}
+                <Link to="/templates">Şablonlara git</Link>
+              </>
+            ),
+          },
           { path: 'antrenman', element: <SayfaGovdesi baslik="Antrenman başlat" metin="Antrenman sayfasi" /> },
           { path: 'profile', element: <SayfaGovdesi baslik="Hesap" metin="Profil sayfasi" /> },
+          { path: 'templates', element: <SayfaGovdesi baslik="Şablonlar" metin="Şablonlar sayfasi" /> },
         ],
       },
       { path: '/login', element: <h1>Giriş Yap</h1> },
@@ -181,4 +192,41 @@ test('artı dugmesi antrenman sayfasina gider', async () => {
   await kullanici.click(screen.getByRole('link', { name: 'Antrenman başlat' }));
 
   expect(await screen.findByText('Antrenman sayfasi')).toBeInTheDocument();
+});
+
+/**
+ * Issue #255: kaydirmaya (#232) EK, tutarli bir ust baslik geri dugmesi -- kok sekmeler
+ * (Ana Sayfa/Antrenman/Profil) DISINDAKI her ekranda.
+ */
+test('kok sekmelerde ust basliktaki geri dugmesi gorunmez', async () => {
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  expect(screen.queryByRole('button', { name: 'Geri' })).not.toBeInTheDocument();
+});
+
+test('alt ekranda ust basliktaki geri dugmesi gorunur ve onceki sayfaya doner', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  await kullanici.click(screen.getByRole('link', { name: 'Şablonlara git' }));
+  await screen.findByText('Şablonlar sayfasi');
+
+  const geriDugmesi = screen.getByRole('button', { name: 'Geri' });
+  await kullanici.click(geriDugmesi);
+
+  expect(await screen.findByText('Ic sayfa icerigi')).toBeInTheDocument();
 });
