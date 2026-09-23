@@ -30,7 +30,7 @@ function cizdir(secilenId: number, seciliKartAlti: React.ReactNode) {
  * #274: mobilde set paneli ekranin altina sabit degil, SECILI kartin hemen altinda acilir -- boylece
  * kart ve panel her zaman alt alta durur, panel karti ortmez.
  */
-test('set paneli yalnizca secili kartin icinde, kartin altinda cizilir', async () => {
+test('set paneli yalnizca secili kartin altinda cizilir', async () => {
   await cizdir(2, <Text>SET PANELI</Text>);
 
   const pecDeckKarti = screen.getByTestId('hareket-karti-2');

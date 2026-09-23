@@ -24,7 +24,7 @@ interface Props {
 }
 
 /**
- * #274: set paneli secili hareket kartinin ICINDE, kartin altinda acilir -- ekranin altina sabit
+ * #274: set paneli secili hareket kartinin hemen altinda acilir -- ekranin altina sabit
  * degil; boylece kart ve panel her zaman alt alta durur. Akis web/src/components/AddSetForm.tsx'in
  * formuyla ayni (spec Karar 6); sesi hazirlama (Web Audio) web'e ozgu oldugu icin yok.
  *
