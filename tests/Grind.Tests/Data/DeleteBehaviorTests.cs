@@ -70,4 +70,15 @@ public class DeleteBehaviorTests
         Assert.Equal(DeleteBehavior.SetNull, BehaviorOf<AiInsight>("WorkoutSessionId"));
         Assert.Equal(DeleteBehavior.SetNull, BehaviorOf<AiInsight>("SetEntryId"));
     }
+
+    /// <summary>
+    /// #281: kullanıcı hard-delete edilmez (soft delete); kazara bir silme takip ilişkilerini sessizce
+    /// uçurmak yerine hata vermeli.
+    /// </summary>
+    [Fact]
+    public void Kullanici_silinince_takip_satirlari_sessizce_silinmez()
+    {
+        Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<Follow>("FollowerId"));
+        Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<Follow>("FolloweeId"));
+    }
 }

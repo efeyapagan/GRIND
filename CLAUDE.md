@@ -191,6 +191,17 @@ Object Reference) açığıdır.
   (nullable `date`, TR yerel günü, iki ucu dahil — yorumun kapsadığı aralık; `Insight`'ta dolu,
   oturum kapsamlı `Suggestion`'da null), `Content`, `Model`, `TokensUsed` (nullable),
   `EstimatedCostUsd` (nullable), `CreatedAt`
+- **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
+  `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak
+
+> Karar (takip ve arkadaşlık — #281, 2026-09-23): takip **doğrudan**dır (istek/onay yok), satırın
+> varlığı takibin kendisidir. **Arkadaş = karşılıklı takip** ve SAKLANMAZ: iki `Follow` satırından
+> sorgulanır — ayrı bir `Friendship` tablosu bu satırlarla senkron kalması gereken ikinci bir doğruluk
+> kaynağı olurdu. Takip ve bırakma idempotenttir (204). Pasif hesaplar listelerde, sayaçlarda ve
+> aramada görünmez, profilleri 404'tür; satırları silinmez, hesap geri açılınca ilişki geri gelir.
+> `/api/users/{username}/...` uçları yalnızca herkese açık başlık bilgisi (ad, sayaçlar, bakanın
+> ilişkisi) döner — antrenman verisi paylaşmaz; arkadaşa geçmiş/rekor görünürlüğü #282'de, Yetkilendirme
+> Kuralı'na yazılı bir istisnayla gelir.
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).
