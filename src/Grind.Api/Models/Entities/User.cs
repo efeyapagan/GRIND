@@ -20,6 +20,17 @@ public class User
     /// </summary>
     public int? WeeklyTargetDays { get; set; }
 
+    /// <summary>
+    /// Görünen isim (#280), ör. "Efe Yapağan"; en fazla 50 karakter, kırpılmış, boşsa <c>null</c>.
+    /// Benzersiz değildir — kimlik kullanıcı adıdır.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Doğum tarihi (#280). Yaş SAKLANMAZ: her yıl değişir, sorgu anında TR gününe göre hesaplanır.
+    /// </summary>
+    public DateOnly? BirthDate { get; set; }
+
     public ICollection<Exercise> Exercises { get; set; } = [];
     public ICollection<WorkoutTemplate> WorkoutTemplates { get; set; } = [];
     public ICollection<WorkoutSession> WorkoutSessions { get; set; } = [];

@@ -151,7 +151,15 @@ Object Reference) açığıdır.
 ## Domain Modeli
 - **User**: `Id`, `Username`, `PasswordHash`, `CreatedAt`, `DeletedAt` (nullable — `null` ise hesap
   aktif; dolu ise hesap pasifleştirilmiş demektir, verisi durur), `WeeklyTargetDays` (nullable, 1–7 —
-  haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`)
+  haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`), `DisplayName` (nullable, en fazla
+  50 karakter, kırpılır, benzersiz değil — #280), `BirthDate` (nullable `date`, #280 — yaş SAKLANMAZ, sorgu
+  anında TR gününe göre `AgeCalculator` ile hesaplanır; 13–120 yaş dışı 400). Uçlar: `GET/PUT /api/profile`
+- **UserAvatar** (#280): `Id`, `UserId` (FK, benzersiz, CASCADE), `Content` (`bytea`), `ContentType`,
+  `UpdatedAt` — profil fotoğrafı veritabanında, `User`'dan ayrı tabloda (her kullanıcı sorgusunda resim
+  baytları taşınmasın). En fazla 256 KB; tür istemcinin beyanından değil dosya imzasından belirlenir
+  (JPEG/PNG/WebP). `PUT/DELETE /api/profile/avatar`; `GET /api/users/{username}/avatar` kimlikli herkese
+  açık (profil başlığı), pasif/fotoğrafsızda 404, `ETag` + `Cache-Control: private, no-cache`; profil
+  yanıtındaki `avatarVersion` (Unix ms) istemcide önbellek kırıcıdır. Pasif hesabın fotoğrafı silinmez
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
   `Category` (Push / Pull / Legs / Other), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)

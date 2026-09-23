@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ExerciseMedia> ExerciseMedia => Set<ExerciseMedia>();
     public DbSet<AiInsight> AiInsights => Set<AiInsight>();
     public DbSet<Follow> Follows => Set<Follow>();
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
