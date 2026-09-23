@@ -17,7 +17,8 @@ export default function ProfilFotografi({ profil, boyut }: { profil: Profil; boy
   const dil = useDil();
 
   return (
-    <View className={`items-center justify-center overflow-hidden rounded-full bg-surface-3 ${BOYUT[boyut]}`}>
+    // shrink-0: baslikta yanindaki `flex-1` sutun daireyi ezmesin (web'deki gibi).
+    <View className={`shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-3 ${BOYUT[boyut]}`}>
       {profil.hasAvatar && profil.avatarVersion !== null ? (
         <Image
           source={kimlikliKaynak(avatarYolu(profil.username, profil.avatarVersion))}

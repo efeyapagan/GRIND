@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Cake, ImagePlus, Trash2, UserRound, X } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
@@ -81,8 +82,10 @@ function FotografAlani({ profil }: { profil: Profil }) {
         return;
       }
       const govde = new FormData();
-      // RN'in FormData'si dosyayi `{ uri, name, type }` nesnesiyle alir (web'deki Blob'un karsiligi).
-      govde.append('file', { uri, name: 'avatar.jpg', type: 'image/jpeg' } as unknown as Blob);
+      // Expo 57'nin global fetch'i (expo/fetch) RN'in eski `{ uri, name, type }` parcasini DESTEKLEMEZ
+      // ("Unsupported FormDataPart", istek hic gitmez) -- dosya Blob uyumlu `File` olarak eklenir; ad ve
+      // tur (`.jpg` -> image/jpeg) dosyanin kendisinden gelir.
+      govde.append('file', new File(uri));
       await yukle.mutateAsync(govde);
     } catch {
       setHata(true);

@@ -33,6 +33,22 @@ jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
 }));
 
+/**
+ * expo/fetch (Expo 57'nin global fetch'i) RN'in eski `{ uri, name, type }` FormData parcasini desteklemez
+ * ("Unsupported FormDataPart") -- dosya `expo-file-system`'in Blob uyumlu `File`'i olarak eklenmeli.
+ */
+jest.mock('expo-file-system', () => ({
+  File: class MockDosya {
+    uri: string;
+    constructor(mockUri: string) {
+      this.uri = mockUri;
+    }
+    bytes() {
+      return Promise.resolve(new Uint8Array());
+    }
+  },
+}));
+
 const requestMock = request as jest.Mock;
 const galeriMock = ImagePicker.launchImageLibraryAsync as jest.Mock;
 
@@ -127,6 +143,7 @@ test('Profili duzenle ile isim kaydedilince PUT gider ve baslik yeni ismi goster
 
 test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', async () => {
   const istekler = profilBackendiKur();
+  const ekle = jest.spyOn(FormData.prototype, 'append');
   galeriMock.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///buyuk.png', width: 2000, height: 2000 }] });
 
   await renderRouterAsync('./app', { initialUrl: '/profile/edit' });
@@ -137,6 +154,9 @@ test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', asy
   const yukleme = istekler.find((istek) => istek.path === '/profile/avatar')!;
   expect(yukleme.method).toBe('PUT');
   expect(yukleme.body).toBeInstanceOf(FormData);
+  const { File: MockDosya } = jest.requireMock('expo-file-system');
+  expect(ekle).toHaveBeenCalledWith('file', expect.any(MockDosya));
+  expect((ekle.mock.calls[0][1] as unknown as { uri: string }).uri).toBe('file:///kucuk.jpg');
   const { ImageManipulator } = jest.requireMock('expo-image-manipulator');
   expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///buyuk.png');
   expect(mockBoyutlandir).toHaveBeenCalledWith({ width: 256, height: 256 });
