@@ -32,6 +32,10 @@ interface Props {
  * Satir kapaliyken hareket YALNIZCA sola aktiflesir (#232): saga kaydirma kabugun sol kenardan geri
  * donme hareketine kalir -- satir ekranin kenarina kadar uzandigi icin aksi halde onu yutardi. Acik
  * satirda bugunku gibi iki yon de satirindir (saga kaydirmak kapatir).
+ *
+ * Jest zinciri `Gesture.Pan()` ile baslamadigi icin Babel eklentisi callback'leri kendiliginden
+ * worklet yapmaz; `'worklet'` direktifleri bu yuzden acik yazili (#297), yoksa UI thread'i yerine JS
+ * thread'inde calisirlar.
  */
 const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function KaydirilabilirSatir(
   { onSil, silEtiketi, children },
@@ -57,13 +61,16 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
   const panHareketi = pan
     .failOffsetY([-10, 10])
     .onStart(() => {
+      'worklet';
       baslangicX.value = translateX.value;
     })
     .onUpdate((olay) => {
+      'worklet';
       const yeni = baslangicX.value + olay.translationX;
       translateX.value = Math.min(0, Math.max(-ACILMA_GENISLIGI, yeni));
     })
     .onEnd(() => {
+      'worklet';
       const acilsin = translateX.value < -ACILMA_ESIGI;
       translateX.value = withSpring(acilsin ? -ACILMA_GENISLIGI : 0, { damping: 20, stiffness: 200 });
       runOnJS(setAcik)(acilsin);
@@ -75,7 +82,7 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
 
   function icerigeDokunuldu() {
     if (translateX.value !== 0) {
-      runOnJS(kapat)();
+      kapat();
     }
   }
 
