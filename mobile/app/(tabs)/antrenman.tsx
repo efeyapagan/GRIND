@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Dimensions, View, Text, Pressable, type ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
@@ -22,10 +22,15 @@ import { formatSaat } from '@grind/shared/lib/format';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { varsayilanHareket } from '@grind/shared/lib/ilerleme';
+import { dinlenmeBaslat, dinlenmeSuresi } from '@grind/shared/lib/dinlenme';
+import { kartHizalamaKaydirmasi } from '@grind/shared/lib/kartHizalama';
 import { oturumdanSablonHareketleri } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import SetList from '../../src/components/SetList';
-import AddSetForm from '../../src/components/AddSetForm';
+import AntrenmanAltAlani from '../../src/components/AntrenmanAltAlani';
+import SetPaneli from '../../src/components/SetPaneli';
+import { useDinlenme } from '../../src/components/useDinlenme';
+import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
 import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
@@ -108,6 +113,7 @@ export default function AntrenmanScreen() {
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
   const seciliEgzersizAdi = egzersizler?.find((eg) => eg.id === etkinSecim)?.name ?? null;
+  const [dinlenme, setDinlenme] = useDinlenme(etkinSecim);
 
   const antrenmandakiIdler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
   const eklenebilirEgzersizler = adaGoreSirala(egzersizler ?? []).filter((eg) => !antrenmandakiIdler.has(eg.id));
@@ -123,7 +129,38 @@ export default function AntrenmanScreen() {
   function kartSec(exerciseId: number) {
     if (secimYap(exerciseId)) {
       setPanelAcik(true);
+      hizalanacak.current = true;
     }
+  }
+
+  // #274: panel secili kartin altinda acilir; kart genisleyip yerlesince (onLayout) ekran, kart +
+  // panel gorunecek kadar kayar -- web ile ayni karar (`kartHizalamaKaydirmasi`). Klavye acilinca da
+  // (EkranKaydirici'nin varsayilan "en alta kay"i yerine) ayni hizalama klavyenin ustune yapilir.
+  const kaydiriciRef = useRef<ScrollView>(null);
+  const kaydirmaY = useRef(0);
+  const seciliKartRef = useRef<View>(null);
+  const hizalanacak = useRef(false);
+  function kartiHizala(klavyeYuksekligi: number) {
+    const kaydirici = kaydiriciRef.current;
+    const kart = seciliKartRef.current;
+    kaydirici?.getNativeScrollRef()?.measureInWindow((_x, alanY, _g, alanH) => {
+      kart?.measureInWindow((_kx, kartY, _kg, kartH) => {
+        const alanAlt = Math.min(
+          alanY + alanH - TABBAR_HALKA_TASMASI,
+          Dimensions.get('window').height - klavyeYuksekligi,
+        );
+        // Klavye acikken kart (gecmis + panel) cogu zaman sigmaz; o zaman "ustu oncelikli" kurali
+        // girdileri klavyenin arkasina iterdi. Yalnizca kartin ALT kenari (panelin sonu) hizalanir.
+        const kartAlt = kartY + kartH;
+        const kaydirma = kartHizalamaKaydirmasi(
+          { ust: klavyeYuksekligi > 0 ? kartAlt : kartY, alt: kartAlt },
+          { ust: alanY, alt: alanAlt },
+        );
+        if (kaydirma !== 0) {
+          kaydirici.scrollTo({ y: Math.max(0, kaydirmaY.current + kaydirma), animated: true });
+        }
+      });
+    });
   }
 
   function hareketEkle(exerciseId: number) {
@@ -181,7 +218,15 @@ export default function AntrenmanScreen() {
   }
 
   return (
-    <EkranKaydirici contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4">
+    <EkranKaydirici
+      ref={kaydiriciRef}
+      contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        kaydirmaY.current = e.nativeEvent.contentOffset.y;
+      }}
+      onKlavyeAcildi={panelAcik ? kartiHizala : undefined}
+    >
       <View className="flex-col gap-1">
         <View className="flex-row items-center justify-between gap-2">
           {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
@@ -283,6 +328,25 @@ export default function AntrenmanScreen() {
                 onSetSil={setiSilmeyeBasla}
                 onHareketKaldir={hareketiKaldirmayaBasla}
                 onSiraDegis={siraDegistir}
+                seciliKartRef={seciliKartRef}
+                onSeciliKartYerlesti={() => {
+                  if (hizalanacak.current) {
+                    hizalanacak.current = false;
+                    kartiHizala(0);
+                  }
+                }}
+                seciliKartAlti={
+                  panelAcik && etkinSecim !== null && seciliEgzersizAdi ? (
+                    <SetPaneli
+                      egzersizId={etkinSecim}
+                      egzersizAdi={seciliEgzersizAdi}
+                      onKapat={() => setPanelAcik(false)}
+                      onSetEklendi={(exerciseId) =>
+                        setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
+                      }
+                    />
+                  ) : undefined
+                }
               />
             ) : (
               <>
@@ -325,12 +389,11 @@ export default function AntrenmanScreen() {
       )}
 
       {gorunenOturum ? (
-        <AddSetForm
-          egzersizId={etkinSecim}
-          onEgzersizSec={secimYap}
-          acik={panelAcik}
-          onAcikDegis={setPanelAcik}
-          hareketEkleme={{ egzersizler: eklenebilirEgzersizler, onEkle: hareketEkle }}
+        <AntrenmanAltAlani
+          dinlenme={dinlenme}
+          onDinlenmeDegis={setDinlenme}
+          egzersizler={eklenebilirEgzersizler}
+          onHareketEkle={hareketEkle}
         />
       ) : (
         <SablonOlusturCagrisi />

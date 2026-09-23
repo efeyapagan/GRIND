@@ -265,7 +265,7 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
           5.5rem = sekme cubugu yuksekligi (App.tsx h-14 = 3.5rem) + ortadaki "+" dugmesinin
           halkasinin tastigi 2rem (issue #159) -- yalnizca 3.5rem kullanilirsa bu panel o dugmeyle
           CAKISIYORDU (kullanici bulgusu). `px-4` YOK -- `main` zaten `px-4 max-w-md`. */}
-      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
+      <div data-alt-panel className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 mt-auto pb-2">
         <div
           className={
             altPanelGorunur ? 'mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl' : undefined
