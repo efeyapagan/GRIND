@@ -58,10 +58,14 @@ export default function HareketKartlari({
         const sayac = setSayaci(hareket);
 
         return (
-          // #274: olcum (ref/onLayout) className'i HIC degismeyen bu sarmalayicida. Icteki kartin
-          // `ring-1`i secilince CSS degiskeni ekler; NativeWind bunun uyarisini basarken prop'lari JSON'a
-          // cevirir -- prop'larda native bir ref olunca cevirme "navigation context" hatasiyla cokuyordu.
-          // Panel kartin DISINDA, hemen altinda ayri bir kutu (web ile ayni gorunum).
+          // #274: olcum (ref/onLayout) className'i HIC degismeyen bu sarmalayicida; panel kartin DISINDA,
+          // hemen altinda ayri bir kutu (web ile ayni gorunum).
+          //
+          // DIKKAT: `ring-*` CSS degiskeni tanimlar (`--tw-ring-*`). Ilk render'dan SONRA eklenirse
+          // NativeWind bileseni "yukseltir" ve uyarisini basarken prop'lari -- elementlerin `_owner`
+          // fiber'lari dahil -- JSON'a cevirir; bu cevirme navigasyon context'inin varsayilan
+          // degerindeki getter'a carpip "Couldn't find a navigation context" ile cokuyordu. Bu yuzden
+          // her kart `ring-1`i bastan tasir, secim yalnizca RENGI degistirir.
           <View
             key={hareket.exerciseId}
             testID={`hareket-karti-${hareket.exerciseId}`}
@@ -69,7 +73,9 @@ export default function HareketKartlari({
             onLayout={secili ? onSeciliKartYerlesti : undefined}
             className="flex-col gap-2"
           >
-            <View className={`flex-col gap-2 rounded-xl bg-surface-1 p-4 ${secili ? 'ring-1 ring-muted' : ''}`}>
+            <View
+              className={`flex-col gap-2 rounded-xl bg-surface-1 p-4 ring-1 ${secili ? 'ring-muted' : 'ring-transparent'}`}
+            >
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: secili }}
