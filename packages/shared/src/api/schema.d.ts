@@ -3026,7 +3026,7 @@ export interface components {
             weight: number;
             /** Format: int32 */
             reps: number;
-            /** Format: int32 */
+            /** Format: double */
             rir?: number | null;
         };
         CreateTemplateRequest: {
@@ -3252,7 +3252,7 @@ export interface components {
             weight?: number | null;
             /** Format: int32 */
             reps?: number | null;
-            /** Format: int32 */
+            /** Format: double */
             rir?: number | null;
         };
         PatchTemplateRequest: {
@@ -3332,7 +3332,7 @@ export interface components {
             /** Format: int32 */
             reps?: number;
             recordType?: components["schemas"]["RecordType"];
-            /** Format: int32 */
+            /** Format: double */
             rir?: number | null;
             /** Format: date-time */
             createdAt?: string;

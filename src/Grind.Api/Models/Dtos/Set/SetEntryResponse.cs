@@ -16,6 +16,6 @@ public record SetEntryResponse(
     decimal Weight,
     int Reps,
     RecordType RecordType,
-    int? Rir,
+    decimal? Rir,
     DateTime CreatedAt,
     int? RestSeconds);

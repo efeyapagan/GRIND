@@ -212,13 +212,28 @@ public static class ExportTextFormatter
         _ => difficulty.ToString()
     };
 
+    /// <summary>
+    /// #266: uygulamadaki kaydırıcı durağıyla aynı yazım — 2 → "2", 2.5 → "2–3", 5 ve üstü → "4+"
+    /// (eski kayıtlarda 5'ten büyük RIR olabilir). İstemci karşılığı: <c>packages/shared/src/lib/rir.ts</c>.
+    /// </summary>
+    private static string RirText(decimal rir)
+    {
+        if (rir >= 5)
+        {
+            return "4+";
+        }
+
+        var whole = decimal.Truncate(rir);
+        return rir == whole ? Inv($"{whole:0}") : Inv($"{whole:0}–{whole + 1:0}");
+    }
+
     private static string SetWithMarks(SetEntryResponse set)
     {
         var text = SetText(set.Weight, set.Reps);
 
         if (set.Rir is { } rir)
         {
-            text += Inv($" (RIR {rir})");
+            text += $" (RIR {RirText(rir)})";
         }
 
         return set.RecordType switch

@@ -83,6 +83,11 @@ Renk kuralları:
   → saydam doğrusal degrade, alt menüde aktif Ana Sayfa/Profil ikonunun arkasında `accent/30` → saydam
   dairesel hale (48 px). Tek kaynak `Parilti` bileşeni (web `web/src/ui/Parilti.tsx`, mobil
   `mobile/src/ui/Parilti.tsx`); metin taşımaz, kontrastı etkilemez, iki temada aynıdır.
+  **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
+  soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
+  durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`
+  nötr kalır. Tek kaynak `RirAlani` (web `web/src/components/RirAlani.tsx`, mobil
+  `mobile/src/components/RirAlani.tsx`).
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.

@@ -15,6 +15,7 @@
     "./lib/geriKaydirma": "./src/lib/geriKaydirma.ts",
     "./lib/grafik": "./src/lib/grafik.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
+    "./lib/rir": "./src/lib/rir.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",
     "./lib/apiErrors": "./src/lib/apiErrors.ts",
     "./lib/egzersizler": "./src/lib/egzersizler.ts",

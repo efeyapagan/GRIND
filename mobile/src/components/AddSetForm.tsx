@@ -21,6 +21,7 @@ import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/
 import BirincilDugme from '../ui/BirincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
+import RirAlani from './RirAlani';
 import HareketSecici from '../ui/HareketSecici';
 import DinlenmeSayaci from './DinlenmeSayaci';
 import HareketEklePaneli from './HareketEklePaneli';
@@ -206,7 +207,8 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
                 onSec={onEgzersizSec}
               />
             )}
-            <View className="flex-row gap-2">
+            {/* flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser. */}
+            <View className="flex-row flex-wrap gap-2">
               <View className="flex-1">
                 <SayiAlani
                   id="set-agirlik"
@@ -232,18 +234,12 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
                   hata={alanHatalari.reps}
                 />
               </View>
-              <View className="flex-1">
-                <SayiAlani
-                  id="set-rir"
-                  etiket="RIR"
-                  birim="kalan"
-                  inputMode="numeric"
-                  placeholder="—"
-                  value={rir}
-                  onChange={setRir}
-                  hata={alanHatalari.rir}
-                />
-              </View>
+              <RirAlani
+                id="set-rir"
+                deger={rir === '' ? null : Number(rir)}
+                onDegis={(yeni) => setRir(yeni === null ? '' : String(yeni))}
+                hata={alanHatalari.rir}
+              />
             </View>
             <Text className="min-h-4 text-label text-muted">{sonEklenen}</Text>
             <BirincilDugme yukseklik="buyuk" disabled={eklemeMutasyonu.isPending} onPress={gonder}>

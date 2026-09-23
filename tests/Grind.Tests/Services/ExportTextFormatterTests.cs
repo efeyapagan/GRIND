@@ -24,7 +24,7 @@ public class ExportTextFormatterTests
 
     private static SetEntryResponse Set(
         long exerciseId, string name, decimal weight, int reps,
-        RecordType recordType = RecordType.None, int? rir = null) =>
+        RecordType recordType = RecordType.None, decimal? rir = null) =>
         new(0, 1, exerciseId, name, weight, reps, recordType, rir, An, RestSeconds: null);
 
     private static HistorySessionResponse Oturum(
@@ -205,6 +205,20 @@ public class ExportTextFormatterTests
             Set(1, "Bench", 80m, 7, rir: 0)));
 
         Assert.Contains("- Bench: 80×8 (RIR 2) [PR: ağırlık], 80×9 [PR: tekrar], 80×7 (RIR 0)\n", metin);
+    }
+
+    /// <summary>
+    /// #266: ara durak uygulamadaki gibi aralık olarak yazılır ("2.5" değil "2–3"); 5 ve üstü (eski
+    /// kayıtlarda 5'ten büyük RIR olabilir) "4+" olur.
+    /// </summary>
+    [Fact]
+    public void Ara_durak_ve_4_arti_RIR_uygulamadaki_gibi_yazilir()
+    {
+        var metin = Formatla(Oturum(An, null,
+            Set(1, "Bench", 80m, 8, rir: 2.5m),
+            Set(1, "Bench", 60m, 12, rir: 7m)));
+
+        Assert.Contains("- Bench: 80×8 (RIR 2–3), 60×12 (RIR 4+)\n", metin);
     }
 
     [Fact]

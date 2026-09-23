@@ -22,6 +22,6 @@ public class CreateSetRequest
     public int? Reps { get; set; }
 
     /// <summary>Reps in Reserve — opsiyonel.</summary>
-    [Range(0, 100, ErrorMessage = "RIR 0 ile 100 arasında olmalı.")]
-    public int? Rir { get; set; }
+    [Range(0, 5, ErrorMessage = "RIR 0 ile 5 arasında olmalı (5 = 4+).")]
+    public decimal? Rir { get; set; }
 }
