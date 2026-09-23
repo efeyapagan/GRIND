@@ -1,4 +1,5 @@
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Projections;
 
 namespace Grind.Api.Repositories;
 
@@ -24,4 +25,11 @@ public interface IUserRepository : IRepository<User>
     /// <c>EXISTS</c> sorgusu.
     /// </summary>
     Task<bool> ExistsActiveAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kullanıcı adı <paramref name="normalizedPrefix"/> ile başlayan AKTİF kullanıcılar, ada göre
+    /// sıralı (#281 arama). <paramref name="excludeId"/> (aramayı yapan) sonuçta yer almaz.
+    /// </summary>
+    Task<IReadOnlyList<UserRef>> SearchActiveByUsernamePrefixAsync(
+        string normalizedPrefix, long excludeId, int take, CancellationToken cancellationToken = default);
 }

@@ -90,4 +90,11 @@ public class CheckConstraintTests
         Assert.Contains("\"WeeklyTargetDays\" >= 1", sql);
         Assert.Contains("\"WeeklyTargetDays\" <= 7", sql);
     }
+
+    /// <summary>#281: servis 400 döner; DB kısıtı servisi atlayan bir yazımı da durdurur.</summary>
+    [Fact]
+    public void Kullanici_kendini_takip_edemez()
+    {
+        Assert.Contains("\"FollowerId\" <> \"FolloweeId\"", SqlOf<Follow>("CK_Follow_NotSelf"));
+    }
 }
