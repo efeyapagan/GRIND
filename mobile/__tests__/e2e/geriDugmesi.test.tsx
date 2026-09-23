@@ -23,6 +23,9 @@ beforeEach(async () => {
  * Issue #255: kaydirmaya (#232) EK, tutarli bir ust baslik geri dugmesi -- kok sekmelerde
  * (Ana Sayfa/Antrenman/Profil) gorunmez, baska her ekranda ("alt ekran") gorunur ve basilinca
  * geri gotur. Gercek rotalarla (renderRouterAsync): `_layout.tsx`teki `KabukBaslik` sinanir.
+ *
+ * #277: tum rotalari soguk derleyen ilk test, tam kosuda jest'in varsayilan 5 sn'sini asiyordu --
+ * diger e2e testleri gibi 20 sn.
  */
 test('kok sekmede geri dugmesi gorunmez', async () => {
   const { sahteRequest } = sahteBackendOlustur();
@@ -32,7 +35,7 @@ test('kok sekmede geri dugmesi gorunmez', async () => {
 
   await screen.findByText('Ana sayfa');
   expect(screen.queryByLabelText('Geri')).toBeNull();
-});
+}, 20_000);
 
 test('alt ekranda geri dugmesi gorunur ve basilinca Ana Sayfaya doner', async () => {
   const { sahteRequest } = sahteBackendOlustur();
@@ -46,4 +49,4 @@ test('alt ekranda geri dugmesi gorunur ve basilinca Ana Sayfaya doner', async ()
   await fireEvent.press(geriDugmesi);
 
   await waitFor(() => expect(screen.getByText('Ana sayfa')).toBeTruthy());
-});
+}, 20_000);
