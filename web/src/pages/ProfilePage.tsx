@@ -33,7 +33,8 @@ function sifreUzunlugunuDogrula(sifre: string): SifreUzunlukHatasiAnahtari | nul
 }
 
 /**
- * Hesap sekmesi (issue #119, kullanıcı kararıyla sadeleştirildi): kullanıcı adı artık
+ * Hesap ayarları (issue #119, kullanıcı kararıyla sadeleştirildi; #283'ten beri sekme değil, profil
+ * başlığındaki düğmenin açtığı ayrı ekran): kullanıcı adı artık
  * DÜZENLENEMEZ, sadece görüntülenir -- düzenlemeyi tamamen kaldırmak, "mevcut şifre" isteyen
  * hassas bir form + doğrulama akışını (issue #65'in orijinal tasarımı) ortadan kaldırdı. Şifre
  * değiştirme kalır. En altta "Çıkış yap" (eskiden üst kabuktaki hesap menüsündeydi -- menü
@@ -44,7 +45,7 @@ function sifreUzunlugunuDogrula(sifre: string): SifreUzunlukHatasiAnahtari | nul
  */
 export default function ProfilePage() {
   const { t } = useTranslation();
-  usePageTitle(t('kabuk.sekmeHesap'));
+  usePageTitle(t('ortak.hesapAyarlari'));
   const { username, updateProfile, logout } = useAuth();
 
   return (

@@ -1,37 +1,38 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { History, Ruler, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Parilti from '../ui/Parilti';
+import ProfilBasligi from '../components/ProfilBasligi';
 
 const SEKMELER = [
-  { to: 'account', etiketAnahtari: 'kabuk.sekmeHesap' },
-  { to: 'history', etiketAnahtari: 'kabuk.sekmeGecmis' },
-  { to: 'measurements', etiketAnahtari: 'kabuk.sekmeOlcumler' },
-  { to: 'records', etiketAnahtari: 'kabuk.sekmeRekorlar' },
+  { to: 'history', etiketAnahtari: 'kabuk.sekmeGecmis', ikon: History },
+  { to: 'records', etiketAnahtari: 'kabuk.sekmeRekorlar', ikon: Trophy },
+  { to: 'measurements', etiketAnahtari: 'kabuk.sekmeOlcumler', ikon: Ruler },
 ] as const;
 
 /**
- * Profil sayfasının sekme çubuğu (issue #119): Hesap (kullanıcı adı/şifre), Geçmiş (alt menüden
- * buraya taşındı, issue #120), Ölçüler ve Rekorlar rota-tabanlı sekmelerdir -- her biri kendi
- * `usePageTitle`'ını bildirir, burada ayrıca bir başlık YAZILMAZ. Sıra kullanıcı kararı: issue
- * #179'da Hesap ile Rekorlar yer değiştirdi. Varsayılan sekme ise Rekorlar OLARAK KALDI
- * (`routes.tsx`) -- en sık bakılan sekme o; bu değişiklik yalnızca görsel konumla ilgili.
- * Rota-tabanlı olduğu için ARIA `tab`/
- * `tablist` rolü BİLEREK kullanılmaz (o rol tek sayfalık bir panel değişimini ifade eder; burada
- * her sekme gerçek bir URL'e sahip ayrı bir sayfadır) -- alt menünün kendisiyle (`App.tsx`) aynı
- * düz `nav` deseni.
+ * Profil (#283): Instagram tarzı başlık, altında yalnızca ikonlu sekmeler (etiket `aria-label`'da).
+ * Sıra kullanıcı kararı: Geçmiş (varsayılan, `routes.tsx`) · Rekorlar · Ölçüler. Hesap artık bir
+ * sekme değil -- başlıktaki "Hesap ayarları" düğmesinin açtığı ayrı ekran.
+ * Her sekme kendi `usePageTitle`'ını bildirir. Rota-tabanlı olduğu için ARIA `tab`/`tablist` rolü
+ * BİLEREK kullanılmaz (her sekme gerçek bir URL'e sahip ayrı bir sayfadır) -- alt menüyle
+ * (`App.tsx`) aynı düz `nav` deseni.
  */
 export default function ProfileLayout() {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4">
+      <ProfilBasligi />
       <nav aria-label={t('kabuk.profilSekmeleri')} className="flex border-b border-surface-3">
-        {SEKMELER.map(({ to, etiketAnahtari }) => (
+        {SEKMELER.map(({ to, etiketAnahtari, ikon: Ikon }) => (
           <NavLink
             key={to}
             to={to}
+            aria-label={t(etiketAnahtari)}
+            title={t(etiketAnahtari)}
             className={({ isActive }) =>
-              `relative flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-center text-label ${
+              `relative flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 ${
                 isActive ? 'border-accent-fg text-fg' : 'border-transparent text-muted'
               }`
             }
@@ -39,7 +40,7 @@ export default function ProfileLayout() {
             {({ isActive }) => (
               <>
                 {isActive && <Parilti bicim="alt" />}
-                <span className="relative">{t(etiketAnahtari)}</span>
+                <Ikon aria-hidden size={22} className="relative" />
               </>
             )}
           </NavLink>

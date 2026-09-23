@@ -72,6 +72,17 @@ test('govde varken Content-Type json eklenir, govde yokken eklenmez', async () =
   expect(basliklarGovdeli['Content-Type']).toBe('application/json');
 });
 
+/** #283: profil fotoğrafı multipart gider -- sınır (boundary) ekli başlığı tarayıcı kendisi yazar. */
+test('FormData govdesinde Content-Type eklenmez', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  await request('/profile/avatar', { method: 'PUT', body: new FormData() });
+
+  const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+  expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+});
+
 test('401 gelince kayitli oturum dusurme isleyicisi cagrilir ve ApiError firlatilir', async () => {
   const isleyici = vi.fn();
   setUnauthorizedHandler(isleyici);

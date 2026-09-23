@@ -43,10 +43,15 @@ describe('altEkranMi (issue #255 -- ust basliktaki geri dugmesi)', () => {
     expect(altEkranMi('/')).toBe(false);
     expect(altEkranMi('/antrenman')).toBe(false);
     expect(altEkranMi('/profile')).toBe(false);
-    expect(altEkranMi('/profile/account')).toBe(false);
     expect(altEkranMi('/profile/measurements')).toBe(false);
     expect(altEkranMi('/profile/history')).toBe(false);
     expect(altEkranMi('/profile/records')).toBe(false);
+  });
+
+  /** #283: Hesap artık bir sekme değil, başlıktaki düğmenin açtığı ekran -- düzenleme ekranı gibi. */
+  test('hesap ayarlari ve profili duzenle alt ekran sayilir, dugmeyi alir', () => {
+    expect(altEkranMi('/profile/account')).toBe(true);
+    expect(altEkranMi('/profile/edit')).toBe(true);
   });
 
   test('sablonlar, GRINDY ve antrenman bitirme alt ekran sayilir, dugmeyi alir', () => {

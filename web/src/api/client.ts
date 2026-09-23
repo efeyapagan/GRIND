@@ -6,4 +6,4 @@ import { session } from '../auth/session';
 // girer -- ayri bir baslangic adimi gerekmez, bugunku davranisla birebir ayni.
 configureRequestClient({ baseUrl: '/api', session });
 
-export { request, setUnauthorizedHandler } from '@grind/shared/api/client';
+export { kimlikliKaynak, request, setUnauthorizedHandler } from '@grind/shared/api/client';
