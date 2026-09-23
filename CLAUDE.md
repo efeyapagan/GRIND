@@ -46,6 +46,11 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **Antrenmandan şablon + boş antrenman (2026-09-22, #209/#186)** — "Şablonla başla" birincil yol, altında
   ikincil "Boş antrenman başlat" (#61 kararı tamamlandı, geri alınmadı); açık antrenmanda "Şablon olarak
   kaydet" ve şablonsuz antrenmanı bitirince aynı soru, dolu şablon formunu açar. Ayrıntı PLAN.md'de.
+- **Profil başlığı (2026-09-23, #283)** — iki platformda Instagram tarzı başlık (fotoğraf, ad, yaş, üç
+  sayaç, "Profili düzenle" · "Hesap ayarları") ve yalnızca ikonlu sekmeler Geçmiş (varsayılan) · Rekorlar ·
+  Ölçüler. Hesap artık sekme değil: `/profile/account` ve `/profile/edit` başlıksız alt ekranlardır. Fotoğraf
+  istemcide 256×256 JPEG'e küçültülüp yüklenir; kimlikli uç olduğu için web data URL'e çevirir, mobil `Image`'a
+  yetki başlığı verir (`kimlikliKaynak`).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

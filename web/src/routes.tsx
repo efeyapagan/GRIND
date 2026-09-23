@@ -12,6 +12,7 @@ import SablonlarPage from './pages/SablonlarPage';
 import SablonDuzenlePage from './pages/SablonDuzenlePage';
 import ProfileLayout from './pages/ProfileLayout';
 import ProfilePage from './pages/ProfilePage';
+import ProfiliDuzenlePage from './pages/ProfiliDuzenlePage';
 import MeasurementsPage from './pages/MeasurementsPage';
 import InsightsPage from './pages/InsightsPage';
 
@@ -23,6 +24,10 @@ import InsightsPage from './pages/InsightsPage';
  * menüden Profil'in sekmelerine taşındı (`ProfileLayout`); eski `/history` ve `/records` rotaları
  * KIRILMASIN diye Profil'in ilgili sekmesine yönlendirilir. Antrenman başlatma/devam etme eski
  * "Bugün" ekranından ayrıldı, kendi rotası (`/antrenman`) oldu.
+ *
+ * #283: varsayılan sekme Geçmiş. Hesap artık sekme değil: `/profile/account` (Hesap ayarları) ve
+ * `/profile/edit` profil başlığındaki düğmelerin açtığı, başlıksız ve sekmesiz ayrı ekranlardır --
+ * adres aynı kaldığı için eski `/profile/account` bağlantıları kırılmaz.
  */
 export const router = createBrowserRouter([
   {
@@ -44,13 +49,14 @@ export const router = createBrowserRouter([
         path: 'profile',
         element: <ProfileLayout />,
         children: [
-          { index: true, element: <Navigate to="records" replace /> },
-          { path: 'account', element: <ProfilePage /> },
+          { index: true, element: <Navigate to="history" replace /> },
           { path: 'measurements', element: <MeasurementsPage /> },
           { path: 'history', element: <HistoryPage /> },
           { path: 'records', element: <RecordsPage /> },
         ],
       },
+      { path: 'profile/account', element: <ProfilePage /> },
+      { path: 'profile/edit', element: <ProfiliDuzenlePage /> },
       { path: 'history', element: <Navigate to="/profile/history" replace /> },
       { path: 'records', element: <Navigate to="/profile/records" replace /> },
     ],

@@ -16,6 +16,7 @@
     "./lib/grafik": "./src/lib/grafik.ts",
     "./lib/kartHizalama": "./src/lib/kartHizalama.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
+    "./lib/profilFotografi": "./src/lib/profilFotografi.ts",
     "./lib/rir": "./src/lib/rir.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",
     "./lib/apiErrors": "./src/lib/apiErrors.ts",

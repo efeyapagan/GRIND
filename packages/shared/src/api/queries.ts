@@ -36,6 +36,9 @@ type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePa
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
 type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogResponsePagedResponse'];
 type CreateBodyWeightRequest = components['schemas']['CreateBodyWeightRequest'];
+type ProfileResponse = components['schemas']['ProfileResponse'];
+type UserProfileResponse = components['schemas']['UserProfileResponse'];
+type UpdateProfileDetailsRequest = components['schemas']['UpdateProfileDetailsRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -93,6 +96,11 @@ export const queryKeys = {
   // `historyAll` ile ayni gerekce. Issue #147: sonsuz kaydirma -- `historyInfinite` ile ayni desen.
   measurementsAll: ['measurements'] as const,
   measurementsInfinite: ['measurements', 'infinite'] as const,
+  // #283: kendi profilin (#280) ve bir kullanicinin herkese acik basligi (#281, sayaclar).
+  profil: ['profil'] as const,
+  kullaniciProfili: (kullaniciAdi: string) => ['kullaniciProfili', kullaniciAdi] as const,
+  // Surum anahtarda: yeni fotograf yeni kayit, eskisi onbellekte bayat kalmaz.
+  avatar: (kullaniciAdi: string, surum: number) => ['avatar', kullaniciAdi, surum] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -1218,6 +1226,119 @@ export function useDeleteMeasurement() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.measurementsAll });
+    },
+  });
+}
+
+/** Kullanicinin kendi profili (#280): yas sunucunun hesabidir, istemci dogum tarihinden hesaplamaz. */
+export interface Profil {
+  username: string;
+  displayName: string | null;
+  birthDate: string | null;
+  age: number | null;
+  hasAvatar: boolean;
+  avatarVersion: number | null;
+}
+
+function dogrulanmisProfil(yanit: ProfileResponse): Profil {
+  if (!yanit.username || yanit.hasAvatar === undefined) {
+    throw new Error('Sunucudan eksik profil yaniti alindi.');
+  }
+  return {
+    username: yanit.username,
+    displayName: yanit.displayName ?? null,
+    birthDate: yanit.birthDate ?? null,
+    age: yanit.age ?? null,
+    hasAvatar: yanit.hasAvatar,
+    avatarVersion: yanit.avatarVersion ?? null,
+  };
+}
+
+/** Profil basligi ve Profili duzenle (#283) ayni onbellegi okur -- kayit basliga aninda yansir. */
+export function useProfilim() {
+  return useQuery({
+    queryKey: queryKeys.profil,
+    queryFn: async (): Promise<Profil> => dogrulanmisProfil(await request<ProfileResponse>('/profile')),
+  });
+}
+
+/** Herkese acik profil basligi (#281): uc sayac sunucudan gelir, istemcide sayilmaz. */
+export interface KullaniciProfili {
+  username: string;
+  friendCount: number;
+  followerCount: number;
+  followingCount: number;
+}
+
+function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfili {
+  if (
+    !yanit.username ||
+    yanit.friendCount === undefined ||
+    yanit.followerCount === undefined ||
+    yanit.followingCount === undefined
+  ) {
+    throw new Error('Sunucudan eksik kullanici profili yaniti alindi.');
+  }
+  return {
+    username: yanit.username,
+    friendCount: yanit.friendCount,
+    followerCount: yanit.followerCount,
+    followingCount: yanit.followingCount,
+  };
+}
+
+export function useKullaniciProfili(kullaniciAdi: string | null) {
+  return useQuery({
+    queryKey: queryKeys.kullaniciProfili(kullaniciAdi ?? ''),
+    enabled: kullaniciAdi !== null,
+    queryFn: async (): Promise<KullaniciProfili> =>
+      dogrulanmisKullaniciProfili(
+        await request<UserProfileResponse>(`/users/${encodeURIComponent(kullaniciAdi!)}/profile`),
+      ),
+  });
+}
+
+/** Fotografin yolu; `v` surum degisince onbellegi kirar (#280 `avatarVersion`). */
+export function avatarYolu(kullaniciAdi: string, surum: number): string {
+  return `/users/${encodeURIComponent(kullaniciAdi)}/avatar?v=${surum}`;
+}
+
+/** `PUT /api/profile`: iki alan da her istekte yazilir, `null` temizler (#280). */
+export function useProfiliGuncelle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (govde: UpdateProfileDetailsRequest): Promise<Profil> =>
+      dogrulanmisProfil(await request<ProfileResponse>('/profile', { method: 'PUT', body: JSON.stringify(govde) })),
+    onSuccess: (profil) => {
+      queryClient.setQueryData(queryKeys.profil, profil);
+    },
+  });
+}
+
+/**
+ * Fotograf yukler (multipart, alan adi `file`). FormData'yi platform kurar: web bir `Blob`, mobil
+ * `{ uri, name, type }` ekler. Yanit govdesiz; yeni `avatarVersion` icin profil yeniden istenir.
+ */
+export function useFotografiYukle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (govde: FormData): Promise<void> => {
+      await request<void>('/profile/avatar', { method: 'PUT', body: govde });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
+    },
+  });
+}
+
+export function useFotografiKaldir() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      await request<void>('/profile/avatar', { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
     },
   });
 }
