@@ -137,11 +137,7 @@ public class AuthService(
         return Respond(user);
     }
 
-    /// <summary>
-    /// Username veritabanında her zaman küçük harf durur. DTO regex'i girdiyi ASCII'ye
-    /// kısıtladığı için ToLowerInvariant burada güvenli (Türkçe İ sorunu oluşamaz).
-    /// </summary>
-    private static string Normalize(string username) => username.Trim().ToLowerInvariant();
+    private static string Normalize(string username) => UsernameNormalizer.Normalize(username);
 
     private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;
 

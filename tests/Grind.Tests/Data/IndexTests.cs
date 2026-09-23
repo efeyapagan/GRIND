@@ -57,4 +57,15 @@ public class IndexTests
         // yanlış olurdu.
         Assert.False(IndexOn<TemplateExercise>("WorkoutTemplateId", "OrderIndex").IsUnique);
     }
+
+    /// <summary>
+    /// #281: aynı kişi aynı kişiyi iki kez takip edemez (eşzamanlı çift tıklamayı da DB yakalar);
+    /// takipçi listesi FolloweeId'den okunduğu için onun da indeksi var.
+    /// </summary>
+    [Fact]
+    public void Takip_cifti_benzersizdir_ve_takipci_sorgusu_indekslidir()
+    {
+        Assert.True(IndexOn<Follow>("FollowerId", "FolloweeId").IsUnique);
+        Assert.False(IndexOn<Follow>("FolloweeId").IsUnique);
+    }
 }

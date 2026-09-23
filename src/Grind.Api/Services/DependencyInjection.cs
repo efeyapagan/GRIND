@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IBodyWeightLogService, BodyWeightLogService>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IAiInsightService, AiInsightService>();
+        services.AddScoped<IFollowService, FollowService>();
         return services;
     }
 }
