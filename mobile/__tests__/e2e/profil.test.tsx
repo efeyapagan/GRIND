@@ -65,10 +65,10 @@ const PROFIL = {
  * Issue #283: sahte backend'e profil uçları eklenir; gönderilen gövdeler `istekler`de toplanır.
  * FormData JSON değildir -- avatar isteği asıl sahte backend'e hiç ulaşmaz.
  */
-function profilBackendiKur() {
+function profilBackendiKur(baslangic: Partial<typeof PROFIL> = {}) {
   const { sahteRequest } = sahteBackendOlustur();
   const istekler: { method: string; path: string; body: unknown }[] = [];
-  let profil = { ...PROFIL };
+  let profil = { ...PROFIL, ...baslangic };
 
   requestMock.mockImplementation(async (path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
@@ -161,4 +161,33 @@ test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', asy
   expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///buyuk.png');
   expect(mockBoyutlandir).toHaveBeenCalledWith({ width: 256, height: 256 });
   expect(mockKaydet).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpeg' }));
+}, 20_000);
+
+/**
+ * Android'in resim yükleyicisi `Image` kaynağındaki `headers`'ı isteğe eklemiyor: fotoğraf ucu 401 dönüyor
+ * ve daire boş kalıyordu (Pixel 8 emülatöründe görüldü). Resim kimlikli bir fetch'le çekilir, `Image`'a
+ * data URL verilir -- web'le aynı yol.
+ */
+test('fotograf varsa kimlikli istekle cekilip Image a data URL olarak verilir', async () => {
+  profilBackendiKur({ hasAvatar: true, avatarVersion: 42 } as never);
+  const fetchMock = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => 'image/jpeg' },
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+  }));
+  const gercekFetch = globalThis.fetch;
+  globalThis.fetch = fetchMock as never;
+
+  try {
+    await renderRouterAsync('./app', { initialUrl: '/profile' });
+
+    const foto = await screen.findByLabelText('Profil fotoğrafı');
+    expect(foto.props.source).toEqual({ uri: 'data:image/jpeg;base64,AQID' });
+    const [adres, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(adres).toMatch(/\/users\/efeypgn\/avatar\?v=42$/);
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+  } finally {
+    globalThis.fetch = gercekFetch;
+  }
 }, 20_000);

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
-import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Cake, ImagePlus, Trash2, UserRound, X } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
@@ -152,15 +152,14 @@ function DogumTarihiAlani({ deger, degistir }: { deger: string; degistir: (gun: 
   const [iosAcik, setIosAcik] = useState(false);
   const secili = deger ? tariheCevir(deger) : varsayilanTarih();
 
-  function secildi(olay: DateTimePickerEvent, tarih?: Date) {
-    if (olay.type === 'set' && tarih) {
-      degistir(gunMetni(tarih));
-    }
+  // v9: `onChange` kullanimdan kalkti; `onValueChange` yalnizca secim onaylaninca cagrilir (iptal `onDismiss`).
+  function secildi(_olay: unknown, tarih: Date) {
+    degistir(gunMetni(tarih));
   }
 
   function ac() {
     if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({ value: secili, mode: 'date', maximumDate: new Date(), onChange: secildi });
+      DateTimePickerAndroid.open({ value: secili, mode: 'date', maximumDate: new Date(), onValueChange: secildi });
     } else {
       setIosAcik((acik) => !acik);
     }
@@ -198,7 +197,7 @@ function DogumTarihiAlani({ deger, degistir }: { deger: string; degistir: (gun: 
           mode="date"
           display="spinner"
           maximumDate={new Date()}
-          onChange={secildi}
+          onValueChange={secildi}
         />
       )}
     </View>
