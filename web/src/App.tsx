@@ -59,7 +59,7 @@ function Kabuk() {
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
-      <header className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <header data-kabuk-baslik className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-2">
             {/* #255: kok sekmeler ve Profil'in kendi alt sekmeleri DISINDAKI her ekranda (sablonlar,

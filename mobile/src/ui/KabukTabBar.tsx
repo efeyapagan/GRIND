@@ -41,7 +41,7 @@ const CENTER_Y = 16;
  * olarak buraya, TUM sayfalara global pb ile rezerve edilen bosluga aitti (kullanici karari:
  * genel bosluk KALDIRILSIN, sadece bunun gibi butonu/paneli sarkan spesifik bilesenler kendi
  * payini alsin). Sadece "+" halkasinin ustune KESINLIKLE binmemesi gereken sabit/mt-auto
- * bilesenler (ornek: AddSetForm'daki "Hareket ekle", antrenman-bitir'deki "Antrenmanı bitir")
+ * bilesenler (ornek: AntrenmanAltAlani'ndaki "Hareket ekle", antrenman-bitir'deki "Antrenmanı bitir")
  * bu degeri kendi alt bosluguna EKLER; sıradan kaydirilabilir icerik (liste kartlari vb.) HİÇBİR
  * ek bosluk almaz, kaydirinca halkanin arkasina gecebilir -- bu artik kabul edilebilir. */
 export const TABBAR_HALKA_TASMASI = FLARE_SIZE / 2 - CENTER_Y;
