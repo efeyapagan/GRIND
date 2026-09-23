@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IBodyWeightLogRepository, BodyWeightLogRepository>();
         services.AddScoped<IAiInsightRepository, AiInsightRepository>();
         services.AddScoped<IFollowRepository, FollowRepository>();
+        services.AddScoped<IUserAvatarRepository, UserAvatarRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

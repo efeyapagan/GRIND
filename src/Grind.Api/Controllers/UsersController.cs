@@ -1,20 +1,23 @@
 using System.ComponentModel.DataAnnotations;
 using Grind.Api.Models.Dtos.Common;
+using Grind.Api.Models.Dtos.Profile;
 using Grind.Api.Models.Dtos.Social;
 using Grind.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 
 namespace Grind.Api.Controllers;
 
 /// <summary>
-/// Kullanıcılar arası takip (#281). Yalnızca herkese açık başlık bilgisi döner — antrenman verisi yok.
+/// Kullanıcılar arası takip (#281) ve profil fotoğrafı (#280). Yalnızca herkese açık başlık bilgisi döner —
+/// antrenman verisi yok.
 /// Hedef kullanıcı adıyla verilir; kimlik (takip eden) her zaman token'dan gelir.
 /// </summary>
 [ApiController]
 [Authorize]
 [Route("api/users")]
-public class UsersController(IFollowService followService) : ControllerBase
+public class UsersController(IFollowService followService, IProfileService profileService) : ControllerBase
 {
     /// <summary>Kullanıcı adı ön-ekiyle arama (büyük/küçük harf duyarsız), en fazla 20 sonuç.</summary>
     [HttpGet("search")]
@@ -30,6 +33,28 @@ public class UsersController(IFollowService followService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserProfileResponse>> GetProfile(string username, CancellationToken cancellationToken)
         => Ok(await followService.GetProfileAsync(username, cancellationToken));
+
+    /// <summary>
+    /// Profil fotoğrafı (#280) — kimlikli her kullanıcı görebilir; kullanıcı yok, pasif ya da fotoğrafsızsa
+    /// 404. <c>no-cache</c> + <c>ETag</c>: tarayıcı saklar ama her seferinde sorar, değişmediyse 304 alır —
+    /// başkasının fotoğrafının güncel sürümünü bilmeyen istemci de eski resimde takılı kalmaz.
+    /// </summary>
+    [HttpGet("{username}/avatar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAvatar(string username, CancellationToken cancellationToken)
+    {
+        var avatar = await profileService.GetAvatarAsync(username, cancellationToken);
+        var etag = new EntityTagHeaderValue($"\"{avatar.Version}\"");
+
+        Response.Headers.CacheControl = "private, no-cache";
+        Response.Headers.ETag = etag.ToString();
+        if (Request.GetTypedHeaders().IfNoneMatch.Any(tag => tag.Compare(etag, useStrongComparison: false)))
+            return StatusCode(StatusCodes.Status304NotModified);
+
+        return File(avatar.Content, avatar.ContentType);
+    }
 
     /// <summary>Takip et — onay yok, idempotent. Kendini takip 400.</summary>
     [HttpPost("{username}/follow")]
