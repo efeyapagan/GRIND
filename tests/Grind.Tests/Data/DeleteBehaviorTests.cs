@@ -81,4 +81,14 @@ public class DeleteBehaviorTests
         Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<Follow>("FollowerId"));
         Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<Follow>("FolloweeId"));
     }
+
+    /// <summary>
+    /// #280: fotoğraf kullanıcının parçasıdır (composition). Kullanıcı bugün hard-delete edilmez; ileride
+    /// bir purge yazılırsa fotoğraf onunla gider, ayrıca silinmesi gerekmez.
+    /// </summary>
+    [Fact]
+    public void Kullanici_silinince_fotografi_da_silinir()
+    {
+        Assert.Equal(DeleteBehavior.Cascade, BehaviorOf<UserAvatar>("UserId"));
+    }
 }

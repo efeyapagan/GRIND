@@ -68,4 +68,11 @@ public class IndexTests
         Assert.True(IndexOn<Follow>("FollowerId", "FolloweeId").IsUnique);
         Assert.False(IndexOn<Follow>("FolloweeId").IsUnique);
     }
+
+    /// <summary>#280: kullanıcı başına en fazla bir fotoğraf — yeni yükleme eskisinin yerine geçer.</summary>
+    [Fact]
+    public void Kullanici_basina_tek_fotograf_vardir()
+    {
+        Assert.True(IndexOn<UserAvatar>("UserId").IsUnique);
+    }
 }
