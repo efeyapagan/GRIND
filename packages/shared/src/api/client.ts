@@ -36,6 +36,18 @@ export function setUnauthorizedHandler(fn: () => void): void {
   oturumDusurIsleyici = fn;
 }
 
+/**
+ * Kimlik isteyen bir kaynagin (profil fotografi, #283) tam adresi ve basliklari: `<img src>` /
+ * RN `Image` kendi istegini attigi icin `request()`'ten gecmez, yetki basligini buradan alir.
+ */
+export function kimlikliKaynak(path: string): { uri: string; headers: Record<string, string> } {
+  const oturum = config.session.read();
+  return {
+    uri: `${config.baseUrl}${path}`,
+    headers: oturum ? { Authorization: `Bearer ${oturum.token}` } : {},
+  };
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit & { auth?: boolean; sifreTeyidi401?: boolean } = {},
@@ -44,7 +56,9 @@ export async function request<T>(
 
   const basliklar: Record<string, string> = { ...(headers as Record<string, string> | undefined) };
 
-  if (rest.body !== undefined && rest.body !== null && !basliklar['Content-Type']) {
+  // FormData (profil fotografi, #283): sinir (boundary) ekli basligi fetch kendisi yazar -- elle
+  // `application/json` yazmak govdeyi sunucuda okunamaz yapardi.
+  if (rest.body !== undefined && rest.body !== null && !(rest.body instanceof FormData) && !basliklar['Content-Type']) {
     basliklar['Content-Type'] = 'application/json';
   }
 

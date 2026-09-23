@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LogOut } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { usePageTitle } from '@grind/shared/pageTitle';
@@ -21,9 +22,13 @@ function sifreUzunlugunuDogrula(sifre: string): string | null {
   return null;
 }
 
-/** web/src/pages/ProfilePage.tsx ile ayni (issue #119, kullanici karariyla sadelestirildi). */
+/**
+ * web/src/pages/ProfilePage.tsx ile ayni (issue #119, kullanici karariyla sadelestirildi). #283'ten beri
+ * sekme degil, profil basligindaki Hesap ayarlari dugmesinin actigi ekran.
+ */
 export default function AccountScreen() {
-  usePageTitle('Hesap');
+  const { t } = useTranslation();
+  usePageTitle(t('ortak.hesapAyarlari'));
   const { username, updateProfile, logout } = useAuth();
 
   return (
