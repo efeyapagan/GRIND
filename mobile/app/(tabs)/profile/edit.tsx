@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { File } from 'expo-file-system';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Cake, ImagePlus, Trash2, UserRound, X } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
@@ -81,8 +82,10 @@ function FotografAlani({ profil }: { profil: Profil }) {
         return;
       }
       const govde = new FormData();
-      // RN'in FormData'si dosyayi `{ uri, name, type }` nesnesiyle alir (web'deki Blob'un karsiligi).
-      govde.append('file', { uri, name: 'avatar.jpg', type: 'image/jpeg' } as unknown as Blob);
+      // Expo 57'nin global fetch'i (expo/fetch) RN'in eski `{ uri, name, type }` parcasini DESTEKLEMEZ
+      // ("Unsupported FormDataPart", istek hic gitmez) -- dosya Blob uyumlu `File` olarak eklenir; ad ve
+      // tur (`.jpg` -> image/jpeg) dosyanin kendisinden gelir.
+      govde.append('file', new File(uri));
       await yukle.mutateAsync(govde);
     } catch {
       setHata(true);
@@ -149,15 +152,14 @@ function DogumTarihiAlani({ deger, degistir }: { deger: string; degistir: (gun: 
   const [iosAcik, setIosAcik] = useState(false);
   const secili = deger ? tariheCevir(deger) : varsayilanTarih();
 
-  function secildi(olay: DateTimePickerEvent, tarih?: Date) {
-    if (olay.type === 'set' && tarih) {
-      degistir(gunMetni(tarih));
-    }
+  // v9: `onChange` kullanimdan kalkti; `onValueChange` yalnizca secim onaylaninca cagrilir (iptal `onDismiss`).
+  function secildi(_olay: unknown, tarih: Date) {
+    degistir(gunMetni(tarih));
   }
 
   function ac() {
     if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({ value: secili, mode: 'date', maximumDate: new Date(), onChange: secildi });
+      DateTimePickerAndroid.open({ value: secili, mode: 'date', maximumDate: new Date(), onValueChange: secildi });
     } else {
       setIosAcik((acik) => !acik);
     }
@@ -195,7 +197,7 @@ function DogumTarihiAlani({ deger, degistir }: { deger: string; degistir: (gun: 
           mode="date"
           display="spinner"
           maximumDate={new Date()}
-          onChange={secildi}
+          onValueChange={secildi}
         />
       )}
     </View>

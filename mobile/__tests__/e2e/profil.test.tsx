@@ -33,6 +33,22 @@ jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
 }));
 
+/**
+ * expo/fetch (Expo 57'nin global fetch'i) RN'in eski `{ uri, name, type }` FormData parcasini desteklemez
+ * ("Unsupported FormDataPart") -- dosya `expo-file-system`'in Blob uyumlu `File`'i olarak eklenmeli.
+ */
+jest.mock('expo-file-system', () => ({
+  File: class MockDosya {
+    uri: string;
+    constructor(mockUri: string) {
+      this.uri = mockUri;
+    }
+    bytes() {
+      return Promise.resolve(new Uint8Array());
+    }
+  },
+}));
+
 const requestMock = request as jest.Mock;
 const galeriMock = ImagePicker.launchImageLibraryAsync as jest.Mock;
 
@@ -49,10 +65,10 @@ const PROFIL = {
  * Issue #283: sahte backend'e profil uçları eklenir; gönderilen gövdeler `istekler`de toplanır.
  * FormData JSON değildir -- avatar isteği asıl sahte backend'e hiç ulaşmaz.
  */
-function profilBackendiKur() {
+function profilBackendiKur(baslangic: Partial<typeof PROFIL> = {}) {
   const { sahteRequest } = sahteBackendOlustur();
   const istekler: { method: string; path: string; body: unknown }[] = [];
-  let profil = { ...PROFIL };
+  let profil = { ...PROFIL, ...baslangic };
 
   requestMock.mockImplementation(async (path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
@@ -82,6 +98,11 @@ beforeEach(async () => {
   await session.write('tok', ileriTarih(60_000), 'efeypgn');
 });
 
+/**
+ * Bu dosyadaki ilk test tum rotalari SOGUK derler (#277 ile ayni). CI bu dosyayi en uzun dosya diye ilk
+ * sirada, diger iscilerle es zamanli kosuyor: 20 sn asildi (#292, 39 sn) ve yarim kalan yonlendirme sonraki
+ * testlere sizdi. Sonraki testler derlenmis modulleri kullanir, 20 sn onlara yeter.
+ */
 test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok', async () => {
   profilBackendiKur();
 
@@ -97,7 +118,7 @@ test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok',
   const sekmeler = screen.getAllByRole('tab');
   expect(sekmeler.map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler']);
   expect(screen.getByRole('tab', { name: 'Geçmiş' }).props.accessibilityState).toEqual({ selected: true });
-}, 20_000);
+}, 60_000);
 
 test('Hesap ayarlari dugmesi sekmesiz hesap ekranini acar', async () => {
   profilBackendiKur();
@@ -127,6 +148,7 @@ test('Profili duzenle ile isim kaydedilince PUT gider ve baslik yeni ismi goster
 
 test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', async () => {
   const istekler = profilBackendiKur();
+  const ekle = jest.spyOn(FormData.prototype, 'append');
   galeriMock.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///buyuk.png', width: 2000, height: 2000 }] });
 
   await renderRouterAsync('./app', { initialUrl: '/profile/edit' });
@@ -137,8 +159,40 @@ test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', asy
   const yukleme = istekler.find((istek) => istek.path === '/profile/avatar')!;
   expect(yukleme.method).toBe('PUT');
   expect(yukleme.body).toBeInstanceOf(FormData);
+  const { File: MockDosya } = jest.requireMock('expo-file-system');
+  expect(ekle).toHaveBeenCalledWith('file', expect.any(MockDosya));
+  expect((ekle.mock.calls[0][1] as unknown as { uri: string }).uri).toBe('file:///kucuk.jpg');
   const { ImageManipulator } = jest.requireMock('expo-image-manipulator');
   expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///buyuk.png');
   expect(mockBoyutlandir).toHaveBeenCalledWith({ width: 256, height: 256 });
   expect(mockKaydet).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpeg' }));
+}, 20_000);
+
+/**
+ * Android'in resim yükleyicisi `Image` kaynağındaki `headers`'ı isteğe eklemiyor: fotoğraf ucu 401 dönüyor
+ * ve daire boş kalıyordu (Pixel 8 emülatöründe görüldü). Resim kimlikli bir fetch'le çekilir, `Image`'a
+ * data URL verilir -- web'le aynı yol.
+ */
+test('fotograf varsa kimlikli istekle cekilip Image a data URL olarak verilir', async () => {
+  profilBackendiKur({ hasAvatar: true, avatarVersion: 42 } as never);
+  const fetchMock = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => 'image/jpeg' },
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+  }));
+  const gercekFetch = globalThis.fetch;
+  globalThis.fetch = fetchMock as never;
+
+  try {
+    await renderRouterAsync('./app', { initialUrl: '/profile' });
+
+    const foto = await screen.findByLabelText('Profil fotoğrafı');
+    expect(foto.props.source).toEqual({ uri: 'data:image/jpeg;base64,AQID' });
+    const [adres, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(adres).toMatch(/\/users\/efeypgn\/avatar\?v=42$/);
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+  } finally {
+    globalThis.fetch = gercekFetch;
+  }
 }, 20_000);

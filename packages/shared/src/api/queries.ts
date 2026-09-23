@@ -7,7 +7,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { request } from './client';
+import { kimlikliKaynak, request } from './client';
 import { trBugundenOnce } from '../lib/format';
 import { ApiError } from './problem';
 import type { components } from './schema';
@@ -1301,6 +1301,38 @@ export function useKullaniciProfili(kullaniciAdi: string | null) {
 /** Fotografin yolu; `v` surum degisince onbellegi kirar (#280 `avatarVersion`). */
 export function avatarYolu(kullaniciAdi: string, surum: number): string {
   return `/users/${encodeURIComponent(kullaniciAdi)}/avatar?v=${surum}`;
+}
+
+/**
+ * Profil fotografi, data URL olarak (#283/#292). Uc kimlik ister: web'de `<img src>` yetki basligi
+ * gonderemez, Android'in resim yukleyicisi de RN `Image` kaynagindaki `headers`'i isteğe eklemez (401) --
+ * iki platform da resmi kimlikli bir fetch'le ceker. Anahtarda surum var: yeni fotograf yeni kayit olur,
+ * ayni surum bir daha istenmez.
+ */
+export function useProfilFotografi(profil: Profil) {
+  const surum = profil.hasAvatar ? profil.avatarVersion : null;
+  return useQuery({
+    queryKey: queryKeys.avatar(profil.username, surum ?? 0),
+    enabled: surum !== null,
+    staleTime: Infinity,
+    queryFn: () => fotografiDataUrlOlarakAl(profil.username, surum!),
+  });
+}
+
+async function fotografiDataUrlOlarakAl(kullaniciAdi: string, surum: number): Promise<string> {
+  const { uri, headers } = kimlikliKaynak(avatarYolu(kullaniciAdi, surum));
+  const yanit = await fetch(uri, { headers });
+  if (!yanit.ok) {
+    throw new Error(`Profil fotografi alinamadi (${yanit.status}).`);
+  }
+  const tur = yanit.headers.get('Content-Type') ?? 'image/jpeg';
+  // FileReader RN'de expo/fetch'in Blob'uyla calismaz; baytlar dogrudan base64'e cevrilir (en fazla 256 KB).
+  const baytlar = new Uint8Array(await yanit.arrayBuffer());
+  let ikili = '';
+  for (let i = 0; i < baytlar.length; i += 0x8000) {
+    ikili += String.fromCharCode(...baytlar.subarray(i, i + 0x8000));
+  }
+  return `data:${tur};base64,${btoa(ikili)}`;
 }
 
 /** `PUT /api/profile`: iki alan da her istekte yazilir, `null` temizler (#280). */
