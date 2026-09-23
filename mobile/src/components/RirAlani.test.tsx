@@ -17,6 +17,16 @@ test('kapali baslar; alana dokununca kaydirici acilir ve secili durak aciklamasi
   expect(screen.getByText('Zorlayıcı ancak kontrollü ve güvenli.')).toBeTruthy();
 });
 
+/** Kullanıcı kararı: tutamaç hep görünsün -- boş alan açılınca 0'dan başlar. */
+test('deger yokken alan acilinca 0 secilir', async () => {
+  const onDegis = jest.fn();
+  await render(<RirAlani id="rir" deger={null} onDegis={onDegis} />);
+
+  await fireEvent.press(screen.getByLabelText('RIR (opsiyonel): girilmedi'));
+
+  expect(onDegis).toHaveBeenCalledWith(0);
+});
+
 test('duraga dokununca o deger secilir', async () => {
   const onDegis = jest.fn();
   await render(<RirAlani id="rir" deger={2.5} onDegis={onDegis} />);
@@ -39,7 +49,7 @@ test('artirma eylemi bir durak (yarim adim) ilerler', async () => {
   expect(onDegis).toHaveBeenCalledWith(3);
 });
 
-test('Temizle secili degeri kaldirir', async () => {
+test('Temizle secili degeri kaldirir ve paneli kapatir', async () => {
   const onDegis = jest.fn();
   await render(<RirAlani id="rir" deger={2} onDegis={onDegis} />);
 
@@ -47,6 +57,7 @@ test('Temizle secili degeri kaldirir', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Temizle' }));
 
   expect(onDegis).toHaveBeenCalledWith(null);
+  expect(screen.queryByLabelText('RIR')).toBeNull();
 });
 
 test('duzenleyicide (temizlenemez) Temizle sunulmaz', async () => {

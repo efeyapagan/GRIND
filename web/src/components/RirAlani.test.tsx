@@ -20,6 +20,17 @@ test('kapali baslar; alana tiklayinca kaydirici acilir ve secili durak aciklamas
   expect(screen.getByText('Zorlayıcı ancak kontrollü ve güvenli.')).toBeInTheDocument();
 });
 
+/** Kullanici karari: tutamac hep gorunsun -- bos alan acilinca 0'dan baslar. */
+test('deger yokken alan acilinca 0 secilir', async () => {
+  const kullanici = userEvent.setup();
+  const onDegis = vi.fn();
+  render(<RirAlani id="rir" deger={null} onDegis={onDegis} />);
+
+  await kullanici.click(screen.getByRole('button', { name: 'RIR (opsiyonel): girilmedi' }));
+
+  expect(onDegis).toHaveBeenCalledWith(0);
+});
+
 test('duraga tiklayinca o deger secilir', async () => {
   const kullanici = userEvent.setup();
   const onDegis = vi.fn();
@@ -44,7 +55,7 @@ test('sag ok bir durak (yarim adim) ilerler, End 4+ duragina gider', async () =>
   expect(onDegis.mock.calls).toEqual([[3], [5]]);
 });
 
-test('Temizle secili degeri kaldirir', async () => {
+test('Temizle secili degeri kaldirir ve paneli kapatir', async () => {
   const kullanici = userEvent.setup();
   const onDegis = vi.fn();
   render(<RirAlani id="rir" deger={2} onDegis={onDegis} />);
@@ -53,6 +64,7 @@ test('Temizle secili degeri kaldirir', async () => {
   await kullanici.click(screen.getByRole('button', { name: 'Temizle' }));
 
   expect(onDegis).toHaveBeenCalledWith(null);
+  expect(screen.queryByRole('slider')).not.toBeInTheDocument();
 });
 
 test('bilgi dugmesi RIRin ne oldugunu aciklar', async () => {

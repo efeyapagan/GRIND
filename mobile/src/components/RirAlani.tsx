@@ -123,7 +123,11 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
           accessibilityState={{ expanded: acik }}
           onPress={() => {
             Keyboard.dismiss();
-            setAcik((onceki) => !onceki);
+            // Kullanici karari: tutamac hep gorunsun -- bos alan acilinca 0'dan baslar.
+            if (!acik && deger === null) {
+              onDegis(RIR_DURAKLARI[0]);
+            }
+            setAcik(!acik);
           }}
           className={`relative h-15 w-full justify-end rounded-lg pb-2 pl-2 ${acik ? 'bg-surface-2' : 'bg-inset'}`}
         >
@@ -146,7 +150,11 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
               {temizlenebilir && deger !== null && (
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => onDegis(null)}
+                  onPress={() => {
+                    // Deger kalkinca panel de kapanir: tutamacsiz bos bir ray kalmaz.
+                    onDegis(null);
+                    setAcik(false);
+                  }}
                   className="h-10 justify-center rounded-lg px-3"
                 >
                   <Text className="text-label text-muted">{t('rir.temizle')}</Text>

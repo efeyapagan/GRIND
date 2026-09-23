@@ -38,6 +38,20 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
   const aciklama = deger === null ? null : rirAciklamasi(deger);
   const etiket = deger === null ? null : rirEtiketi(deger);
 
+  /** Kullanici karari: tutamac hep gorunsun -- bos alan acilinca 0'dan baslar. */
+  function alaniAcKapat() {
+    if (!acik && deger === null) {
+      onDegis(RIR_DURAKLARI[0]);
+    }
+    setAcik(!acik);
+  }
+
+  /** Deger kalkinca panel de kapanir: tutamacsiz bos bir ray kalmaz. */
+  function temizle() {
+    onDegis(null);
+    setAcik(false);
+  }
+
   function sec(rir: number) {
     if (rir !== deger) {
       onDegis(rir);
@@ -81,7 +95,7 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
           aria-label={t('rir.alanDegeri', { deger: etiket ?? t('rir.girilmedi') })}
           aria-expanded={acik}
           aria-controls={panelId}
-          onClick={() => setAcik((onceki) => !onceki)}
+          onClick={alaniAcKapat}
           className={`relative h-15 w-full rounded-lg pt-5 pr-12 pl-2 text-left ${acik ? 'bg-surface-2' : 'bg-inset'}`}
         >
           <span className="absolute top-2 left-2 text-label-xs text-muted uppercase">{t('setGirdisi.rirEtiket')}</span>
@@ -99,7 +113,7 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
               {temizlenebilir && deger !== null && (
                 <button
                   type="button"
-                  onClick={() => onDegis(null)}
+                  onClick={temizle}
                   className="h-10 rounded-lg px-3 text-label text-muted"
                 >
                   {t('rir.temizle')}
