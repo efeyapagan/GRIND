@@ -36,6 +36,11 @@ public class SetEntryService(
 
         WeightScale.EnsureAtMostTwoDecimals(weight);
 
+        if (request.Rir is { } rir)
+        {
+            RirScale.EnsureHalfStep(rir);
+        }
+
         var exercise = await exerciseRepository.GetVisibleByIdAsync(
                            exerciseId, currentUser.UserId, cancellationToken: cancellationToken)
                        ?? throw new NotFoundException(ExerciseNotFound);
@@ -116,6 +121,7 @@ public class SetEntryService(
 
         if (request.Rir is { } rir)
         {
+            RirScale.EnsureHalfStep(rir);
             set.Rir = rir;
         }
 

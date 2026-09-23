@@ -16,8 +16,11 @@ public class SetEntry
     /// <summary>Bu set kaydedildiği anda bir rekor kırdı mı — tarihsel anlık görüntü.</summary>
     public RecordType RecordType { get; set; }
 
-    /// <summary>Reps in Reserve.</summary>
-    public int? Rir { get; set; }
+    /// <summary>
+    /// Reps in Reserve — yarım adımlı (#266): 2.5 = "2–3 arası", 5 = "4+". #266 öncesi kayıtlarda
+    /// 5'ten büyük olabilir; gösterimde "4+" sayılır.
+    /// </summary>
+    public decimal? Rir { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

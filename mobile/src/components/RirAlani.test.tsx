@@ -1,0 +1,67 @@
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import RirAlani from './RirAlani';
+
+/**
+ * #266: RIR artık yazılmaz, alana dokununca açılan on duraklık kaydırıcıdan seçilir. Parmakla
+ * SÜRÜKLEME burada test EDİLMEZ: jest ortamında rayın ekrandaki ölçüsü sıfırdır; konum → durak hesabı
+ * `web/src/lib/rir.test.ts`te (ortak kaynak). Burada açılma, durağa dokunma, erişilebilirlik
+ * artır eylemi, Temizle ve bilgi düğmesi.
+ */
+test('kapali baslar; alana dokununca kaydirici acilir ve secili durak aciklamasiyla yazar', async () => {
+  await render(<RirAlani id="rir" deger={2.5} onDegis={jest.fn()} />);
+
+  expect(screen.queryByLabelText('RIR')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('RIR (opsiyonel): 2–3'));
+
+  expect(screen.getByLabelText('RIR')).toBeTruthy();
+  expect(screen.getByText('Zorlayıcı ancak kontrollü ve güvenli.')).toBeTruthy();
+});
+
+test('duraga dokununca o deger secilir', async () => {
+  const onDegis = jest.fn();
+  await render(<RirAlani id="rir" deger={2.5} onDegis={onDegis} />);
+
+  await fireEvent.press(screen.getByLabelText(/^RIR \(opsiyonel\)/));
+  await fireEvent.press(screen.getByLabelText('4+'));
+
+  expect(onDegis).toHaveBeenCalledWith(5);
+});
+
+test('artirma eylemi bir durak (yarim adim) ilerler', async () => {
+  const onDegis = jest.fn();
+  await render(<RirAlani id="rir" deger={2.5} onDegis={onDegis} />);
+
+  await fireEvent.press(screen.getByLabelText(/^RIR \(opsiyonel\)/));
+  await fireEvent(screen.getByLabelText('RIR'), 'accessibilityAction', {
+    nativeEvent: { actionName: 'increment' },
+  });
+
+  expect(onDegis).toHaveBeenCalledWith(3);
+});
+
+test('Temizle secili degeri kaldirir', async () => {
+  const onDegis = jest.fn();
+  await render(<RirAlani id="rir" deger={2} onDegis={onDegis} />);
+
+  await fireEvent.press(screen.getByLabelText(/^RIR \(opsiyonel\)/));
+  await fireEvent.press(screen.getByRole('button', { name: 'Temizle' }));
+
+  expect(onDegis).toHaveBeenCalledWith(null);
+});
+
+test('duzenleyicide (temizlenemez) Temizle sunulmaz', async () => {
+  await render(<RirAlani id="rir" deger={2} onDegis={jest.fn()} temizlenebilir={false} />);
+
+  await fireEvent.press(screen.getByLabelText(/^RIR \(opsiyonel\)/));
+
+  expect(screen.queryByRole('button', { name: 'Temizle' })).toBeNull();
+});
+
+test('bilgi dugmesi RIRin ne oldugunu aciklar', async () => {
+  await render(<RirAlani id="rir" deger={null} onDegis={jest.fn()} />);
+
+  await fireEvent.press(screen.getByLabelText('RIR (opsiyonel): girilmedi'));
+  await fireEvent.press(screen.getByLabelText('RIR nedir?'));
+
+  expect(screen.getByText(/setin sonunda yedekte kaç tekrar/)).toBeTruthy();
+});

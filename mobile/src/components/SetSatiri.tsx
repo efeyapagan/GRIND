@@ -4,6 +4,7 @@ import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { formatWeight } from '@grind/shared/lib/format';
 import { rekorRozetiMetni } from '@grind/shared/lib/rekor';
+import { rirEtiketi } from '@grind/shared/lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
@@ -40,7 +41,7 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
     `${sira}. set`,
     `${formatWeight(kayit.weight, dil)} kg × ${kayit.reps}`,
     rozet,
-    kayit.rir !== null ? `RIR ${kayit.rir}` : null,
+    kayit.rir !== null ? `RIR ${rirEtiketi(kayit.rir)}` : null,
     kayit.restSeconds !== null ? `dinlenme ${kalanSureMetni(kayit.restSeconds * 1000)}` : null,
     'düzenle',
   ]
@@ -66,7 +67,7 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
       </View>
       <View className="shrink-0 flex-row items-center gap-2">
         <DinlenmeHapi saniye={kayit.restSeconds} />
-        {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+        {kayit.rir !== null && <Hap>RIR {rirEtiketi(kayit.rir)}</Hap>}
       </View>
     </Pressable>
   );

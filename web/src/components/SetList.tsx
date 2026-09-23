@@ -5,6 +5,7 @@ import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
+import { rirEtiketi } from '../lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
@@ -90,7 +91,7 @@ export default function SetList(props: Props) {
                       </div>
                       <div className="flex items-center gap-2">
                         <DinlenmeHapi saniye={kayit.restSeconds} />
-                        {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+                        {kayit.rir !== null && <Hap>RIR {rirEtiketi(kayit.rir)}</Hap>}
                       </div>
                     </div>
                     {rozet && (

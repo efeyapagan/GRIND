@@ -62,22 +62,32 @@ test('mevcut degerlerle dolu acilir; Kaydet yeni degerleri PATCH ile gonderir ve
 
   const agirlik = within(form).getByLabelText('Ağırlık (kg)');
   const tekrar = within(form).getByLabelText('Tekrar');
-  const rir = within(form).getByLabelText('RIR (opsiyonel)');
   expect(agirlik).toHaveValue('70');
   expect(tekrar).toHaveValue('12');
-  expect(rir).toHaveValue('2');
 
   await kullanici.clear(agirlik);
   // Ekleme formuyla ayni kural: virgul kabul edilir, sunucuya nokta ile gider.
   await kullanici.type(agirlik, '72,5');
   await kullanici.clear(tekrar);
   await kullanici.type(tekrar, '10');
-  await kullanici.clear(rir);
-  await kullanici.type(rir, '1');
+  // #266: RIR yazilmaz, kaydiricidan secilir.
+  await kullanici.click(within(form).getByRole('button', { name: 'RIR (opsiyonel): 2' }));
+  await kullanici.click(within(form).getByRole('button', { name: '1' }));
   await kullanici.click(within(form).getByRole('button', { name: 'Kaydet' }));
 
   await waitFor(() => expect(onKapat).toHaveBeenCalled());
   expect(istekler).toEqual([{ method: 'PATCH', path: '/api/sets/7', govde: { weight: 72.5, reps: 10, rir: 1 } }]);
+});
+
+/** Sunucuda `PATCH` icin `null` "degistirme" demek: RIR buradan bosaltilamaz, Temizle yaniltirdi. */
+test('duzenleyicide RIR icin Temizle sunulmaz', async () => {
+  const kullanici = userEvent.setup();
+  const { form } = duzenleyiciyiOlustur();
+
+  await kullanici.click(within(form).getByRole('button', { name: 'RIR (opsiyonel): 2' }));
+
+  expect(within(form).getByRole('slider', { name: 'RIR' })).toBeInTheDocument();
+  expect(within(form).queryByRole('button', { name: 'Temizle' })).not.toBeInTheDocument();
 });
 
 test('gecersiz giriste alan hatasi gosterilir ve istek gitmez', async () => {

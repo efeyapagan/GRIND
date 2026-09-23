@@ -1,4 +1,5 @@
 import { i18n } from '../i18n/i18n';
+import { RIR_DURAKLARI } from './rir';
 
 /** Set formlarinin (panel ve duzenleyici, #57) metin halindeki alanlari. */
 export interface SetGirdisiMetni {
@@ -25,12 +26,12 @@ export const SET_ALANLARI = ['weight', 'reps', 'rir'];
  * kontrolu yapilir.
  *
  * DIKKAT (review bulgusu I3): "Tekrar" sunucuda `int` -- "8.5" JSON'da sayi olarak GECERLI oldugu icin
- * sessizce gonderilir ve sunucu deserializasyonda formun hicbir alaniyla eslesmeyen bir 400 doner. RIR
- * "abc" yazilirsa `Number('abc')` NaN'a, NaN da JSON'da `null`'a donusur ve yazilan SESSIZCE kaybolur.
+ * sessizce gonderilir ve sunucu deserializasyonda formun hicbir alaniyla eslesmeyen bir 400 doner.
  * Bu yuzden ust sinir/ondalik hane sayisi sunucuya birakilsa da sayisal bicim istemcide kontrol edilir
- * ve GECERSIZSE istek hic GONDERILMEZ.
+ * ve GECERSIZSE istek hic GONDERILMEZ. RIR (#266) yazilmaz, kaydiricinin duraklarindan secilir --
+ * gecersiz bir RIR metni olusamaz, dogrulanacak bir sey yok.
  */
-export function setGirdisiniDogrula({ agirlik, tekrar, rir }: SetGirdisiMetni): Record<string, string> {
+export function setGirdisiniDogrula({ agirlik, tekrar }: SetGirdisiMetni): Record<string, string> {
   const hatalar: Record<string, string> = {};
 
   const agirlikMetni = agirlik.trim();
@@ -47,11 +48,6 @@ export function setGirdisiniDogrula({ agirlik, tekrar, rir }: SetGirdisiMetni): 
     hatalar.reps = i18n.t('setGirdisi.tekrarTamSayiOlmali');
   }
 
-  const rirMetni = rir.trim();
-  if (rirMetni !== '' && !Number.isInteger(Number(rirMetni))) {
-    hatalar.rir = i18n.t('setGirdisi.rirTamSayiOlmali');
-  }
-
   return hatalar;
 }
 
@@ -64,11 +60,15 @@ export function setGirdisiniAyristir({ agirlik, tekrar, rir }: SetGirdisiMetni):
   };
 }
 
-/** Kayitli bir seti forma yazilacak metne cevirir (72.5 -> "72,5"; RIR yoksa bos). */
+/**
+ * Kayitli bir seti forma yazilacak metne cevirir (72.5 -> "72,5"; RIR yoksa bos). #266 oncesi
+ * kayitlarda 5'ten buyuk RIR olabilir: "4+" duragina (5) cekilir -- sunucu artik 5'ten buyugunu
+ * reddettigi icin oldugu gibi geri gondermek yalnizca agirligi duzelten bir kaydi bile 400'e dusururdu.
+ */
 export function setGirdisiMetni(set: AyristirilmisSet): SetGirdisiMetni {
   return {
     agirlik: String(set.weight).replace('.', ','),
     tekrar: String(set.reps),
-    rir: set.rir === null ? '' : String(set.rir),
+    rir: set.rir === null ? '' : String(Math.min(set.rir, RIR_DURAKLARI[RIR_DURAKLARI.length - 1])),
   };
 }

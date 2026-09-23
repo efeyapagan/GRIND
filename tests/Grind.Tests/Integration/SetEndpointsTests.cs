@@ -253,6 +253,56 @@ public class SetEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApi
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>#266: kaydırıcının ara durağı ("2–3 arası") 2.5 olarak saklanır ve geri okunur.</summary>
+    [Fact]
+    public async Task Yarim_adimli_RIR_saklanir_ve_geri_okunur()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+
+        var eklenen = await (await client.PostAsJsonAsync("/api/sets",
+                new CreateSetRequest { ExerciseId = exerciseId, Weight = 100m, Reps = 8, Rir = 2.5m }, Json))
+            .Content.ReadFromJsonAsync<SetEntryResponse>(Json);
+        var setler = await client.GetFromJsonAsync<List<SetEntryResponse>>(
+            $"/api/sessions/{eklenen!.SessionId}/sets", Json);
+
+        Assert.Equal(2.5m, setler!.Single(s => s.Id == eklenen.Id).Rir);
+    }
+
+    /// <summary>#266: "4+" = 5 en üst durak; yarım adım dışı değer hiçbir durağa düşmez.</summary>
+    [Theory]
+    [InlineData("5.5")]
+    [InlineData("1.3")]
+    public async Task Gecersiz_RIR_400_verir(string rir)
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+
+        var response = await client.PostAsJsonAsync("/api/sets", new CreateSetRequest
+        {
+            ExerciseId = exerciseId,
+            Weight = 100m,
+            Reps = 8,
+            Rir = decimal.Parse(rir, System.Globalization.CultureInfo.InvariantCulture)
+        }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Patch_yarim_adim_disi_RIR_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        var set = await (await PostSetAsync(client, exerciseId, 100m, 8))
+            .Content.ReadFromJsonAsync<SetEntryResponse>(Json);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/sets/{set!.Id}", new PatchSetRequest { Rir = 1.3m }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task Sifir_tekrar_400_verir()
     {

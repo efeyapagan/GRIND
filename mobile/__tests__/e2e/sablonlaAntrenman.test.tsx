@@ -57,11 +57,15 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
   await fireEvent.changeText(await screen.findByLabelText('Ağırlık'), '60');
   await fireEvent.changeText(screen.getByLabelText('Tekrar'), '8');
+  // #266: RIR alanına dokununca kaydırıcı açılır; ara durak "2–3" sunucuya 2.5 gider.
+  await fireEvent.press(screen.getByLabelText('RIR (opsiyonel): girilmedi'));
+  await fireEvent.press(screen.getByLabelText('2–3'));
   await fireEvent.press(screen.getByRole('button', { name: 'Set ekle' }));
 
   // Set gerçekten sunucuya gitmiş ve ilerleme güncellenmiş olmalı.
   await waitFor(() => expect(state.setler).toHaveLength(1));
-  expect(state.setler[0]).toMatchObject({ weight: 60, reps: 8, exerciseId: 1 });
+  expect(state.setler[0]).toMatchObject({ weight: 60, reps: 8, exerciseId: 1, rir: 2.5 });
+  expect(await screen.findByText('RIR 2–3')).toBeTruthy();
   await waitFor(() => expect(screen.getByLabelText(/Bench Press, 1 \/ 3 set/)).toBeTruthy());
 
   // #153: "Antrenmanı bitir" artık oturumu kapatmaz, ayrı zorluk ekranına götürür; kadrandan
