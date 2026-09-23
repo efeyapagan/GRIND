@@ -12,6 +12,7 @@ import {
 import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
 import SayiAlani from '../ui/SayiAlani';
+import RirAlani from './RirAlani';
 import { ikonRenk } from '../ui/renkler';
 
 interface Props {
@@ -53,7 +54,8 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
             {genelHata}
           </Text>
         )}
-        <View className="flex-row gap-2">
+        {/* flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser. */}
+        <View className="flex-row flex-wrap gap-2">
           <View className="flex-1">
             <SayiAlani
               id={`set-${kayit.id}-agirlik`}
@@ -78,18 +80,13 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
               hata={alanHatalari.reps}
             />
           </View>
-          <View className="flex-1">
-            <SayiAlani
-              id={`set-${kayit.id}-rir`}
-              etiket="RIR"
-              birim="kalan"
-              inputMode="numeric"
-              placeholder="—"
-              value={girdi.rir}
-              onChange={(rir) => setGirdi((onceki) => ({ ...onceki, rir }))}
-              hata={alanHatalari.rir}
-            />
-          </View>
+          <RirAlani
+            id={`set-${kayit.id}-rir`}
+            deger={girdi.rir === '' ? null : Number(girdi.rir)}
+            onDegis={(rir) => setGirdi((onceki) => ({ ...onceki, rir: rir === null ? '' : String(rir) }))}
+            temizlenebilir={false}
+            hata={alanHatalari.rir}
+          />
         </View>
         <View className="flex-row gap-2">
           <View className="flex-1">

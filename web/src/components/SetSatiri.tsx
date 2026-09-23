@@ -4,6 +4,7 @@ import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '../api/queries';
 import { formatWeight } from '../lib/format';
 import { rekorRozetiMetni } from '../lib/rekor';
+import { rirEtiketi } from '../lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
@@ -54,7 +55,7 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
     t('setler.setSirasi', { sira }),
     `${formatWeight(kayit.weight, dil)} kg × ${kayit.reps}`,
     rozet,
-    kayit.rir !== null ? `RIR ${kayit.rir}` : null,
+    kayit.rir !== null ? `RIR ${rirEtiketi(kayit.rir)}` : null,
     // aria-label icerigi ezdigi icin dinlenme de burada ayrica soylenir (#71).
     kayit.restSeconds !== null
       ? t('setler.dinlenmeSuresi', { sure: kalanSureMetni(kayit.restSeconds * 1000) })
@@ -85,7 +86,7 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <DinlenmeHapi saniye={kayit.restSeconds} />
-          {kayit.rir !== null && <Hap>RIR {kayit.rir}</Hap>}
+          {kayit.rir !== null && <Hap>RIR {rirEtiketi(kayit.rir)}</Hap>}
         </span>
       </button>
     </li>

@@ -176,7 +176,10 @@ Object Reference) açığıdır.
   benzersiz
 - **SetEntry**: `Id`, `WorkoutSessionId` (FK), `ExerciseId` (FK), `Weight`, `Reps`,
   `RecordType` (None / Weight / Reps), `Rir` (nullable — Reps in Reserve, ileride koçluk
-  önerileri için veri toplamaya şimdiden başlıyoruz), `CreatedAt`
+  önerileri için veri toplamaya şimdiden başlıyoruz; #266'dan beri yarım adımlı `numeric(4,1)`:
+  0–5, 2.5 = "2–3 arası", 5 = "4+"; iki platformda kaydırıcıdan seçilir, etiketi
+  `packages/shared/src/lib/rir.ts`. Eski kayıtlarda 5'ten büyük değer kalabilir, "4+" gösterilir),
+  `CreatedAt`
 - **BodyWeightLog**: `Id`, `UserId` (FK), `Weight`, `RecordedAt` — antrenman verisinden
   bağımsız, performansla zaman ekseninde karşılaştırmak için ayrı bir kayıt
 - **ExerciseMedia**: `Id`, `ExerciseId` (FK), `MediaType` (Video / Gif), `Url`, `CreatedAt` —

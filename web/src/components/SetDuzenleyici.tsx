@@ -7,6 +7,7 @@ import { SET_ALANLARI, setGirdisiMetni, setGirdisiniAyristir, setGirdisiniDogrul
 import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
 import SayiAlani from '../ui/SayiAlani';
+import RirAlani from './RirAlani';
 
 interface Props {
   kayit: SetKaydi;
@@ -24,7 +25,7 @@ interface Props {
  * (gecikmeli) silmeyi yurutur, cunku duzenleyici silme baslayinca listeden kalkar.
  *
  * DIKKAT: sunucuda `PATCH` icin `null` "degistirme" demektir -- RIR bu duzenleyiciyle BOSALTILAMAZ
- * (issue #57 kapsam disi).
+ * (issue #57 kapsam disi); RIR kaydiricisi (#266) bu yuzden burada Temizle sunmaz.
  */
 export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
   const { t } = useTranslation();
@@ -80,15 +81,11 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
             onChange={(tekrar) => setGirdi((onceki) => ({ ...onceki, tekrar }))}
             hata={alanHatalari.reps}
           />
-          <SayiAlani
+          <RirAlani
             id={`${onek}-rir`}
-            etiket={t('setGirdisi.rirEtiket')}
-            ekranOkuyucuEki={t('setGirdisi.opsiyonelEki')}
-            birim={t('setGirdisi.kalanBirimi')}
-            inputMode="numeric"
-            placeholder="—"
-            value={girdi.rir}
-            onChange={(rir) => setGirdi((onceki) => ({ ...onceki, rir }))}
+            deger={girdi.rir === '' ? null : Number(girdi.rir)}
+            onDegis={(rir) => setGirdi((onceki) => ({ ...onceki, rir: rir === null ? '' : String(rir) }))}
+            temizlenebilir={false}
             hata={alanHatalari.rir}
           />
         </div>

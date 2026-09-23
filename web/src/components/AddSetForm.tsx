@@ -21,6 +21,7 @@ import { sesiHazirla } from '../lib/uyari';
 import BirincilDugme from '../ui/BirincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
+import RirAlani from './RirAlani';
 import SecimKutusu from '../ui/SecimKutusu';
 import DinlenmeSayaci from './DinlenmeSayaci';
 import HareketEklePaneli from './HareketEklePaneli';
@@ -342,15 +343,10 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
                 onChange={setTekrar}
                 hata={alanHatalari.reps}
               />
-              <SayiAlani
+              <RirAlani
                 id="set-rir"
-                etiket={t('setGirdisi.rirEtiket')}
-                ekranOkuyucuEki={t('setGirdisi.opsiyonelEki')}
-                birim={t('setGirdisi.kalanBirimi')}
-                inputMode="numeric"
-                placeholder="—"
-                value={rir}
-                onChange={setRir}
+                deger={rir === '' ? null : Number(rir)}
+                onDegis={(yeni) => setRir(yeni === null ? '' : String(yeni))}
                 hata={alanHatalari.rir}
               />
             </div>

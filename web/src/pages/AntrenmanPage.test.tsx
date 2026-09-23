@@ -592,40 +592,21 @@ test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez',
   expect(istekYapildiMi).toBe(false);
 });
 
-test('RIR sayi olmayan bir deger (abc) ile girilirse istemcide reddedilir, istek gonderilmez', async () => {
-  let istekYapildiMi = false;
-  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
-  server.use(
-    http.post('/api/sets', () => {
-      istekYapildiMi = true;
-      return HttpResponse.json({
-        id: 1,
-        sessionId: 1,
-        exerciseId: 1,
-        exerciseName: 'Bench Press',
-        weight: 60,
-        reps: 8,
-        recordType: 'None',
-        rir: null,
-        createdAt: new Date().toISOString(),
-      });
-    }),
-  );
+/** #266: RIR kaydiricinin ara duragi ("2–3") sunucuya 2.5 olarak gider ve set satirinda aralik yazar. */
+test('RIR kaydiricisindan secilen ara durak POST govdesinde 2.5 gider ve satirda 2–3 yazar', async () => {
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
   antrenmanSayfasiniOlustur();
 
   await seciliKartaBekle('Bench Press');
   await paneliAc(kullanici);
-  await kullanici.clear(screen.getByLabelText('Ağırlık (kg)'));
-  await kullanici.type(screen.getByLabelText('Ağırlık (kg)'), '60');
-  await kullanici.clear(screen.getByLabelText('Tekrar'));
-  await kullanici.type(screen.getByLabelText('Tekrar'), '8');
-  await kullanici.type(screen.getByLabelText('RIR (opsiyonel)'), 'abc');
-  await kullanici.click(screen.getByRole('button', { name: 'Set ekle' }));
+  await kullanici.click(screen.getByRole('button', { name: 'RIR (opsiyonel): girilmedi' }));
+  await kullanici.click(screen.getByRole('button', { name: '2–3' }));
+  await setEkle(kullanici, '60', '8');
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('RIR tam sayı olmalı.');
-  expect(istekYapildiMi).toBe(false);
+  expect(await screen.findByText('RIR 2–3')).toBeInTheDocument();
+  expect(ortam.sonGonderilenGovde()).toMatchObject({ weight: 60, reps: 8, rir: 2.5 });
 });
 
 test('acik oturum sorgusu 500 donerse hata gosterilir, bos durum metni GORUNMEZ', async () => {
