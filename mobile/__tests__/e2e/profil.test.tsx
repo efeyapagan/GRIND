@@ -98,6 +98,11 @@ beforeEach(async () => {
   await session.write('tok', ileriTarih(60_000), 'efeypgn');
 });
 
+/**
+ * Bu dosyadaki ilk test tum rotalari SOGUK derler (#277 ile ayni). CI bu dosyayi en uzun dosya diye ilk
+ * sirada, diger iscilerle es zamanli kosuyor: 20 sn asildi (#292, 39 sn) ve yarim kalan yonlendirme sonraki
+ * testlere sizdi. Sonraki testler derlenmis modulleri kullanir, 20 sn onlara yeter.
+ */
 test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok', async () => {
   profilBackendiKur();
 
@@ -113,7 +118,7 @@ test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok',
   const sekmeler = screen.getAllByRole('tab');
   expect(sekmeler.map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler']);
   expect(screen.getByRole('tab', { name: 'Geçmiş' }).props.accessibilityState).toEqual({ selected: true });
-}, 20_000);
+}, 60_000);
 
 test('Hesap ayarlari dugmesi sekmesiz hesap ekranini acar', async () => {
   profilBackendiKur();
