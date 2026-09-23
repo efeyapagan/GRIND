@@ -1,3 +1,4 @@
+import type { ReactNode, Ref } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, ChevronUp, CirclePlay, Plus, Trash2 } from 'lucide-react-native';
@@ -17,6 +18,11 @@ interface Props {
   onHareketKaldir: (exerciseId: number) => void;
   // #229: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur.
   onSiraDegis: (exerciseIds: number[]) => void;
+  // #274: secili kartin en altinda cizilir (set paneli) -- kart ve panel alt alta durur.
+  seciliKartAlti?: ReactNode;
+  // Secili kartin olcumu ve boyutu degisince haber: ekran, karti gorunur alana kaydirir.
+  seciliKartRef?: Ref<View>;
+  onSeciliKartYerlesti?: () => void;
 }
 
 function setSayaci(hareket: HareketIlerlemesi): string {
@@ -37,6 +43,9 @@ export default function HareketKartlari({
   onSetSil,
   onHareketKaldir,
   onSiraDegis,
+  seciliKartAlti,
+  seciliKartRef,
+  onSeciliKartYerlesti,
 }: Props) {
   const { t } = useTranslation();
   const idler = ilerleme.map((hareket) => hareket.exerciseId);
@@ -51,6 +60,9 @@ export default function HareketKartlari({
         return (
           <View
             key={hareket.exerciseId}
+            testID={`hareket-karti-${hareket.exerciseId}`}
+            ref={secili ? seciliKartRef : undefined}
+            onLayout={secili ? onSeciliKartYerlesti : undefined}
             className={`flex-col gap-2 rounded-xl bg-surface-1 p-4 ${secili ? 'ring-1 ring-muted' : ''}`}
           >
             <Pressable
@@ -107,6 +119,7 @@ export default function HareketKartlari({
                     <Text className="text-label text-danger">Hareketi kaldır</Text>
                   </Pressable>
                 </View>
+                {seciliKartAlti}
               </>
             )}
           </View>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, ClipboardList, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,7 @@ import { formatSaat } from '../lib/format';
 import { adaGoreSirala } from '../lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '../lib/gecikmeliSilme';
 import { varsayilanHareket } from '../lib/ilerleme';
+import { kartHizalamaKaydirmasi } from '../lib/kartHizalama';
 import { oturumdanSablonHareketleri } from '../lib/sablonTaslagi';
 import SetList from '../components/SetList';
 import AddSetForm from '../components/AddSetForm';
@@ -169,8 +170,39 @@ export default function AntrenmanPage() {
   function kartSec(exerciseId: number) {
     if (secimYap(exerciseId)) {
       setPanelAcik(true);
+      hizalanacakKart.current = exerciseId;
     }
   }
+
+  // #274: alta yapisik panel acilinca secili kartin altini ortuyordu (kart da genisledigi icin).
+  // Kart ve panel cizildikten SONRA olculur; sayfa, kart panelin tam ustunde kalacak kadar kayar.
+  // Ref (state degil): dokunusun kendisi zaten yeniden cizim tetikler, hizalama o cizimin ardindan
+  // BIR KEZ yapilir. Bagimlilik dizisi yok -- ref'i her cizimden sonra okumak ucuzdur.
+  const hizalanacakKart = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const exerciseId = hizalanacakKart.current;
+    if (exerciseId === null || !panelAcik) {
+      return;
+    }
+    hizalanacakKart.current = null;
+    const kart = document.querySelector(`[data-hareket-karti="${exerciseId}"]`);
+    const panel = document.querySelector('[data-alt-panel]');
+    if (!kart || !panel) {
+      return;
+    }
+    const kartKutusu = kart.getBoundingClientRect();
+    const kaydirma = kartHizalamaKaydirmasi(
+      { ust: kartKutusu.top, alt: kartKutusu.bottom },
+      {
+        ust: document.querySelector('[data-kabuk-baslik]')?.getBoundingClientRect().bottom ?? 0,
+        alt: panel.getBoundingClientRect().top,
+      },
+    );
+    if (kaydirma !== 0) {
+      const azHareket = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      window.scrollBy({ top: kaydirma, behavior: azHareket ? 'auto' : 'smooth' });
+    }
+  });
 
   function hareketEkle(exerciseId: number) {
     if (!gorunenOturum) {

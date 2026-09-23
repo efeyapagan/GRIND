@@ -104,6 +104,7 @@ function HareketKarti({ hareket, sira, sonMu, secili, setler, onSec, onSetSil, o
   return (
     <li
       ref={dugumuBagla}
+      data-hareket-karti={hareket.exerciseId}
       style={stil}
       className={`flex flex-col gap-2 rounded-xl p-4 ${surukleniyor ? 'z-10 bg-surface-4' : 'bg-surface-1'} ${secili ? 'ring-1 ring-muted' : ''}`}
     >
