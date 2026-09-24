@@ -6,14 +6,15 @@ import { session } from '../auth/session';
 import { kendiProfilimiKur, kullaniciProfili, kullaniciSatiri, sosyalSahneyiOlustur } from '../test/sosyalSahne';
 
 /**
- * #284: kullanıcı arama. Giriş noktası kendi profil başlığındaki arama ikonu; sonuç satırları takip
+ * #284: kullanıcı arama. Giriş noktası Profil'in kök ekranlarında üst kabuktaki arama ikonu (#293'te
+ * profil başlığından buraya taşındı, bkz. `App.test.tsx`daki ikon testi); sonuç satırları takip
  * listeleriyle aynı satırdır ve profile götürür.
  */
 afterEach(() => {
   session.clear();
 });
 
-test('profil basligindaki arama ikonu arama ekranini acar; yazilani sunucuda arar ve profile goturur', async () => {
+test('yazilani sunucuda arar ve sonuca dokununca profile goturur', async () => {
   const kullanici = userEvent.setup();
   kendiProfilimiKur();
   const aramalar: string[] = [];
@@ -24,9 +25,8 @@ test('profil basligindaki arama ikonu arama ekranini acar; yazilani sunucuda ara
     }),
     http.get('/api/users/ayse/profile', () => HttpResponse.json(kullaniciProfili('ayse', 'None'))),
   );
-  sosyalSahneyiOlustur('/profile');
+  sosyalSahneyiOlustur('/search');
 
-  await kullanici.click(await screen.findByRole('link', { name: 'Kullanıcı ara' }));
   await kullanici.type(await screen.findByRole('searchbox', { name: 'Kullanıcı ara' }), 'ayş');
   await kullanici.click(await screen.findByRole('link', { name: /^ayse/ }));
 

@@ -5,9 +5,13 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import RekorKarti from '../../../src/components/RekorKarti';
 
-/** web/src/pages/RecordsPage.tsx ile ayni: her egzersiz icin en agir set ve en cok tekrar AYRI. */
+/**
+ * web/src/pages/RecordsPage.tsx ile ayni: her egzersiz icin en agir set ve en cok tekrar AYRI.
+ * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti -- `usePageTitle('')`
+ * onceki basligi temizler.
+ */
 export default function RecordsScreen() {
-  usePageTitle('Rekorlar');
+  usePageTitle('');
   const { data, isLoading, isError } = useRecords();
   const { data: takvimOzeti } = useGuncelTakvimOzeti();
   // #72: web ile ayni -- platodaki kartlara rozet; sorgu dusse de rekorlar gosterilir.

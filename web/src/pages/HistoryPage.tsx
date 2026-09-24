@@ -30,10 +30,13 @@ import GrindyMaskot from '../ui/GrindyMaskot';
  *
  * Pencere acikken sayfadan cikilirsa silme IPTAL EDILMEZ, kaldirma (unmount) sirasinda
  * tamamlanir: kullanici "sildim" dedi, geri almadi.
+ *
+ * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti (bkz. `RecordsPage.tsx`
+ * ayni gerekce) -- `usePageTitle('')` onceki basligi temizler.
  */
 export default function HistoryPage() {
   const { t } = useTranslation();
-  usePageTitle(t('kabuk.sekmeGecmis'));
+  usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   // Sorgu istemcisi baglamdan gelir ve uygulama boyunca AYNI ornektir; bu yuzden dogrudan
   // bagimlilik olarak kullanilabilir, ref'e kopyalanmasi gerekmez.

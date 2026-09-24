@@ -52,6 +52,7 @@ function testRouterOlustur() {
           { path: 'antrenman', element: <SayfaGovdesi baslik="Antrenman başlat" metin="Antrenman sayfasi" /> },
           { path: 'profile', element: <SayfaGovdesi baslik="Hesap" metin="Profil sayfasi" /> },
           { path: 'profile/account', element: <SayfaGovdesi baslik="Hesap ayarları" metin="Hesap ayarları sayfasi" /> },
+          { path: 'search', element: <SayfaGovdesi baslik="Kullanıcı ara" metin="Kullanıcı ara sayfasi" /> },
           { path: 'templates', element: <SayfaGovdesi baslik="Şablonlar" metin="Şablonlar sayfasi" /> },
         ],
       },
@@ -147,9 +148,11 @@ test('ust kabuktaki baslik o an hangi ekranda oldugumuzu gosterir ve gezinince g
   await screen.findByText('Ic sayfa icerigi');
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ana sayfa');
 
-  await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
-  await screen.findByText('Profil sayfasi');
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hesap');
+  // #293: Profil kullanilmaz -- o ekranda ust bar (dolayisiyla `<h1>`) BILEREK yok, bkz.
+  // "Profil ekraninda GRIND yerine hesap ayarlari kisayolu gorunur..." testi.
+  await kullanici.click(screen.getByRole('link', { name: 'Antrenman başlat' }));
+  await screen.findByText('Antrenman sayfasi');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Antrenman başlat');
 });
 
 /**
@@ -234,7 +237,8 @@ test('alt ekranda ust basliktaki geri dugmesi gorunur ve onceki sayfaya doner', 
 
 /**
  * Issue #293: Profil'in kok ekranlarinda "GRIND" yazisi yerini hesap ayarlarina giden bir kisayola
- * birakir -- "Hesap ayarları" düğmesi profil basligindan kalktigi icin.
+ * birakir -- "Hesap ayarları" düğmesi profil basligindan kalktigi icin. #293 (devami): bu ekranda
+ * ust bar TAMAMEN kalkti (artik `<header>` element'i yok, `banner` rolu aranmaz).
  */
 test('Profil ekraninda GRIND yerine hesap ayarlari kisayolu gorunur ve /profile/account a gider', async () => {
   const kullanici = userEvent.setup();
@@ -252,9 +256,37 @@ test('Profil ekraninda GRIND yerine hesap ayarlari kisayolu gorunur ve /profile/
   await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
   await screen.findByText('Profil sayfasi');
 
-  const ustKabuk = screen.getByRole('banner');
-  expect(within(ustKabuk).queryByText('GRIND')).not.toBeInTheDocument();
-  await kullanici.click(within(ustKabuk).getByRole('link', { name: 'Hesap ayarları' }));
+  expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  expect(screen.queryByText('GRIND')).not.toBeInTheDocument();
+  await kullanici.click(screen.getByRole('link', { name: 'Hesap ayarları' }));
 
   expect(await screen.findByText('Hesap ayarları sayfasi')).toBeInTheDocument();
+});
+
+/**
+ * Issue #293 (devami): arama ikonu de profil basligindaki `@kullanici adi`nin yanindan kalkip ayni
+ * kisayol alanina, hesap ayarlarinin HEMEN SOLUNA tasindi.
+ */
+test('Profil ekraninda hesap ayarlari kisayolunun solunda arama ikonu var ve /search a gider', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
+  await screen.findByText('Profil sayfasi');
+
+  const arama = screen.getByRole('link', { name: 'Kullanıcı ara' });
+  const hesapAyarlari = screen.getByRole('link', { name: 'Hesap ayarları' });
+  expect(arama.compareDocumentPosition(hesapAyarlari) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  await kullanici.click(arama);
+
+  expect(await screen.findByText('Kullanıcı ara sayfasi')).toBeInTheDocument();
 });

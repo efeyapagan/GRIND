@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Home, Menu, Plus, User, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, Home, Menu, Plus, Search, User, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
@@ -16,6 +16,10 @@ import { altEkranMi, geriHedefi, profilAnaEkraniMi } from './lib/geriKaydirma';
  * Hesap menusu KALDIRILDI (kullanici karari): Profil artik alt menude kendi sekmesi, "Cikis yap"
  * o sekmenin (Hesap) icinde en altta durur (bkz. ProfilePage) -- ust kabukta ayrica bir hesap
  * ikonuna/popover'a gerek kalmadi. Sag ustte "GRIND" yazisi ve hemen solunda tema dugmesi (#194).
+ *
+ * #293: Profil'in kok ekranlarinda (Gecmis/Rekorlar/Olculer) bu bar TAMAMEN kalkar --
+ * `profilAnaEkraniMi` -- yerine yalnizca arama + hesap ayarlari kisayollarini tasiyan ince bir serit
+ * gelir; fotograf ve isim (ProfilBasligi) boylece guvenli alanin hemen altindan baslar.
  *
  * Alt menu (issue #119/#120): Ana Sayfa · (+) · Profil -- simetrik 1-1, ortada tasan buyuk bir "+"
  * dugmesi. UCU DE simgeden ibarettir, gorunur etiket YOK -- erisilebilir ad `aria-label`den gelir
@@ -57,54 +61,75 @@ function Kabuk() {
     }
   }
 
+  const profilKok = profilAnaEkraniMi(konum.pathname);
+
   return (
     <div className="min-h-dvh bg-bg text-fg">
-      <header data-kabuk-baslik className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            {/* #255: kok sekmeler ve Profil'in kendi alt sekmeleri DISINDAKI her ekranda (sablonlar,
-                GRINDY, antrenman bitirme...) tutarli bir geri dugmesi -- daha once her ekran kendi
-                ad-hoc "ChevronLeft + metin" baglantisini tekrarliyordu. */}
-            {altEkranMi(konum.pathname) && (
-              <button
-                type="button"
-                aria-label={t('kabuk.geri')}
-                onClick={geriGit}
-                className="-ml-2 flex size-11 shrink-0 items-center justify-center text-fg"
-              >
-                <ChevronLeft aria-hidden size={22} />
-              </button>
-            )}
-            <h1 className="truncate text-heading">{baslik}</h1>
-          </div>
-          {/* #194: tema dugmesi GRIND'in hemen solunda. #293: Profil'in kok ekranlarinda "GRIND"
-              yazisi yerini hesap ayarlarina giden bir kisayola ("3 cizgi") birakir -- "Hesap
-              ayarlari" dugmesi profil basligindan kalktigi icin baska bir erisim yolu gerekiyordu. */}
-          <div className="flex shrink-0 items-center gap-3">
-            <TemaDugmesi />
-            {profilAnaEkraniMi(konum.pathname) ? (
-              <Link
-                to="/profile/account"
-                aria-label={t('ortak.hesapAyarlari')}
-                title={t('ortak.hesapAyarlari')}
-                className="flex size-8 items-center justify-center text-fg"
-              >
-                <Menu aria-hidden size={22} />
-              </Link>
-            ) : (
-              <span className="text-label text-muted uppercase">GRIND</span>
-            )}
+      {profilKok ? (
+        /* #293 (devami): Profil'in kok ekranlarinda ust bar (baslik + GRIND) TAMAMEN kalkar --
+         * fotograf ve isim (ProfilBasligi) yukarida bosalan yerden baslasin diye. Geriye kalan
+         * tek sey arama + hesap ayarlari kisayollari; onlar da bardan degil, dogrudan guvenli
+         * alanin hemen altindan baslar ("tam ustten"). NOT: tema dugmesi (#194) bu ekranlarda
+         * GORUNMEZ -- baska bir ekrandan degistirilebilir, burada ayrica bir yer ayrilmadi. */
+        <div className="fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top)]">
+          <div className="mx-auto flex h-10 max-w-md items-center justify-end gap-3 px-4">
+            <Link
+              to="/search"
+              aria-label={t('takip.kullaniciAra')}
+              title={t('takip.kullaniciAra')}
+              className="flex size-8 items-center justify-center text-fg"
+            >
+              <Search aria-hidden size={20} />
+            </Link>
+            <Link
+              to="/profile/account"
+              aria-label={t('ortak.hesapAyarlari')}
+              title={t('ortak.hesapAyarlari')}
+              className="flex size-8 items-center justify-center text-fg"
+            >
+              <Menu aria-hidden size={22} />
+            </Link>
           </div>
         </div>
-      </header>
+      ) : (
+        <header data-kabuk-baslik className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+          <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
+            <div className="flex min-w-0 items-center gap-2">
+              {/* #255: kok sekmeler ve Profil'in kendi alt sekmeleri DISINDAKI her ekranda (sablonlar,
+                  GRINDY, antrenman bitirme...) tutarli bir geri dugmesi -- daha once her ekran kendi
+                  ad-hoc "ChevronLeft + metin" baglantisini tekrarliyordu. */}
+              {altEkranMi(konum.pathname) && (
+                <button
+                  type="button"
+                  aria-label={t('kabuk.geri')}
+                  onClick={geriGit}
+                  className="-ml-2 flex size-11 shrink-0 items-center justify-center text-fg"
+                >
+                  <ChevronLeft aria-hidden size={22} />
+                </button>
+              )}
+              <h1 className="truncate text-heading">{baslik}</h1>
+            </div>
+            {/* #194: tema dugmesi GRIND'in hemen solunda. */}
+            <div className="flex shrink-0 items-center gap-3">
+              <TemaDugmesi />
+              <span className="text-label text-muted uppercase">GRIND</span>
+            </div>
+          </div>
+        </header>
+      )}
 
       {/* #232: sol kenardan saga kaydirinca bir onceki sayfa (useGeriKaydirma); kayarken yalnizca
           `main` hareket eder. `touch-pan-y` + `touch-pinch-zoom`: dikey kaydirma ve yakinlastirma
-          tarayicida kalir, yatay hareket sayfaya gelir (tarayici pointercancel gondermez). */}
+          tarayicida kalir, yatay hareket sayfaya gelir (tarayici pointercancel gondermez).
+          #293: Profil'in kok ekranlarinda ust bar kalktigi icin ustteki bosluk da guvenli alanla
+          sinirli -- "yarim satir"lik kalan bosluk ProfilBasligi'in kendi `pt-2`'sinden gelir. */}
       <main
         ref={geriKaydirmaRef}
         {...geriKaydirmaIsaretcileri}
-        className="mx-auto max-w-md touch-pan-y touch-pinch-zoom px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))]"
+        className={`mx-auto max-w-md touch-pan-y touch-pinch-zoom px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] ${
+          profilKok ? 'pt-[env(safe-area-inset-top)]' : 'pt-[calc(4rem+env(safe-area-inset-top))]'
+        }`}
       >
         <Outlet />
       </main>
