@@ -1,10 +1,9 @@
-import { Navigate, Outlet, useParams } from 'react-router-dom';
-import { History, Lock, Trophy } from 'lucide-react';
+import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
+import { History, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { useKullaniciProfili } from '../api/queries';
 import { usePageTitle } from '../ui/PageTitleContext';
-import BosDurum from '../ui/BosDurum';
 import HataKutusu from '../ui/HataKutusu';
 import Rozet from '../ui/Rozet';
 import ProfilBasligi from '../components/ProfilBasligi';
@@ -18,13 +17,16 @@ const SEKMELER: readonly ProfilSekmesi[] = [
 
 /**
  * Başkasının profili (#284): kendi profilindeki başlığın aynısı, "Profili düzenle" yerine takip düğmesi.
- * Arkadaşsa Geçmiş + Rekorlar salt-okunur (#282); değilse sekmeler hiç çizilmez, antrenman uçlarına istek
- * gitmez. Ölçüler başkasında yoktur. Kendi kullanıcı adına gelinirse kendi profiline yönlendirilir.
+ * Kapı artık arkadaşlık değil hedefin gizlilik seviyesi (#294): Gizli'de yalnızca Rekorlar sekmesi
+ * çizilir, Geçmiş linki hiç görünmez (gerçek kısıtlama sunucuda; burada yalnızca arayüz önceden
+ * doğru çizilir). Ölçüler başkasında yoktur. Kendi kullanıcı adına gelinirse kendi profiline
+ * yönlendirilir.
  */
 export default function KullaniciProfiliPage() {
   const { t } = useTranslation();
   const { username: ad = '' } = useParams();
   const { username: ben } = useAuth();
+  const konum = useLocation();
   const kendisi = ben !== null && ad.toLowerCase() === ben.toLowerCase();
   const profil = useKullaniciProfili(kendisi ? null : ad);
   usePageTitle(ad);
@@ -40,6 +42,9 @@ export default function KullaniciProfiliPage() {
   }
 
   const arkadas = profil.data.relation === 'Friends';
+  const gizli = profil.data.privacyLevel === 'Gizli';
+  const sekmeler = gizli ? SEKMELER.filter((s) => s.to === 'records') : SEKMELER;
+
   return (
     <div className="flex flex-col gap-4">
       <ProfilBasligi
@@ -49,13 +54,12 @@ export default function KullaniciProfiliPage() {
       >
         <TakipDugmesi kullaniciAdi={profil.data.username} iliski={profil.data.relation} />
       </ProfilBasligi>
-      {arkadas ? (
-        <>
-          <ProfilSekmeleri sekmeler={SEKMELER} />
-          <Outlet />
-        </>
+      <ProfilSekmeleri sekmeler={sekmeler} />
+      {gizli && <p className="text-label text-muted">{t('takip.gizliHesapGecmisi')}</p>}
+      {gizli && konum.pathname.endsWith('/history') ? (
+        <Navigate to={`/u/${ad}/records`} replace />
       ) : (
-        <BosDurum ikon={Lock} baslik={t('takip.arkadasDegil')} />
+        <Outlet />
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Entities;
 
 public class User
@@ -30,6 +32,12 @@ public class User
     /// Doğum tarihi (#280). Yaş SAKLANMAZ: her yıl değişir, sorgu anında TR gününe göre hesaplanır.
     /// </summary>
     public DateOnly? BirthDate { get; set; }
+
+    /// <summary>
+    /// Antrenman geçmişi ve rekorların başkalarına görünürlüğü (#294); varsayılan <see cref="Enums.PrivacyLevel.Kisitli"/>.
+    /// Yalnızca sahibi tarafından, <c>PUT /api/settings/privacy-level</c> ile değiştirilir.
+    /// </summary>
+    public PrivacyLevel PrivacyLevel { get; set; } = PrivacyLevel.Kisitli;
 
     public ICollection<Exercise> Exercises { get; set; } = [];
     public ICollection<WorkoutTemplate> WorkoutTemplates { get; set; } = [];

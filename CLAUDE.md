@@ -58,6 +58,15 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   göstergesi var (bırakmak profilden). Takip/bırak sonrası her şey sunucudan tazelenir (`useTakipEt`). Mobil
   profil düzenlerinde `Slot` hep aynı konumda çizilir — başka yere konunca iç navigator yeniden kurulup yolun
   parçasını parametre sanıyordu.
+- **Gizlilik seviyesi (2026-09-24, #294)** — #284'teki arkadaş kapısı kaldırıldı: `User.PrivacyLevel`
+  (`Acik` / `Kisitli` (varsayılan) / `Gizli`, `PUT /api/settings/privacy-level`) artık kimin göreceğini
+  DEĞİL, kimlikli HERHANGİ bir kullanıcının ne kadarını göreceğini belirler: `Acik` tüm geçmiş, `Kisitli`
+  son 5 antrenman, `Gizli` yalnızca rekorlar (geçmiş sekmesi hiç çizilmez). Servis adı
+  `FriendActivityService` → `PublicActivityService` (arkadaşlık artık kapı değil, bkz. Yetkilendirme
+  Kuralı istisnası). Web `KullaniciProfiliPage`/mobil `u/[username]/_layout` sekmeleri
+  `privacyLevel`'e göre filtreler; mobilde hangi sekmeye yönlendirileceğine `index.tsx` profil verisi
+  onbellekten gelene kadar bekleyip karar verir (aksi hâlde `Slot` geçici olarak yanlış sekmeyi monte
+  edip gereksiz bir geçmiş isteği atıyordu).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -121,15 +130,19 @@ kendi template/session'ına referans veremez. Bu kontrol her ilgili servis metod
 yapılmalı — sadece Id ile sorgulayıp sahiplik kontrolünü atlamak bir IDOR (Insecure Direct
 Object Reference) açığıdır.
 
-> İstisna (arkadaş görünümü — #282, 2026-09-24): arkadaşlar (karşılıklı takip) birbirinin **Geçmiş** ve
-> **Rekorlarını salt-okunur** görür — yalnızca `GET /api/users/{username}/history` ve `/records`. Bu iki
-> uç TEK kapıdan geçer: `FriendActivityService` (hedef pasif/yoksa 404, bakan kendisi ya da arkadaşı
-> değilse 403; yetki her istekte veritabanından okunur, takipten çıkıldığı an erişim biter). Geçmiş ve
-> rekor servislerinin `userId` alan metotları (`GetForUserAsync`, `GetAllTimeForUserAsync`) yetki kontrolü
-> YAPMAZ — yalnızca bu kapıdan sonra çağrılır; mevcut `/api/history`, `/api/records` ve yazan her uç hâlâ
-> yalnız `currentUserId` ile çalışır. Paylaşılmayanlar: oturum notu (`FriendHistorySessionResponse`'ta alan
-> olarak yok), ölçüler, AI yorumları, export. Arkadaş verisine yeni bir uç açmak bu istisnayı genişletmektir:
-> aynı kapıdan geçer ve buraya yazılır.
+> İstisna (herkese açık antrenman verisi — #282, #294, 2026-09-24): her kullanıcının **Geçmiş** ve
+> **Rekorları**, hesap sahibinin kendi `PrivacyLevel` tercihine göre kimlikli HERHANGİ bir kullanıcıya
+> salt-okunur görünür — yalnızca `GET /api/users/{username}/history` ve `/records`. Kapı artık arkadaşlık
+> DEĞİL: `Acik` tüm geçmiş, `Kisitli` (varsayılan) yalnızca son 5 antrenman, `Gizli` geçmişte boş liste
+> (403 DEĞİL — bu bir yetki hatası değil, sahibinin tercihi). **Rekorlar üç seviyede de görünür.** Bu iki
+> uç TEK kapıdan geçer: `PublicActivityService` (hedef pasif/yoksa 404; bunun ötesinde ilişki kontrolü
+> YOK — içerik miktarı hedefin `PrivacyLevel`'ine göre belirlenir; yetki her istekte veritabanından
+> okunur). Geçmiş ve rekor servislerinin `userId` alan metotları (`GetForUserAsync`,
+> `GetAllTimeForUserAsync`) yetki kontrolü YAPMAZ — yalnızca bu kapıdan sonra çağrılır; mevcut
+> `/api/history`, `/api/records` ve yazan her uç hâlâ yalnız `currentUserId` ile çalışır. Paylaşılmayanlar:
+> oturum notu (`FriendHistorySessionResponse`'ta alan olarak yok), ölçüler (hiçbir seviyede paylaşılmaz),
+> AI yorumları, export. Başkasının verisine yeni bir uç açmak bu istisnayı genişletmektir: aynı kapıdan
+> geçer ve buraya yazılır.
 
 > Karar (JWT içeriği): JWT SADECE kimlik taşır (`UserId`, `Username`) — rol/plan gibi
 > zamanla değişebilecek öznitelikler token'a claim olarak gömülmez. Sebep: kullanıcı

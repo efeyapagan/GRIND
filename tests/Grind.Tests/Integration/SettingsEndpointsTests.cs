@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Grind.Api.Models.Dtos.Auth;
+using Grind.Api.Models.Dtos.Profile;
 using Grind.Api.Models.Dtos.Settings;
 using Grind.Api.Models.Dtos.Stats;
+using Grind.Api.Models.Enums;
 
 namespace Grind.Tests.Integration;
 
@@ -14,6 +18,9 @@ namespace Grind.Tests.Integration;
 [Trait("Category", "Database")]
 public class SettingsEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApiFactory>
 {
+    private static readonly JsonSerializerOptions Json =
+        new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
     private async Task<HttpClient> RegisteredClientAsync()
     {
         var client = factory.CreateClient();
@@ -60,6 +67,34 @@ public class SettingsEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
 
         var response = await client.PutAsJsonAsync("/api/settings/weekly-target",
             new UpdateWeeklyTargetRequest { WeeklyTargetDays = hedef });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PrivacyLevel.Acik)]
+    [InlineData(PrivacyLevel.Kisitli)]
+    [InlineData(PrivacyLevel.Gizli)]
+    public async Task Gizlilik_seviyesi_ayarlanir_ve_profilde_gorunur(PrivacyLevel seviye)
+    {
+        var client = await RegisteredClientAsync();
+
+        var ayarla = await client.PutAsJsonAsync("/api/settings/privacy-level",
+            new UpdatePrivacyLevelRequest { PrivacyLevel = seviye });
+        Assert.Equal(HttpStatusCode.NoContent, ayarla.StatusCode);
+
+        var profil = await client.GetFromJsonAsync<ProfileResponse>("/api/profile", Json);
+        Assert.Equal(seviye, profil!.PrivacyLevel);
+    }
+
+    [Fact]
+    public async Task Gecersiz_gizlilik_seviyesi_400_doner()
+    {
+        var client = await RegisteredClientAsync();
+
+        using var govde = new StringContent(
+            "{\"privacyLevel\":\"Yok\"}", System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PutAsync("/api/settings/privacy-level", govde);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

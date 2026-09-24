@@ -25,4 +25,14 @@ public class SettingsService(
         user.WeeklyTargetDays = request.WeeklyTargetDays;
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task SetPrivacyLevelAsync(
+        UpdatePrivacyLevelRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+                   ?? throw new UnauthorizedException("Oturum geçersiz.");
+
+        user.PrivacyLevel = request.PrivacyLevel;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
 }

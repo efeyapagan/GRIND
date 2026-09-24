@@ -59,6 +59,7 @@ const PROFIL = {
   age: 25,
   hasAvatar: false,
   avatarVersion: null,
+  privacyLevel: 'Kisitli',
 };
 
 /**
@@ -92,6 +93,7 @@ function profilBackendiKur(baslangic: Partial<typeof PROFIL> = {}) {
         followerCount: 12,
         followingCount: 7,
         relation: 'Self',
+        privacyLevel: 'Kisitli',
       };
     }
     return sahteRequest(path, init as never);

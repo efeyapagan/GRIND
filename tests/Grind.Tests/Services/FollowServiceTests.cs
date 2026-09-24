@@ -178,6 +178,7 @@ public class FollowServiceTests
 
             Assert.Equal(FollowRelation.Self, (await aGozuyle.GetProfileAsync(a.Username)).Relation);
             Assert.Equal(FollowRelation.None, (await aGozuyle.GetProfileAsync(b.Username)).Relation);
+            Assert.Equal(PrivacyLevel.Kisitli, (await aGozuyle.GetProfileAsync(b.Username)).PrivacyLevel);
 
             await aGozuyle.FollowAsync(b.Username);
             Assert.Equal(FollowRelation.Following, (await aGozuyle.GetProfileAsync(b.Username)).Relation);

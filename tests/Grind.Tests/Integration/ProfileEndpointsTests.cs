@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.Profile;
+using Grind.Api.Models.Enums;
 
 namespace Grind.Tests.Integration;
 
@@ -14,6 +17,8 @@ namespace Grind.Tests.Integration;
 public class ProfileEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApiFactory>
 {
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
+    private static readonly JsonSerializerOptions Json =
+        new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private async Task<(HttpClient Client, string Username)> RegisteredClientAsync()
     {
@@ -39,11 +44,12 @@ public class ProfileEndpointsTests(GrindApiFactory factory) : IClassFixture<Grin
             new UpdateProfileDetailsRequest { DisplayName = "Efe Yapağan", BirthDate = new DateOnly(2000, 1, 1) });
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
 
-        var profil = await client.GetFromJsonAsync<ProfileResponse>("/api/profile");
+        var profil = await client.GetFromJsonAsync<ProfileResponse>("/api/profile", Json);
         Assert.Equal(username, profil!.Username);
         Assert.Equal("Efe Yapağan", profil.DisplayName);
         Assert.Equal(new DateOnly(2000, 1, 1), profil.BirthDate);
         Assert.NotNull(profil.Age);
+        Assert.Equal(PrivacyLevel.Kisitli, profil.PrivacyLevel);
     }
 
     /// <summary>

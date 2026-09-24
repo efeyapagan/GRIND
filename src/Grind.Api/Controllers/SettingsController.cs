@@ -25,4 +25,20 @@ public class SettingsController(ISettingsService settingsService) : ControllerBa
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Antrenman geçmişi ve rekorların başkalarına görünürlüğünü ayarlar (#294). Güncel değer
+    /// <c>GET /api/profile</c> yanıtında döner.
+    /// </summary>
+    [HttpPut("privacy-level")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> PutPrivacyLevel(
+        UpdatePrivacyLevelRequest request, CancellationToken cancellationToken)
+    {
+        await settingsService.SetPrivacyLevelAsync(request, cancellationToken);
+
+        return NoContent();
+    }
 }
