@@ -28,6 +28,9 @@ public class WorkoutSessionService(
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
     private const string ExerciseNotFound = "Egzersiz bulunamadı.";
 
+    /// <summary>İstemci zaman damgası gelecekte olduğunda gösterilen mesaj (#262, tolerans BodyWeightLog'la paylaşılır).</summary>
+    private const string FutureStart = "Antrenman başlangıcı gelecekte olamaz.";
+
     /// <summary>
     /// "Açık oturum" olarak sayılmanın süre sınırı (issue #191). Issue'nun kendi önerdiği örnek
     /// değer: bir antrenman genelde bundan çok kısa sürer, ama gece yarısını (hatta birkaç saatlik
@@ -65,7 +68,8 @@ public class WorkoutSessionService(
     }
 
     public async Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
-        long? templateId, string? notes, CancellationToken cancellationToken = default)
+        long? templateId, string? notes, DateTimeOffset? clientStartedAt = null,
+        CancellationToken cancellationToken = default)
     {
         var existing = await FindRecentOpenSessionAsync(cancellationToken);
 
@@ -90,7 +94,10 @@ public class WorkoutSessionService(
             // döndürüyor; navigasyonu burada bağlamak, SaveChanges sonrası aynı grafiği
             // ikinci bir gidiş-dönüşle yeniden okumanın önüne geçer (bkz. Faz 7 fix notu).
             Template = template,
-            StartedAt = timeProvider.GetUtcNow().UtcDateTime,
+            // #262: mobilde zayif salon baglantisi/istek gecikmesi "basla"ya basilan an ile
+            // sunucunun aldigi an arasinda fark yaratabilir -- istemci saatine (verilmisse)
+            // dusulur, BodyWeightLog'daki (#119) AYNI tolerans kullanilir (ClientTimestamp).
+            StartedAt = ClientTimestamp.Resolve(clientStartedAt, timeProvider, FutureStart),
             Notes = notes,
             // #60/#62: şablonun hareketleri antrenmana KOPYALANIR (anlık görüntü). Şablon sonradan
             // değişse de başlamış antrenmanın listesi ve ilerlemesi değişmez. Oturumla aynı commit.
@@ -220,7 +227,7 @@ public class WorkoutSessionService(
         StartSessionRequest request, CancellationToken cancellationToken = default)
     {
         var (session, created) = await GetOrOpenTodayAsync(
-            request.TemplateId, request.Notes, cancellationToken);
+            request.TemplateId, request.Notes, request.StartedAt, cancellationToken);
 
         if (!created)
         {

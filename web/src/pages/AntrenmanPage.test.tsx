@@ -852,10 +852,36 @@ test('bos durumda sablon kartina dokunmak templateId ile oturum baslatir ve hare
 
   expect(await screen.findByRole('button', { name: 'Bench Press, 0 / 4 set' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Squat, 0 / 3 set' })).toBeInTheDocument();
-  expect(ortam.baslatmaGovdeleri()).toEqual([{ templateId: 10 }]);
+  // #262: govde artik cihaz saatini de tasir (startedAt) -- yalnizca templateId'yi dogrula.
+  expect(ortam.baslatmaGovdeleri()).toEqual([expect.objectContaining({ templateId: 10 })]);
   // Baslikta sablon adi notr hap olarak (buyuk harf CSS ile).
   expect(screen.getByText('Push Day')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Şablonla başla' })).not.toBeInTheDocument();
+});
+
+/**
+ * Issue #262: mobilde zayif salon baglantisi/istek gecikmesi "basla"ya basilan an ile sunucunun
+ * aldigi an arasinda fark yaratabilir -- istemci CIHAZININ o anki saatini gonderir, sunucudan
+ * "simdi" istemez. Web de ayni degisikligi alir (kararlastirildi).
+ */
+test('oturum baslatma govdesi cihazin o anki saatini (startedAt) tasir', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    vi.setSystemTime(new Date('2026-09-14T09:00:00Z'));
+    const ortam = sahteSunucuyuKur({ sablonlar: [PUSH_DAY] });
+    const kullanici = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    antrenmanSayfasiniOlustur();
+
+    await kullanici.click(await screen.findByRole('button', { name: /Push Day/ }));
+
+    await waitFor(() =>
+      expect(ortam.baslatmaGovdeleri()).toEqual([
+        expect.objectContaining({ startedAt: '2026-09-14T09:00:00.000Z' }),
+      ]),
+    );
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test('baslatma var olan sablonsuz oturumu donerse sablon uygulanmadi bilgisi gorunur', async () => {
@@ -1424,7 +1450,10 @@ describe('sablonsuz antrenman ve sablon olarak kaydetme (#186, #209)', () => {
 
     await kullanici.click(await screen.findByRole('button', { name: 'Boş antrenman başlat' }));
 
-    await waitFor(() => expect(ortam.baslatmaGovdeleri()).toEqual([{ templateId: null }]));
+    // #262: govde artik cihaz saatini de tasir (startedAt) -- yalnizca templateId'yi dogrula.
+    await waitFor(() =>
+      expect(ortam.baslatmaGovdeleri()).toEqual([expect.objectContaining({ templateId: null })]),
+    );
     expect(await screen.findByRole('button', { name: 'Hareket ekle' })).toBeInTheDocument();
   });
 

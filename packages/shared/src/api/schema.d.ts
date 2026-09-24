@@ -4109,6 +4109,8 @@ export interface components {
             /** Format: int64 */
             templateId?: number | null;
             notes?: string | null;
+            /** Format: date-time */
+            startedAt?: string | null;
         };
         TemplateExerciseRequest: {
             /** Format: int64 */
