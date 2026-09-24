@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { History, Pencil, Ruler, Search, Trophy } from 'lucide-react-native';
+import { History, Pencil, Ruler, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, useProfilim } from '@grind/shared/api/queries';
 import { useAuth } from '../../../src/auth/AuthContext';
 import HataKutusu from '../../../src/ui/HataKutusu';
@@ -19,6 +19,7 @@ const SEKMELER: readonly ProfilSekmesi[] = [
  * Kendi profil başlığın (#283, düzeni #293'te değişti): ad, yaş ve fotoğraf `useProfilim`'den, sayaçlar
  * sunucudan (#281). "Hesap ayarları" ve "Profili düzenle" düğmeleri kalktı (#293): duzenle artik isim
  * satirinin sonundaki kalem, hesap ayarlarina erisim ust kabuktaki kisayoldan (bkz. `KabukBaslik.tsx`).
+ * Arama ikonu da (#293 devami) `adYani`'dan kalkip ust kabuga tasindi -- burada artik verilmiyor.
  */
 function KendiProfilBasligi() {
   const { t } = useTranslation();
@@ -47,19 +48,9 @@ function KendiProfilBasligi() {
           accessibilityRole="button"
           accessibilityLabel={t('ortak.profiliDuzenle')}
           onPress={() => router.push('/profile/edit')}
-          className="ml-auto size-9 items-center justify-center rounded-lg bg-surface-3"
+          className="size-6 items-center justify-center"
         >
           <Pencil color={ikonRenk.muted} size={16} />
-        </Pressable>
-      }
-      adYani={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('takip.kullaniciAra')}
-          onPress={() => router.push('/profile/search')}
-          className="size-9 items-center justify-center rounded-lg bg-surface-3"
-        >
-          <Search color={ikonRenk.muted} size={18} />
         </Pressable>
       }
     />
@@ -75,13 +66,16 @@ function KendiProfilBasligi() {
  * `Slot` HER ZAMAN ayni konumda cizilir: sekme disi ekranda agacin baska bir yerine konunca ic navigator
  * yeniden kuruluyor, `u/[username]`'e gecerken eski yolun parcasi parametre saniliyordu
  * (`/users/history/history`, #284).
+ *
+ * #293 (devami): web/src/pages/ProfileLayout.tsx ile ayni gerekce -- ust bar kalkinca boslugu
+ * `gap-6` devraldi, baslik ile sekmeler ve sekmelerle icerik arasina esit dagitir.
  */
 export default function ProfileLayout() {
   const pathname = usePathname();
   const sekmeEkrani = SEKMELER.some(({ to }) => to === pathname);
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 flex-col gap-6">
       {sekmeEkrani && (
         <>
           <KendiProfilBasligi />

@@ -21,10 +21,13 @@ import GrindyMaskot from '../../../src/ui/GrindyMaskot';
  * ayni desen): `FlatList`in `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi
  * ceker; sayfalar TanStack Query'nin kendi `pages` dizisinde birikir, istemci ayri bir
  * "biriktirilmis liste" state'i TUTMAZ.
+ *
+ * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti -- `usePageTitle('')`
+ * onceki basligi temizler.
  */
 export default function HistoryScreen() {
   const { t } = useTranslation();
-  usePageTitle('Geçmiş');
+  usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   const queryClient = useQueryClient();
   const silmeyiTamamla = useCallback(

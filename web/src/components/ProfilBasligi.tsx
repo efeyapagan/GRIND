@@ -29,6 +29,10 @@ const SAYACLAR = [
  * Görünen isim yoksa üst satır kullanıcı adına düşer. #284: aynı bileşen kendi profilinde ve
  * başkasınınkinde (DRY) -- veri ve ek öğeler çağırandan gelir. Sayılar ve yaş sunucudan gelir,
  * istemcide hesaplanmaz; sayaçlar ilgili takip listesini açar.
+ *
+ * #293 (devami): isim ve kullanıcı adı satırları BİLEREK ayrı, sıkı bir alt grupta (`gap-1`) --
+ * birbirine yakın durmaları istendi. Sayaç satırı bu ikiliden daha uzakta (`gap-4`) durur, ust
+ * kabuktaki bar kalkinca (App.tsx, profilAnaEkraniMi) `pt-2` artik "yarim satir" bosluğun kendisi.
  */
 export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, children }: Props) {
   const { t } = useTranslation();
@@ -38,17 +42,19 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, childre
     <section className="flex flex-col gap-3 pt-2">
       <div className="flex items-center gap-4">
         <ProfilFotografi profil={kisi} boyut="orta" />
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="min-w-0 truncate text-heading">{kisi.displayName || kisi.username}</h2>
-            {kisi.age !== null && (
-              <span className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</span>
-            )}
-            {duzenle}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="min-w-0 truncate text-body text-muted">@{kisi.username}</span>
-            {adYani}
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <h2 className="min-w-0 truncate text-heading">{kisi.displayName || kisi.username}</h2>
+              {kisi.age !== null && (
+                <span className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</span>
+              )}
+              {duzenle}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 truncate text-body text-muted">@{kisi.username}</span>
+              {adYani}
+            </div>
           </div>
           <ul aria-label={t('profil.sayaclar')} className="flex gap-4">
             {SAYACLAR.map(({ liste, alan, etiketAnahtari }) => (

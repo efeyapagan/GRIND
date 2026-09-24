@@ -22,9 +22,12 @@ const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hip
  * Sayfalama Onceki/Sonraki dugmeleri yerine SONSUZ KAYDIRMA'dir (issue #147, Gecmis'in #142'siyle
  * ayni desen): `FlatList`in `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi
  * ceker.
+ *
+ * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti -- `usePageTitle('')`
+ * onceki basligi temizler.
  */
 export default function MeasurementsScreen() {
-  usePageTitle('Ölçüler');
+  usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
   const silMutasyonu = useDeleteMeasurement();

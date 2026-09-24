@@ -24,10 +24,13 @@ const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hip
  * metniyle `apiHatasiniAyir`in genel hata yoluyla otomatik gösterilir (409'un alan hatası yoktur).
  * Liste her satırda SADECE dolu olan ölçüleri gösterir (bkz. `olcuMetni`, backend'in
  * `ExportTextFormatter`ındaki aynı mantığın istemci tarafı karşılığı).
+ *
+ * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti (bkz. `RecordsPage.tsx`
+ * ayni gerekce) -- `usePageTitle('')` onceki basligi temizler.
  */
 export default function MeasurementsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('kabuk.sekmeOlcumler'));
+  usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
   const silMutasyonu = useDeleteMeasurement();
