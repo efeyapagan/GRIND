@@ -21,7 +21,7 @@ public class FollowService(
 
     public async Task FollowAsync(string username, CancellationToken cancellationToken = default)
     {
-        var target = await GetActiveUserAsync(username, cancellationToken);
+        var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         if (target.Id == currentUser.UserId)
             throw new ValidationException("Kendini takip edemezsin.");
 
@@ -48,7 +48,7 @@ public class FollowService(
 
     public async Task UnfollowAsync(string username, CancellationToken cancellationToken = default)
     {
-        var target = await GetActiveUserAsync(username, cancellationToken);
+        var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var follow = await followRepository.GetAsync(currentUser.UserId, target.Id, cancellationToken);
         if (follow is null)
             return;
@@ -59,7 +59,7 @@ public class FollowService(
 
     public async Task<UserProfileResponse> GetProfileAsync(string username, CancellationToken cancellationToken = default)
     {
-        var target = await GetActiveUserAsync(username, cancellationToken);
+        var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var counts = await followRepository.GetCountsAsync(target.Id, cancellationToken);
         var relations = await RelationsAsync([target.Id], cancellationToken);
 
@@ -92,7 +92,7 @@ public class FollowService(
         Func<long, int, int, CancellationToken, Task<(IReadOnlyList<UserRef> Items, int TotalCount)>> fetch,
         CancellationToken cancellationToken)
     {
-        var target = await GetActiveUserAsync(username, cancellationToken);
+        var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var (items, total) = await fetch(target.Id, query.Skip(), query.PageSize, cancellationToken);
         return new PagedResponse<UserSummaryResponse>(
             await SummariesAsync(items, cancellationToken), query.Page, query.PageSize, total);
@@ -121,12 +121,5 @@ public class FollowService(
             (_, false, true) => FollowRelation.FollowedBy,
             _ => FollowRelation.None
         };
-    }
-
-    /// <summary>Pasif hesap, olmayan hesapla aynı 404'ü alır — pasifliği sızmaz.</summary>
-    private async Task<User> GetActiveUserAsync(string username, CancellationToken cancellationToken)
-    {
-        var user = await userRepository.GetByUsernameAsync(UsernameNormalizer.Normalize(username), cancellationToken);
-        return user is { DeletedAt: null } ? user : throw new NotFoundException("Kullanıcı bulunamadı.");
     }
 }

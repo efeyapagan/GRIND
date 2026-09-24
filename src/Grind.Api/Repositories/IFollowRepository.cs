@@ -11,6 +11,12 @@ public interface IFollowRepository : IRepository<Follow>
 {
     Task<Follow?> GetAsync(long followerId, long followeeId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// İki kullanıcı arkadaş mı (karşılıklı takip, #281) — iki satırın varlığından, tek sorguda. Hesap
+    /// aktifliğine BAKMAZ; o, kullanıcı adı çözülürken kontrol edilir.
+    /// </summary>
+    Task<bool> AreFriendsAsync(long userId, long otherId, CancellationToken cancellationToken = default);
+
     Task<FollowCounts> GetCountsAsync(long userId, CancellationToken cancellationToken = default);
 
     /// <summary><paramref name="userId"/>'yi takip edenler, en yeni takip önce.</summary>
