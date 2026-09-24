@@ -67,3 +67,17 @@ const KOK_YOLLAR = new Set([
 export function altEkranMi(konum: string): boolean {
   return !KOK_YOLLAR.has(konum);
 }
+
+/**
+ * Ust basliktaki "GRIND" yazisinin yerini alan hesap ayarlari kisayolu icin (issue #293): yalnizca
+ * Profil'in KOK ekranlarinda (Gecmis/Rekorlar/Olcumler) gorunur. Baskasinin profilinde (web `/u/...`,
+ * mobil `/profile/u/...` -- BASLE ILE baslamak yetmez, mobilde bu da `/profile` ile basliyor) ve
+ * Profil'in kendi alt ekranlarinda (`/profile/account`, `/profile/edit`, `/profile/search`) GORUNMEZ
+ * -- oralarda zaten #255'in geri dugmesi var, ikisi ayni satirda cakismaz. Bu yuzden `KOK_YOLLAR`'la
+ * ayni kumeyi ama ACIK bir esitlikle (startsWith degil) kontrol eder.
+ */
+const PROFIL_ANA_YOLLARI = new Set(['/profile', '/profile/history', '/profile/records', '/profile/measurements']);
+
+export function profilAnaEkraniMi(konum: string): boolean {
+  return PROFIL_ANA_YOLLARI.has(konum);
+}

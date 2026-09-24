@@ -14,15 +14,20 @@ const SAYACLAR = [
 interface Props {
   kisi: FotografSahibi & { age: number | null };
   sayaclar: KullaniciProfili | undefined;
+  /** `@kullanıcı adı` satırının sonu: kendi profilinde arama ikonu, arkadaşta "Arkadaş" göstergesi. */
   adYani?: ReactNode;
-  children: ReactNode;
+  /** İsim satırının sonu -- yalnızca kendi profilinde düzenleme kalemi (issue #293). */
+  duzenle?: ReactNode;
+  /** En alttaki düğme satırı: başkasında takip düğmesi. Kendi profilinde YOK (issue #293). */
+  children?: ReactNode;
 }
 
 /**
- * web/src/components/ProfilBasligi.tsx ile ayni (#283/#284): kendi profilinde ve başkasınınkinde tek
- * bileşen; veri ve düğmeler çağırandan gelir. Sayılar ve yaş sunucudan; sayaçlar takip listesini açar.
+ * web/src/components/ProfilBasligi.tsx ile ayni (#283/#284, duzeni #293'te degisti): solda fotograf,
+ * yaninda gorunen isim + yas (+ kalem), altinda `@kullanici adi` (+ arama/arkadas gostergesi), altinda
+ * uc sayac. Gorunen isim yoksa ust satir kullanici adina duser. Veri ve ek ogeler cagirandan gelir.
  */
-export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Props) {
+export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, children }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -33,7 +38,14 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Prop
         <View className="min-w-0 flex-1 flex-col gap-2">
           <View className="flex-row items-center gap-2">
             <Text accessibilityRole="header" numberOfLines={1} className="shrink text-heading text-fg">
-              {kisi.username}
+              {kisi.displayName || kisi.username}
+            </Text>
+            {kisi.age !== null && <Text className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</Text>}
+            {duzenle}
+          </View>
+          <View className="flex-row items-center gap-2">
+            <Text numberOfLines={1} className="min-w-0 shrink text-body text-muted">
+              @{kisi.username}
             </Text>
             {adYani}
           </View>
@@ -56,13 +68,7 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Prop
           </View>
         </View>
       </View>
-      {(kisi.displayName || kisi.age !== null) && (
-        <View className="flex-col">
-          {kisi.displayName && <Text className="text-body-lg text-fg">{kisi.displayName}</Text>}
-          {kisi.age !== null && <Text className="text-body text-muted">{t('profil.yas', { count: kisi.age })}</Text>}
-        </View>
-      )}
-      <View className="flex-row gap-2">{children}</View>
+      {children && <View className="flex-row gap-2">{children}</View>}
     </View>
   );
 }

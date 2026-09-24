@@ -1,7 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { History, Ruler, Search, Trophy } from 'lucide-react-native';
+import { History, Pencil, Ruler, Search, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, useProfilim } from '@grind/shared/api/queries';
 import { useAuth } from '../../../src/auth/AuthContext';
 import HataKutusu from '../../../src/ui/HataKutusu';
@@ -15,12 +15,11 @@ const SEKMELER: readonly ProfilSekmesi[] = [
   { to: '/profile/measurements', etiketAnahtari: 'kabuk.sekmeOlcumler', ikon: Ruler },
 ];
 
-const DUGMELER = [
-  { to: '/profile/edit', etiketAnahtari: 'ortak.profiliDuzenle' },
-  { to: '/profile/account', etiketAnahtari: 'ortak.hesapAyarlari' },
-] as const;
-
-/** Kendi profil başlığın (#283): ad, yaş ve fotoğraf `useProfilim`'den, sayaçlar sunucudan (#281). */
+/**
+ * Kendi profil başlığın (#283, düzeni #293'te değişti): ad, yaş ve fotoğraf `useProfilim`'den, sayaçlar
+ * sunucudan (#281). "Hesap ayarları" ve "Profili düzenle" düğmeleri kalktı (#293): duzenle artik isim
+ * satirinin sonundaki kalem, hesap ayarlarina erisim ust kabuktaki kisayoldan (bkz. `KabukBaslik.tsx`).
+ */
 function KendiProfilBasligi() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -43,28 +42,27 @@ function KendiProfilBasligi() {
     <ProfilBasligi
       kisi={profil.data}
       sayaclar={sayaclar.data}
+      duzenle={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('ortak.profiliDuzenle')}
+          onPress={() => router.push('/profile/edit')}
+          className="ml-auto size-9 items-center justify-center rounded-lg bg-surface-3"
+        >
+          <Pencil color={ikonRenk.muted} size={16} />
+        </Pressable>
+      }
       adYani={
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('takip.kullaniciAra')}
           onPress={() => router.push('/profile/search')}
-          className="ml-auto size-10 items-center justify-center rounded-lg bg-surface-3"
+          className="size-9 items-center justify-center rounded-lg bg-surface-3"
         >
-          <Search color={ikonRenk.muted} size={20} />
+          <Search color={ikonRenk.muted} size={18} />
         </Pressable>
       }
-    >
-      {DUGMELER.map(({ to, etiketAnahtari }) => (
-        <Pressable
-          key={to}
-          accessibilityRole="button"
-          onPress={() => router.push(to)}
-          className="h-10 flex-1 items-center justify-center rounded-xl bg-surface-3 px-3"
-        >
-          <Text className="text-label text-fg">{t(etiketAnahtari)}</Text>
-        </Pressable>
-      ))}
-    </ProfilBasligi>
+    />
   );
 }
 
