@@ -9,10 +9,10 @@ namespace Grind.Api.Repositories;
 public class FollowRepository(AppDbContext context) : Repository<Follow>(context), IFollowRepository
 {
     private static readonly Expression<Func<Follow, UserRef>> AsFollower =
-        f => new UserRef(f.Follower.Id, f.Follower.Username);
+        f => new UserRef(f.Follower.Id, f.Follower.Username, f.Follower.DisplayName);
 
     private static readonly Expression<Func<Follow, UserRef>> AsFollowee =
-        f => new UserRef(f.Followee.Id, f.Followee.Username);
+        f => new UserRef(f.Followee.Id, f.Followee.Username, f.Followee.DisplayName);
 
     public Task<Follow?> GetAsync(long followerId, long followeeId, CancellationToken cancellationToken = default)
         => Set.FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FolloweeId == followeeId, cancellationToken);

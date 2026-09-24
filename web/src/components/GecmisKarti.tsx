@@ -12,7 +12,8 @@ import TurEtiketi from '../ui/TurEtiketi';
 
 interface Props {
   oturum: GecmisOturum;
-  onSil: () => void;
+  /** Verilmezse kart salt-okunurdur (#284, arkadasin gecmisi): kaydirma ve silme yolu cizilmez. */
+  onSil?: () => void;
 }
 
 /**
@@ -30,6 +31,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
   const kaydirma = useKaydirma();
   const [onayAcik, setOnayAcik] = useState(false);
   const bos = oturum.setCount === 0;
+  const silinebilir = onSil !== undefined;
 
   function onayiAc() {
     kaydirma.kapat();
@@ -63,20 +65,22 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
   return (
     <li className="relative overflow-hidden rounded-xl bg-surface-2">
       {/* Kaydirmayla ortaya cikan kopya dugme: gorsel/dokunmatik kisayol. */}
-      <div aria-hidden className="absolute inset-y-0 right-0 flex">
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={onayiAc}
-          className="flex w-24 flex-col items-center justify-center gap-1 bg-danger-bg text-label-xs text-on-danger-bg uppercase"
-        >
-          <Trash2 size={20} />
-          {t('gecmis.sil')}
-        </button>
-      </div>
+      {silinebilir && (
+        <div aria-hidden className="absolute inset-y-0 right-0 flex">
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={onayiAc}
+            className="flex w-24 flex-col items-center justify-center gap-1 bg-danger-bg text-label-xs text-on-danger-bg uppercase"
+          >
+            <Trash2 size={20} />
+            {t('gecmis.sil')}
+          </button>
+        </div>
+      )}
 
       <div
-        {...kaydirma.isaretciler}
+        {...(silinebilir ? kaydirma.isaretciler : {})}
         className={`relative bg-surface-2 transition-transform motion-reduce:transition-none ${
           kaydirma.acik ? '-translate-x-24' : 'translate-x-0'
         } ${bos ? 'opacity-80' : ''}`}
@@ -129,14 +133,16 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
           <div className="flex flex-col gap-3 p-4">
             <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni={t('gecmis.bosDurumMetni')} />
             {/* Kaydirma yapamayan herkesin (klavye, ekran okuyucu) silme yolu. */}
-            <button
-              type="button"
-              onClick={onayiAc}
-              className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
-            >
-              <Trash2 aria-hidden size={18} />
-              {t('gecmis.antrenmaniSil')}
-            </button>
+            {silinebilir && (
+              <button
+                type="button"
+                onClick={onayiAc}
+                className="flex h-12 items-center justify-center gap-2 rounded-xl text-label text-danger"
+              >
+                <Trash2 aria-hidden size={18} />
+                {t('gecmis.antrenmaniSil')}
+              </button>
+            )}
           </div>
         </details>
       </div>

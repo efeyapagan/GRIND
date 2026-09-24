@@ -49,7 +49,7 @@ public class FollowServiceTests
 
     /// <summary>Aynı context, farklı "oturum açmış" kullanıcı.</summary>
     private static FollowService ServiceFor(AppDbContext context, User current) => new(
-        new FollowRepository(context), new UserRepository(context), new UnitOfWork(context),
+        new FollowRepository(context), new UserRepository(context), new UserAvatarRepository(context), new UnitOfWork(context),
         new StubCurrentUser(current), new SahteSaat());
 
     private static async Task<string[]> Adlar(Task<PagedResponse<UserSummaryResponse>> liste) =>
@@ -247,7 +247,59 @@ public class FollowServiceTests
         }
     }
 
+    /// <summary>
+    /// #284: başkasının profil başlığı ve liste/arama satırları kendi başlığınla aynı bilgiyi çizer —
+    /// görünen isim, fotoğraf sürümü; başlıkta yaş da (TR gününe göre, doğum günü yarın → henüz dolmadı).
+    /// </summary>
+    [Fact]
+    public async Task Profil_ve_satirlar_gorunen_isim_yas_ve_fotograf_surumunu_tasir()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            b.DisplayName = "Ayşe Kaya";
+            b.BirthDate = new DateOnly(2001, 9, 24);
+            context.Add(new UserAvatar { UserId = b.Id, Content = [1], ContentType = "image/jpeg", UpdatedAt = An });
+            await context.SaveChangesAsync();
+            await ServiceFor(context, b).FollowAsync(a.Username);
+            var surum = new DateTimeOffset(An).ToUnixTimeMilliseconds();
+
+            var aGozuyle = ServiceFor(context, a);
+            var profil = await aGozuyle.GetProfileAsync(b.Username);
+            Assert.Equal(("Ayşe Kaya", 24, true, surum), (profil.DisplayName, profil.Age, profil.HasAvatar, profil.AvatarVersion));
+
+            var satir = (await aGozuyle.GetFollowersAsync(a.Username, IlkSayfa)).Items.Single();
+            Assert.Equal(("Ayşe Kaya", true, surum), (satir.DisplayName, satir.HasAvatar, satir.AvatarVersion));
+
+            var fotografsiz = await ServiceFor(context, b).GetProfileAsync(a.Username);
+            Assert.Equal((null, null, false, null), (fotografsiz.DisplayName, fotografsiz.Age, fotografsiz.HasAvatar, fotografsiz.AvatarVersion));
+        }
+    }
+
     // ---- Arama ----
+
+    /// <summary>
+    /// #284: görünen isimle de aranır — ismin başı ya da herhangi bir kelimesinin başı, büyük/küçük harf
+    /// duyarsız. Kelimenin ortası eşleşmez.
+    /// </summary>
+    [Fact]
+    public async Task Arama_gorunen_ismin_kelime_basiyla_da_bulur()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (ben, hedef) = (users[0], users[1]);
+            var soyad = $"Zq{Guid.NewGuid():N}"[..10];
+            hedef.DisplayName = $"Ayşe {soyad}";
+            await context.SaveChangesAsync();
+            var benGozuyle = ServiceFor(context, ben);
+
+            Assert.Equal([hedef.Username], (await benGozuyle.SearchAsync(soyad.ToLowerInvariant())).Select(s => s.Username));
+            Assert.Contains(hedef.Username, (await benGozuyle.SearchAsync("AYŞE")).Select(s => s.Username));
+            Assert.Empty(await benGozuyle.SearchAsync(soyad[2..]));
+        }
+    }
 
     /// <summary>Ön-ek, büyük/küçük harf duyarsız; pasif hesap ve aramayı yapan kendisi sonuçta yok.</summary>
     [Fact]

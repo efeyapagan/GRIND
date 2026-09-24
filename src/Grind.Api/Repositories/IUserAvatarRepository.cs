@@ -13,6 +13,10 @@ public interface IUserAvatarRepository : IRepository<UserAvatar>
     /// </summary>
     Task<DateTime?> GetUpdatedAtAsync(long userId, CancellationToken cancellationToken = default);
 
+    /// <summary>Verilen kullanıcıların fotoğraf yükleme anları (#284 satırları), tek sorgu; fotoğrafsız olan sözlükte yok.</summary>
+    Task<IReadOnlyDictionary<long, DateTime>> GetUpdatedAtsAsync(
+        IReadOnlyCollection<long> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// AKTİF bir kullanıcının fotoğrafı, izlenmeden; kullanıcı yok, pasif ya da fotoğrafsızsa <c>null</c>.
     /// <paramref name="normalizedUsername"/> küçük harfe çevrilmiş olmalı.

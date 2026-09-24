@@ -38,6 +38,9 @@ type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogRe
 type CreateBodyWeightRequest = components['schemas']['CreateBodyWeightRequest'];
 type ProfileResponse = components['schemas']['ProfileResponse'];
 type UserProfileResponse = components['schemas']['UserProfileResponse'];
+type UserSummaryResponse = components['schemas']['UserSummaryResponse'];
+type UserSummaryResponsePagedResponse = components['schemas']['UserSummaryResponsePagedResponse'];
+type FriendHistorySessionResponsePagedResponse = components['schemas']['FriendHistorySessionResponsePagedResponse'];
 type UpdateProfileDetailsRequest = components['schemas']['UpdateProfileDetailsRequest'];
 
 /**
@@ -98,9 +101,20 @@ export const queryKeys = {
   measurementsInfinite: ['measurements', 'infinite'] as const,
   // #283: kendi profilin (#280) ve bir kullanicinin herkese acik basligi (#281, sayaclar).
   profil: ['profil'] as const,
-  kullaniciProfili: (kullaniciAdi: string) => ['kullaniciProfili', kullaniciAdi] as const,
+  kullaniciProfiliAll: ['kullaniciProfili'] as const,
+  kullaniciProfili: (kullaniciAdi: string) => [...queryKeys.kullaniciProfiliAll, kullaniciAdi] as const,
   // Surum anahtarda: yeni fotograf yeni kayit, eskisi onbellekte bayat kalmaz.
   avatar: (kullaniciAdi: string, surum: number) => ['avatar', kullaniciAdi, surum] as const,
+  // #284: takip edip birakmak BUNLARIN HEPSINI eskitir -- sayaclar (`kullaniciProfili` oneki), listeler
+  // ve arama satirlarindaki iliski, arkadasligin acip kapattigi gecmis/rekorlar. Onekler tek yerde.
+  takipListesiAll: ['takipListesi'] as const,
+  takipListesi: (kullaniciAdi: string, liste: TakipListesiTuru) =>
+    [...queryKeys.takipListesiAll, kullaniciAdi, liste] as const,
+  kullaniciAramaAll: ['kullaniciArama'] as const,
+  kullaniciArama: (sorgu: string) => [...queryKeys.kullaniciAramaAll, sorgu] as const,
+  arkadasAll: ['arkadas'] as const,
+  arkadasGecmisi: (kullaniciAdi: string) => [...queryKeys.arkadasAll, kullaniciAdi, 'gecmis'] as const,
+  arkadasRekorlari: (kullaniciAdi: string) => [...queryKeys.arkadasAll, kullaniciAdi, 'rekorlar'] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -1262,12 +1276,22 @@ export function useProfilim() {
   });
 }
 
-/** Herkese acik profil basligi (#281): uc sayac sunucudan gelir, istemcide sayilmaz. */
-export interface KullaniciProfili {
-  username: string;
+/** Fotografi cizmeye yeten alanlar: kendi profilin, baskasinin basligi ve liste satirlari (#284) ortak. */
+export type FotografSahibi = Pick<Profil, 'username' | 'displayName' | 'hasAvatar' | 'avatarVersion'>;
+
+/** Bakanin o kisiyle iliskisi (#281); sunucu her istekte turetir, istemci hesaplamaz. */
+export type TakipIliskisi = components['schemas']['FollowRelation'];
+
+/**
+ * Herkese acik profil basligi (#281/#284): uc sayac, iliski, gorunen isim, yas ve fotograf surumu
+ * sunucudan gelir, istemcide sayilmaz/hesaplanmaz.
+ */
+export interface KullaniciProfili extends FotografSahibi {
+  age: number | null;
   friendCount: number;
   followerCount: number;
   followingCount: number;
+  relation: TakipIliskisi;
 }
 
 function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfili {
@@ -1275,15 +1299,22 @@ function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfi
     !yanit.username ||
     yanit.friendCount === undefined ||
     yanit.followerCount === undefined ||
-    yanit.followingCount === undefined
+    yanit.followingCount === undefined ||
+    yanit.relation === undefined ||
+    yanit.hasAvatar === undefined
   ) {
     throw new Error('Sunucudan eksik kullanici profili yaniti alindi.');
   }
   return {
     username: yanit.username,
+    displayName: yanit.displayName ?? null,
+    age: yanit.age ?? null,
+    hasAvatar: yanit.hasAvatar,
+    avatarVersion: yanit.avatarVersion ?? null,
     friendCount: yanit.friendCount,
     followerCount: yanit.followerCount,
     followingCount: yanit.followingCount,
+    relation: yanit.relation,
   };
 }
 
@@ -1309,7 +1340,7 @@ export function avatarYolu(kullaniciAdi: string, surum: number): string {
  * iki platform da resmi kimlikli bir fetch'le ceker. Anahtarda surum var: yeni fotograf yeni kayit olur,
  * ayni surum bir daha istenmez.
  */
-export function useProfilFotografi(profil: Profil) {
+export function useProfilFotografi(profil: FotografSahibi) {
   const surum = profil.hasAvatar ? profil.avatarVersion : null;
   return useQuery({
     queryKey: queryKeys.avatar(profil.username, surum ?? 0),
@@ -1372,5 +1403,121 @@ export function useFotografiKaldir() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
     },
+  });
+}
+
+// ---- Takip arayuzu (#284) ----
+
+export type TakipListesiTuru = 'friends' | 'followers' | 'following';
+
+/** Takip listesinde ve aramada bir satir; `relation` BAKANIN o kisiyle iliskisi (#281). */
+export interface KullaniciOzeti extends FotografSahibi {
+  relation: TakipIliskisi;
+}
+
+function dogrulanmisKullaniciOzeti(yanit: UserSummaryResponse): KullaniciOzeti {
+  if (!yanit.username || yanit.relation === undefined || yanit.hasAvatar === undefined) {
+    throw new Error('Sunucudan eksik kullanici satiri alindi.');
+  }
+  return {
+    username: yanit.username,
+    displayName: yanit.displayName ?? null,
+    hasAvatar: yanit.hasAvatar,
+    avatarVersion: yanit.avatarVersion ?? null,
+    relation: yanit.relation,
+  };
+}
+
+export interface KullaniciSayfasi {
+  items: KullaniciOzeti[];
+  page: number;
+  totalPages: number;
+}
+
+function kullaniciYolu(kullaniciAdi: string, uc: string): string {
+  return `/users/${encodeURIComponent(kullaniciAdi)}/${uc}`;
+}
+
+/** Arkadaslar / takipciler / takip edilenler, en yeni once; sonsuz kaydirma (Gecmis ile ayni desen). */
+export function useTakipListesi(kullaniciAdi: string, liste: TakipListesiTuru) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.takipListesi(kullaniciAdi, liste),
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<KullaniciSayfasi> => {
+      const yanit = await request<UserSummaryResponsePagedResponse>(
+        `${kullaniciYolu(kullaniciAdi, liste)}?Page=${pageParam}&PageSize=${SAYFA_BOYUTU}`,
+      );
+      if (yanit.page === undefined || yanit.totalPages === undefined) {
+        throw new Error('Sunucudan eksik takip listesi yaniti alindi.');
+      }
+      return { items: (yanit.items ?? []).map(dogrulanmisKullaniciOzeti), page: yanit.page, totalPages: yanit.totalPages };
+    },
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
+  });
+}
+
+/** Kullanici adi ya da gorunen isimle arama (en fazla 20 sonuc, sunucu). Bos sorgu istek atmaz. */
+export function useKullaniciAra(sorgu: string) {
+  const temiz = sorgu.trim();
+  return useQuery({
+    queryKey: queryKeys.kullaniciArama(temiz),
+    enabled: temiz.length > 0,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<KullaniciOzeti[]> =>
+      (await request<UserSummaryResponse[]>(`/users/search?q=${encodeURIComponent(temiz)}`)).map(
+        dogrulanmisKullaniciOzeti,
+      ),
+  });
+}
+
+/**
+ * Takip et (`takipEt: true`) ya da birak. Sonuc sunucudan tazelenir (#284 madde 4): sayaclar, listeler,
+ * aramadaki iliski ve -- arkadaslik acilip kapanmis olabilecegi icin -- o kisinin gecmis/rekorlari.
+ */
+export function useTakipEt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kullaniciAdi, takipEt }: { kullaniciAdi: string; takipEt: boolean }): Promise<void> => {
+      await request<void>(kullaniciYolu(kullaniciAdi, 'follow'), { method: takipEt ? 'POST' : 'DELETE' });
+    },
+    onSuccess: () => {
+      for (const queryKey of [
+        queryKeys.kullaniciProfiliAll,
+        queryKeys.takipListesiAll,
+        queryKeys.kullaniciAramaAll,
+        queryKeys.arkadasAll,
+      ]) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
+/**
+ * Arkadasin gecmisi (#282), salt-okunur; oturum notu sunucudan hic gelmez. `etkin` false iken (arkadas
+ * degilse) istek atilmaz -- 403 almak icin sunucuya gidilmez.
+ */
+export function useArkadasGecmisi(kullaniciAdi: string, etkin: boolean) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.arkadasGecmisi(kullaniciAdi),
+    enabled: etkin,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }): Promise<GecmisSayfasi> =>
+      dogrulanmisGecmisSayfasi(
+        await request<FriendHistorySessionResponsePagedResponse>(
+          `${kullaniciYolu(kullaniciAdi, 'history')}?Page=${pageParam}&PageSize=${SAYFA_BOYUTU}`,
+        ),
+      ),
+    getNextPageParam: (sonSayfa) => (sonSayfa.page < sonSayfa.totalPages ? sonSayfa.page + 1 : undefined),
+  });
+}
+
+/** Arkadasin tum zamanlarin rekorlari (#282) -- `/records` ile ayni yanit. */
+export function useArkadasRekorlari(kullaniciAdi: string, etkin: boolean) {
+  return useQuery({
+    queryKey: queryKeys.arkadasRekorlari(kullaniciAdi),
+    enabled: etkin,
+    queryFn: async (): Promise<EgzersizRekoru[]> =>
+      (await request<ExerciseRecordResponse[]>(kullaniciYolu(kullaniciAdi, 'records'))).map(dogrulanmisRekor),
   });
 }
