@@ -52,6 +52,10 @@ beforeEach(() => {
     http.get('/api/users/efeypgn/profile', () =>
       HttpResponse.json({
         username: 'efeypgn',
+        displayName: 'Efe Yapağan',
+        age: 25,
+        hasAvatar: false,
+        avatarVersion: null,
         friendCount: 3,
         followerCount: 12,
         followingCount: 7,

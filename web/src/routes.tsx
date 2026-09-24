@@ -15,6 +15,11 @@ import ProfilePage from './pages/ProfilePage';
 import ProfiliDuzenlePage from './pages/ProfiliDuzenlePage';
 import MeasurementsPage from './pages/MeasurementsPage';
 import InsightsPage from './pages/InsightsPage';
+import KullaniciProfiliPage from './pages/KullaniciProfiliPage';
+import ArkadasGecmisiPage from './pages/ArkadasGecmisiPage';
+import ArkadasRekorlariPage from './pages/ArkadasRekorlariPage';
+import TakipListesiPage from './pages/TakipListesiPage';
+import KullaniciAraPage from './pages/KullaniciAraPage';
 
 /**
  * `/`, `/antrenman`, `/profile/*` ve şablon rotaları TEK bir `ProtectedRoute` altında (DRY) --
@@ -28,6 +33,10 @@ import InsightsPage from './pages/InsightsPage';
  * #283: varsayılan sekme Geçmiş. Hesap artık sekme değil: `/profile/account` (Hesap ayarları) ve
  * `/profile/edit` profil başlığındaki düğmelerin açtığı, başlıksız ve sekmesiz ayrı ekranlardır --
  * adres aynı kaldığı için eski `/profile/account` bağlantıları kırılmaz.
+ *
+ * #284: başkasının profili `/u/:username` (arkadaşsa Geçmiş · Rekorlar alt sekmeleri), takip listeleri
+ * `/u/:username/friends|followers|following`, kullanıcı arama `/search`. Kendi listelerin de aynı
+ * `/u/<ben>/...` adresindedir; `/u/<ben>` ise `/profile`'a yönlenir.
  */
 export const router = createBrowserRouter([
   {
@@ -59,6 +68,19 @@ export const router = createBrowserRouter([
       { path: 'profile/edit', element: <ProfiliDuzenlePage /> },
       { path: 'history', element: <Navigate to="/profile/history" replace /> },
       { path: 'records', element: <Navigate to="/profile/records" replace /> },
+      { path: 'search', element: <KullaniciAraPage /> },
+      {
+        path: 'u/:username',
+        element: <KullaniciProfiliPage />,
+        children: [
+          { index: true, element: <Navigate to="history" replace /> },
+          { path: 'history', element: <ArkadasGecmisiPage /> },
+          { path: 'records', element: <ArkadasRekorlariPage /> },
+        ],
+      },
+      { path: 'u/:username/friends', element: <TakipListesiPage liste="friends" /> },
+      { path: 'u/:username/followers', element: <TakipListesiPage liste="followers" /> },
+      { path: 'u/:username/following', element: <TakipListesiPage liste="following" /> },
     ],
   },
   { path: '/login', element: <LoginPage /> },

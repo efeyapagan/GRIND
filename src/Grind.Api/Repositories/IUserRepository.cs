@@ -27,9 +27,11 @@ public interface IUserRepository : IRepository<User>
     Task<bool> ExistsActiveAsync(long id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Kullanıcı adı <paramref name="normalizedPrefix"/> ile başlayan AKTİF kullanıcılar, ada göre
-    /// sıralı (#281 arama). <paramref name="excludeId"/> (aramayı yapan) sonuçta yer almaz.
+    /// Kullanıcı adı <paramref name="normalizedUsernamePrefix"/> ile ya da görünen isminin herhangi bir
+    /// kelimesi <paramref name="displayNameWordPrefix"/> ile (büyük/küçük harf duyarsız, #284) başlayan AKTİF
+    /// kullanıcılar, ada göre sıralı (#281 arama). <paramref name="excludeId"/> (aramayı yapan) sonuçta yer almaz.
     /// </summary>
-    Task<IReadOnlyList<UserRef>> SearchActiveByUsernamePrefixAsync(
-        string normalizedPrefix, long excludeId, int take, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserRef>> SearchActiveAsync(
+        string normalizedUsernamePrefix, string displayNameWordPrefix, long excludeId, int take,
+        CancellationToken cancellationToken = default);
 }

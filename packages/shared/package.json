@@ -25,6 +25,7 @@
     "./lib/ilerleme": "./src/lib/ilerleme.ts",
     "./lib/setGirdisi": "./src/lib/setGirdisi.ts",
     "./lib/siralama": "./src/lib/siralama.ts",
+    "./lib/takip": "./src/lib/takip.ts",
     "./lib/takvim": "./src/lib/takvim.ts",
     "./lib/zorlukKadrani": "./src/lib/zorlukKadrani.ts",
     "./i18n": "./src/i18n/i18n.ts",
