@@ -34,8 +34,8 @@ function sifreUzunlugunuDogrula(sifre: string): SifreUzunlukHatasiAnahtari | nul
 }
 
 /**
- * Hesap ayarları (issue #119, kullanıcı kararıyla sadeleştirildi; #283'ten beri sekme değil, profil
- * başlığındaki düğmenin açtığı ayrı ekran): kullanıcı adı artık
+ * Hesap ayarları (issue #119, kullanıcı kararıyla sadeleştirildi; #283'ten beri sekme değil, ayrı
+ * bir ekran; #293'ten beri ust kabuktaki "GRIND" yazisinin yerini alan kisayoldan açılır): kullanıcı adı artık
  * DÜZENLENEMEZ, sadece görüntülenir -- düzenlemeyi tamamen kaldırmak, "mevcut şifre" isteyen
  * hassas bir form + doğrulama akışını (issue #65'in orijinal tasarımı) ortadan kaldırdı. Şifre
  * değiştirme kalır. En altta "Çıkış yap" (eskiden üst kabuktaki hesap menüsündeydi -- menü

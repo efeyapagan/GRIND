@@ -8,10 +8,13 @@ interface Props {
   kisi: FotografSahibi & { age: number | null };
   /** Sunucudan; gelene kadar `–`. */
   sayaclar: KullaniciProfili | undefined;
-  /** Kullanıcı adının yanı: kendi profilinde arama ikonu, arkadaşta "Arkadaş" göstergesi. */
+  /** `@kullanıcı adı` satırının sonu: kendi profilinde arama ikonu, arkadaşta "Arkadaş" göstergesi. */
   adYani?: ReactNode;
-  /** En alttaki düğme satırı: kendi profilinde düzenle/hesap, başkasında takip düğmesi. */
-  children: ReactNode;
+  /** İsim satırının sonu -- yalnızca kendi profilinde düzenleme kalemi (issue #293). */
+  duzenle?: ReactNode;
+  /** En alttaki düğme satırı: başkasında takip düğmesi. Kendi profilinde YOK (düzenle kaleme,
+   * hesap ayarları ust kabuktaki kısayola taşındı, issue #293). */
+  children?: ReactNode;
 }
 
 const SAYACLAR = [
@@ -21,12 +24,13 @@ const SAYACLAR = [
 ] as const satisfies readonly { liste: TakipListesiTuru; alan: keyof KullaniciProfili; etiketAnahtari: string }[];
 
 /**
- * Instagram tarzı profil başlığı (#283): solda fotoğraf, yanında kullanıcı adı ve üç sayaç, altında
- * görünen isim + yaş, en altta düğmeler. #284: aynı bileşen kendi profilinde ve başkasınınkinde
- * (DRY) -- veri ve düğmeler çağırandan gelir. Sayılar ve yaş sunucudan gelir, istemcide hesaplanmaz;
- * sayaçlar ilgili takip listesini açar.
+ * Instagram tarzı profil başlığı (#283, düzeni #293'te değişti): solda fotoğraf, yanında görünen
+ * isim + yaş (+ kalem), altında `@kullanıcı adı` (+ arama/arkadaş göstergesi), altında üç sayaç.
+ * Görünen isim yoksa üst satır kullanıcı adına düşer. #284: aynı bileşen kendi profilinde ve
+ * başkasınınkinde (DRY) -- veri ve ek öğeler çağırandan gelir. Sayılar ve yaş sunucudan gelir,
+ * istemcide hesaplanmaz; sayaçlar ilgili takip listesini açar.
  */
-export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Props) {
+export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, children }: Props) {
   const { t } = useTranslation();
   const kullaniciYolu = `/u/${encodeURIComponent(kisi.username)}`;
 
@@ -36,7 +40,14 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Prop
         <ProfilFotografi profil={kisi} boyut="orta" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex items-center gap-2">
-            <h2 className="min-w-0 truncate text-heading">{kisi.username}</h2>
+            <h2 className="min-w-0 truncate text-heading">{kisi.displayName || kisi.username}</h2>
+            {kisi.age !== null && (
+              <span className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</span>
+            )}
+            {duzenle}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="min-w-0 truncate text-body text-muted">@{kisi.username}</span>
             {adYani}
           </div>
           <ul aria-label={t('profil.sayaclar')} className="flex gap-4">
@@ -51,13 +62,7 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Prop
           </ul>
         </div>
       </div>
-      {(kisi.displayName || kisi.age !== null) && (
-        <div className="flex flex-col">
-          {kisi.displayName && <span className="text-body-lg text-fg">{kisi.displayName}</span>}
-          {kisi.age !== null && <span className="text-body text-muted">{t('profil.yas', { count: kisi.age })}</span>}
-        </div>
-      )}
-      <div className="flex gap-2">{children}</div>
+      {children && <div className="flex gap-2">{children}</div>}
     </section>
   );
 }

@@ -1,11 +1,11 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Home, Plus, User, type LucideIcon } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Home, Menu, Plus, User, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
 import TemaDugmesi from './components/TemaDugmesi';
 import Parilti from './ui/Parilti';
 import { useGeriKaydirma } from './lib/useGeriKaydirma';
-import { altEkranMi, geriHedefi } from './lib/geriKaydirma';
+import { altEkranMi, geriHedefi, profilAnaEkraniMi } from './lib/geriKaydirma';
 
 /**
  * Korumali alanin ortak kabugu (spec Karar 8, issue #65 ile yeniden duzenlendi, #119/#120 ile
@@ -77,10 +77,23 @@ function Kabuk() {
             )}
             <h1 className="truncate text-heading">{baslik}</h1>
           </div>
-          {/* #194: tema dugmesi GRIND'in hemen solunda (Profil > Hesap'tan buraya tasindi). */}
+          {/* #194: tema dugmesi GRIND'in hemen solunda. #293: Profil'in kok ekranlarinda "GRIND"
+              yazisi yerini hesap ayarlarina giden bir kisayola ("3 cizgi") birakir -- "Hesap
+              ayarlari" dugmesi profil basligindan kalktigi icin baska bir erisim yolu gerekiyordu. */}
           <div className="flex shrink-0 items-center gap-3">
             <TemaDugmesi />
-            <span className="text-label text-muted uppercase">GRIND</span>
+            {profilAnaEkraniMi(konum.pathname) ? (
+              <Link
+                to="/profile/account"
+                aria-label={t('ortak.hesapAyarlari')}
+                title={t('ortak.hesapAyarlari')}
+                className="flex size-8 items-center justify-center text-fg"
+              >
+                <Menu aria-hidden size={22} />
+              </Link>
+            ) : (
+              <span className="text-label text-muted uppercase">GRIND</span>
+            )}
           </div>
         </div>
       </header>
