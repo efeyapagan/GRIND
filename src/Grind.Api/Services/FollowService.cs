@@ -74,7 +74,7 @@ public class FollowService(
             target.BirthDate is { } birthDate ? AgeCalculator.AgeOn(birthDate, today) : null,
             avatarUpdatedAt is not null,
             avatarUpdatedAt is { } updatedAt ? AvatarVersion.Of(updatedAt) : null,
-            counts.Friends, counts.Followers, counts.Following, relations(target.Id));
+            counts.Friends, counts.Followers, counts.Following, relations(target.Id), target.PrivacyLevel);
     }
 
     public Task<PagedResponse<UserSummaryResponse>> GetFriendsAsync(

@@ -49,11 +49,17 @@ export function sosyalSahneyiOlustur(yol: string) {
 }
 
 type Iliski = 'Self' | 'None' | 'Following' | 'FollowedBy' | 'Friends';
+type Gizlilik = 'Acik' | 'Kisitli' | 'Gizli';
 
 export function kullaniciProfili(
   username: string,
   relation: Iliski,
-  ek: Partial<{ displayName: string | null; age: number | null; followerCount: number }> = {},
+  ek: Partial<{
+    displayName: string | null;
+    age: number | null;
+    followerCount: number;
+    privacyLevel: Gizlilik;
+  }> = {},
 ) {
   return {
     username,
@@ -65,6 +71,7 @@ export function kullaniciProfili(
     followerCount: 2,
     followingCount: 3,
     relation,
+    privacyLevel: 'Acik' as Gizlilik,
     ...ek,
   };
 }
@@ -88,6 +95,7 @@ export function kendiProfilimiKur() {
         age: null,
         hasAvatar: false,
         avatarVersion: null,
+        privacyLevel: 'Kisitli',
       }),
     ),
     http.get('/api/users/efeypgn/profile', () => HttpResponse.json(kullaniciProfili('efeypgn', 'Self'))),

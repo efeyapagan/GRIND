@@ -25,6 +25,7 @@ function profilYaniti(gecersizler: Record<string, unknown> = {}) {
     age: 25,
     hasAvatar: false,
     avatarVersion: null,
+    privacyLevel: 'Kisitli',
     ...gecersizler,
   };
 }

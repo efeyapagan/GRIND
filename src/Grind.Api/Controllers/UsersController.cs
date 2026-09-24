@@ -13,8 +13,8 @@ namespace Grind.Api.Controllers;
 
 /// <summary>
 /// Kullanıcılar arası takip (#281) ve profil fotoğrafı (#280) herkese açık başlık bilgisidir. Antrenman
-/// verisi yalnızca <c>history</c>/<c>records</c> uçlarında ve yalnızca arkadaşa açıktır (#282).
-/// Hedef kullanıcı adıyla verilir; kimlik (bakan) her zaman token'dan gelir.
+/// verisi yalnızca <c>history</c>/<c>records</c> uçlarında ve hedefin gizlilik seviyesine göre açıktır
+/// (#282, #294). Hedef kullanıcı adıyla verilir; kimlik (bakan) her zaman token'dan gelir.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -22,7 +22,7 @@ namespace Grind.Api.Controllers;
 public class UsersController(
     IFollowService followService,
     IProfileService profileService,
-    IFriendActivityService friendActivityService) : ControllerBase
+    IPublicActivityService publicActivityService) : ControllerBase
 {
     /// <summary>Kullanıcı adı ön-ekiyle arama (büyük/küçük harf duyarsız), en fazla 20 sonuç.</summary>
     [HttpGet("search")]
@@ -91,26 +91,28 @@ public class UsersController(
         => Ok(await followService.GetFriendsAsync(username, query, cancellationToken));
 
     /// <summary>
-    /// Arkadaşın antrenman geçmişi (#282) — <c>/api/history</c> ile aynı filtreler, oturum notu hariç.
-    /// Kendisi ya da arkadaşı değilse 403.
+    /// Hedefin antrenman geçmişi (#282, #294) — <c>/api/history</c> ile aynı filtreler, oturum notu hariç.
+    /// Gizlilik seviyesine göre kısıtlanır (<c>Kisitli</c> = son 5, <c>Gizli</c> = boş liste); hedef
+    /// pasif ya da yoksa 404.
     /// </summary>
     [HttpGet("{username}/history")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PagedResponse<FriendHistorySessionResponse>>> GetHistory(
         string username, [FromQuery] HistoryQuery query, CancellationToken cancellationToken)
-        => Ok(await friendActivityService.GetHistoryAsync(username, query, cancellationToken));
+        => Ok(await publicActivityService.GetHistoryAsync(username, query, cancellationToken));
 
-    /// <summary>Arkadaşın tüm zamanların rekorları (#282) — <c>/api/records</c> ile aynı yanıt.</summary>
+    /// <summary>
+    /// Hedefin tüm zamanların rekorları (#282, #294) — <c>/api/records</c> ile aynı yanıt. Gizlilik
+    /// seviyesinden bağımsız görünür.
+    /// </summary>
     [HttpGet("{username}/records")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<ExerciseRecordResponse>>> GetRecords(
         string username, CancellationToken cancellationToken)
-        => Ok(await friendActivityService.GetRecordsAsync(username, cancellationToken));
+        => Ok(await publicActivityService.GetRecordsAsync(username, cancellationToken));
 
     /// <summary>Takipçiler, en yeni önce.</summary>
     [HttpGet("{username}/followers")]

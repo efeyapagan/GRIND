@@ -48,7 +48,7 @@ public interface IPersonalRecordService
 
     /// <summary>
     /// <see cref="GetAllTimeAsync"/>'in verilen kullanıcı için olanı. YETKİ KONTROLÜ YAPMAZ — yalnızca
-    /// erişimi zaten doğrulamış bir çağıran kullanır (<see cref="IFriendActivityService"/>, #282).
+    /// erişimi zaten doğrulamış bir çağıran kullanır (<see cref="IPublicActivityService"/>, #282).
     /// </summary>
     Task<IReadOnlyList<ExerciseRecordResponse>> GetAllTimeForUserAsync(
         long userId, CancellationToken cancellationToken = default);

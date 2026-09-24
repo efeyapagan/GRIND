@@ -5,12 +5,15 @@ using Grind.Api.Models.Dtos.Record;
 namespace Grind.Api.Services;
 
 /// <summary>
-/// Arkadaşın antrenman verisini SALT OKUMA (#282) — Yetkilendirme Kuralı'na kontrollü istisna (CLAUDE.md).
-/// Her metot önce aynı kontrolden geçer: hedef aktif değilse ya da yoksa 404, bakan kendisi ya da arkadaşı
-/// (karşılıklı takip) değilse 403. Yetki her istekte veritabanından okunur; takipten çıkıldığı an erişim biter.
+/// Başkasının antrenman verisini SALT OKUMA (#282, #294'te gizlilik seviyesine göre genişledi) —
+/// Yetkilendirme Kuralı'na kontrollü istisna (CLAUDE.md). Hedef aktif değilse ya da yoksa 404; aksi
+/// hâlde kimlikli HERHANGİ bir kullanıcı görebilir — kapı artık arkadaşlık değil, hedefin kendi
+/// <c>PrivacyLevel</c> tercihi: <c>Acik</c> tüm geçmiş, <c>Kisitli</c> yalnızca son 5 antrenman,
+/// <c>Gizli</c> geçmişte boş liste döner (403 DEĞİL — bu bir yetki hatası değil, sahibinin tercihi).
+/// Rekorlar üç seviyede de görünür. Hesap sahibi kendi verisini seviyeden bağımsız tam görür.
 /// Paylaşılmayanlar: oturum notu, ölçüler, AI yorumları, export.
 /// </summary>
-public interface IFriendActivityService
+public interface IPublicActivityService
 {
     /// <summary><c>/api/history</c> ile aynı filtreler ve hesap; oturum notu hariç.</summary>
     Task<PagedResponse<FriendHistorySessionResponse>> GetHistoryAsync(

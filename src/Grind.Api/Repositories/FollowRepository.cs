@@ -17,10 +17,6 @@ public class FollowRepository(AppDbContext context) : Repository<Follow>(context
     public Task<Follow?> GetAsync(long followerId, long followeeId, CancellationToken cancellationToken = default)
         => Set.FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FolloweeId == followeeId, cancellationToken);
 
-    public async Task<bool> AreFriendsAsync(long userId, long otherId, CancellationToken cancellationToken = default)
-        => await Set.CountAsync(f => (f.FollowerId == userId && f.FolloweeId == otherId)
-                                     || (f.FollowerId == otherId && f.FolloweeId == userId), cancellationToken) == 2;
-
     public async Task<FollowCounts> GetCountsAsync(long userId, CancellationToken cancellationToken = default)
     {
         var followers = await Followers(userId).CountAsync(cancellationToken);

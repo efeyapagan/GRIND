@@ -1,12 +1,11 @@
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import { Slot, useLocalSearchParams, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { History, Lock, Trophy } from 'lucide-react-native';
+import { History, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, type KullaniciProfili } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useAuth } from '../../../../../src/auth/AuthContext';
-import BosDurum from '../../../../../src/ui/BosDurum';
 import HataKutusu from '../../../../../src/ui/HataKutusu';
 import Rozet from '../../../../../src/ui/Rozet';
 import ProfilBasligi from '../../../../../src/components/ProfilBasligi';
@@ -16,8 +15,8 @@ import TakipDugmesi from '../../../../../src/components/TakipDugmesi';
 const LISTE_EKRANLARI = ['friends', 'followers', 'following'];
 
 /**
- * Başlık + (arkadaşsa) sekmeler ya da boş durum. Sayfa başlığını da BU bildirir: üst düzende bildirilse
- * efekt sırası gereği (önce çocuk, sonra ebeveyn) takip listesinin kendi başlığını ezerdi.
+ * Başlık + sekmeler. Sayfa başlığını da BU bildirir: üst düzende bildirilse efekt sırası gereği (önce
+ * çocuk, sonra ebeveyn) takip listesinin kendi başlığını ezerdi.
  */
 function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<KullaniciProfili> }) {
   const { t } = useTranslation();
@@ -35,7 +34,15 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
   }
 
   const arkadas = profil.data.relation === 'Friends';
+  const gizli = profil.data.privacyLevel === 'Gizli';
   const kok = `/profile/u/${ad}`;
+  const sekmeler = (
+    [
+      { to: `${kok}/history`, etiketAnahtari: 'kabuk.sekmeGecmis', ikon: History },
+      { to: `${kok}/records`, etiketAnahtari: 'kabuk.sekmeRekorlar', ikon: Trophy },
+    ] as const
+  ).filter((s) => !gizli || s.to.endsWith('/records'));
+
   return (
     <>
       <ProfilBasligi
@@ -45,26 +52,21 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
       >
         <TakipDugmesi kullaniciAdi={profil.data.username} iliski={profil.data.relation} />
       </ProfilBasligi>
-      {arkadas ? (
-        <ProfilSekmeleri
-          sekmeler={[
-            { to: `${kok}/history`, etiketAnahtari: 'kabuk.sekmeGecmis', ikon: History },
-            { to: `${kok}/records`, etiketAnahtari: 'kabuk.sekmeRekorlar', ikon: Trophy },
-          ]}
-        />
-      ) : (
-        <BosDurum ikon={Lock} baslik={t('takip.arkadasDegil')} />
+      <ProfilSekmeleri sekmeler={sekmeler} />
+      {gizli && (
+        <Text className="px-4 text-label text-muted">{t('takip.gizliHesapGecmisi')}</Text>
       )}
     </>
   );
 }
 
 /**
- * web/src/pages/KullaniciProfiliPage.tsx ile ayni (#284): baskasinin profili. Arkadassa Gecmis + Rekorlar
- * salt-okunur sekmeler, degilse bos durum -- alt ekran (Slot) cizilmez, antrenman ucuna istek gitmez.
- * Takip listeleri bu klasorde durur ama baslik/sekme cizilmez. Kendi adina gelinirse `index.tsx` `/profile`'a
- * yonlendirir -- BURADA degil: `push` sirasinda ilk render'da `usePathname` henuz eski yolu verir, kendi
- * listene giderken burada yonlendirmek navigasyonla sonsuz dongu kuruyordu. `Slot` ust duzendeki gibi hep
+ * web/src/pages/KullaniciProfiliPage.tsx ile ayni (#284, #294): baskasinin profili. Kapi artik
+ * arkadaslik degil hedefin gizlilik seviyesi -- Gizli'de yalniz Rekorlar sekmesi cizilir; hangi
+ * sekmeye yonlendirilecegine `index.tsx` karar verir (bkz. orada). Takip listeleri bu klasorde
+ * durur ama baslik/sekme cizilmez. Kendi adina gelinirse `index.tsx` `/profile`'a yonlendirir --
+ * BURADA degil: `push` sirasinda ilk render'da `usePathname` henuz eski yolu verir, kendi listene
+ * giderken burada yonlendirmek navigasyonla sonsuz dongu kuruyordu. `Slot` ust duzendeki gibi hep
  * ayni konumda cizilir (bkz. `profile/_layout.tsx`).
  */
 export default function KullaniciProfiliLayout() {
@@ -75,12 +77,15 @@ export default function KullaniciProfiliLayout() {
   const listeEkrani = LISTE_EKRANLARI.some((liste) => pathname.endsWith(`/${liste}`));
   const profilEkrani = !listeEkrani && !kendisi;
   const profil = useKullaniciProfili(profilEkrani ? ad : null);
-  const slotGorunur = !profilEkrani || profil.data?.relation === 'Friends';
+  // Veri gelmeden Slot cizilmez: aksi halde `index.tsx` -- gizlilik seviyesini henuz bilmeden --
+  // varsayilan olarak Gecmis'e yonlendirip gereksiz bir istek atardi (#294). `index.tsx` ayni
+  // sorgu anahtarini kullandigi icin veri onbellekten gelir, ikinci bir istek atmaz.
+  const slotBekliyor = profilEkrani && !profil.isError && !profil.data;
 
   return (
     <View className="flex-1">
       {profilEkrani && <BaskasininBasligi ad={ad} profil={profil} />}
-      <View className="flex-1">{slotGorunur && <Slot />}</View>
+      <View className="flex-1">{slotBekliyor ? null : <Slot />}</View>
     </View>
   );
 }
