@@ -51,6 +51,7 @@ function testRouterOlustur() {
           },
           { path: 'antrenman', element: <SayfaGovdesi baslik="Antrenman başlat" metin="Antrenman sayfasi" /> },
           { path: 'profile', element: <SayfaGovdesi baslik="Hesap" metin="Profil sayfasi" /> },
+          { path: 'profile/account', element: <SayfaGovdesi baslik="Hesap ayarları" metin="Hesap ayarları sayfasi" /> },
           { path: 'templates', element: <SayfaGovdesi baslik="Şablonlar" metin="Şablonlar sayfasi" /> },
         ],
       },
@@ -229,4 +230,31 @@ test('alt ekranda ust basliktaki geri dugmesi gorunur ve onceki sayfaya doner', 
   await kullanici.click(geriDugmesi);
 
   expect(await screen.findByText('Ic sayfa icerigi')).toBeInTheDocument();
+});
+
+/**
+ * Issue #293: Profil'in kok ekranlarinda "GRIND" yazisi yerini hesap ayarlarina giden bir kisayola
+ * birakir -- "Hesap ayarları" düğmesi profil basligindan kalktigi icin.
+ */
+test('Profil ekraninda GRIND yerine hesap ayarlari kisayolu gorunur ve /profile/account a gider', async () => {
+  const kullanici = userEvent.setup();
+  render(
+    <QueryClientProvider client={testeOzelSorguIstemcisi()}>
+      <AuthProvider>
+        <RouterProvider router={testRouterOlustur()} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText('Ic sayfa icerigi');
+  expect(within(screen.getByRole('banner')).getByText('GRIND')).toBeInTheDocument();
+
+  await kullanici.click(screen.getByRole('link', { name: 'Profil' }));
+  await screen.findByText('Profil sayfasi');
+
+  const ustKabuk = screen.getByRole('banner');
+  expect(within(ustKabuk).queryByText('GRIND')).not.toBeInTheDocument();
+  await kullanici.click(within(ustKabuk).getByRole('link', { name: 'Hesap ayarları' }));
+
+  expect(await screen.findByText('Hesap ayarları sayfasi')).toBeInTheDocument();
 });

@@ -58,8 +58,8 @@ test('arkadasin basligi gorunur; duzenleme dugmesi yerine Takibi birak, sekmeler
   arkadasiKur();
   sosyalSahneyiOlustur('/u/ayse');
 
-  expect(await screen.findByText('Ayşe Kaya')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'ayse' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Ayşe Kaya' })).toBeInTheDocument();
+  expect(screen.getByText('@ayse')).toBeInTheDocument();
   expect(screen.getByText('24 yaş')).toBeInTheDocument();
   expect(screen.getByText('Arkadaş')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Takibi bırak' })).toBeInTheDocument();

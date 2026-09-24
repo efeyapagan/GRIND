@@ -1,4 +1,4 @@
-import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, yonKarari } from './geriKaydirma';
+import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, profilAnaEkraniMi, yonKarari } from './geriKaydirma';
 
 /**
  * #232: sol kenardan saga kaydirarak geri donme karari -- web ve mobil ayni saf fonksiyonlari
@@ -61,5 +61,26 @@ describe('altEkranMi (issue #255 -- ust basliktaki geri dugmesi)', () => {
     expect(altEkranMi('/insights')).toBe(true);
     expect(altEkranMi('/antrenman/bitir')).toBe(true);
     expect(altEkranMi('/antrenman-bitir')).toBe(true);
+  });
+});
+
+describe('profilAnaEkraniMi (issue #293 -- ust basliktaki hesap ayarlari kisayolu)', () => {
+  test('Profilin kok ekranlarinda gorunur', () => {
+    expect(profilAnaEkraniMi('/profile')).toBe(true);
+    expect(profilAnaEkraniMi('/profile/history')).toBe(true);
+    expect(profilAnaEkraniMi('/profile/records')).toBe(true);
+    expect(profilAnaEkraniMi('/profile/measurements')).toBe(true);
+  });
+
+  test('Profilin alt ekranlarinda ve baska hicbir yolda gorunmez', () => {
+    expect(profilAnaEkraniMi('/profile/account')).toBe(false);
+    expect(profilAnaEkraniMi('/profile/edit')).toBe(false);
+    expect(profilAnaEkraniMi('/profile/search')).toBe(false);
+    // Baskasinin profili: web `/u/...`, mobil `/profile/u/...` -- ikisi de HARIC tutulmali.
+    expect(profilAnaEkraniMi('/u/efe')).toBe(false);
+    expect(profilAnaEkraniMi('/profile/u/efe')).toBe(false);
+    expect(profilAnaEkraniMi('/')).toBe(false);
+    expect(profilAnaEkraniMi('/antrenman')).toBe(false);
+    expect(profilAnaEkraniMi('/templates')).toBe(false);
   });
 });

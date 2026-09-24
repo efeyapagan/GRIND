@@ -9,9 +9,11 @@ import { session } from '../auth/session';
 import ProfileLayout from './ProfileLayout';
 
 /**
- * Issue #283: Profil, Instagram profili gibi bir başlık (fotoğraf, ad, yaş, üç sayaç, iki düğme) ve
- * altında ikonlu sekmelerden oluşur. Gerçek alt sayfalar yerine yer tutucular kullanılır -- burada
- * sınanan `ProfileLayout`'ın kendisi, sekmelerin içeriği değil.
+ * Issue #283 (düzeni #293'te değişti): Profil, Instagram profili gibi bir başlık (fotoğraf, görünen
+ * isim + yaş + düzenleme kalemi, `@kullanıcı adı`, üç sayaç) ve altında ikonlu sekmelerden oluşur.
+ * "Hesap ayarları" artık ust kabuktaki kısayoldan açılır (bkz. `App.test.tsx`) -- burada sınanmaz.
+ * Gerçek alt sayfalar yerine yer tutucular kullanılır -- burada sınanan `ProfileLayout`'ın kendisi,
+ * sekmelerin içeriği değil.
  */
 function profiliOlustur(baslangicYolu = '/profile') {
   render(
@@ -83,11 +85,11 @@ test('sekmeler soldan saga Gecmis, Rekorlar, Olculer sirasinda gorunur, Hesap se
   expect(etiketler).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler']);
 });
 
-test('baslik kullanici adini, gorunen ismi, yasi ve sunucudan gelen uc sayaci gosterir', async () => {
+test('baslik gorunen ismi (basluk), kullanici adini, yasi ve sunucudan gelen uc sayaci gosterir', async () => {
   profiliOlustur();
 
-  expect(await screen.findByText('Efe Yapağan')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'efeypgn' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Efe Yapağan' })).toBeInTheDocument();
+  expect(screen.getByText('@efeypgn')).toBeInTheDocument();
   expect(screen.getByText('25 yaş')).toBeInTheDocument();
 
   const sayaclar = screen.getByRole('list', { name: 'Profil sayaçları' });
@@ -105,18 +107,11 @@ test('fotograf yoksa gorunen ismin bas harfi gosterilir', async () => {
   expect(screen.queryByRole('img', { name: 'Profil fotoğrafı' })).not.toBeInTheDocument();
 });
 
-test('Profili duzenle dugmesi duzenleme ekranini acar', async () => {
+/** #293: "Profili düzenle" artık isim satırının sonundaki kalem ikonu, ayrı bir düğme değil. */
+test('duzenleme kalemi duzenleme ekranini acar', async () => {
   const kullanici = userEvent.setup();
   profiliOlustur();
 
   await kullanici.click(await screen.findByRole('link', { name: 'Profili düzenle' }));
   expect(await screen.findByText('Düzenleme içeriği')).toBeInTheDocument();
-});
-
-test('Hesap ayarlari dugmesi hesap ekranini acar', async () => {
-  const kullanici = userEvent.setup();
-  profiliOlustur();
-
-  await kullanici.click(await screen.findByRole('link', { name: 'Hesap ayarları' }));
-  expect(await screen.findByText('Hesap ayarları içeriği')).toBeInTheDocument();
 });

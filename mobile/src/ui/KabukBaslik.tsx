@@ -1,10 +1,10 @@
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Menu } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
-import { altEkranMi, geriHedefi } from '@grind/shared/lib/geriKaydirma';
+import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { ikonRenk } from './renkler';
 
 /**
@@ -48,7 +48,21 @@ export default function KabukBaslik() {
         <Text numberOfLines={1} className="flex-1 text-heading text-fg">
           {baslik}
         </Text>
-        <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+        {/* #293: Profil'in kok ekranlarinda "GRIND" yazisi yerini hesap ayarlarina giden bir
+            kisayola birakir -- "Hesap ayarlari" dugmesi profil basligindan kalktigi icin baska
+            bir erisim yolu gerekiyordu. */}
+        {profilAnaEkraniMi(pathname) ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('ortak.hesapAyarlari')}
+            onPress={() => router.push('/profile/account')}
+            className="size-8 shrink-0 items-center justify-center"
+          >
+            <Menu color={ikonRenk.fg} size={22} />
+          </Pressable>
+        ) : (
+          <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+        )}
       </View>
     </View>
   );

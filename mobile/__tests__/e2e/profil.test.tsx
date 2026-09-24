@@ -119,7 +119,7 @@ test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok',
   await renderRouterAsync('./app', { initialUrl: '/profile' });
 
   expect(await screen.findByText('Efe Yapağan')).toBeTruthy();
-  expect(screen.getByText('efeypgn')).toBeTruthy();
+  expect(screen.getByText('@efeypgn')).toBeTruthy();
   expect(screen.getByText('25 yaş')).toBeTruthy();
   expect(screen.getByLabelText('Arkadaşlar: 3')).toBeTruthy();
   expect(screen.getByLabelText('Takipçiler: 12')).toBeTruthy();
