@@ -384,6 +384,10 @@ export const tr = {
     kalcaDegeri: '{{cm}} cm kalça',
     silmeOnayi: 'Bu ölçü kalıcı olarak silinecek.',
     olcuyuSil: 'Ölçüyü sil',
+    cakismaBaslik: 'Bugün için başka bir ölçüm girdiniz.',
+    cakismaYerineKaydet: 'Yerine kaydet',
+    cakismaEkstraOlcum: 'Ekstra ölçüm',
+    guncellenemedi: 'Ölçü güncellenemedi',
   },
   yorumlar: {
     baslik: 'GRINDY ne diyor?',

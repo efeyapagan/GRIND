@@ -37,6 +37,7 @@ type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePa
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
 type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogResponsePagedResponse'];
 type CreateBodyWeightRequest = components['schemas']['CreateBodyWeightRequest'];
+type PatchBodyWeightRequest = components['schemas']['PatchBodyWeightRequest'];
 type ProfileResponse = components['schemas']['ProfileResponse'];
 type UserProfileResponse = components['schemas']['UserProfileResponse'];
 type UserSummaryResponse = components['schemas']['UserSummaryResponse'];
@@ -1242,6 +1243,28 @@ export function useAddMeasurement() {
       dogrulanmisOlcu(
         await request<BodyWeightLogResponse>('/body-weights', {
           method: 'POST',
+          body: JSON.stringify(govde),
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.measurementsAll });
+    },
+  });
+}
+
+/**
+ * `PATCH /api/body-weights/{id}` (issue #260): ayni gun icin farkli degerli ikinci bir olcum
+ * girilince "yerine kaydet" secilirse, gunun EN SON olcumu bu ucla guncellenir -- yeni bir satir
+ * eklenmez. Ucu de gonderilir; backend `null` alanlari degistirmez (`PatchAsync`), boylece formda
+ * bos birakilan bir alan (orn. yag orani) var olan degeri SILMEZ.
+ */
+export function useUpdateMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...govde }: { id: number } & PatchBodyWeightRequest): Promise<Olcu> =>
+      dogrulanmisOlcu(
+        await request<BodyWeightLogResponse>(`/body-weights/${id}`, {
+          method: 'PATCH',
           body: JSON.stringify(govde),
         }),
       ),
