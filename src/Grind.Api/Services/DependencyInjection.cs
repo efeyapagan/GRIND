@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IAiInsightService, AiInsightService>();
         services.AddScoped<IFollowService, FollowService>();
+        services.AddScoped<IFriendActivityService, FriendActivityService>();
         services.AddScoped<IProfileService, ProfileService>();
         return services;
     }
