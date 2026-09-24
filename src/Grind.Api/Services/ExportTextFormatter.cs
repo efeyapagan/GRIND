@@ -38,7 +38,10 @@ public static class ExportTextFormatter
         "Hacim = ağırlık × tekrar.",
         "RIR = yedekte kalan tekrar.",
         "[PR: ağırlık] = o egzersizde o ana kadarki en ağır set.",
-        "[PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar."
+        "[PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.",
+        "Hareket adının başındaki sayı (\"1.\", \"2.\"...) o oturumda kaçıncı sırada yapıldığıdır; " +
+        "sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma " +
+        "yaparken dikkate alınmalıdır."
     ];
 
     private const string EmptyRange = "Bu aralıkta kayıt yok.";
@@ -158,11 +161,13 @@ public static class ExportTextFormatter
         }
 
         // GroupBy anahtarları ilk görünme sırasıyla, elemanları kendi sırasıyla verir: egzersizler
-        // oturumdaki ilk setlerinin sırasıyla, setler kronolojik yazılır.
+        // oturumdaki ilk setlerinin sırasıyla, setler kronolojik yazılır. Pozisyon numarası (#230)
+        // bu yüzden burada AYRICA hesaplanmaz -- `ExercisePosition` zaten aynı sırayı taşır.
         foreach (var exercise in session.Sets.GroupBy(s => s.ExerciseId))
         {
+            var ilk = exercise.First();
             Line(text,
-                $"- {SingleLine(exercise.First().ExerciseName)}: " +
+                Inv($"- {ilk.ExercisePosition}. {SingleLine(ilk.ExerciseName)}: ") +
                 $"{string.Join(", ", exercise.Select(SetWithMarks))}");
         }
 

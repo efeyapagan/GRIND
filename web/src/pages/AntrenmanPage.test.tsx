@@ -73,6 +73,7 @@ function girilmisSet(sessionId: number): SetEntryResponse {
     sessionId,
     exerciseId: 1,
     exerciseName: 'Bench Press',
+    exercisePosition: 1,
     weight: 60,
     reps: 8,
     recordType: 'None',
@@ -223,11 +224,17 @@ function sahteSunucuyuKur(
       }
 
       const egzersiz = EGZERSIZLER.find((e) => e.id === govde.exerciseId);
+      // #230: gercek backend gibi -- pozisyon oturumdaki hareketlerin ILK GORUNME sirasidir.
+      const gorulenHareketler = [...new Set(setler.map((s) => s.exerciseId))];
+      if (!gorulenHareketler.includes(govde.exerciseId)) {
+        gorulenHareketler.push(govde.exerciseId);
+      }
       const yeniSet: SetEntryResponse = {
         id: siradakiSetId++,
         sessionId: oturum.id as number,
         exerciseId: govde.exerciseId,
         exerciseName: egzersiz?.name ?? 'Bilinmeyen',
+        exercisePosition: gorulenHareketler.indexOf(govde.exerciseId) + 1,
         weight: govde.weight,
         reps: govde.reps,
         recordType: opsiyonlar.recordTypeUret?.(govde) ?? 'None',
@@ -482,6 +489,7 @@ test('agirlik alani bos birakilirsa istek gonderilmez ve alan hatasi gosterilir'
         sessionId: 1,
         exerciseId: 1,
         exerciseName: 'Bench Press',
+        exercisePosition: 1,
         weight: 0,
         reps: 8,
         recordType: 'None',
@@ -573,6 +581,7 @@ test('tekrar ondalikli (8.5) girilirse istemcide reddedilir, istek gonderilmez',
         sessionId: 1,
         exerciseId: 1,
         exerciseName: 'Bench Press',
+        exercisePosition: 1,
         weight: 60,
         reps: 8,
         recordType: 'None',
