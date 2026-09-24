@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
-import { History, Pencil, Ruler, Search, Trophy } from 'lucide-react';
+import { History, Pencil, Ruler, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { useKullaniciProfili, useProfilim } from '../api/queries';
@@ -22,7 +22,12 @@ const SEKMELER: readonly ProfilSekmesi[] = [
  * #293: "Profili düzenle" ve "Hesap ayarları" düğmeleri kalktı -- düzenleme artık isim satırının
  * sonundaki kalem ikonu, hesap ayarları ust kabuktaki "GRIND" yazisinin yerini alan kisayol
  * (`App.tsx`, `profilAnaEkraniMi`). Bu yuzden `ProfilBasligi`'a `children` HIC verilmiyor -- kendi
- * profilinde en alttaki dugme satiri artik yok.
+ * profilinde en alttaki dugme satiri artik yok. Arama ikonu da (#293 devami) `adYani`'dan kalkip
+ * ust kabuga tasindi (`App.tsx`) -- burada artik `adYani` verilmiyor.
+ *
+ * #293 (devami): ust bar (baslik + GRIND) Profil'in kok ekranlarinda tamamen kalkti (App.tsx) --
+ * bu yuzden disaridaki `gap-4` `gap-6`'ya cikti: bar biraktigi bosluk artik ProfilBasligi ile
+ * sekmeler (Gecmis/Rekorlar/Olculer) ve sekmelerle icerik arasina dagitildi.
  */
 export default function ProfileLayout() {
   const { t } = useTranslation();
@@ -31,7 +36,7 @@ export default function ProfileLayout() {
   const sayaclar = useKullaniciProfili(username);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {profil.isError ? (
         <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={t('profil.profilAlinamadi')} />
       ) : !profil.data ? (
@@ -45,19 +50,9 @@ export default function ProfileLayout() {
               to="/profile/edit"
               aria-label={t('ortak.profiliDuzenle')}
               title={t('ortak.profiliDuzenle')}
-              className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted"
+              className="flex size-6 shrink-0 items-center justify-center text-muted"
             >
               <Pencil aria-hidden size={16} />
-            </Link>
-          }
-          adYani={
-            <Link
-              to="/search"
-              aria-label={t('takip.kullaniciAra')}
-              title={t('takip.kullaniciAra')}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted"
-            >
-              <Search aria-hidden size={18} />
             </Link>
           }
         />

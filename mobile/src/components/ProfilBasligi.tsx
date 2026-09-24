@@ -26,6 +26,9 @@ interface Props {
  * web/src/components/ProfilBasligi.tsx ile ayni (#283/#284, duzeni #293'te degisti): solda fotograf,
  * yaninda gorunen isim + yas (+ kalem), altinda `@kullanici adi` (+ arama/arkadas gostergesi), altinda
  * uc sayac. Gorunen isim yoksa ust satir kullanici adina duser. Veri ve ek ogeler cagirandan gelir.
+ *
+ * #293 (devami): isim ve kullanici adi satirlari BILEREK ayri, siki bir alt grupta (`gap-1`) --
+ * birbirine yakin durmalari istendi. Sayac satiri bu ikiliden daha uzakta (`gap-4`) durur.
  */
 export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, children }: Props) {
   const { t } = useTranslation();
@@ -35,19 +38,21 @@ export default function ProfilBasligi({ kisi, sayaclar, adYani, duzenle, childre
     <View className="flex-col gap-3 px-4 pt-2 pb-4">
       <View className="flex-row items-center gap-4">
         <ProfilFotografi profil={kisi} boyut="orta" />
-        <View className="min-w-0 flex-1 flex-col gap-2">
-          <View className="flex-row items-center gap-2">
-            <Text accessibilityRole="header" numberOfLines={1} className="shrink text-heading text-fg">
-              {kisi.displayName || kisi.username}
-            </Text>
-            {kisi.age !== null && <Text className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</Text>}
-            {duzenle}
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Text numberOfLines={1} className="min-w-0 shrink text-body text-muted">
-              @{kisi.username}
-            </Text>
-            {adYani}
+        <View className="min-w-0 flex-1 flex-col gap-4">
+          <View className="flex-col gap-1">
+            <View className="flex-row items-center gap-2">
+              <Text accessibilityRole="header" numberOfLines={1} className="shrink text-heading text-fg">
+                {kisi.displayName || kisi.username}
+              </Text>
+              {kisi.age !== null && <Text className="shrink-0 text-body text-muted">{t('profil.yas', { count: kisi.age })}</Text>}
+              {duzenle}
+            </View>
+            <View className="flex-row items-center gap-2">
+              <Text numberOfLines={1} className="min-w-0 shrink text-body text-muted">
+                @{kisi.username}
+              </Text>
+              {adYani}
+            </View>
           </View>
           <View accessibilityLabel={t('profil.sayaclar')} className="flex-row gap-4">
             {SAYACLAR.map(({ liste, alan, etiketAnahtari }) => {

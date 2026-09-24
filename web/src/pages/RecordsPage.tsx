@@ -11,11 +11,15 @@ import RekorKarti from '../components/RekorKarti';
  * istemci hicbir rekoru YENIDEN HESAPLAMAZ. Kartlar etkilesimsizdir.
  *
  * Baslik artik ust kabukta (issue #65) -- `usePageTitle` ile bildirilir, burada ayrica bir
- * `<h1>` YAZILMAZ. Alt aciklama ("Kişisel en iyiler") baslik degil, kalir.
+ * `<h1>` YAZILMAZ. Alt aciklama ("Kişisel en iyiler") baslik degil, kalir. #293: Profil'in kendi
+ * sekmelerinde (Gecmis/Rekorlar/Olculer) ust basliktaki metin tamamen kalkti -- profil basligi
+ * (foto, isim) zaten hemen ustte, ayrica bir sekme adi gostermeye gerek yok. Bos gonderilen
+ * `usePageTitle('')` bir onceki sayfadan kalan basligi TEMIZLER (aksi halde context state'i
+ * degismeden kalirdi).
  */
 export default function RecordsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('kabuk.sekmeRekorlar'));
+  usePageTitle('');
   const { data, isLoading, isError } = useRecords();
   // #117: en uzun seri Bugun'den buraya tasindi; tum gecmisten, sunucunun degeri.
   const { data: takvimOzeti } = useGuncelTakvimOzeti();
