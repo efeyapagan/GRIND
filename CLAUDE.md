@@ -114,6 +114,16 @@ kendi template/session'ına referans veremez. Bu kontrol her ilgili servis metod
 yapılmalı — sadece Id ile sorgulayıp sahiplik kontrolünü atlamak bir IDOR (Insecure Direct
 Object Reference) açığıdır.
 
+> İstisna (arkadaş görünümü — #282, 2026-09-24): arkadaşlar (karşılıklı takip) birbirinin **Geçmiş** ve
+> **Rekorlarını salt-okunur** görür — yalnızca `GET /api/users/{username}/history` ve `/records`. Bu iki
+> uç TEK kapıdan geçer: `FriendActivityService` (hedef pasif/yoksa 404, bakan kendisi ya da arkadaşı
+> değilse 403; yetki her istekte veritabanından okunur, takipten çıkıldığı an erişim biter). Geçmiş ve
+> rekor servislerinin `userId` alan metotları (`GetForUserAsync`, `GetAllTimeForUserAsync`) yetki kontrolü
+> YAPMAZ — yalnızca bu kapıdan sonra çağrılır; mevcut `/api/history`, `/api/records` ve yazan her uç hâlâ
+> yalnız `currentUserId` ile çalışır. Paylaşılmayanlar: oturum notu (`FriendHistorySessionResponse`'ta alan
+> olarak yok), ölçüler, AI yorumları, export. Arkadaş verisine yeni bir uç açmak bu istisnayı genişletmektir:
+> aynı kapıdan geçer ve buraya yazılır.
+
 > Karar (JWT içeriği): JWT SADECE kimlik taşır (`UserId`, `Username`) — rol/plan gibi
 > zamanla değişebilecek öznitelikler token'a claim olarak gömülmez. Sebep: kullanıcı
 > premium'a geçtiğinde/düştüğünde, eski token hâlâ eski durumu taşımaya devam eder (süresi
@@ -213,8 +223,8 @@ Object Reference) açığıdır.
 > kaynağı olurdu. Takip ve bırakma idempotenttir (204). Pasif hesaplar listelerde, sayaçlarda ve
 > aramada görünmez, profilleri 404'tür; satırları silinmez, hesap geri açılınca ilişki geri gelir.
 > `/api/users/{username}/...` uçları yalnızca herkese açık başlık bilgisi (ad, sayaçlar, bakanın
-> ilişkisi) döner — antrenman verisi paylaşmaz; arkadaşa geçmiş/rekor görünürlüğü #282'de, Yetkilendirme
-> Kuralı'na yazılı bir istisnayla gelir.
+> ilişkisi) döner — antrenman verisi paylaşmaz; istisna arkadaşa salt-okunur geçmiş/rekor uçlarıdır
+> (#282, bkz. Yetkilendirme Kuralı istisnası).
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).

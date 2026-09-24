@@ -51,11 +51,14 @@ public class PersonalRecordService(
         }
     }
 
-    public async Task<IReadOnlyList<ExerciseRecordResponse>> GetAllTimeAsync(
+    public Task<IReadOnlyList<ExerciseRecordResponse>> GetAllTimeAsync(
         CancellationToken cancellationToken = default)
+        => GetAllTimeForUserAsync(currentUser.UserId, cancellationToken);
+
+    public async Task<IReadOnlyList<ExerciseRecordResponse>> GetAllTimeForUserAsync(
+        long userId, CancellationToken cancellationToken = default)
     {
-        var records = await setEntryRepository.GetAllForUserAsync(
-            currentUser.UserId, cancellationToken);
+        var records = await setEntryRepository.GetAllForUserAsync(userId, cancellationToken);
 
         // Gruplama bellekte yapılıyor: "yalnızca rekor taşıyan satırlar" filtresi bilgi
         // kaybediyordu (bkz. spec düzeltme notu, 2026-09-10 final inceleme) — bu yüzden
