@@ -1,38 +1,12 @@
 import { View, Text, ScrollView } from 'react-native';
 import { Trophy } from 'lucide-react-native';
-import { useDil } from '@grind/shared/i18n';
-import { useTranslation } from 'react-i18next';
-import { useGuncelTakvimOzeti, usePlatolar, useRecords, type Plato } from '@grind/shared/api/queries';
-import { formatTarih, formatWeight } from '@grind/shared/lib/format';
+import { useGuncelTakvimOzeti, usePlatolar, useRecords } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
-import Rozet from '../../../src/ui/Rozet';
-
-/** Kart basligi: hareket adi ve -- platodaysa (#72) -- rozet ile sunucunun verdigi sure/1RM. */
-function PlatoBasligi({ ad, plato }: { ad: string; plato: Plato | undefined }) {
-  const { t } = useTranslation();
-  const dil = useDil();
-  return (
-    <View className="flex-col gap-1">
-      <View className="flex-row items-center justify-between gap-2">
-        <View className="flex-1 flex-row items-center gap-2.5">
-          <View className="size-2 rounded-full bg-accent" />
-          <Text className="text-heading text-fg">{ad}</Text>
-        </View>
-        {plato && <Rozet ton="acik">{t('rekorlar.plato')}</Rozet>}
-      </View>
-      {plato && (
-        <Text className="text-label-xs text-muted">
-          {t('rekorlar.platoAciklama', { count: plato.weeks, kg: formatWeight(plato.bestOneRepMax, dil) })}
-        </Text>
-      )}
-    </View>
-  );
-}
+import RekorKarti from '../../../src/components/RekorKarti';
 
 /** web/src/pages/RecordsPage.tsx ile ayni: her egzersiz icin en agir set ve en cok tekrar AYRI. */
 export default function RecordsScreen() {
-  const dil = useDil();
   usePageTitle('Rekorlar');
   const { data, isLoading, isError } = useRecords();
   const { data: takvimOzeti } = useGuncelTakvimOzeti();
@@ -68,37 +42,7 @@ export default function RecordsScreen() {
       {!isLoading && !isError && data && data.length > 0 && (
         <View className="flex-col gap-4">
           {data.map((rekor) => (
-            <View
-              key={rekor.exerciseId}
-              testID={`rekor-karti-${rekor.exerciseId}`}
-              className="flex-col gap-4 rounded-xl bg-surface-2 p-4"
-            >
-              <PlatoBasligi ad={rekor.exerciseName} plato={platoOf.get(rekor.exerciseId)} />
-              <View className="flex-col gap-2">
-                <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
-                  <View className="flex-row items-center gap-1.5">
-                    <Rozet>En ağır set</Rozet>
-                    <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</Text>
-                  </View>
-                  <View className="flex-row items-baseline gap-1">
-                    <Text className="text-metric text-fg">{formatWeight(rekor.bestWeight, dil)} kg</Text>
-                    <Text className="text-body-lg font-bold text-accent-soft">
-                      × {rekor.bestWeightReps}
-                    </Text>
-                  </View>
-                </View>
-                <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
-                  <View className="flex-row items-center gap-1.5">
-                    <Rozet ton="acik">En çok tekrar</Rozet>
-                    <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestRepsAt, dil)}</Text>
-                  </View>
-                  <View className="flex-row items-baseline gap-1.5">
-                    <Text className="text-metric text-fg">{rekor.bestReps} tekrar</Text>
-                    <Text className="text-body text-muted">@ {formatWeight(rekor.bestRepsWeight, dil)} kg</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <RekorKarti key={rekor.exerciseId} rekor={rekor} plato={platoOf.get(rekor.exerciseId)} />
           ))}
         </View>
       )}

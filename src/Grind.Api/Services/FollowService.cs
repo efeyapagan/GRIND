@@ -1,5 +1,7 @@
+using Grind.Api.Common;
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
+using Grind.Api.Common.Time;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Common;
 using Grind.Api.Models.Dtos.Social;
@@ -13,6 +15,7 @@ namespace Grind.Api.Services;
 public class FollowService(
     IFollowRepository followRepository,
     IUserRepository userRepository,
+    IUserAvatarRepository avatarRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFollowService
@@ -62,9 +65,16 @@ public class FollowService(
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var counts = await followRepository.GetCountsAsync(target.Id, cancellationToken);
         var relations = await RelationsAsync([target.Id], cancellationToken);
+        var avatarUpdatedAt = await avatarRepository.GetUpdatedAtAsync(target.Id, cancellationToken);
+        var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
 
         return new UserProfileResponse(
-            target.Username, counts.Friends, counts.Followers, counts.Following, relations(target.Id));
+            target.Username,
+            target.DisplayName,
+            target.BirthDate is { } birthDate ? AgeCalculator.AgeOn(birthDate, today) : null,
+            avatarUpdatedAt is not null,
+            avatarUpdatedAt is { } updatedAt ? AvatarVersion.Of(updatedAt) : null,
+            counts.Friends, counts.Followers, counts.Following, relations(target.Id));
     }
 
     public Task<PagedResponse<UserSummaryResponse>> GetFriendsAsync(
@@ -82,8 +92,8 @@ public class FollowService(
     public async Task<IReadOnlyList<UserSummaryResponse>> SearchAsync(
         string query, CancellationToken cancellationToken = default)
     {
-        var users = await userRepository.SearchActiveByUsernamePrefixAsync(
-            UsernameNormalizer.Normalize(query), currentUser.UserId, SearchLimit, cancellationToken);
+        var users = await userRepository.SearchActiveAsync(
+            UsernameNormalizer.Normalize(query), query.Trim(), currentUser.UserId, SearchLimit, cancellationToken);
         return await SummariesAsync(users, cancellationToken);
     }
 
@@ -101,8 +111,15 @@ public class FollowService(
     private async Task<IReadOnlyList<UserSummaryResponse>> SummariesAsync(
         IReadOnlyList<UserRef> users, CancellationToken cancellationToken)
     {
-        var relation = await RelationsAsync(users.Select(u => u.Id).ToList(), cancellationToken);
-        return users.Select(u => new UserSummaryResponse(u.Username, relation(u.Id))).ToList();
+        var ids = users.Select(u => u.Id).ToList();
+        var relation = await RelationsAsync(ids, cancellationToken);
+        var avatars = await avatarRepository.GetUpdatedAtsAsync(ids, cancellationToken);
+        return users.Select(u => new UserSummaryResponse(
+            u.Username,
+            u.DisplayName,
+            avatars.ContainsKey(u.Id),
+            avatars.TryGetValue(u.Id, out var updatedAt) ? AvatarVersion.Of(updatedAt) : null,
+            relation(u.Id))).ToList();
     }
 
     /// <summary>Oturum açmış kullanıcının verilen kişilerle ilişkisi — tek sorgu, sonra bellekte.</summary>

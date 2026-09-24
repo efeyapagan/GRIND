@@ -82,7 +82,17 @@ function profilBackendiKur(baslangic: Partial<typeof PROFIL> = {}) {
     }
     if (path === '/profile/avatar') return undefined;
     if (method === 'GET' && path === '/users/efeypgn/profile') {
-      return { username: 'efeypgn', friendCount: 3, followerCount: 12, followingCount: 7, relation: 'Self' };
+      return {
+        username: 'efeypgn',
+        displayName: 'Efe Yapağan',
+        age: 25,
+        hasAvatar: false,
+        avatarVersion: null,
+        friendCount: 3,
+        followerCount: 12,
+        followingCount: 7,
+        relation: 'Self',
+      };
     }
     return sahteRequest(path, init as never);
   });

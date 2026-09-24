@@ -1,74 +1,63 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../auth/AuthContext';
-import { useKullaniciProfili, useProfilim } from '../api/queries';
-import HataKutusu from '../ui/HataKutusu';
+import type { FotografSahibi, KullaniciProfili, TakipListesiTuru } from '../api/queries';
 import ProfilFotografi from './ProfilFotografi';
 
-const DUGMELER = [
-  { to: '/profile/edit', etiketAnahtari: 'ortak.profiliDuzenle' },
-  { to: '/profile/account', etiketAnahtari: 'ortak.hesapAyarlari' },
-] as const;
+interface Props {
+  kisi: FotografSahibi & { age: number | null };
+  /** Sunucudan; gelene kadar `–`. */
+  sayaclar: KullaniciProfili | undefined;
+  /** Kullanıcı adının yanı: kendi profilinde arama ikonu, arkadaşta "Arkadaş" göstergesi. */
+  adYani?: ReactNode;
+  /** En alttaki düğme satırı: kendi profilinde düzenle/hesap, başkasında takip düğmesi. */
+  children: ReactNode;
+}
+
+const SAYACLAR = [
+  { liste: 'friends', alan: 'friendCount', etiketAnahtari: 'profil.arkadaslar' },
+  { liste: 'followers', alan: 'followerCount', etiketAnahtari: 'profil.takipciler' },
+  { liste: 'following', alan: 'followingCount', etiketAnahtari: 'profil.takipEdilenler' },
+] as const satisfies readonly { liste: TakipListesiTuru; alan: keyof KullaniciProfili; etiketAnahtari: string }[];
 
 /**
  * Instagram tarzı profil başlığı (#283): solda fotoğraf, yanında kullanıcı adı ve üç sayaç, altında
- * görünen isim + yaş, en altta iki düğme. Sayılar ve yaş sunucudan gelir (#280/#281), istemcide
- * hesaplanmaz. Sayaçlara dokunmak (listeler) ayrı bir issue -- şimdilik düz metin.
+ * görünen isim + yaş, en altta düğmeler. #284: aynı bileşen kendi profilinde ve başkasınınkinde
+ * (DRY) -- veri ve düğmeler çağırandan gelir. Sayılar ve yaş sunucudan gelir, istemcide hesaplanmaz;
+ * sayaçlar ilgili takip listesini açar.
  */
-export default function ProfilBasligi() {
+export default function ProfilBasligi({ kisi, sayaclar, adYani, children }: Props) {
   const { t } = useTranslation();
-  const { username } = useAuth();
-  const profil = useProfilim();
-  const sayaclar = useKullaniciProfili(username);
-
-  if (profil.isError) {
-    return <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={t('profil.profilAlinamadi')} />;
-  }
-  if (!profil.data) {
-    return <div className="min-h-40" />;
-  }
-
-  const sayacListesi = [
-    { sayi: sayaclar.data?.friendCount, etiket: t('profil.arkadaslar') },
-    { sayi: sayaclar.data?.followerCount, etiket: t('profil.takipciler') },
-    { sayi: sayaclar.data?.followingCount, etiket: t('profil.takipEdilenler') },
-  ];
+  const kullaniciYolu = `/u/${encodeURIComponent(kisi.username)}`;
 
   return (
     <section className="flex flex-col gap-3 pt-2">
       <div className="flex items-center gap-4">
-        <ProfilFotografi profil={profil.data} boyut="orta" />
+        <ProfilFotografi profil={kisi} boyut="orta" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h2 className="truncate text-heading">{profil.data.username}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="min-w-0 truncate text-heading">{kisi.username}</h2>
+            {adYani}
+          </div>
           <ul aria-label={t('profil.sayaclar')} className="flex gap-4">
-            {sayacListesi.map(({ sayi, etiket }) => (
-              <li key={etiket} className="flex flex-col">
-                <span className="text-body-lg font-bold text-fg">{sayi ?? '–'}</span>
-                <span className="text-label text-muted">{etiket}</span>
+            {SAYACLAR.map(({ liste, alan, etiketAnahtari }) => (
+              <li key={liste}>
+                <Link to={`${kullaniciYolu}/${liste}`} className="flex flex-col">
+                  <span className="text-body-lg font-bold text-fg">{sayaclar?.[alan] ?? '–'}</span>
+                  <span className="text-label text-muted">{t(etiketAnahtari)}</span>
+                </Link>
               </li>
             ))}
           </ul>
         </div>
       </div>
-      {(profil.data.displayName || profil.data.age !== null) && (
+      {(kisi.displayName || kisi.age !== null) && (
         <div className="flex flex-col">
-          {profil.data.displayName && <span className="text-body-lg text-fg">{profil.data.displayName}</span>}
-          {profil.data.age !== null && (
-            <span className="text-body text-muted">{t('profil.yas', { count: profil.data.age })}</span>
-          )}
+          {kisi.displayName && <span className="text-body-lg text-fg">{kisi.displayName}</span>}
+          {kisi.age !== null && <span className="text-body text-muted">{t('profil.yas', { count: kisi.age })}</span>}
         </div>
       )}
-      <div className="flex gap-2">
-        {DUGMELER.map(({ to, etiketAnahtari }) => (
-          <Link
-            key={to}
-            to={to}
-            className="flex h-10 flex-1 items-center justify-center rounded-xl bg-surface-3 px-3 text-label text-fg"
-          >
-            {t(etiketAnahtari)}
-          </Link>
-        ))}
-      </div>
+      <div className="flex gap-2">{children}</div>
     </section>
   );
 }

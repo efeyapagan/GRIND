@@ -3321,6 +3321,145 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{username}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    ExerciseId?: number;
+                    From?: string;
+                    To?: string;
+                    Page?: number;
+                    PageSize?: number;
+                };
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FriendHistorySessionResponsePagedResponse"];
+                        "application/json": components["schemas"]["FriendHistorySessionResponsePagedResponse"];
+                        "text/json": components["schemas"]["FriendHistorySessionResponsePagedResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ExerciseRecordResponse"][];
+                        "application/json": components["schemas"]["ExerciseRecordResponse"][];
+                        "text/json": components["schemas"]["ExerciseRecordResponse"][];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/{username}/followers": {
         parameters: {
             query?: never;
@@ -3730,6 +3869,36 @@ export interface components {
         };
         /** @enum {string} */
         FollowRelation: "Self" | "None" | "Following" | "FollowedBy" | "Friends";
+        FriendHistorySessionResponse: {
+            /** Format: int64 */
+            sessionId?: number;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            endedAt?: string | null;
+            /** Format: int64 */
+            durationSeconds?: number | null;
+            templateName?: string | null;
+            difficulty?: components["schemas"]["SessionDifficulty"];
+            /** Format: double */
+            totalVolume?: number;
+            /** Format: int32 */
+            setCount?: number;
+            /** Format: int32 */
+            medianRestSeconds?: number | null;
+            sets?: components["schemas"]["SetEntryResponse"][] | null;
+        };
+        FriendHistorySessionResponsePagedResponse: {
+            items?: components["schemas"]["FriendHistorySessionResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            readonly totalPages?: number;
+        };
         GenerateInsightRequest: {
             /** Format: date */
             from?: string | null;
@@ -3957,6 +4126,12 @@ export interface components {
         };
         UserProfileResponse: {
             username?: string | null;
+            displayName?: string | null;
+            /** Format: int32 */
+            age?: number | null;
+            hasAvatar?: boolean;
+            /** Format: int64 */
+            avatarVersion?: number | null;
             /** Format: int32 */
             friendCount?: number;
             /** Format: int32 */
@@ -3967,6 +4142,10 @@ export interface components {
         };
         UserSummaryResponse: {
             username?: string | null;
+            displayName?: string | null;
+            hasAvatar?: boolean;
+            /** Format: int64 */
+            avatarVersion?: number | null;
             relation?: components["schemas"]["FollowRelation"];
         };
         UserSummaryResponsePagedResponse: {

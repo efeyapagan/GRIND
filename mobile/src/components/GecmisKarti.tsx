@@ -13,7 +13,8 @@ import { ikonRenk } from '../ui/renkler';
 
 interface Props {
   oturum: GecmisOturum;
-  onSil: () => void;
+  /** Verilmezse kart salt-okunurdur (#284, arkadasin gecmisi): kaydirma ve silme yolu cizilmez. */
+  onSil?: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
   const [onayAcik, setOnayAcik] = useState(false);
   const kaydirmaRef = useRef<KaydirilabilirSatirRef>(null);
   const bos = oturum.setCount === 0;
+  const silinebilir = onSil !== undefined;
 
   function onayiAc() {
     kaydirmaRef.current?.kapat();
@@ -54,50 +56,59 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
     );
   }
 
-  return (
-    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} silEtiketi="Antrenmanı sil">
-      <View className="bg-surface-2">
-        <Pressable
-          onPress={() => setAcik((a) => !a)}
-          className={`flex-row items-center justify-between gap-4 p-4 ${acik ? 'bg-surface-3' : ''}`}
-        >
-          <View className="min-w-0 flex-1 flex-col gap-1">
-            <View className="flex-row flex-wrap items-center gap-2">
-              <View className="flex-row items-center gap-1">
-                <CalendarDays color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-fg">{formatGoreliTarih(oturum.startedAt, dil)}</Text>
-              </View>
-              <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
+  const kart = (
+    <View className="bg-surface-2">
+      <Pressable
+        onPress={() => setAcik((a) => !a)}
+        className={`flex-row items-center justify-between gap-4 p-4 ${acik ? 'bg-surface-3' : ''}`}
+      >
+        <View className="min-w-0 flex-1 flex-col gap-1">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <View className="flex-row items-center gap-1">
+              <CalendarDays color={ikonRenk.muted} size={18} />
+              <Text className="text-label text-fg">{formatGoreliTarih(oturum.startedAt, dil)}</Text>
             </View>
-            <View className="flex-row flex-wrap items-baseline gap-4">
-              <View className="flex-row items-baseline gap-1">
-                <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{oturum.setCount}</Text>
-                <Text className="text-label-xs text-muted uppercase">set</Text>
-              </View>
-              <View className="flex-row items-baseline gap-1">
-                <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>
-                  {formatWeight(oturum.totalVolume, dil)}
-                </Text>
-                <Text className="text-label-xs text-muted uppercase">kg</Text>
-              </View>
-              {/* #246: medyan dinlenmenin (#71) yerini aldi. Acik antrenmanda sure yok, hicbir sey cizilmez. */}
-              {oturum.durationSeconds !== null && <AntrenmanSuresi saniye={oturum.durationSeconds} />}
+            <TurEtiketi>{oturum.templateName ?? 'Serbest'}</TurEtiketi>
+          </View>
+          <View className="flex-row flex-wrap items-baseline gap-4">
+            <View className="flex-row items-baseline gap-1">
+              <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{oturum.setCount}</Text>
+              <Text className="text-label-xs text-muted uppercase">set</Text>
             </View>
+            <View className="flex-row items-baseline gap-1">
+              <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>
+                {formatWeight(oturum.totalVolume, dil)}
+              </Text>
+              <Text className="text-label-xs text-muted uppercase">kg</Text>
+            </View>
+            {/* #246: medyan dinlenmenin (#71) yerini aldi. Acik antrenmanda sure yok, hicbir sey cizilmez. */}
+            {oturum.durationSeconds !== null && <AntrenmanSuresi saniye={oturum.durationSeconds} />}
           </View>
-          <View className="size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3">
-            {acik ? <ChevronUp color={ikonRenk.fg} size={20} /> : <ChevronDown color={ikonRenk.muted} size={20} />}
-          </View>
-        </Pressable>
-        {acik && (
-          <View className="flex-col gap-3 p-4">
-            <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni="Bu antrenmanda set yok." />
+        </View>
+        <View className="size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3">
+          {acik ? <ChevronUp color={ikonRenk.fg} size={20} /> : <ChevronDown color={ikonRenk.muted} size={20} />}
+        </View>
+      </Pressable>
+      {acik && (
+        <View className="flex-col gap-3 p-4">
+          <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni="Bu antrenmanda set yok." />
+          {silinebilir && (
             <Pressable onPress={onayiAc} className="h-12 flex-row items-center justify-center gap-2 rounded-xl">
               <Trash2 color={ikonRenk.danger} size={18} />
               <Text className="text-label text-danger">Antrenmanı sil</Text>
             </Pressable>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  if (!silinebilir) {
+    return <View className="overflow-hidden rounded-xl">{kart}</View>;
+  }
+  return (
+    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} silEtiketi="Antrenmanı sil">
+      {kart}
     </KaydirilabilirSatir>
   );
 }

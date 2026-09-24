@@ -51,6 +51,13 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   Ölçüler. Hesap artık sekme değil: `/profile/account` ve `/profile/edit` başlıksız alt ekranlardır. Fotoğraf
   istemcide 256×256 JPEG'e küçültülüp yüklenir; kimlikli uç olduğu için web data URL'e çevirir, mobil `Image`'a
   yetki başlığı verir (`kimlikliKaynak`).
+- **Takip arayüzü (2026-09-24, #284)** — başlık tek bileşen, iki kullanım: kendi profilin ve başkasınınki
+  (web `/u/:username`, mobil `/profile/u/[username]`); sayaçlar takip listelerini açar, arama kendi başlığındaki
+  ikondan (`/search`, mobil `/profile/search`). Arkadaşsa Geçmiş · Rekorlar salt-okunur (`GecmisKarti` `onSil`
+  olmadan), değilse boş durum ve antrenman ucuna istek gitmez. Liste satırında arkadaşa düğme yok, "Arkadaş"
+  göstergesi var (bırakmak profilden). Takip/bırak sonrası her şey sunucudan tazelenir (`useTakipEt`). Mobil
+  profil düzenlerinde `Slot` hep aynı konumda çizilir — başka yere konunca iç navigator yeniden kurulup yolun
+  parçasını parametre sanıyordu.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

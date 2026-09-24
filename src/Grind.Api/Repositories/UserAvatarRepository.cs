@@ -14,6 +14,11 @@ public class UserAvatarRepository(AppDbContext context) : Repository<UserAvatar>
             .Select(a => (DateTime?)a.UpdatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<long, DateTime>> GetUpdatedAtsAsync(
+        IReadOnlyCollection<long> userIds, CancellationToken cancellationToken = default)
+        => await Set.Where(a => userIds.Contains(a.UserId))
+            .ToDictionaryAsync(a => a.UserId, a => a.UpdatedAt, cancellationToken);
+
     public Task<UserAvatar?> GetByActiveUsernameAsync(
         string normalizedUsername, CancellationToken cancellationToken = default)
         => Set.AsNoTracking()

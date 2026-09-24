@@ -1,3 +1,4 @@
+using Grind.Api.Common;
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
@@ -87,7 +88,7 @@ public class ProfileService(
                          UsernameNormalizer.Normalize(username), cancellationToken)
                      ?? throw new NotFoundException("Profil fotoğrafı bulunamadı.");
 
-        return new AvatarContent(avatar.Content, avatar.ContentType, VersionOf(avatar.UpdatedAt));
+        return new AvatarContent(avatar.Content, avatar.ContentType, AvatarVersion.Of(avatar.UpdatedAt));
     }
 
     private async Task<ProfileResponse> ResponseForAsync(User user, CancellationToken cancellationToken)
@@ -100,7 +101,7 @@ public class ProfileService(
             user.BirthDate,
             user.BirthDate is { } birthDate ? AgeCalculator.AgeOn(birthDate, Today()) : null,
             avatarUpdatedAt is not null,
-            avatarUpdatedAt is { } updatedAt ? VersionOf(updatedAt) : null);
+            avatarUpdatedAt is { } updatedAt ? AvatarVersion.Of(updatedAt) : null);
     }
 
     private async Task<User> GetCurrentUserAsync(CancellationToken cancellationToken)
@@ -109,9 +110,6 @@ public class ProfileService(
 
     /// <summary>Yaş TR yerel gününe göre: gece yarısından sonra TR'de doğum günü başlamışsa yaş dolmuştur.</summary>
     private DateOnly Today() => TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
-
-    private static long VersionOf(DateTime updatedAt)
-        => new DateTimeOffset(DateTime.SpecifyKind(updatedAt, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
 
     /// <summary>En fazla <see cref="MaxAvatarBytes"/> okur; akış daha uzunsa <c>null</c> (tamamı belleğe alınmaz).</summary>
     private static async Task<byte[]?> ReadLimitedAsync(Stream content, CancellationToken cancellationToken)
