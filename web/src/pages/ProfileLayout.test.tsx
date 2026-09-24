@@ -47,6 +47,7 @@ beforeEach(() => {
         age: 25,
         hasAvatar: false,
         avatarVersion: null,
+        privacyLevel: 'Kisitli',
       }),
     ),
     http.get('/api/users/efeypgn/profile', () =>
@@ -60,6 +61,7 @@ beforeEach(() => {
         followerCount: 12,
         followingCount: 7,
         relation: 'Self',
+        privacyLevel: 'Kisitli',
       }),
     ),
   );

@@ -8,6 +8,7 @@ import SifreAlani from '../ui/SifreAlani';
 import HataKutusu from '../ui/HataKutusu';
 import BirincilDugme from '../ui/BirincilDugme';
 import HaftalikHedefSecici from '../components/HaftalikHedefSecici';
+import GizlilikSeviyesiSecici from '../components/GizlilikSeviyesiSecici';
 import DilSecici from '../components/DilSecici';
 
 const MIN_SIFRE_KARAKTER = 8;
@@ -61,6 +62,9 @@ export default function ProfilePage() {
           {t('profil.antrenmanHedefi')}
         </h2>
         <HaftalikHedefSecici />
+      </section>
+      <section className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
+        <GizlilikSeviyesiSecici />
       </section>
       <section className="flex flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <DilSecici />

@@ -53,9 +53,27 @@ function takvimSunucusu(weeklyTargetDays: number | null) {
   return araliklar;
 }
 
+/** GizlilikSeviyesiSecici (#294) `GET /api/profile` okur; varsayılan seviye Kısıtlı. */
+function profilSunucusu(privacyLevel: 'Acik' | 'Kisitli' | 'Gizli' = 'Kisitli') {
+  server.use(
+    http.get('/api/profile', () =>
+      HttpResponse.json({
+        username: 'benimadim',
+        displayName: null,
+        birthDate: null,
+        age: null,
+        hasAvatar: false,
+        avatarVersion: null,
+        privacyLevel,
+      }),
+    ),
+  );
+}
+
 beforeEach(() => {
   session.write('gecerli-token', new Date(Date.now() + 3_600_000).toISOString(), 'benimadim');
   takvimSunucusu(null);
+  profilSunucusu();
 });
 
 afterEach(() => {
@@ -182,6 +200,25 @@ test('haftalik hedef sunucunun degeriyle gelir; secim PUT gonderir ve deger yeni
 
   await waitFor(() => expect(govdeler).toEqual([{ weeklyTargetDays: null }]));
   await waitFor(() => expect(araliklar).toHaveLength(2));
+});
+
+test('gizlilik secimi PUT gonderir ve profil yeniden istenir (#294)', async () => {
+  profilSunucusu('Acik');
+  const govdeler: unknown[] = [];
+  server.use(
+    http.put('/api/settings/privacy-level', async ({ request }) => {
+      govdeler.push(await request.json());
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  profilSayfasiniOlustur();
+
+  const secici = await screen.findByLabelText('Gizlilik seviyesi');
+  await waitFor(() => expect(secici).toHaveValue('Acik'));
+
+  await userEvent.selectOptions(secici, 'Gizli');
+
+  await waitFor(() => expect(govdeler).toEqual([{ privacyLevel: 'Gizli' }]));
 });
 
 /** Issue #119/#120: Cikis yap ust kabuktaki hesap menusunden buraya (Hesap sekmesinin en altina) tasindi. */

@@ -8,8 +8,9 @@ import { kendiProfilimiKur, kullaniciProfili, sayfa, sosyalSahneyiOlustur } from
 
 /**
  * #284: başkasının profili. Başlık kendi profilindekiyle aynı bileşendir; "Profili düzenle" yerine
- * takip düğmesi durur. Arkadaşsa Geçmiş + Rekorlar salt-okunur (#282), değilse boş durum ve antrenman
- * uçlarına HİÇ istek gitmez (MSW tanımsız isteği hata sayar). Ölçüler sekmesi başkasında yoktur.
+ * takip düğmesi durur. Kapı artık arkadaşlık değil hedefin gizlilik seviyesi (#294): Açık/Kısıtlı'da
+ * yabancı bile (arkadaş olmasa da) sekmeleri görür, Gizli'de yalnızca Rekorlar sekmesi çizilir. Ölçüler
+ * sekmesi başkasında yoktur.
  */
 const OTURUM = {
   sessionId: 7,
@@ -88,12 +89,33 @@ test('arkadasin rekorlari sunucudan gelir; kendi serin ve plato rozetin cizilmez
   expect(screen.queryByText('En uzun seri')).not.toBeInTheDocument();
 });
 
-test('arkadas olmayanin profilinde sekme yerine bos durum gorunur, antrenman ucu istenmez', async () => {
-  server.use(http.get('/api/users/mehmet/profile', () => HttpResponse.json(kullaniciProfili('mehmet', 'None'))));
+test('acik hesapta yabanci (arkadas degil) bile her iki sekmeyi de gorur', async () => {
+  server.use(
+    http.get('/api/users/mehmet/profile', () =>
+      HttpResponse.json(kullaniciProfili('mehmet', 'None', { privacyLevel: 'Acik' })),
+    ),
+    http.get('/api/users/mehmet/history', () => HttpResponse.json(sayfa([OTURUM]))),
+    http.get('/api/users/mehmet/records', () => HttpResponse.json([REKOR])),
+  );
   sosyalSahneyiOlustur('/u/mehmet');
 
-  expect(await screen.findByText('Karşılıklı takipleşince antrenmanları görünür')).toBeInTheDocument();
-  expect(screen.queryByRole('navigation', { name: 'Profil sekmeleri' })).not.toBeInTheDocument();
+  const sekmeler = within(await screen.findByRole('navigation', { name: 'Profil sekmeleri' })).getAllByRole('link');
+  expect(sekmeler.map((sekme) => sekme.getAttribute('aria-label'))).toEqual(['Geçmiş', 'Rekorlar']);
+});
+
+test('gizli hesapta yabanci yalniz Rekorlar sekmesini gorur, Gecmis linki yok', async () => {
+  server.use(
+    http.get('/api/users/mehmet/profile', () =>
+      HttpResponse.json(kullaniciProfili('mehmet', 'None', { privacyLevel: 'Gizli' })),
+    ),
+    http.get('/api/users/mehmet/records', () => HttpResponse.json([REKOR])),
+  );
+  sosyalSahneyiOlustur('/u/mehmet');
+
+  const sekmeler = within(await screen.findByRole('navigation', { name: 'Profil sekmeleri' })).getAllByRole('link');
+  expect(sekmeler.map((sekme) => sekme.getAttribute('aria-label'))).toEqual(['Rekorlar']);
+  expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeInTheDocument();
+  expect(await screen.findByText('Bench Press')).toBeInTheDocument();
 });
 
 test('Takip et POST atar; sayac ve dugme sunucudan tazelenir', async () => {
@@ -109,6 +131,8 @@ test('Takip et POST atar; sayac ve dugme sunucudan tazelenir', async () => {
       takipEdiyor = true;
       return new HttpResponse(null, { status: 204 });
     }),
+    http.get('/api/users/mehmet/history', () => HttpResponse.json(sayfa([]))),
+    http.get('/api/users/mehmet/records', () => HttpResponse.json([])),
   );
   sosyalSahneyiOlustur('/u/mehmet');
 

@@ -78,11 +78,14 @@ test('satira dokunmak o kisinin profilini acar', async () => {
   const kullanici = userEvent.setup();
   server.use(
     http.get('/api/users/efeypgn/following', () => HttpResponse.json(sayfa([kullaniciSatiri('mehmet', 'Following')]))),
-    http.get('/api/users/mehmet/profile', () => HttpResponse.json(kullaniciProfili('mehmet', 'Following'))),
+    http.get('/api/users/mehmet/profile', () =>
+      HttpResponse.json(kullaniciProfili('mehmet', 'Following', { privacyLevel: 'Gizli' })),
+    ),
+    http.get('/api/users/mehmet/records', () => HttpResponse.json([])),
   );
   sosyalSahneyiOlustur('/u/efeypgn/following');
 
   await kullanici.click(await screen.findByRole('link', { name: 'mehmet' }));
 
-  expect(await screen.findByText('Karşılıklı takipleşince antrenmanları görünür')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'mehmet' })).toBeInTheDocument();
 });

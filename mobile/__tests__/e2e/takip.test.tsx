@@ -24,6 +24,7 @@ function profil(username: string, relation: Iliski, ek: Record<string, unknown> 
     followerCount: 2,
     followingCount: 3,
     relation,
+    privacyLevel: 'Acik',
     ...ek,
   };
 }
@@ -73,7 +74,15 @@ function takipBackendiKur() {
   requestMock.mockImplementation(async (path: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
     if (path === '/profile') {
-      return { username: 'efeypgn', displayName: null, birthDate: null, age: null, hasAvatar: false, avatarVersion: null };
+      return {
+        username: 'efeypgn',
+        displayName: null,
+        birthDate: null,
+        age: null,
+        hasAvatar: false,
+        avatarVersion: null,
+        privacyLevel: 'Kisitli',
+      };
     }
     if (!path.startsWith('/users/')) {
       return sahteRequest(path, init as never);
@@ -92,11 +101,14 @@ function takipBackendiKur() {
       return profil('efeypgn', 'Self', { followerCount: takipcilerim.size, followingCount: takipEdilenler.size });
     }
     if (path === '/users/ayse/profile') return profil('ayse', iliski('ayse'), { displayName: 'Ayşe Kaya', age: 24 });
-    if (path === '/users/mehmet/profile') return profil('mehmet', iliski('mehmet'));
+    if (path === '/users/mehmet/profile') {
+      return profil('mehmet', iliski('mehmet'), { privacyLevel: 'Gizli' });
+    }
     if (path.startsWith('/users/efeypgn/followers')) {
       return sayfa([...takipcilerim].map((ad) => satir(ad, iliski(ad), ad === 'ayse' ? 'Ayşe Kaya' : null)));
     }
     if (path.startsWith('/users/ayse/history')) return sayfa([OTURUM]);
+    if (path.startsWith('/users/mehmet/records')) return [];
     if (path.startsWith('/users/search')) return [satir('mehmet', iliski('mehmet'), 'Mehmet Demir')];
     throw new Error(`Tanımsız uç: ${method} ${path}`);
   });
@@ -147,13 +159,13 @@ test('arkadasin profili: baslik, Takibi birak, yalniz Gecmis ve Rekorlar; gecmis
   expect(screen.queryByText(/sil/i)).toBeNull();
 }, 20_000);
 
-test('arkadas olmayanin profilinde bos durum; gecmis istenmez; Takip et POST atar ve dugme tazelenir', async () => {
+test('gizli hesapta yalniz Rekorlar sekmesi; gecmis istenmez; Takip et POST atar ve dugme tazelenir', async () => {
   const istekler = takipBackendiKur();
 
   await renderRouterAsync('./app', { initialUrl: '/profile/u/mehmet' });
 
-  expect(await screen.findByText('Karşılıklı takipleşince antrenmanları görünür')).toBeTruthy();
-  expect(screen.queryAllByRole('tab')).toHaveLength(0);
+  expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeTruthy();
+  expect(screen.getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Rekorlar']);
 
   await fireEvent.press(screen.getByRole('button', { name: 'Takip et' }));
 
@@ -171,5 +183,5 @@ test('arama ikonundan kullanici aranir ve sonuca dokununca profili acilir', asyn
   await fireEvent.changeText(await screen.findByLabelText('Kullanıcı ara'), 'meh');
   await fireEvent.press(await screen.findByText('Mehmet Demir'));
 
-  expect(await screen.findByText('Karşılıklı takipleşince antrenmanları görünür')).toBeTruthy();
+  expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeTruthy();
 }, 20_000);

@@ -10,6 +10,7 @@ import HataKutusu from '../../../src/ui/HataKutusu';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import HaftalikHedefSecici from '../../../src/components/HaftalikHedefSecici';
+import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
 import { ikonRenk } from '../../../src/ui/renkler';
 
 const MIN_SIFRE_KARAKTER = 8;
@@ -41,6 +42,9 @@ export default function AccountScreen() {
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <Text className="text-heading text-fg">Antrenman hedefi</Text>
         <HaftalikHedefSecici />
+      </View>
+      <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+        <GizlilikSeviyesiSecici />
       </View>
       <Pressable
         onPress={logout}

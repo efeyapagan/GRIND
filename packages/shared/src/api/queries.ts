@@ -31,6 +31,7 @@ type ExerciseProgressPointResponse = components['schemas']['ExerciseProgressPoin
 type CalendarResponse = components['schemas']['CalendarResponse'];
 type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
 type UpdateWeeklyTargetRequest = components['schemas']['UpdateWeeklyTargetRequest'];
+type UpdatePrivacyLevelRequest = components['schemas']['UpdatePrivacyLevelRequest'];
 type AiInsightResponse = components['schemas']['AiInsightResponse'];
 type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
@@ -599,6 +600,24 @@ export function useSetWeeklyTarget() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
+    },
+  });
+}
+
+/**
+ * `PUT /api/settings/privacy-level` (#294), govdesiz 204. Guncel deger `GET /api/profile`
+ * yanitinda geldigi icin basarida profil onbellegi tazelenir.
+ */
+export function useSetPrivacyLevel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (privacyLevel: GizlilikSeviyesi): Promise<void> => {
+      const govde: UpdatePrivacyLevelRequest = { privacyLevel };
+      await request<void>('/settings/privacy-level', { method: 'PUT', body: JSON.stringify(govde) });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
     },
   });
 }
@@ -1244,6 +1263,9 @@ export function useDeleteMeasurement() {
   });
 }
 
+/** Gizlilik seviyesi (#294): geçmiş ve rekorların başkalarına görünürlüğü. */
+export type GizlilikSeviyesi = components['schemas']['PrivacyLevel'];
+
 /** Kullanicinin kendi profili (#280): yas sunucunun hesabidir, istemci dogum tarihinden hesaplamaz. */
 export interface Profil {
   username: string;
@@ -1252,10 +1274,11 @@ export interface Profil {
   age: number | null;
   hasAvatar: boolean;
   avatarVersion: number | null;
+  privacyLevel: GizlilikSeviyesi;
 }
 
 function dogrulanmisProfil(yanit: ProfileResponse): Profil {
-  if (!yanit.username || yanit.hasAvatar === undefined) {
+  if (!yanit.username || yanit.hasAvatar === undefined || !yanit.privacyLevel) {
     throw new Error('Sunucudan eksik profil yaniti alindi.');
   }
   return {
@@ -1265,6 +1288,7 @@ function dogrulanmisProfil(yanit: ProfileResponse): Profil {
     age: yanit.age ?? null,
     hasAvatar: yanit.hasAvatar,
     avatarVersion: yanit.avatarVersion ?? null,
+    privacyLevel: yanit.privacyLevel,
   };
 }
 
@@ -1292,6 +1316,7 @@ export interface KullaniciProfili extends FotografSahibi {
   followerCount: number;
   followingCount: number;
   relation: TakipIliskisi;
+  privacyLevel: GizlilikSeviyesi;
 }
 
 function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfili {
@@ -1301,7 +1326,8 @@ function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfi
     yanit.followerCount === undefined ||
     yanit.followingCount === undefined ||
     yanit.relation === undefined ||
-    yanit.hasAvatar === undefined
+    yanit.hasAvatar === undefined ||
+    !yanit.privacyLevel
   ) {
     throw new Error('Sunucudan eksik kullanici profili yaniti alindi.');
   }
@@ -1315,6 +1341,7 @@ function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfi
     followerCount: yanit.followerCount,
     followingCount: yanit.followingCount,
     relation: yanit.relation,
+    privacyLevel: yanit.privacyLevel,
   };
 }
 
