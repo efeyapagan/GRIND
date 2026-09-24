@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, X } from 'lucide-react';
+import { ClipboardList, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -57,6 +57,12 @@ interface BekleyenHareket {
  *
  * DIKKAT (review bulgusu): oturum ve set sorgularinin HATA durumu bos durumdan AYRI ve ONCELIKLI.
  *
+ * #273: set girilmis (dolu) bir oturumda "Hareket ekle" ve "Antrenmani bitir" yer degistirdi --
+ * sablon uzerinden gidildigi icin hareket eklemek nadiren gerekir, bitirmek EN SIK yapilan islemdir.
+ * Ust baslikta artik sade bir metin olan "Hareket ekle" durur; alta yapisik kutuda (hareket
+ * kartlarinin hemen ardinda, bkz. #226) turuncu "Antrenmani bitir" durur. Bos oturumda (#47) bu
+ * degismez -- ust baslik hala "Iptal et", alt kutu hala "Hareket ekle" gosterir.
+ *
  * Secim (spec Karar 5) burada TEK durumdur; kartlar ve panel paylasir. YENI bir sablonlu oturum
  * gorununce (id, varsayilanin en son uygulandigi oturumdan FARKLIYSA) secim o oturumun varsayilanina
  * SIFIRLANIR -- aksi halde onceki oturumdan kalma bir secim (orn. Bench Press) yeni sablonda hic
@@ -96,6 +102,9 @@ export default function AntrenmanPage() {
   const siraMutasyonu = useReorderSessionExercises();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
+  // Issue #273: "Hareket ekle" acma dugmesi ust basliga tasindiktan sonra bu durumu artik AddSetForm
+  // degil burasi tutar -- ust baslikla alta yapisik kutu AYNI paneli acabilsin diye.
+  const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
   // Issue #57: set silme. Bekleyen set listeden hemen gizlenir; "1 / 3 set" ilerlemesi ve "bitir / iptal
   // et" karari sunucu verisinden gelmeye devam eder -- istemci sunucunun sayimini tekrarlamaz.
@@ -274,12 +283,14 @@ export default function AntrenmanPage() {
               {t('antrenman.devamEdiyor')}
             </span>
           )}
-          {/* Issue #47: set GIRILMEMIS acik oturumda "bitir" degil "iptal et" gosterilir -- yanlislikla
-              dokunulan bir sablon kartinin geri alinmasi budur. "Bitir" bu durumda gecmise BOS bir
-              antrenman birakirdi (sorunun ta kendisi). Set girilince iptal kaybolur, "bitir" doner:
-              artik silinecek gercek veri var. Set durumu HENUZ BILINMIYORKEN (yukleniyor/hata) ikisi
-              de gosterilmez -- yanlis dugmeyi gosterip sonra degistirmek, kullanicinin o kisa anda
-              yanlis olana dokunmasina yol acar. */}
+          {/* Issue #47: set GIRILMEMIS acik oturumda "iptal et" gosterilir -- yanlislikla dokunulan bir
+              sablon kartinin geri alinmasi budur ("bitir" bu durumda gecmise BOS bir antrenman
+              birakirdi, sorunun ta kendisi). Set girilince (#273) yerini "Hareket ekle"ye birakir --
+              "Antrenmani bitir" artik en sik yapilan islem oldugu icin alta, turuncu kutuya tasindi
+              (bkz. AddSetForm.tsx `bitirCagrisi`); hareket eklemek nadiren gerekir, o yuzden burada
+              sade bir metin olarak durur. Set durumu HENUZ BILINMIYORKEN (yukleniyor/hata) ikisi de
+              gosterilmez -- yanlis dugmeyi gosterip sonra degistirmek, kullanicinin o kisa anda yanlis
+              olana dokunmasina yol acar. */}
           {gorunenOturum?.isOpen &&
             setlerYuklendi &&
             (oturumBos ? (
@@ -293,15 +304,13 @@ export default function AntrenmanPage() {
                 {t('antrenman.iptalEt')}
               </button>
             ) : (
-              // #182: oturumu burada KAPATMAZ -- zorluk kadraninin oldugu bitirme sayfasina goturur
-              // (zorluk yalnizca bitirirken alinir, sunucuda sonradan degistiren bir uc yok).
               <button
                 type="button"
-                onClick={() => navigate('/antrenman/bitir')}
+                onClick={() => setHareketEkleAcik(true)}
                 className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-label text-muted disabled:opacity-60"
               >
-                <CircleCheck aria-hidden size={18} />
-                {t('antrenman.bitir')}
+                <Plus aria-hidden size={18} />
+                {t('antrenman.hareketEkle')}
               </button>
             ))}
         </div>
@@ -430,7 +439,16 @@ export default function AntrenmanPage() {
           onEgzersizSec={secimYap}
           acik={panelAcik}
           onAcikDegis={setPanelAcik}
-          hareketEkleme={{ egzersizler: eklenebilirEgzersizler, onEkle: hareketEkle }}
+          hareketEkleme={{
+            egzersizler: eklenebilirEgzersizler,
+            onEkle: hareketEkle,
+            acik: hareketEkleAcik,
+            onAcikDegis: setHareketEkleAcik,
+            // #273: bos oturumda (#47) hala "Hareket ekle" gosterilir -- "bitir" bos bir antrenmani
+            // gecmise birakirdi. #182: oturumu burada KAPATMAZ, zorluk kadraninin oldugu bitirme
+            // sayfasina goturur (zorluk yalnizca bitirirken alinir, sunucuda sonradan degistiren uc yok).
+            bitirCagrisi: oturumBos ? undefined : { onBitir: () => navigate('/antrenman/bitir') },
+          }}
         />
       ) : (
         <SablonOlusturCagrisi />

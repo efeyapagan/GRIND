@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, X } from 'lucide-react-native';
+import { ClipboardList, Plus, X } from 'lucide-react-native';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -50,6 +50,12 @@ interface BekleyenHareket {
 /**
  * web/src/pages/AntrenmanPage.tsx ile ayni (issue #119/#120). #186: "Sablonla basla"nin altinda
  * ikincil "Bos antrenman baslat"; #209: hareketi olan acik antrenmanda "Sablon olarak kaydet".
+ *
+ * #273: set girilmis (dolu) bir oturumda "Hareket ekle" ve "Antrenmani bitir" yer degistirdi --
+ * sablon uzerinden gidildigi icin hareket eklemek nadiren gerekir, bitirmek EN SIK yapilan islemdir.
+ * Ust baslikta artik sade bir metin olan "Hareket ekle" durur; alt alanda (hareket kartlarinin
+ * hemen ardinda) turuncu "Antrenmani bitir" durur. Bos oturumda (#47) bu degismez -- ust baslik
+ * hala "Iptal et", alt alan hala "Hareket ekle" gosterir.
  */
 export default function AntrenmanScreen() {
   const { t } = useTranslation();
@@ -71,6 +77,9 @@ export default function AntrenmanScreen() {
   const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   const [panelAcik, setPanelAcik] = useState(false);
+  // Issue #273: "Hareket ekle" acma dugmesi ust basliga tasindiktan sonra bu durumu artik
+  // AntrenmanAltAlani degil burasi tutar -- ust baslikla alt alan AYNI paneli acabilsin diye.
+  const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
   const queryClient = useQueryClient();
   const setSilmeyiTamamla = useCallback(
@@ -249,15 +258,15 @@ export default function AntrenmanScreen() {
                 <Text className="text-label text-danger">Antrenmanı iptal et</Text>
               </Pressable>
             ) : (
-              // #153: bitirme burada kapanmaz, zorluk kadranının olduğu ekrana götürür -- antrenman
-              // oradan kapanır. `push` (replace değil): kullanıcı vazgeçip geri dönebilmeli.
+              // #273: "Hareket ekle" artik ust baslikta sade bir metin -- "Antrenmani bitir" en sik
+              // yapilan islem oldugu icin alt alandaki turuncu kutuya tasindi (AntrenmanAltAlani).
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.push('/antrenman-bitir')}
+                onPress={() => setHareketEkleAcik(true)}
                 className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
               >
-                <CircleCheck color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-muted">Antrenmanı bitir</Text>
+                <Plus color={ikonRenk.muted} size={18} />
+                <Text className="text-label text-muted">Hareket ekle</Text>
               </Pressable>
             ))}
         </View>
@@ -394,6 +403,13 @@ export default function AntrenmanScreen() {
           onDinlenmeDegis={setDinlenme}
           egzersizler={eklenebilirEgzersizler}
           onHareketEkle={hareketEkle}
+          acik={hareketEkleAcik}
+          onAcikDegis={setHareketEkleAcik}
+          // #273: bos oturumda (#47) hala "Hareket ekle" gosterilir -- "bitir" bos bir antrenmani
+          // gecmise birakirdi. #153: bitirme burada kapanmaz, zorluk kadraninin oldugu ekrana
+          // goturur -- antrenman oradan kapanir. `push` (replace degil): kullanici vazgecip geri
+          // donebilmeli.
+          bitirCagrisi={oturumBos ? undefined : { onBitir: () => router.push('/antrenman-bitir') }}
         />
       ) : (
         <SablonOlusturCagrisi />

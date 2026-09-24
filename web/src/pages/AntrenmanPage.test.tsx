@@ -729,6 +729,46 @@ test('set girilince iptal dugmesi yerini bitir dugmesine birakir', async () => {
   );
 });
 
+/**
+ * Issue #273: set girilmis (dolu) oturumda "Hareket ekle" ve "Antrenmani bitir" yer degistirir --
+ * "Hareket ekle" sade bir metin olarak ust baslikta durur, "Antrenmani bitir" alta yapisik turuncu
+ * kutuda (hareket kartlarinin hemen ardinda, #226) durur.
+ */
+test('dolu oturumda Hareket ekle ust baslikta metin, Antrenmani bitir alt kutuda birincil dugme olur', async () => {
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
+  const kullanici = userEvent.setup();
+  antrenmanSayfasiniOlustur();
+
+  await seciliKartaBekle('Bench Press');
+  await setEkle(kullanici, '60', '8');
+
+  const kart = await screen.findByRole('button', { name: 'Bench Press, 1 / 4 set' });
+  const hareketEkle = await screen.findByRole('button', { name: 'Hareket ekle' });
+  const bitir = await screen.findByRole('button', { name: 'Antrenmanı bitir' });
+
+  // "Hareket ekle" artik ust baslikta -- kartlardan ONCE gelir, alta yapisik degil.
+  expect(hareketEkle.compareDocumentPosition(kart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // "Antrenmani bitir" artik kartlarin hemen ardinda -- sticky alt panelde DEGIL (#226 ile ayni kural).
+  expect(kart.compareDocumentPosition(bitir) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(bitir.closest('.sticky')).toBeNull();
+});
+
+test('dolu oturumda ust baslikta Hareket ekle tiklaninca panel acilir ve secilen hareket eklenir', async () => {
+  const ortam = sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
+  const kullanici = userEvent.setup();
+  antrenmanSayfasiniOlustur();
+
+  await seciliKartaBekle('Bench Press');
+  await setEkle(kullanici, '60', '8');
+
+  await kullanici.click(await screen.findByRole('button', { name: 'Hareket ekle' }));
+  const liste = await screen.findByRole('listbox', { name: 'Hareketler' });
+  await kullanici.click(within(liste).getByRole('option', { name: 'Squat' }));
+
+  await waitFor(() => expect(ortam.eklenenHareketler()).toEqual([2]));
+  expect(await screen.findByRole('button', { name: 'Squat, 0 set' })).toBeInTheDocument();
+});
+
 test('iptal basarisiz olursa hata gosterilir ve dugme yerinde kalir', async () => {
   const acikOturum: SessionResponse = {
     id: 7,

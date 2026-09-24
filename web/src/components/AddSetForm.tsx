@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, X } from 'lucide-react';
+import { CircleCheck, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '../api/queries';
@@ -49,13 +49,23 @@ interface Props {
   acik: boolean;
   onAcikDegis: (acik: boolean) => void;
   /**
-   * Acik antrenmanda verilir (#62). Verildiginde kapali alan "Hareket ekle"dir ve paneldeki hareket
-   * secimi KALKAR: hareket karttan gelir, panel basligi onu gosterir. Verilmezse (antrenman yokken)
-   * bugunku davranis (#61'e kadar) korunur.
+   * Acik antrenmanda verilir (#62). Verildiginde paneldeki hareket secimi KALKAR: hareket karttan
+   * gelir, panel basligi onu gosterir. Verilmezse (antrenman yokken) bugunku davranis (#61'e kadar)
+   * korunur. Acilip kapanma durumu artik AntrenmanPage'de tutulur (issue #273) -- ust basliktaki
+   * "Hareket ekle" kisayolu da AYNI durumu acabilsin diye.
    */
   hareketEkleme?: {
     egzersizler: readonly Egzersiz[];
     onEkle: (exerciseId: number) => void;
+    acik: boolean;
+    onAcikDegis: (acik: boolean) => void;
+    /**
+     * Issue #273: set girilmis (dolu) bir oturumda alta yapisik kutuda "Hareket ekle" yerine
+     * "Antrenmani bitir" durur -- sablon uzerinden gidildigi icin hareket eklemek nadiren gerekir,
+     * bitirmekse EN SIK yapilan islemdir; bos oturumda (#47) hala "Hareket ekle" gosterilir, "bitir"
+     * bos bir antrenmani gecmise birakirdi.
+     */
+    bitirCagrisi?: { onBitir: () => void };
   };
 }
 
@@ -77,7 +87,6 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
   const seciliEgzersizAdi = siraliEgzersizler.find((eg) => eg.id === egzersizId)?.name ?? '';
-  const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -239,20 +248,27 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   return (
     <>
       {hareketEkleme && (
-        // #62: acik antrenmanda set ekleme karta dokununca acilir. #226: "Hareket ekle" alta yapisik
-        // DEGIL, kartlarin hemen ardinda akisin icindedir -- uzun listede ekrani ortuyordu.
+        // #62: acik antrenmanda set ekleme karta dokununca acilir. #226: bu kutu alta yapisik DEGIL,
+        // kartlarin hemen ardinda akisin icindedir -- uzun listede ekrani ortuyordu. #273: dolu
+        // oturumda (bitirCagrisi verilmisse) kapali durumda "Hareket ekle" yerine "Antrenmani bitir"
+        // gosterilir -- acma dugmesi artik ust basliktaki kisayoldan geliyor (bkz. AntrenmanPage.tsx).
         <div className="flex flex-col gap-2">
-          {hareketEkleAcik ? (
+          {hareketEkleme.acik ? (
             <HareketEklePaneli
               egzersizler={hareketEkleme.egzersizler}
               onSec={(exerciseId) => {
-                setHareketEkleAcik(false);
+                hareketEkleme.onAcikDegis(false);
                 hareketEkleme.onEkle(exerciseId);
               }}
-              onKapat={() => setHareketEkleAcik(false)}
+              onKapat={() => hareketEkleme.onAcikDegis(false)}
             />
+          ) : hareketEkleme.bitirCagrisi ? (
+            <BirincilDugme yukseklik="normal" onClick={hareketEkleme.bitirCagrisi.onBitir}>
+              <CircleCheck aria-hidden size={20} />
+              {t('antrenman.bitir')}
+            </BirincilDugme>
           ) : (
-            <BirincilDugme yukseklik="normal" aria-expanded={false} onClick={() => setHareketEkleAcik(true)}>
+            <BirincilDugme yukseklik="normal" aria-expanded={false} onClick={() => hareketEkleme.onAcikDegis(true)}>
               <Plus aria-hidden size={20} />
               {t('antrenman.hareketEkle')}
             </BirincilDugme>
