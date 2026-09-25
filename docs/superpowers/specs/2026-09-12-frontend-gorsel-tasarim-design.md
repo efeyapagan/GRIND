@@ -95,7 +95,9 @@ Renk kuralları:
   bırakır. Web alt menüsü (dondurulmuş) değişmedi.
   **#350:** mobilde antrenmanın yüzer set paneli de aynı cam yüzeyi taşır (tek kaynak
   `mobile/src/ui/CamYuzey.tsx`, alt menüyle ortak); `surface-3` zemin yerine cam + 1 px `surface-4`
-  kenar, köşe (`xl`) ve iç düzen aynı. Klavye açıkken panel klavyenin 8 üstüne çıkar.
+  kenar, köşe (`xl`); iç boşluk 16, satır arası 12. Açılırken alttan 48 pt yukarı, alt menü balonuyla
+  aynı hafif taşmalı yayla belirir; kapanırken 150 ms'de aşağı kayıp söner. Klavye açıkken panel
+  klavyenin 8 üstüne çıkar.
   **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
   soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
   durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`

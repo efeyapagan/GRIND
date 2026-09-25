@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Dimensions, View, Text, Pressable, type ScrollView } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
@@ -43,6 +44,16 @@ import { ikonRenk } from '../../src/ui/renkler';
 
 /** Klavye acikken yuzer set panelinin klavyenin ustunde biraktigi bosluk (#350). */
 const KLAVYE_BOSLUGU = 8;
+/**
+ * Set panelinin acilisi (#350): alttan 48 pt yukari, alt menu balonuyla ayni hafif tasmali yay
+ * (KabukTabBar `ACILIS_YAYI`) -- sert degil, "yerine oturan" bir his. Kapanis kisa bir asagi kayip sonme.
+ */
+const PANEL_ACILISI = FadeInDown.springify()
+  .damping(14)
+  .stiffness(180)
+  .mass(0.8)
+  .withInitialValues({ transform: [{ translateY: 48 }] });
+const PANEL_KAPANISI = FadeOutDown.duration(150);
 
 const SABLON_UYGULANMADI ='Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
@@ -435,11 +446,15 @@ export default function AntrenmanScreen() {
           yuzer bir panel (`position: absolute`) -- web/AddSetForm.tsx'in sticky panelinin RN
           karsiligi. `altMenuPayi`: alt menu icerigin ustunde yuzdugu icin (#338, bkz. KabukTabBar.tsx)
           panel onun UZERINE binmesin diye menunun kapladigi alanin ustunde durur; klavye acikken
-          klavyenin ustune cikar (#350, `panelAlti`). */}
-      {gorunenOturum && panelAcik && etkinSecim !== null && seciliEgzersizAdi && (
+          klavyenin ustune cikar (#350, `panelAlti`).
+          #350: panel alttan yaylanarak acilir, asagi kayip soner. Dis kabuk (olculen, `panelRef`)
+          oturum boyunca yerinde durur, yalnizca icteki katman canlanir: kart hizalamasi kabugu olcer,
+          animasyonun ara konumunu degil; cikis animasyonu da ancak kabuk yerindeyken oynayabilir. */}
+      {gorunenOturum && (
         <View
           ref={panelRef}
           testID="set-paneli"
+          pointerEvents="box-none"
           onLayout={(e) => {
             setPanelYuksekligi(e.nativeEvent.layout.height);
             if (hizalanacak.current) {
@@ -450,14 +465,18 @@ export default function AntrenmanScreen() {
           style={{ position: 'absolute', left: 0, right: 0, bottom: panelAlti }}
           className="px-4"
         >
-          <SetPaneli
-            egzersizId={etkinSecim}
-            egzersizAdi={seciliEgzersizAdi}
-            onKapat={() => setPanelAcik(false)}
-            onSetEklendi={(exerciseId) =>
-              setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
-            }
-          />
+          {panelAcik && etkinSecim !== null && seciliEgzersizAdi && (
+            <Animated.View entering={PANEL_ACILISI} exiting={PANEL_KAPANISI}>
+              <SetPaneli
+                egzersizId={etkinSecim}
+                egzersizAdi={seciliEgzersizAdi}
+                onKapat={() => setPanelAcik(false)}
+                onSetEklendi={(exerciseId) =>
+                  setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
+                }
+              />
+            </Animated.View>
+          )}
         </View>
       )}
     </View>

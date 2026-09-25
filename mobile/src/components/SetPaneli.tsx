@@ -96,8 +96,8 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
   }
 
   return (
-    // #350: alt menuyle ayni "liquid glass" yuzey (`CamYuzey`); duzen ayni, yalnizca zemin cam.
-    <View className="flex-col gap-2 overflow-hidden rounded-xl border border-surface-4 p-3">
+    // #350: alt menuyle ayni "liquid glass" yuzey (`CamYuzey`), biraz daha ferah ic bosluk.
+    <View className="flex-col gap-3 overflow-hidden rounded-xl border border-surface-4 p-4">
       <CamYuzey />
       <View className="flex-row items-center justify-between gap-2">
         <Text className="pl-1 text-label text-muted uppercase">{t('setler.yeniSetIcin', { ad: egzersizAdi })}</Text>
