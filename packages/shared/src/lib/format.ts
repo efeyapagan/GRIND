@@ -19,6 +19,18 @@ function tarihParcalariniAl(iso: string): { gun: string; ay: string; yil: string
   return { gun: bul('day'), ay: bul('month'), yil: bul('year') };
 }
 
+/**
+ * Iki ISO zaman damgasi TR takvim gununde ayni mi (issue #260 -- "bugun icin baska bir olcum
+ * girdiniz" tespiti). Backend'in ayni kontrolu (`TurkeyDay.RangeFor`) ile ayni mantik, istemci
+ * tarafinda: yalnizca UI'nin "popup gostersin mi" karari icin, sunucudaki gercek 409 kontrolunun
+ * YERINE gecmez.
+ */
+export function ayniTrGunuMu(isoA: string, isoB: string): boolean {
+  const a = tarihParcalariniAl(isoA);
+  const b = tarihParcalariniAl(isoB);
+  return a.gun === b.gun && a.ay === b.ay && a.yil === b.yil;
+}
+
 /** Sayi bicimi: Turkcede ondalik virgul, Ingilizcede nokta. */
 const SAYI_YERELI: Record<Dil, string> = { tr: 'tr-TR', en: 'en-US' };
 

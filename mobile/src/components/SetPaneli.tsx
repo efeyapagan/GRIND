@@ -18,6 +18,7 @@ import { ikonRenk } from '../ui/renkler';
 interface Props {
   egzersizId: number;
   egzersizAdi: string;
+  /** Set eklenince de cagrilir: panel tek bir setten sonra kapanir. */
   onKapat: () => void;
   // Basarili set sonrasi dinlenme sayaci baslar -- sayac listenin sonunda, ekranda yasar.
   onSetEklendi: (exerciseId: number) => void;
@@ -73,6 +74,9 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
         t('setler.eklendi', { agirlik: formatWeight(ayristirilmisAgirlik, dil), tekrar: ayristirilmisTekrar }),
       );
       onSetEklendi(egzersizId);
+      // Set eklenince panel KAPANIR (kullanici karari): eklenen set kartta gorunur ve dinlenme
+      // sayaci ust barda baslar -- ikisi de yuzer panelin arkasinda kalirdi.
+      onKapat();
     } catch (hata) {
       if (hata instanceof ApiError) {
         const sonuc = apiHatasiniAyir(hata, SET_ALANLARI);

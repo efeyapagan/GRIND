@@ -229,11 +229,14 @@ export const tr = {
     dinlenme: 'Dinlenme',
     dinlenmeBitti: 'Dinlenme bitti',
     dinlenmeEkleSure: '+15 sn',
+    dinlenmeGenislet: 'Dinlenme sayacını aç',
     sablonUygulanmadi: 'Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.',
     bosBaslat: 'Boş antrenman başlat',
     sablonOlarakKaydet: 'Şablon olarak kaydet',
-    sablonSorusu: 'Bu antrenman şablon olarak kaydedilsin mi?',
+    sablonSorusu: 'Şablon olarak kaydedilsin mi?',
     sablonSorusuAciklama: 'Hareketleri bir sonraki antrenmanda tek dokunuşla başlatabilirsin.',
+    sablonSorusuSapmaAciklama:
+      'Şablonunda olmayan hareketler eklemişsin. Bu listeyi yeni bir şablon olarak kaydedebilirsin.',
     simdiDegil: 'Şimdi değil',
   },
   setler: {
@@ -342,6 +345,9 @@ export const tr = {
     grafikEtiket: '{{ad}} grafiği',
     grafikBasligi_one: '{{ad}} {{ozet}}, {{count}} antrenman',
     grafikBasligi_other: '{{ad}} {{ozet}}, {{count}} antrenman',
+    noktaPozisyonu: '{{n}}. hareket',
+    pozisyonDegistiIpucu:
+      'Kesikli halkalı nokta: hareket o antrenmanda genelden farklı bir sırada yapıldı; değişim bundan kaynaklanıyor olabilir.',
   },
   rekorlar: {
     altBaslik: 'Kişisel en iyiler',
@@ -377,6 +383,10 @@ export const tr = {
     kalcaDegeri: '{{cm}} cm kalça',
     silmeOnayi: 'Bu ölçü kalıcı olarak silinecek.',
     olcuyuSil: 'Ölçüyü sil',
+    cakismaBaslik: 'Bugün için başka bir ölçüm girdiniz.',
+    cakismaYerineKaydet: 'Ölçümü değiştir',
+    cakismaEkstraOlcum: 'Ekstra ölçüm',
+    guncellenemedi: 'Ölçü güncellenemedi',
   },
   yorumlar: {
     baslik: 'GRINDY ne diyor?',

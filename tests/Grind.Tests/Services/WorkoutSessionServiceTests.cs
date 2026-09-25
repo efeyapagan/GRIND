@@ -79,6 +79,56 @@ public class WorkoutSessionServiceTests
     }
 
     /// <summary>
+    /// Issue #262: mobilde zayıf salon bağlantısı/istek gecikmesi "başlat"a basılan an ile sunucunun
+    /// aldığı an arasında fark yaratabilir -- istemci saati verilirse `StartedAt` ODUR, sunucu saati
+    /// değil.
+    /// </summary>
+    [Fact]
+    public async Task Istemci_zaman_damgasi_verilince_baslangic_odur()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            // Sunucu saatinden (VarsayilanAn) 2 dakika ONCE -- "basla"ya basildiktan sonra istek
+            // gecikmis gibi.
+            var istemciZamani = new DateTimeOffset(VarsayilanAn.AddMinutes(-2), TimeSpan.Zero);
+
+            var sonuc = await service.StartAsync(new StartSessionRequest { StartedAt = istemciZamani });
+
+            Assert.Equal(istemciZamani.UtcDateTime, sonuc.Session.StartedAt);
+        }
+    }
+
+    /// <summary>Issue #262: BodyWeightLog'daki (#119) AYNI 5 dakikalik tolerans -- fazlasi reddedilir.</summary>
+    [Fact]
+    public async Task Istemci_zaman_damgasi_toleranstan_fazla_ileride_ise_reddedilir()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var cokIleri = new DateTimeOffset(VarsayilanAn.AddMinutes(6), TimeSpan.Zero);
+
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.StartAsync(new StartSessionRequest { StartedAt = cokIleri }));
+        }
+    }
+
+    /// <summary>Issue #262: tolerans SINIRI icindeki (5 dk) bir ileri zaman kabul edilir.</summary>
+    [Fact]
+    public async Task Istemci_zaman_damgasi_tolerans_icinde_ileride_ise_kabul_edilir()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var azIleri = new DateTimeOffset(VarsayilanAn.AddMinutes(4), TimeSpan.Zero);
+
+            var sonuc = await service.StartAsync(new StartSessionRequest { StartedAt = azIleri });
+
+            Assert.Equal(azIleri.UtcDateTime, sonuc.Session.StartedAt);
+        }
+    }
+
+    /// <summary>
     /// FIX 1 REGRESYON TESTİ: eskiden `StartAsync`'in idempotent (var olan oturumu döndüren)
     /// dalı, `FindOpenTodayAsync`'in Include'suz döndürdüğü session'ı doğrudan `ProgressAsync`'e
     /// veriyordu; guard `Template is null` olduğu için bu şablonlu bir oturumda bile sessizce

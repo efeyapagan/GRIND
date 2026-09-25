@@ -184,6 +184,86 @@ public class ExerciseProgressServiceTests
         }
     }
 
+    /// <summary>
+    /// Issue #230: pozisyon `SessionExercise.OrderIndex`'ten DEĞİL, oturumdaki İLK setin
+    /// `CreatedAt`'inden gelir -- hedef egzersizin id'si diğerinden küçük olsa da (id sırası değil,
+    /// fiilen NE ZAMAN YAPILDIĞI sırası) pozisyonu belirleyen budur.
+    /// </summary>
+    [Fact]
+    public async Task Pozisyon_oturumdaki_tum_hareketlerin_ilk_set_zamanina_gore_hesaplanir()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerEgzersiz = TestDatabase.NewExercise(user, $"Squat {Guid.NewGuid():N}");
+            context.Add(digerEgzersiz);
+
+            var oturum = TestDatabase.NewSession(user);
+            oturum.StartedAt = Gun;
+            context.Add(oturum);
+
+            // Diger egzersiz ONCE yapildi (daha erken CreatedAt) -- hedef egzersiz o gun 2. sirada.
+            context.Add(new SetEntry
+            {
+                WorkoutSession = oturum, Exercise = digerEgzersiz,
+                Weight = 100m, Reps = 5, RecordType = RecordType.None, CreatedAt = Gun,
+            });
+            context.Add(new SetEntry
+            {
+                WorkoutSession = oturum, Exercise = exercise,
+                Weight = 60m, Reps = 8, RecordType = RecordType.None, CreatedAt = Gun.AddMinutes(10),
+            });
+            await context.SaveChangesAsync();
+
+            var sonuc = await service.GetAsync(exercise.Id, new StatsRangeQuery());
+
+            Assert.Equal(2, Assert.Single(sonuc.Points).Position);
+        }
+    }
+
+    /// <summary>
+    /// Issue #230: `PositionChanged`, yalnızca KENDİSİNDEN ÖNCEKİ (kronolojik) noktaya göre --
+    /// ilk nokta için her zaman `false` (kıyaslanacak önceki nokta yok).
+    /// </summary>
+    [Fact]
+    public async Task PositionChanged_yalnizca_pozisyon_onceki_noktadan_farkliysa_true_olur()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerEgzersiz = TestDatabase.NewExercise(user, $"Squat {Guid.NewGuid():N}");
+            context.Add(digerEgzersiz);
+
+            // 1. oturum: hedef egzersiz TEK basina -- pozisyon 1.
+            Seed(context, user, exercise, Gun.AddDays(-6), (55m, 8));
+
+            // 2. oturum: diger egzersiz ONCE yapildi -- hedef egzersiz pozisyon 2 (degisti).
+            var ikinciOturum = TestDatabase.NewSession(user);
+            ikinciOturum.StartedAt = Gun.AddDays(-3);
+            context.Add(ikinciOturum);
+            context.Add(new SetEntry
+            {
+                WorkoutSession = ikinciOturum, Exercise = digerEgzersiz,
+                Weight = 100m, Reps = 5, RecordType = RecordType.None, CreatedAt = Gun.AddDays(-3),
+            });
+            context.Add(new SetEntry
+            {
+                WorkoutSession = ikinciOturum, Exercise = exercise,
+                Weight = 57.5m, Reps = 8, RecordType = RecordType.None, CreatedAt = Gun.AddDays(-3).AddMinutes(10),
+            });
+
+            // 3. oturum: hedef egzersiz yine TEK basina -- pozisyon 1 (degisti, 2.oturumdaki 2'den).
+            Seed(context, user, exercise, Gun, (60m, 8));
+
+            await context.SaveChangesAsync();
+
+            var sonuc = await service.GetAsync(exercise.Id, new StatsRangeQuery());
+
+            Assert.Equal([1, 2, 1], sonuc.Points.Select(p => p.Position));
+            Assert.Equal([false, true, true], sonuc.Points.Select(p => p.PositionChanged));
+        }
+    }
+
     [Fact]
     public async Task Ters_aralik_reddedilir()
     {

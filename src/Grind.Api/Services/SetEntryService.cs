@@ -1,4 +1,5 @@
 using Grind.Api.Common.Exceptions;
+using Grind.Api.Common.Progress;
 using Grind.Api.Common.Rest;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Validation;
@@ -57,8 +58,9 @@ public class SetEntryService(
             exerciseId, weight, reps, cancellationToken);
 
         // Seam: kaydetmez. Oturum (gerekirse) ve set aşağıda TEK commit'te birlikte gider.
+        // #262: client zaman damgası burada VERİLMEZ -- bu yol setin kendi CreatedAt'i ile açılır.
         var (session, _) = await sessionService.GetOrOpenTodayAsync(
-            templateId: null, notes: null, cancellationToken);
+            templateId: null, notes: null, cancellationToken: cancellationToken);
 
         // #62: hareket antrenmanın listesinde yoksa sona hedefsiz girer — "Plan dışı" diye ayrı bir
         // kavram kalmaz. Seam kaydetmez; liste satırı set ile aynı commit'te gider.
@@ -93,7 +95,8 @@ public class SetEntryService(
         var sets = await setEntryRepository.GetForSessionAsync(
             sessionId, currentUser.UserId, cancellationToken);
 
-        return HistoryMapping.ToSetResponses(sets, RestIntervalCalculator.ForSession(sets));
+        return HistoryMapping.ToSetResponses(
+            sets, RestIntervalCalculator.ForSession(sets), ExercisePositionCalculator.ForSession(sets));
     }
 
     public async Task<SetEntryResponse> PatchAsync(
@@ -167,7 +170,8 @@ public class SetEntryService(
         var sessionSets = await setEntryRepository.GetForSessionAsync(
             set.WorkoutSessionId, currentUser.UserId, cancellationToken);
 
-        return HistoryMapping.ToSetResponses(sessionSets, RestIntervalCalculator.ForSession(sessionSets))
+        return HistoryMapping.ToSetResponses(
+                sessionSets, RestIntervalCalculator.ForSession(sessionSets), ExercisePositionCalculator.ForSession(sessionSets))
             .Single(s => s.Id == set.Id);
     }
 }

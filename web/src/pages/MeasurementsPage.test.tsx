@@ -212,6 +212,138 @@ test('sunucu 409 donerse "zaten kayitli" mesaji gosterilir, pencere acik kalir',
   expect(screen.getByRole('heading', { name: 'Yeni ölçüm' })).toBeInTheDocument();
 });
 
+/**
+ * Issue #260: ayni gun (TR) icin FARKLI degerli ikinci bir olcum girilince soru sorulur -- TAM AYNI
+ * boy+kiloyla ikinci giriside (yukaridaki 409 testi) bu soru CIKMAZ, davranis degismedi.
+ */
+describe('ayni gun ikinci olcum sorusu (#260)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-18T18:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('farkli degerli ikinci olcumde soru cikar, "Ekstra olcum" normal POST atar', async () => {
+    let govde: unknown = 'dokunulmadi';
+    server.use(
+      http.get('/api/body-weights', () =>
+        HttpResponse.json(sayfaYaniti([ornekOlcu({ id: 1, recordedAt: '2026-09-18T10:00:00Z' })])),
+      ),
+      http.post('/api/body-weights', async ({ request }) => {
+        govde = await request.json();
+        return HttpResponse.json(ornekOlcu({ id: 2, weight: 79.5, recordedAt: '2026-09-18T18:00:00Z' }), {
+          status: 201,
+        });
+      }),
+    );
+    const kullanici = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    ekraniOlustur();
+
+    await penceresiniAc(kullanici);
+    await kullanici.type(screen.getByLabelText(/Boy/), '180');
+    await kullanici.type(screen.getByLabelText(/Kilo/), '79.5');
+    await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+    expect(await screen.findByRole('heading', { name: 'Bugün için başka bir ölçüm girdiniz.' })).toBeInTheDocument();
+    // Boy/kilo alanlari artik gorunmuyor -- yalnizca uc secenek.
+    expect(screen.queryByLabelText(/Boy/)).not.toBeInTheDocument();
+
+    await kullanici.click(screen.getByRole('button', { name: 'Ekstra ölçüm' }));
+
+    await waitFor(() => expect(govde).toMatchObject({ weight: 79.5, heightCm: 180 }));
+    expect(screen.queryByRole('heading', { name: 'Yeni ölçüm' })).not.toBeInTheDocument();
+  });
+
+  test('"Ölçümü değiştir" gunun EN SON olcumunu PATCH ile gunceller', async () => {
+    let patchGovde: unknown = 'dokunulmadi';
+    let patchedId: string | undefined;
+    server.use(
+      http.get('/api/body-weights', () =>
+        HttpResponse.json(
+          sayfaYaniti([
+            ornekOlcu({ id: 5, weight: 80, recordedAt: '2026-09-18T15:00:00Z' }),
+            ornekOlcu({ id: 1, weight: 81, recordedAt: '2026-09-18T09:00:00Z' }),
+          ]),
+        ),
+      ),
+      http.patch('/api/body-weights/:id', async ({ request, params }) => {
+        patchedId = params.id as string;
+        patchGovde = await request.json();
+        return HttpResponse.json(ornekOlcu({ id: 5, weight: 79.5, recordedAt: '2026-09-18T15:00:00Z' }));
+      }),
+    );
+    const kullanici = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    ekraniOlustur();
+
+    await penceresiniAc(kullanici);
+    await kullanici.type(screen.getByLabelText(/Boy/), '180');
+    await kullanici.type(screen.getByLabelText(/Kilo/), '79.5');
+    await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Ölçümü değiştir' }));
+
+    await waitFor(() => expect(patchedId).toBe('5'));
+    expect(patchGovde).toMatchObject({ weight: 79.5, heightCm: 180 });
+    expect(screen.queryByRole('heading', { name: 'Bugün için başka bir ölçüm girdiniz.' })).not.toBeInTheDocument();
+  });
+
+  test('"Vazgec" soruyu kapatir, form degerleri korunur, hicbir istek gitmez', async () => {
+    let istekAtildiMi = false;
+    server.use(
+      http.get('/api/body-weights', () =>
+        HttpResponse.json(sayfaYaniti([ornekOlcu({ id: 1, recordedAt: '2026-09-18T10:00:00Z' })])),
+      ),
+      http.post('/api/body-weights', () => {
+        istekAtildiMi = true;
+        return HttpResponse.json(ornekOlcu(), { status: 201 });
+      }),
+    );
+    const kullanici = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    ekraniOlustur();
+
+    await penceresiniAc(kullanici);
+    await kullanici.type(screen.getByLabelText(/Boy/), '180');
+    await kullanici.type(screen.getByLabelText(/Kilo/), '79.5');
+    await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+    await kullanici.click(await screen.findByRole('button', { name: 'Vazgeç' }));
+
+    expect(screen.getByRole('heading', { name: 'Yeni ölçüm' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Boy/)).toHaveValue('180');
+    expect(screen.getByLabelText(/Kilo/)).toHaveValue('79.5');
+    expect(istekAtildiMi).toBe(false);
+  });
+
+  test('tam ayni boy+kiloyla ikinci giriste soru CIKMAZ, sunucu 409 doner (#119 davranisi degismedi)', async () => {
+    server.use(
+      http.get('/api/body-weights', () =>
+        HttpResponse.json(sayfaYaniti([ornekOlcu({ id: 1, weight: 82.4, heightCm: 180, recordedAt: '2026-09-18T10:00:00Z' })])),
+      ),
+      http.post('/api/body-weights', () =>
+        HttpResponse.json(
+          { title: 'Çakışma', status: 409, detail: 'Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.' },
+          { status: 409 },
+        ),
+      ),
+    );
+    const kullanici = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    ekraniOlustur();
+
+    await penceresiniAc(kullanici);
+    await kullanici.type(screen.getByLabelText(/Boy/), '180');
+    await kullanici.type(screen.getByLabelText(/Kilo/), '82.4');
+    await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
+
+    expect(
+      await screen.findByText('Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Bugün için başka bir ölçüm girdiniz.' })).not.toBeInTheDocument();
+  });
+});
+
 test('pencere Kapat dugmesiyle kapanir', async () => {
   server.use(http.get('/api/body-weights', () => HttpResponse.json(sayfaYaniti([]))));
   const kullanici = userEvent.setup();

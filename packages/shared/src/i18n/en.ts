@@ -227,11 +227,14 @@ export const en: Katalog = {
     dinlenme: 'Rest',
     dinlenmeBitti: 'Rest finished',
     dinlenmeEkleSure: '+15 sec',
+    dinlenmeGenislet: 'Open rest timer',
     sablonUygulanmadi: 'You already have an open workout today; the template was not applied.',
     bosBaslat: 'Start empty workout',
     sablonOlarakKaydet: 'Save as template',
-    sablonSorusu: 'Save this workout as a template?',
+    sablonSorusu: 'Save as template?',
     sablonSorusuAciklama: 'You can start these exercises with one tap next time.',
+    sablonSorusuSapmaAciklama:
+      'You added exercises that are not in your template. You can save this list as a new template.',
     simdiDegil: 'Not now',
   },
   setler: {
@@ -340,6 +343,9 @@ export const en: Katalog = {
     grafikEtiket: '{{ad}} chart',
     grafikBasligi_one: '{{ad}} {{ozet}}, {{count}} workout',
     grafikBasligi_other: '{{ad}} {{ozet}}, {{count}} workouts',
+    noktaPozisyonu: 'Exercise #{{n}} that day',
+    pozisyonDegistiIpucu:
+      'Dashed ring: the exercise was done in a different position than usual that workout — the change may be due to that.',
   },
   rekorlar: {
     altBaslik: 'Personal bests',
@@ -375,6 +381,10 @@ export const en: Katalog = {
     kalcaDegeri: '{{cm}} cm hip',
     silmeOnayi: 'This measurement will be permanently deleted.',
     olcuyuSil: 'Delete measurement',
+    cakismaBaslik: "You've already logged another measurement today.",
+    cakismaYerineKaydet: 'Update the measurement',
+    cakismaEkstraOlcum: 'Add as extra',
+    guncellenemedi: 'Could not update the measurement',
   },
   yorumlar: {
     baslik: "What's GRINDY saying?",

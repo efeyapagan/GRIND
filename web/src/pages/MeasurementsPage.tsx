@@ -3,9 +3,15 @@ import { Plus, Scale, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useDil } from '@grind/shared/i18n';
-import { useAddMeasurement, useDeleteMeasurement, useInfiniteMeasurements, type Olcu } from '../api/queries';
+import {
+  useAddMeasurement,
+  useDeleteMeasurement,
+  useInfiniteMeasurements,
+  useUpdateMeasurement,
+  type Olcu,
+} from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
-import { formatSaat, formatTarih } from '../lib/format';
+import { ayniTrGunuMu, formatSaat, formatTarih } from '../lib/format';
 import { usePageTitle } from '../ui/PageTitleContext';
 import Modal from '../ui/Modal';
 import SayiAlani from '../ui/SayiAlani';
@@ -17,6 +23,15 @@ import HataKutusu from '../ui/HataKutusu';
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
 
+/** Formdan cikan govde -- hem POST (`useAddMeasurement`) hem PATCH (`useUpdateMeasurement`) icin uyumlu. */
+interface OlcumGovdesi {
+  weight: number;
+  heightCm: number;
+  bodyFatPercent?: number;
+  waistCm?: number;
+  hipCm?: number;
+}
+
 /**
  * Vücut ölçüleri sekmesi (issue #119, kullanıcı kararıyla revize): "Yeni ölçüm ekle" bir
  * PENCERE (dialog) açar -- boy ve kilo ZORUNLU, yağ oranı/bel/kalça çevresi opsiyonel. Aynı gün
@@ -27,12 +42,22 @@ const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hip
  *
  * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti (bkz. `RecordsPage.tsx`
  * ayni gerekce) -- `usePageTitle('')` onceki basligi temizler.
+ *
+ * #260: ayni gun icin FARKLI degerli ikinci bir olcum girilmeye calisilinca (ayni pencere icinde)
+ * bir soru gosterilir: "Olcumu degistir" (gunun EN SON olcumunu PATCH ile gunceller), "Ekstra olcum"
+ * (bugunku POST akisi, degismedi) veya "Vazgec" (hicbir sey kaydedilmez, form acik kalir --
+ * degerler kaybolmaz). TAM AYNI boy+kiloyla ikinci girisim (issue #119) bu sorunun DISINDA kalir --
+ * o durumda sunucu hala sert 409 dondurur, davranis degismedi (kullanici karari). "Bugun" ve "en
+ * son olcum" tespiti ilk sayfadaki (`useInfiniteMeasurements`, yeniden eskiye siralı) kayitlardan
+ * yapilir -- bu yalnizca hangi UI'nin gosterilecegine karar verir, sunucudaki gercek kurali
+ * DEGISTIRMEZ.
  */
 export default function MeasurementsPage() {
   const { t } = useTranslation();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
+  const guncelleMutasyonu = useUpdateMeasurement();
   const silMutasyonu = useDeleteMeasurement();
 
   const [modalAcik, setModalAcik] = useState(false);
@@ -44,6 +69,10 @@ export default function MeasurementsPage() {
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
   const [silinecekId, setSilinecekId] = useState<number | null>(null);
+  // #260: dolu -- ayni gun icin farkli degerli ikinci bir olcum, kullaniciya soru sorulmasi
+  // gerekiyor demektir. `hedefId`: "Olcumu degistir" secilirse guncellenecek (gunun en son) kayit.
+  const [cakisma, setCakisma] = useState<{ govde: OlcumGovdesi; hedefId: number } | null>(null);
+  const [cakismaHata, setCakismaHata] = useState<string | null>(null);
 
   function formuSifirla() {
     setKilo('');
@@ -53,6 +82,8 @@ export default function MeasurementsPage() {
     setKalcaCevresi('');
     setGenelHata(null);
     setAlanHatalari({});
+    setCakisma(null);
+    setCakismaHata(null);
   }
 
   function penceresiniAc() {
@@ -82,13 +113,27 @@ export default function MeasurementsPage() {
       return;
     }
 
-    const govde = {
+    const govde: OlcumGovdesi = {
       weight: agirlik,
       heightCm: boyDegeri,
       bodyFatPercent: sayiyaCevir(yagOrani),
       waistCm: sayiyaCevir(belCevresi),
       hipCm: sayiyaCevir(kalcaCevresi),
     };
+
+    // #260: bugunun (TR gunu) olculeri arasinda TAM AYNI boy+kiloyla bir kayit varsa (issue #119)
+    // soru sorulmaz -- dogrudan gonderilir, sunucu hala sert 409 doner (davranis degismedi).
+    // Bugun baska bir olcum var ama boy+kilo FARKLI ise soru sorulur.
+    const suAn = new Date().toISOString();
+    const bugununOlculeri = tumOlculer.filter((olcu) => ayniTrGunuMu(olcu.recordedAt, suAn));
+    const tamAyniVarMi = bugununOlculeri.some(
+      (olcu) => olcu.weight === govde.weight && olcu.heightCm === govde.heightCm,
+    );
+    if (bugununOlculeri.length > 0 && !tamAyniVarMi) {
+      // Liste yeniden eskiye sirali (bkz. `useInfiniteMeasurements`) -- ilk oge gunun EN SON olcumu.
+      setCakisma({ govde, hedefId: bugununOlculeri[0].id });
+      return;
+    }
 
     ekleMutasyonu.mutate(govde, {
       onSuccess: () => {
@@ -100,6 +145,37 @@ export default function MeasurementsPage() {
         setGenelHata(ayrilmis.genelHata);
         setAlanHatalari(ayrilmis.alanHatalari);
       },
+    });
+  }
+
+  function yerineKaydet() {
+    if (!cakisma) {
+      return;
+    }
+    setCakismaHata(null);
+    guncelleMutasyonu.mutate(
+      { id: cakisma.hedefId, ...cakisma.govde },
+      {
+        onSuccess: () => {
+          formuSifirla();
+          setModalAcik(false);
+        },
+        onError: (hata) => setCakismaHata(apiHatasiniAyir(hata, []).genelHata),
+      },
+    );
+  }
+
+  function ekstraOlcumEkle() {
+    if (!cakisma) {
+      return;
+    }
+    setCakismaHata(null);
+    ekleMutasyonu.mutate(cakisma.govde, {
+      onSuccess: () => {
+        formuSifirla();
+        setModalAcik(false);
+      },
+      onError: (hata) => setCakismaHata(apiHatasiniAyir(hata, []).genelHata),
     });
   }
 
@@ -132,71 +208,94 @@ export default function MeasurementsPage() {
         {t('olcumler.yeniOlcumEkle')}
       </BirincilDugme>
 
-      <Modal acik={modalAcik} onKapat={() => setModalAcik(false)} baslik={t('olcumler.yeniOlcum')}>
-        <form onSubmit={gonder} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2">
-            <SayiAlani
-              id="olcu-boy"
-              etiket={t('olcumler.boy')}
-              ekranOkuyucuEki=" (cm)"
-              birim="cm"
-              inputMode="decimal"
-              placeholder="—"
-              value={boy}
-              onChange={setBoy}
-              hata={alanHatalari.heightCm}
-            />
-            <SayiAlani
-              id="olcu-kilo"
-              etiket={t('olcumler.kilo')}
-              ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
-              birim="kg"
-              inputMode="decimal"
-              placeholder="—"
-              value={kilo}
-              onChange={setKilo}
-              hata={alanHatalari.weight}
-            />
-            <SayiAlani
-              id="olcu-yag-orani"
-              etiket={t('olcumler.yagOrani')}
-              ekranOkuyucuEki=" (%)"
-              birim="%"
-              inputMode="decimal"
-              placeholder="—"
-              value={yagOrani}
-              onChange={setYagOrani}
-              hata={alanHatalari.bodyFatPercent}
-            />
-            <SayiAlani
-              id="olcu-bel-cevresi"
-              etiket={t('olcumler.belCevresi')}
-              ekranOkuyucuEki=" (cm)"
-              birim="cm"
-              inputMode="decimal"
-              placeholder="—"
-              value={belCevresi}
-              onChange={setBelCevresi}
-              hata={alanHatalari.waistCm}
-            />
-            <SayiAlani
-              id="olcu-kalca-cevresi"
-              etiket={t('olcumler.kalcaCevresi')}
-              ekranOkuyucuEki=" (cm)"
-              birim="cm"
-              inputMode="decimal"
-              placeholder="—"
-              value={kalcaCevresi}
-              onChange={setKalcaCevresi}
-              hata={alanHatalari.hipCm}
-            />
+      <Modal
+        acik={modalAcik}
+        onKapat={() => setModalAcik(false)}
+        baslik={cakisma ? t('olcumler.cakismaBaslik') : t('olcumler.yeniOlcum')}
+      >
+        {cakisma ? (
+          // #260: ayni gun icin farkli degerli ikinci olcum -- form BILEREK arkada kalir (deger
+          // kaybolmaz), "Vazgec" yalnizca bu soruyu kapatir, pencereyi degil.
+          <div className="flex flex-col gap-3">
+            {cakismaHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={cakismaHata} />}
+            <BirincilDugme
+              yukseklik="normal"
+              onClick={yerineKaydet}
+              disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}
+            >
+              {t('olcumler.cakismaYerineKaydet')}
+            </BirincilDugme>
+            <IkincilDugme onClick={ekstraOlcumEkle} disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}>
+              {t('olcumler.cakismaEkstraOlcum')}
+            </IkincilDugme>
+            <IkincilDugme onClick={() => setCakisma(null)}>{t('ortak.vazgec')}</IkincilDugme>
           </div>
-          <p className="text-label text-muted">{t('olcumler.zorunluAciklama')}</p>
-          {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
-          <BirincilDugme type="submit" yukseklik="normal" disabled={ekleMutasyonu.isPending}>
-            {t('ortak.kaydet')}
-          </BirincilDugme>
-        </form>
+        ) : (
+          <form onSubmit={gonder} className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-2">
+              <SayiAlani
+                id="olcu-boy"
+                etiket={t('olcumler.boy')}
+                ekranOkuyucuEki=" (cm)"
+                birim="cm"
+                inputMode="decimal"
+                placeholder="—"
+                value={boy}
+                onChange={setBoy}
+                hata={alanHatalari.heightCm}
+              />
+              <SayiAlani
+                id="olcu-kilo"
+                etiket={t('olcumler.kilo')}
+                ekranOkuyucuEki={t('setGirdisi.agirlikBirimEki')}
+                birim="kg"
+                inputMode="decimal"
+                placeholder="—"
+                value={kilo}
+                onChange={setKilo}
+                hata={alanHatalari.weight}
+              />
+              <SayiAlani
+                id="olcu-yag-orani"
+                etiket={t('olcumler.yagOrani')}
+                ekranOkuyucuEki=" (%)"
+                birim="%"
+                inputMode="decimal"
+                placeholder="—"
+                value={yagOrani}
+                onChange={setYagOrani}
+                hata={alanHatalari.bodyFatPercent}
+              />
+              <SayiAlani
+                id="olcu-bel-cevresi"
+                etiket={t('olcumler.belCevresi')}
+                ekranOkuyucuEki=" (cm)"
+                birim="cm"
+                inputMode="decimal"
+                placeholder="—"
+                value={belCevresi}
+                onChange={setBelCevresi}
+                hata={alanHatalari.waistCm}
+              />
+              <SayiAlani
+                id="olcu-kalca-cevresi"
+                etiket={t('olcumler.kalcaCevresi')}
+                ekranOkuyucuEki=" (cm)"
+                birim="cm"
+                inputMode="decimal"
+                placeholder="—"
+                value={kalcaCevresi}
+                onChange={setKalcaCevresi}
+                hata={alanHatalari.hipCm}
+              />
+            </div>
+            <p className="text-label text-muted">{t('olcumler.zorunluAciklama')}</p>
+            {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
+            <BirincilDugme type="submit" yukseklik="normal" disabled={ekleMutasyonu.isPending}>
+              {t('ortak.kaydet')}
+            </BirincilDugme>
+          </form>
+        )}
       </Modal>
 
       {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}

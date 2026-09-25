@@ -29,6 +29,8 @@ function nokta(
   topWeight: number,
   volume: number,
   estimatedOneRepMax: number | null,
+  position = 1,
+  positionChanged = false,
 ): ExerciseProgressPointResponse {
   return {
     sessionId,
@@ -39,6 +41,8 @@ function nokta(
     volume,
     setCount: 3,
     estimatedOneRepMax,
+    position,
+    positionChanged,
   };
 }
 
@@ -109,7 +113,11 @@ test('varsayilan Agirlik sekmesi ve 1 Ay: From ile ister, en agir setleri cizer,
   expect(aramalar[0].searchParams.get('From')).toBe('2026-08-15');
   expect(screen.getByRole('tab', { name: 'Ağırlık' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('button', { name: '1 Ay' })).toHaveAttribute('aria-pressed', 'true');
-  expect(maddeler()).toEqual(['25 Ağu: 60 kg', '1 Eyl: 62,5 kg', '10 Eyl: 57,5 kg']);
+  expect(maddeler()).toEqual([
+    '25 Ağu: 60 kg (1. hareket)',
+    '1 Eyl: 62,5 kg (1. hareket)',
+    '10 Eyl: 57,5 kg (1. hareket)',
+  ]);
   expect(screen.getByText('Şu anki').parentElement).toHaveTextContent('57,5');
   expect(screen.getByText('Fark').parentElement).toHaveTextContent('−2,5');
   expect(screen.getByText('25 Ağu – 10 Eyl 2026')).toBeInTheDocument();
@@ -124,13 +132,17 @@ test('Antrenman ve Tahmini 1RM sekmeleri sunucu degerlerine gecer; 1RM olmayan n
   await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' });
   await kullanici.click(screen.getByRole('tab', { name: 'Antrenman' }));
 
-  expect(maddeler()).toEqual(['25 Ağu: 900 kg', '1 Eyl: 1.000 kg', '10 Eyl: 1.100 kg']);
+  expect(maddeler()).toEqual([
+    '25 Ağu: 900 kg (1. hareket)',
+    '1 Eyl: 1.000 kg (1. hareket)',
+    '10 Eyl: 1.100 kg (1. hareket)',
+  ]);
   expect(screen.getByText('Fark').parentElement).toHaveTextContent('+200');
 
   await kullanici.click(screen.getByRole('tab', { name: 'Tahmini 1RM' }));
 
   expect(screen.getByRole('img', { name: 'Bench Press tahmini 1RM, 2 antrenman' })).toBeInTheDocument();
-  expect(maddeler()).toEqual(['25 Ağu: 67,5 kg', '10 Eyl: 64,69 kg']);
+  expect(maddeler()).toEqual(['25 Ağu: 67,5 kg (1. hareket)', '10 Eyl: 64,69 kg (1. hareket)']);
 });
 
 test('Tum araliginda From gonderilmez; bos sonucta aralik ve ilk antrenman metinleri', async () => {
@@ -158,6 +170,49 @@ test('hicbir noktada tahmini 1RM yoksa aciklama metni gorunur', async () => {
 
   expect(screen.getByText('Tahmini 1RM için 1–12 tekrarlı ve ağırlıklı set gerekir.')).toBeInTheDocument();
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
+});
+
+/**
+ * Issue #230: her noktanin detayinda "N. hareket" gorunur; pozisyonu bir onceki noktadan farkli
+ * olan nokta icin (yalnizca) ek bir aciklama satiri cikar.
+ */
+test('nokta pozisyonu detayda gorunur; pozisyon degisince aciklama satiri cikar', async () => {
+  sunucuyuKur([
+    nokta(3, '2026-08-25T08:00:00Z', 60, 900, 67.5, 1, false),
+    nokta(5, '2026-09-01T08:00:00Z', 62.5, 1000, null, 2, true),
+    nokta(9, '2026-09-10T08:00:00Z', 57.5, 1100, 64.69, 2, false),
+  ]);
+  const kullanici = userEvent.setup();
+  gecmisiOlustur();
+  await grafigiAc(kullanici);
+
+  await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' });
+
+  expect(maddeler()).toEqual([
+    '25 Ağu: 60 kg (1. hareket)',
+    '1 Eyl: 62,5 kg (2. hareket)',
+    '10 Eyl: 57,5 kg (2. hareket)',
+  ]);
+  expect(
+    screen.getByText(
+      'Kesikli halkalı nokta: hareket o antrenmanda genelden farklı bir sırada yapıldı; değişim bundan kaynaklanıyor olabilir.',
+    ),
+  ).toBeInTheDocument();
+});
+
+test('hicbir noktanin pozisyonu degismemisse aciklama satiri cikmaz', async () => {
+  sunucuyuKur(NOKTALAR);
+  const kullanici = userEvent.setup();
+  gecmisiOlustur();
+  await grafigiAc(kullanici);
+
+  await screen.findByRole('img', { name: 'Bench Press ağırlık, 3 antrenman' });
+
+  expect(
+    screen.queryByText(
+      'Kesikli halkalı nokta: hareket o antrenmanda genelden farklı bir sırada yapıldı; değişim bundan kaynaklanıyor olabilir.',
+    ),
+  ).not.toBeInTheDocument();
 });
 
 test('istek basarisizsa hata duyurulur', async () => {

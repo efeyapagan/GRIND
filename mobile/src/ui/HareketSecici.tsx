@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
-import { Check, Search } from 'lucide-react-native';
+import { Check, Search, X } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
@@ -23,6 +23,12 @@ interface Props {
   onSec: (exerciseId: number) => void;
   otomatikOdak?: boolean;
   listeYukari?: boolean;
+  /**
+   * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
+   * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
+   * ortemedigi tek yere -- alanin kendi satirina -- konur.
+   */
+  onKapat?: () => void;
 }
 
 /**
@@ -39,6 +45,7 @@ export default function HareketSecici({
   onSec,
   otomatikOdak = false,
   listeYukari = false,
+  onKapat,
 }: Props) {
   const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
@@ -98,13 +105,27 @@ export default function HareketSecici({
             setSorgu(metin);
             setAcik(true);
           }}
-          className="h-12 w-full rounded-lg bg-inset pr-4 pl-10 text-body-lg text-fg focus:bg-surface-3"
+          className={`h-12 w-full rounded-lg bg-inset pl-10 text-body-lg text-fg focus:bg-surface-3 ${
+            onKapat ? 'pr-12' : 'pr-4'
+          }`}
         />
+        {onKapat && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('antrenman.hareketEklemeyiKapat')}
+            onPress={onKapat}
+            className="absolute right-1 z-10 size-10 items-center justify-center rounded-lg"
+          >
+            <X color={ikonRenk.muted} size={20} />
+          </Pressable>
+        )}
       </View>
 
       {acik && (
         <View
-          className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+          // `mb-4`: yukari acilan liste, arama kutusunu saran KARTIN (p-3 = 12px dolgu) da ustunden
+          // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
+          className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'}`}
         >
           <ScrollView keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} className="max-h-64">
             <View className="flex-row flex-wrap gap-1 rounded-t-lg border-b border-surface-4 bg-surface-3 p-1">

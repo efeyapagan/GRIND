@@ -9,6 +9,11 @@ import { renkler } from '@grind/shared/designTokens';
 export interface CizgiNoktasi {
   etiket: string;
   deger: number;
+  /**
+   * Iceren bilesenin (ör. HareketGecmisi, issue #230) `vurgula` true ise noktayi ince bir
+   * isaretle ayirt eder -- grafik bunun ANLAMINI bilmez (veri bilmeyen bilesen, web ile ayni).
+   */
+  vurgula?: boolean;
 }
 
 interface Props {
@@ -126,6 +131,22 @@ function Cizim({ noktalar, baslik }: Props) {
           {koordinatlar.map((k, sira) => (
             <Circle key={`nokta-${sira}`} cx={k.x} cy={k.y} r={5} stroke={renkler.accent} strokeWidth={2.5} fill={renkler.bg} />
           ))}
+          {/* #230: "ince bir işaret" -- web/src/ui/CizgiGrafik.tsx ile ayni notr, kesikli halka. */}
+          {koordinatlar.map(
+            (k, sira) =>
+              noktalar[sira].vurgula && (
+                <Circle
+                  key={`vurgu-${sira}`}
+                  cx={k.x}
+                  cy={k.y}
+                  r={9}
+                  fill="none"
+                  stroke={renkler.muted}
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                />
+              ),
+          )}
           {etiketliSiralar.map((sira) => {
             const metin = formatWeight(noktalar[sira].deger, dil);
             const etiketGenisligi = metin.length * 8 + 16;

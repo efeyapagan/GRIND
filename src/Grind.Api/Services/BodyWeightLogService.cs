@@ -19,11 +19,8 @@ public class BodyWeightLogService(
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
     private const string LogNotFound = "Tartı kaydı bulunamadı.";
 
-    /// <summary>
-    /// İstemci saati birkaç saniye/dakika ileride olabilir; "şimdi"yi gönderen bir tartı 400
-    /// almamalı (spec Karar 2).
-    /// </summary>
-    private static readonly TimeSpan FutureTolerance = TimeSpan.FromMinutes(5);
+    /// <summary>İstemci saati gelecekte oldugunda gosterilen mesaj (spec Karar 2, tolerans #262'de paylasildi).</summary>
+    private const string FutureTime = "Tartı zamanı gelecekte olamaz.";
 
     /// <summary>Aynı gün, aynı boy/kilo tekrarını engeller (issue #119, kullanıcı kararı).</summary>
     private const string DuplicateMeasurement = "Bu gün için aynı boy ve kiloyla bir ölçüm zaten kayıtlı.";
@@ -50,7 +47,7 @@ public class BodyWeightLogService(
             WeightScale.EnsureAtMostTwoDecimals(hipCm);
         }
 
-        var recordedAt = request.RecordedAt is { } girilenZaman ? ToUtcNotInFuture(girilenZaman) : Now();
+        var recordedAt = ClientTimestamp.Resolve(request.RecordedAt, timeProvider, FutureTime);
 
         // Karşılaştırma SADECE boy+kilo üzerinden (issue #119): diğer ölçüler (yağ oranı, bel/kalça)
         // farklı olsa bile aynı gün aynı boy+kilo "zaten kayıtlı" sayılır.
@@ -139,7 +136,7 @@ public class BodyWeightLogService(
 
         if (request.RecordedAt is { } recordedAt)
         {
-            log.RecordedAt = ToUtcNotInFuture(recordedAt);
+            log.RecordedAt = ClientTimestamp.Resolve(recordedAt, timeProvider, FutureTime);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -153,24 +150,6 @@ public class BodyWeightLogService(
 
         repository.Remove(log);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-    }
-
-    private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;
-
-    /// <summary>
-    /// Offset'li zamanı UTC'ye çevirir (<c>UtcDateTime</c> Kind=Utc döner — Npgsql bunu ister) ve
-    /// toleranstan fazla ileride olanı reddeder.
-    /// </summary>
-    private DateTime ToUtcNotInFuture(DateTimeOffset recordedAt)
-    {
-        var utc = recordedAt.UtcDateTime;
-
-        if (utc > Now() + FutureTolerance)
-        {
-            throw new ValidationException("Tartı zamanı gelecekte olamaz.");
-        }
-
-        return utc;
     }
 
     private async Task<BodyWeightLog> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)

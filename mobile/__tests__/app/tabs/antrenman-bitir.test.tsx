@@ -1,11 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { useFinishSession, useOpenSession } from '@grind/shared/api/queries';
+import { useFinishSession, useOpenSession, useTemplate } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import AntrenmanBitirScreen from '../../../app/(tabs)/antrenman-bitir';
 
 jest.mock('@grind/shared/api/queries', () => ({
   useFinishSession: jest.fn(),
   useOpenSession: jest.fn(),
+  useTemplate: jest.fn(),
 }));
 
 const mockReplace = jest.fn();
@@ -18,6 +19,7 @@ jest.mock('expo-router', () => ({
 
 const useOpenSessionMock = useOpenSession as jest.Mock;
 const useFinishSessionMock = useFinishSession as jest.Mock;
+const useTemplateMock = useTemplate as jest.Mock;
 
 const ACIK_OTURUM = {
   id: 7,
@@ -42,6 +44,8 @@ beforeEach(() => {
   mockBack.mockReset();
   useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
   useFinishSessionMock.mockReturnValue({ mutate: jest.fn(), isPending: false, isError: false });
+  // Varsayilan: sablonsuz oturum -- sapma karsilastirmasi icin sablon yok.
+  useTemplateMock.mockReturnValue({ data: undefined });
 });
 
 /**
@@ -146,7 +150,7 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
 
-    expect(await screen.findByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeTruthy();
+    expect(await screen.findByText('Şablon olarak kaydedilsin mi?')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
@@ -177,17 +181,73 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
-  test('sablonlu antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
+  /** Sablonla baslamis oturum; sapma karsilastirmasi `useTemplate`ten gelen listeye bakar. */
+  function sablonluOturumuKur(sablonHareketIdleri: number[] | null) {
     useOpenSessionMock.mockReturnValue({
       data: { ...SABLONSUZ_HAREKETLI, templateId: 10, templateName: 'Push Day' },
       isLoading: false,
       isError: false,
     });
+    useTemplateMock.mockReturnValue({
+      data:
+        sablonHareketIdleri === null
+          ? undefined
+          : { id: 10, name: 'Push Day', exercises: sablonHareketIdleri.map((exerciseId) => ({ exerciseId })) },
+    });
+  }
+
+  /** Liste sablonun aynisi: yeni bir sablon adayi yok, soru sorulmaz. */
+  test('sablonundan sapmamis antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
+    sablonluOturumuKur([1, 2]);
     await ekraniOlustur();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
 
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(screen.queryByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeNull();
+    expect(screen.queryByText('Şablon olarak kaydedilsin mi?')).toBeNull();
+  });
+
+  /** Sablonda olmayan bir hareket eklendiyse liste artik yeni bir sablon adayidir. */
+  test('sablonunda olmayan hareket eklenmis antrenman bitince soru cikar', async () => {
+    sablonluOturumuKur([1]);
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(screen.getByText('Şablon olarak kaydedilsin mi?')).toBeTruthy();
+    // Aciklama sablonsuz halinkinden farkli: neden soruldugunu anlatir.
+    expect(
+      screen.getByText('Şablonunda olmayan hareketler eklemişsin. Bu listeyi yeni bir şablon olarak kaydedebilirsin.'),
+    ).toBeTruthy();
+  });
+
+  test('sapan antrenmanda Sablon olarak kaydet TUM hareketlerle yeni sablon formuna gider', async () => {
+    sablonluOturumuKur([1]);
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Şablon olarak kaydet' }));
+
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/templates/new',
+      params: {
+        donus: '/',
+        hareketler: JSON.stringify([
+          { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+          { exerciseId: 2, exerciseName: 'Squat', plannedSets: 3, restSeconds: 120 },
+        ]),
+      },
+    });
+  });
+
+  /** Sablon alinamazsa bitirme BEKLETILMEZ: soru sorulmadan ana sayfaya donulur. */
+  test('sablon sorgusu sonuclanmadiysa soru sorulmaz', async () => {
+    sablonluOturumuKur(null);
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(screen.queryByText('Şablon olarak kaydedilsin mi?')).toBeNull();
   });
 });

@@ -37,6 +37,7 @@ type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePa
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
 type BodyWeightLogResponsePagedResponse = components['schemas']['BodyWeightLogResponsePagedResponse'];
 type CreateBodyWeightRequest = components['schemas']['CreateBodyWeightRequest'];
+type PatchBodyWeightRequest = components['schemas']['PatchBodyWeightRequest'];
 type ProfileResponse = components['schemas']['ProfileResponse'];
 type UserProfileResponse = components['schemas']['UserProfileResponse'];
 type UserSummaryResponse = components['schemas']['UserSummaryResponse'];
@@ -142,6 +143,9 @@ export interface SetKaydi {
   sessionId: number;
   exerciseId: number;
   exerciseName: string;
+  // #230: bu hareketin o oturumda kacinci sirada yapildigi (1'den baslar), sunucudan -- istemci
+  // kendisi HESAPLAMAZ (ikinci dogruluk kaynagi olmasin diye).
+  exercisePosition: number;
   weight: number;
   reps: number;
   recordType: components['schemas']['RecordType'];
@@ -206,6 +210,7 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     yanit.sessionId === undefined ||
     yanit.exerciseId === undefined ||
     !yanit.exerciseName ||
+    yanit.exercisePosition === undefined ||
     yanit.weight === undefined ||
     yanit.reps === undefined ||
     !yanit.recordType ||
@@ -218,6 +223,7 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     sessionId: yanit.sessionId,
     exerciseId: yanit.exerciseId,
     exerciseName: yanit.exerciseName,
+    exercisePosition: yanit.exercisePosition,
     weight: yanit.weight,
     reps: yanit.reps,
     recordType: yanit.recordType,
@@ -454,6 +460,11 @@ export interface IlerlemeNoktasi {
   setCount: number;
   // Tahmin edilemeyen oturumda null (0 kg ya da 12'den fazla tekrar).
   estimatedOneRepMax: number | null;
+  // #230: hareketin o oturumda kacinci sirada yapildigi (1'den baslar), sunucudan.
+  position: number;
+  // #230: bu noktanin pozisyonu KENDISINDEN ONCEKI (kronolojik) noktadan farkliysa true; ilk
+  // nokta icin her zaman false.
+  positionChanged: boolean;
 }
 
 /** `0` gecerli bir deger: kontroller `=== undefined` ile, `!` ile degil. */
@@ -465,7 +476,9 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     yanit.topWeightReps === undefined ||
     yanit.volume === undefined ||
     yanit.setCount === undefined ||
-    yanit.estimatedOneRepMax === undefined
+    yanit.estimatedOneRepMax === undefined ||
+    yanit.position === undefined ||
+    yanit.positionChanged === undefined
   ) {
     throw new Error('Sunucudan eksik ilerleme noktasi alindi.');
   }
@@ -477,6 +490,8 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     volume: yanit.volume,
     setCount: yanit.setCount,
     estimatedOneRepMax: yanit.estimatedOneRepMax,
+    position: yanit.position,
+    positionChanged: yanit.positionChanged,
   };
 }
 
@@ -889,13 +904,18 @@ export function useDeleteSession() {
  * `POST /api/sessions { templateId }`. Bugun acik oturum varsa sunucu onu 200 ile oldugu gibi doner
  * ve `templateId` UYGULANMAZ (Faz 7 karari) -- cagiran taraf donen oturumun `templateId`'sine bakar.
  * `templateId: null` bos (sablonsuz) antrenman acar (#186).
+ *
+ * `startedAt` (#262) her cagrida CIHAZIN o anki saatiyle otomatik doldurulur -- cagiran taraf
+ * (web/mobil) ayrica bir sey yapmaz, DRY. Mobilde zayif salon baglantisi/istek gecikmesi
+ * "basla"ya basilan anla sunucunun aldigi an arasinda fark yaratabilir; sunucu 5 dakikalik
+ * tolerans disindaki bir gelecek zamani reddeder (`ClientTimestamp`, BodyWeightLog #119 ile ayni).
  */
 export function useStartSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (templateId: number | null): Promise<AcikOturum> => {
-      const govde: StartSessionRequest = { templateId };
+      const govde: StartSessionRequest = { templateId, startedAt: new Date().toISOString() };
       const yanit = await request<SessionResponse>('/sessions', {
         method: 'POST',
         body: JSON.stringify(govde),
@@ -1242,6 +1262,28 @@ export function useAddMeasurement() {
       dogrulanmisOlcu(
         await request<BodyWeightLogResponse>('/body-weights', {
           method: 'POST',
+          body: JSON.stringify(govde),
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.measurementsAll });
+    },
+  });
+}
+
+/**
+ * `PATCH /api/body-weights/{id}` (issue #260): ayni gun icin farkli degerli ikinci bir olcum
+ * girilince "yerine kaydet" secilirse, gunun EN SON olcumu bu ucla guncellenir -- yeni bir satir
+ * eklenmez. Ucu de gonderilir; backend `null` alanlari degistirmez (`PatchAsync`), boylece formda
+ * bos birakilan bir alan (orn. yag orani) var olan degeri SILMEZ.
+ */
+export function useUpdateMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...govde }: { id: number } & PatchBodyWeightRequest): Promise<Olcu> =>
+      dogrulanmisOlcu(
+        await request<BodyWeightLogResponse>(`/body-weights/${id}`, {
+          method: 'PATCH',
           body: JSON.stringify(govde),
         }),
       ),

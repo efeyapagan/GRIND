@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Check, Search } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Egzersiz, EgzersizKategorisi } from '../api/queries';
 import { egzersizAra, egzersizOner } from '../lib/egzersizler';
@@ -29,6 +29,12 @@ interface Props {
   otomatikOdak?: boolean;
   /** Liste alanin USTUNDE acilir: ekranin altindaki bir panelde asagi acilan liste sekme cubugunun altinda kalirdi. */
   listeYukari?: boolean;
+  /**
+   * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
+   * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
+   * ortemedigi tek yere -- alanin kendi satirina -- konur.
+   */
+  onKapat?: () => void;
 }
 
 /** Devre disi secenekleri atlayarak sonraki secilebilir indeksi bulur; yoksa mevcut indeks kalir. */
@@ -67,6 +73,7 @@ export default function HareketSecici({
   onSec,
   otomatikOdak = false,
   listeYukari = false,
+  onKapat,
 }: Props) {
   const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
@@ -159,8 +166,22 @@ export default function HareketSecici({
             setAcik(true);
           }}
           onKeyDown={tusaBasildi}
-          className="h-12 w-full rounded-lg bg-inset pr-4 pl-10 text-body-lg text-fg placeholder:text-muted/50 focus:bg-surface-3"
+          className={`h-12 w-full rounded-lg bg-inset pl-10 text-body-lg text-fg placeholder:text-muted/50 focus:bg-surface-3 ${
+            onKapat ? 'pr-12' : 'pr-4'
+          }`}
         />
+        {onKapat && (
+          <button
+            type="button"
+            aria-label={t('antrenman.hareketEklemeyiKapat')}
+            // Secenek satirlariyla ayni gerekce: blur once calisirsa tiklama dugmeye ULASMAZ.
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={onKapat}
+            className="absolute right-1 flex size-10 items-center justify-center rounded-lg text-muted"
+          >
+            <X aria-hidden size={20} />
+          </button>
+        )}
       </div>
 
       {/* Sonuc sayisi duyurulur: ekran okuyucu kullanicisi listeyi goremez, kac sonuc kaldigini bilmeli. */}
@@ -174,8 +195,10 @@ export default function HareketSecici({
 
       <div
         hidden={!acik}
+        // `mb-4`: yukari acilan liste, arama kutusunu saran KARTIN (p-3 = 12px dolgu) da ustunden
+        // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
         className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${
-          listeYukari ? 'bottom-full mb-1' : 'top-full mt-1'
+          listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'
         }`}
       >
         {/* Kategori haplari (#77). Odak metin alaninda kalir (secenekler gibi pointerdown bastirilir):
