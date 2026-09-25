@@ -1,6 +1,7 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
-import { ScrollView, Keyboard, Platform, type ScrollViewProps } from 'react-native';
+import { forwardRef, useRef } from 'react';
+import { ScrollView, type ScrollViewProps } from 'react-native';
 import { useAltMenuPayi } from './KabukTabBar';
+import { useKlavyeYuksekligi } from './useKlavyeYuksekligi';
 
 /**
  * Metin alani + en altta gonder dugmesi olan HER ekranin ortak sarmalayicisi (Faz 3 sonrasi
@@ -22,8 +23,8 @@ import { useAltMenuPayi } from './KabukTabBar';
  * Dolgu buyuyunce ScrollView otomatik KAYMAZ -- en alttaki form gorunsun diye elle
  * `scrollToEnd` cagirilir. Bunu DISARIDAN (ayri bir `keyboardWillShow` dinleyicisiyle) yapmak
  * YARIS DURUMUNA dusuyordu: dolgu state'i henuz native tarafa COMMIT olmadan scrollToEnd
- * cagriliyor ve hicbir sey yapmiyordu. Burada, AYNI bilesen icinde, dolgu state'i guncellendikten
- * bir sonraki tick'te (kisa bir gecikmeyle) kaydirilarak bu race ONLENIR.
+ * cagriliyor ve hicbir sey yapmiyordu. Kaydirma, `useKlavyeYuksekligi`nin dolgu state'i guncellendikten
+ * bir sonraki tick'te (kisa bir gecikmeyle) cagirdigi geri cagrimda yapilarak bu race ONLENIR.
  */
 interface Props extends ScrollViewProps {
   /**
@@ -45,37 +46,14 @@ const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
   disariAcilanRef,
 ) {
   const icRef = useRef<ScrollView>(null);
-  const [klavyeYuksekligi, setKlavyeYuksekligi] = useState(0);
   const altMenuPayi = useAltMenuPayi();
-  // Dinleyici bir kez kurulur; en guncel geri cagrim ref uzerinden okunur.
-  const klavyeAcilincaRef = useRef(onKlavyeAcildi);
-  klavyeAcilincaRef.current = onKlavyeAcildi;
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios') {
-      return;
+  const klavyeYuksekligi = useKlavyeYuksekligi((yukseklik) => {
+    if (onKlavyeAcildi) {
+      onKlavyeAcildi(yukseklik);
+    } else {
+      icRef.current?.scrollToEnd({ animated: true });
     }
-    // `Will` (Did degil) kullanilir: klavye animasyonuyla ES ZAMANLI baslar, "Did" animasyon
-    // bittikten sonra geldigi icin gorunur bir sicrama/gecikme yaratirdi.
-    const gosterilince = Keyboard.addListener('keyboardWillShow', (e) => {
-      setKlavyeYuksekligi(e.endCoordinates.height);
-      const yukseklik = e.endCoordinates.height;
-      setTimeout(() => {
-        if (klavyeAcilincaRef.current) {
-          klavyeAcilincaRef.current(yukseklik);
-        } else {
-          icRef.current?.scrollToEnd({ animated: true });
-        }
-      }, 50);
-    });
-    const gizlenince = Keyboard.addListener('keyboardWillHide', () => {
-      setKlavyeYuksekligi(0);
-    });
-    return () => {
-      gosterilince.remove();
-      gizlenince.remove();
-    };
-  }, []);
+  });
 
   return (
     <ScrollView
