@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { SlideInLeft, SlideInRight } from 'react-native-reanimated';
+import Animated, { LayoutAnimationConfig, SlideInLeft, SlideInRight } from 'react-native-reanimated';
 import { CalendarDays, Check, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -96,6 +96,12 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
           </IkonDugmesi>
         </View>
 
+        {/* #332: giris animasyonu YALNIZCA donem degisince calisir, takvimin ilk montajinda degil.
+            Antrenman bitince ana sayfa acilirken "Devam ediyor" karti bir an cizilip kalkiyor ve
+            takvim yukari kayiyordu; ilk montajdaki kayma animasyonu surerken gelen bu yerlesim
+            degisikligi izgarayi ekranin disinda birakiyordu (sekme degisip yeniden monte olunca
+            duzeliyordu). `key` ile yeniden monte olan izgara yine animasyonla girer. */}
+        <LayoutAnimationConfig skipEntering>
         <GestureDetector gesture={kaydirmaHareketi}>
         {/* #315: izgara iki gorunumde de TAM GENISLIGE yayilir (#84'un 256 px siniri kalkti). */}
         {/* `key`: donem degisince izgara yeniden monte olur ve kartlar yandan girer (#315) --
@@ -132,6 +138,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
           ))}
         </Animated.View>
         </GestureDetector>
+        </LayoutAnimationConfig>
 
         {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
         {isError && (
