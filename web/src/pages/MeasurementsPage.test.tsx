@@ -257,7 +257,7 @@ describe('ayni gun ikinci olcum sorusu (#260)', () => {
     expect(screen.queryByRole('heading', { name: 'Yeni ölçüm' })).not.toBeInTheDocument();
   });
 
-  test('"Yerine kaydet" gunun EN SON olcumunu PATCH ile gunceller', async () => {
+  test('"Ölçümü değiştir" gunun EN SON olcumunu PATCH ile gunceller', async () => {
     let patchGovde: unknown = 'dokunulmadi';
     let patchedId: string | undefined;
     server.use(
@@ -283,7 +283,7 @@ describe('ayni gun ikinci olcum sorusu (#260)', () => {
     await kullanici.type(screen.getByLabelText(/Kilo/), '79.5');
     await kullanici.click(screen.getByRole('button', { name: 'Kaydet' }));
 
-    await kullanici.click(await screen.findByRole('button', { name: 'Yerine kaydet' }));
+    await kullanici.click(await screen.findByRole('button', { name: 'Ölçümü değiştir' }));
 
     await waitFor(() => expect(patchedId).toBe('5'));
     expect(patchGovde).toMatchObject({ weight: 79.5, heightCm: 180 });

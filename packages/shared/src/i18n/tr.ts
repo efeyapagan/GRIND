@@ -385,7 +385,7 @@ export const tr = {
     silmeOnayi: 'Bu ölçü kalıcı olarak silinecek.',
     olcuyuSil: 'Ölçüyü sil',
     cakismaBaslik: 'Bugün için başka bir ölçüm girdiniz.',
-    cakismaYerineKaydet: 'Yerine kaydet',
+    cakismaYerineKaydet: 'Ölçümü değiştir',
     cakismaEkstraOlcum: 'Ekstra ölçüm',
     guncellenemedi: 'Ölçü güncellenemedi',
   },

@@ -383,7 +383,7 @@ export const en: Katalog = {
     silmeOnayi: 'This measurement will be permanently deleted.',
     olcuyuSil: 'Delete measurement',
     cakismaBaslik: "You've already logged another measurement today.",
-    cakismaYerineKaydet: 'Replace it',
+    cakismaYerineKaydet: 'Update the measurement',
     cakismaEkstraOlcum: 'Add as extra',
     guncellenemedi: 'Could not update the measurement',
   },

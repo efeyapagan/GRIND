@@ -44,7 +44,7 @@ interface OlcumGovdesi {
  * ayni gerekce) -- `usePageTitle('')` onceki basligi temizler.
  *
  * #260: ayni gun icin FARKLI degerli ikinci bir olcum girilmeye calisilinca (ayni pencere icinde)
- * bir soru gosterilir: "Yerine kaydet" (gunun EN SON olcumunu PATCH ile gunceller), "Ekstra olcum"
+ * bir soru gosterilir: "Olcumu degistir" (gunun EN SON olcumunu PATCH ile gunceller), "Ekstra olcum"
  * (bugunku POST akisi, degismedi) veya "Vazgec" (hicbir sey kaydedilmez, form acik kalir --
  * degerler kaybolmaz). TAM AYNI boy+kiloyla ikinci girisim (issue #119) bu sorunun DISINDA kalir --
  * o durumda sunucu hala sert 409 dondurur, davranis degismedi (kullanici karari). "Bugun" ve "en
@@ -70,7 +70,7 @@ export default function MeasurementsPage() {
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
   const [silinecekId, setSilinecekId] = useState<number | null>(null);
   // #260: dolu -- ayni gun icin farkli degerli ikinci bir olcum, kullaniciya soru sorulmasi
-  // gerekiyor demektir. `hedefId`: "Yerine kaydet" secilirse guncellenecek (gunun en son) kayit.
+  // gerekiyor demektir. `hedefId`: "Olcumu degistir" secilirse guncellenecek (gunun en son) kayit.
   const [cakisma, setCakisma] = useState<{ govde: OlcumGovdesi; hedefId: number } | null>(null);
   const [cakismaHata, setCakismaHata] = useState<string | null>(null);
 

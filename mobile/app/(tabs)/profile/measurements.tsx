@@ -217,7 +217,7 @@ export default function MeasurementsScreen() {
                   onPress={yerineKaydet}
                   disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}
                 >
-                  Yerine kaydet
+                  Ölçümü değiştir
                 </BirincilDugme>
                 <IkincilDugme onPress={ekstraOlcumEkle} disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}>
                   Ekstra ölçüm

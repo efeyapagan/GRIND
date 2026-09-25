@@ -165,7 +165,7 @@ describe('ayni gun ikinci olcum sorusu (#260)', () => {
     await waitFor(() => expect(screen.queryByText('Bugün için başka bir ölçüm girdiniz.')).toBeNull());
   });
 
-  test('"Yerine kaydet" gunun EN SON olcumunu PATCH ile gunceller', async () => {
+  test('"Ölçümü değiştir" gunun EN SON olcumunu PATCH ile gunceller', async () => {
     const guncelleMutate = jest.fn((govde, { onSuccess }) => onSuccess());
     useUpdateMeasurementMock.mockReturnValue({ mutate: guncelleMutate, isPending: false });
     useInfiniteMeasurementsMock.mockReturnValue(
@@ -183,7 +183,7 @@ describe('ayni gun ikinci olcum sorusu (#260)', () => {
     await fireEvent.changeText(screen.getByLabelText('Kilo'), '79.5');
     await fireEvent.press(screen.getByRole('button', { name: 'Kaydet' }));
 
-    await fireEvent.press(await screen.findByRole('button', { name: 'Yerine kaydet' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Ölçümü değiştir' }));
 
     expect(guncelleMutate).toHaveBeenCalledWith(
       expect.objectContaining({ id: 5, weight: 79.5, heightCm: 180 }),
