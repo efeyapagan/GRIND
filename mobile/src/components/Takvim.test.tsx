@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { useCalendar, useGunGecmisi } from '@grind/shared/api/queries';
 import Takvim from './Takvim';
 
@@ -15,8 +15,10 @@ const useGunGecmisiMock = useGunGecmisi as jest.Mock;
 
 const BUGUN = '2026-09-15';
 
-/** Takvim ozeti; `days` disindaki alanlar bu testlerin konusu degil. */
-function ozet(days: { date: string; sessionCount: number; setCount: number; volume: number }[] = []) {
+type Gun = { date: string; sessionCount: number; setCount: number; volume: number };
+
+/** Takvim ozeti; `alanlar` yalnizca testin konusu olan seri/hedef alanlarini ezer. */
+function ozet(days: Gun[] = [], alanlar: Record<string, number | null> = {}) {
   return {
     data: {
       from: '',
@@ -28,6 +30,7 @@ function ozet(days: { date: string; sessionCount: number; setCount: number; volu
       thisWeekTrainedDays: 0,
       weeklyTargetDays: null,
       currentTargetStreak: null,
+      ...alanlar,
     },
     isLoading: false,
     isError: false,
@@ -76,15 +79,16 @@ test('takvim ikonu aylik ve haftalik arasinda gecis yapar', async () => {
   await waitFor(() => expect(sonAralik()).toBe('2026-09-14..2026-09-20'));
 });
 
-test('antrenman yapilan gun yesil, antrenmansiz gun degil', async () => {
+/** #324: gun hucresi kucuk bir isaret tasir -- antrenmanli gunde onay, antrenmansizda bos halka. */
+test('antrenman yapilan gunde onay isareti, yapilmayan gunde bos halka vardir', async () => {
   useCalendarMock.mockReturnValue(ozet([{ date: '2026-09-14', sessionCount: 1, setCount: 18, volume: 4200 }]));
   await render(<Takvim bugun={BUGUN} />);
 
   const antrenmanli = screen.getByLabelText('14 Eylül: 18 set');
   const bos = screen.getByLabelText('15 Eylül: antrenman yok');
 
-  expect(JSON.stringify(antrenmanli.props.className)).toContain('bg-success');
-  expect(JSON.stringify(bos.props.className)).not.toContain('bg-success');
+  expect(within(antrenmanli).getByTestId('gun-isareti-antrenmanli')).toBeTruthy();
+  expect(within(bos).getByTestId('gun-isareti-bos')).toBeTruthy();
 });
 
 /**
@@ -100,13 +104,50 @@ test('gune dokununca o gunun detay ekranina gidilir', async () => {
   expect(mockPush).toHaveBeenCalledWith('/gun/2026-09-14');
 });
 
-/** Ayni tuzak: `ring-*` ilk render'dan SONRA eklenirse NativeWind bileseni yukseltip cokuyordu. */
-test('her gun hucresi ring sinifini bastan tasir', async () => {
+/** #324: bugun hafif gri bir zeminle vurgulanir; diger gunler zeminsizdir. */
+test('bugunun hucresi gri zeminle vurgulanir, diger gunler degil', async () => {
   await render(<Takvim bugun={BUGUN} />);
 
   const bugunHucresi = screen.getByLabelText('15 Eylül: antrenman yok');
   const digerHucre = screen.getByLabelText('14 Eylül: antrenman yok');
 
-  expect(JSON.stringify(bugunHucresi.props.className)).toContain('ring-1');
-  expect(JSON.stringify(digerHucre.props.className)).toContain('ring-1');
+  expect(JSON.stringify(bugunHucresi.props.className)).toContain('bg-surface-2');
+  expect(JSON.stringify(digerHucre.props.className)).not.toContain('bg-surface-2');
+});
+
+/** #324: "Hedef serisi" yerine bu haftanin ilerlemesi -- x (bu hafta antrenman gunu) / hedef. */
+test('haftalik hedef karti bu haftanin ilerlemesini x/hedef olarak gosterir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4, currentTargetStreak: 7 }));
+  await render(<Takvim bugun={BUGUN} />);
+
+  expect(screen.getByText('Haftalık hedef')).toBeTruthy();
+  expect(screen.getByLabelText('Bu hafta 2 gün, hedef 4')).toBeTruthy();
+  expect(screen.queryByText('Hedef serisi')).toBeNull();
+});
+
+/** #324: hedef yokken kart kaybolmaz, hedef belirlemeye cagirir -- hedef ekranina ana sayfadan ulasilsin. */
+test('haftalik hedef yoksa kart hedef belirlemeye cagirir', async () => {
+  await render(<Takvim bugun={BUGUN} />);
+
+  expect(screen.getByText('Haftalık hedef')).toBeTruthy();
+  expect(screen.getByText('Hedef belirle')).toBeTruthy();
+});
+
+test('haftalik hedef kartina dokununca hedef ekranina gidilir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
+  await render(<Takvim bugun={BUGUN} />);
+
+  await fireEvent.press(screen.getByText('Haftalık hedef'));
+
+  expect(mockPush).toHaveBeenCalledWith('/haftalik-hedef');
+});
+
+/** #324: seri karti buyuk sayi + ates ikonu; altinda en uzun seri ("Rekorun"). */
+test('haftalik seri karti seriyi ve en uzun seriyi gosterir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 3, longestWeekStreak: 8 }));
+  await render(<Takvim bugun={BUGUN} />);
+
+  expect(screen.getByText('Haftalık seri')).toBeTruthy();
+  expect(screen.getByText('3')).toBeTruthy();
+  expect(screen.getByText('Rekorun: 8 hafta')).toBeTruthy();
 });
