@@ -4,6 +4,7 @@ import { useGuncelTakvimOzeti, usePlatolar, useRecords } from '@grind/shared/api
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import RekorKarti from '../../../src/components/RekorKarti';
+import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
  * web/src/pages/RecordsPage.tsx ile ayni: her egzersiz icin en agir set ve en cok tekrar AYRI.
@@ -11,6 +12,7 @@ import RekorKarti from '../../../src/components/RekorKarti';
  * onceki basligi temizler.
  */
 export default function RecordsScreen() {
+  const altMenuPayi = useAltMenuPayi();
   usePageTitle('');
   const { data, isLoading, isError } = useRecords();
   const { data: takvimOzeti } = useGuncelTakvimOzeti();
@@ -19,7 +21,7 @@ export default function RecordsScreen() {
   const platoOf = new Map(platolar?.map((p) => [p.exerciseId, p]));
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+    <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       <Text className="text-body text-muted">Kişisel en iyiler</Text>
 
       {takvimOzeti && (

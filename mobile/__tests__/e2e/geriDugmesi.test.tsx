@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
 import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
@@ -33,7 +33,7 @@ test('kok sekmede geri dugmesi gorunmez', async () => {
 
   await renderRouterAsync('./app', { initialUrl: '/' });
 
-  await screen.findByText('Ana sayfa');
+  await screen.findByRole('tab', { name: 'Ana sayfa', selected: true });
   expect(screen.queryByLabelText('Geri')).toBeNull();
 }, 20_000);
 
@@ -48,5 +48,5 @@ test('alt ekranda geri dugmesi gorunur ve basilinca Ana Sayfaya doner', async ()
   const geriDugmesi = await screen.findByLabelText('Geri');
   await fireEvent.press(geriDugmesi);
 
-  await waitFor(() => expect(screen.getByText('Ana sayfa')).toBeTruthy());
+  expect(await screen.findByRole('tab', { name: 'Ana sayfa', selected: true })).toBeTruthy();
 }, 20_000);

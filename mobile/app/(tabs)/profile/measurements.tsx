@@ -20,6 +20,7 @@ import IkonDugmesi from '../../../src/ui/IkonDugmesi';
 import BosDurum from '../../../src/ui/BosDurum';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import { ikonRenk } from '../../../src/ui/renkler';
+import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
 
@@ -46,6 +47,7 @@ interface OlcumGovdesi {
  * 409 doner.
  */
 export default function MeasurementsScreen() {
+  const altMenuPayi = useAltMenuPayi();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
@@ -188,7 +190,8 @@ export default function MeasurementsScreen() {
         />
       )}
       ItemSeparatorComponent={() => <View className="h-3" />}
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) {

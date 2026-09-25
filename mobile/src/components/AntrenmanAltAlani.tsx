@@ -4,7 +4,6 @@ import type { Egzersiz } from '@grind/shared/api/queries';
 import BirincilDugme from '../ui/BirincilDugme';
 import HareketEklePaneli from './HareketEklePaneli';
 import { ikonRenk } from '../ui/renkler';
-import { TABBAR_HALKA_TASMASI } from '../ui/KabukTabBar';
 
 interface Props {
   egzersizler: readonly Egzersiz[];
@@ -42,7 +41,7 @@ export default function AntrenmanAltAlani({
 }: Props) {
   return (
     // `mt-auto` YOK (#274): kisa listede ekranin dibine itilmez, son kartin hemen ardinda durur (web #226).
-    <View className="pb-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
+    <View className="pb-2">
       <View className="flex-col gap-2 rounded-xl bg-surface-3 p-3">
         {acik ? (
           <HareketEklePaneli

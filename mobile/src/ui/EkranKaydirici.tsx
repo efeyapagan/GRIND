@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { ScrollView, Keyboard, Platform, type ScrollViewProps } from 'react-native';
+import { useAltMenuPayi } from './KabukTabBar';
 
 /**
  * Metin alani + en altta gonder dugmesi olan HER ekranin ortak sarmalayicisi (Faz 3 sonrasi
@@ -45,6 +46,7 @@ const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
 ) {
   const icRef = useRef<ScrollView>(null);
   const [klavyeYuksekligi, setKlavyeYuksekligi] = useState(0);
+  const altMenuPayi = useAltMenuPayi();
   // Dinleyici bir kez kurulur; en guncel geri cagrim ref uzerinden okunur.
   const klavyeAcilincaRef = useRef(onKlavyeAcildi);
   klavyeAcilincaRef.current = onKlavyeAcildi;
@@ -86,7 +88,9 @@ const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
         }
       }}
       contentContainerClassName={contentContainerClassName}
-      contentContainerStyle={{ paddingBottom: klavyeYuksekligi + altBosluk }}
+      // Alt menu icerigin ustunde yuzer (#338); klavye acikken menu klavyenin arkasinda kalir, bu
+      // yuzden ikisinden buyugu kadar yer birakilir.
+      contentContainerStyle={{ paddingBottom: Math.max(klavyeYuksekligi, altMenuPayi) + altBosluk }}
       keyboardShouldPersistTaps="handled"
       {...props}
     >

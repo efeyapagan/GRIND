@@ -107,6 +107,7 @@ export const en: Katalog = {
     geri: 'Back',
     anaSayfa: 'Home',
     antrenmanBaslat: 'Start workout',
+    antrenman: 'Workout',
     profil: 'Profile',
     acikTemayaGec: 'Switch to light theme',
     koyuTemayaGec: 'Switch to dark theme',

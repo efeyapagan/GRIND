@@ -35,11 +35,9 @@ export default function TabsLayout() {
       <RestTimerProvider>
         <View className="flex-1 bg-bg">
           <KabukBaslik />
-          {/* Global bir alt bosluk BILEREK yok (issue #159, kullanici karari): "+" dugmesinin
-              halkasindan pay ayirmak icin TUM sayfalara rezerve edilen bosluk "olu alan" olarak
-              goruldu. Bunun yerine sadece halkanin KESINLIKLE ustune binmemesi gereken spesifik
-              bilesenler (bkz. `KabukTabBar`'daki `TABBAR_HALKA_TASMASI`) kendi payini alir; sıradan
-              kaydirilabilir icerik halkanin arkasina gecebilir. */}
+          {/* Alt menu icerigin USTUNDE yuzer (#338): icerik ekranin en altina kadar uzanir ve menunun
+              arkasindan kayar. Son satir menunun arkasinda kalmasin diye kaydirilabilir icerik kendi
+              sonuna `useAltMenuPayi()` kadar bosluk birakir (bkz. `KabukTabBar`). */}
           <GeriKaydirilabilirIcerik />
           <KabukTabBar />
           {/* Dinlenme sayacinin genis paneli ust barin USTUNE cizilir ve onu kaplar (en son cocuk =

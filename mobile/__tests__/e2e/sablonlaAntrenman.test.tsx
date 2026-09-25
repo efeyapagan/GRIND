@@ -29,8 +29,8 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
 
   await renderRouterAsync('./app', { initialUrl: '/' });
 
-  // Ana Sayfa'dan alt menüdeki "+" ile Antrenman'a geç.
-  await fireEvent.press(await screen.findByLabelText('Antrenman başlat'));
+  // Ana Sayfa'dan alt menüdeki "Antrenman" sekmesiyle (#338) Antrenman'a geç.
+  await fireEvent.press(await screen.findByRole('tab', { name: 'Antrenman' }));
   expect(await screen.findByText('Şablon oluştur')).toBeTruthy();
 
   // Henüz şablon yok -- "Şablon oluştur" ile yeni şablon formuna geç.
@@ -44,9 +44,9 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   await waitFor(() => expect(state.sablonlar).toHaveLength(1));
   expect(state.sablonlar[0]).toMatchObject({ name: 'Push Day E2E' });
 
-  // #272: kaydetme artık doğrudan /antrenman'a döner; alt menüdeki "+" aynı ekranı açtığı için
+  // #272: kaydetme artık doğrudan /antrenman'a döner; alt menüdeki "Antrenman" sekmesi aynı ekranı açtığı için
   // bu dokunuş zararsız ve akışı gerçek kullanımdaki gibi bırakır.
-  await fireEvent.press(await screen.findByLabelText('Antrenman başlat'));
+  await fireEvent.press(await screen.findByRole('tab', { name: 'Antrenman' }));
   const sablonKarti = await screen.findByText('Push Day E2E');
   await fireEvent.press(sablonKarti);
 

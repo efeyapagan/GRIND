@@ -1,127 +1,156 @@
-import { View, Pressable } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useEffect } from 'react';
+import { View, Pressable, Text, Platform, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useRouter, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Plus, User } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
+import { useTranslation } from 'react-i18next';
+import { Dumbbell, Home, User, type LucideIcon } from 'lucide-react-native';
+import { renkler } from '@grind/shared/designTokens';
 import { ikonRenk } from './renkler';
-import Parilti from './Parilti';
 
 /**
- * App.tsx'teki alt menunun RN karsiligi (issue #119/#120): Ana Sayfa · (+) · Profil, simetrik
- * 1-1, ortada tasan buyuk "+" dugmesi. UCU DE simgeden ibarettir, gorunur etiket YOK --
- * erisilebilir ad `accessibilityLabel`den gelir. "+" HER ZAMAN `/antrenman`a gider.
+ * Alt menu (issue #338, kullanici referansi: iOS 26 "liquid glass" sekme cubugu): icerigin USTUNDE
+ * yuzen, tam yuvarlak cam bir hap; icinde uc esit, etiketli sekme -- Ana sayfa · Antrenman · Profil.
+ * Onceki surumun (#119/#159) ortada tasan "+" dugmesi ve halkasi kalkti; "+" artik "Antrenman"
+ * sekmesidir ve yine `/antrenman`a gider.
  *
- * Expo Router'in kendi `Tabs` bilesenini KULLANMIYORUZ -- React Navigation'in tabBar prop
- * seklini (descriptors/state) web'in duz NavLink desenine zorlamak yerine, web'deki
- * `usePathname`/`Link` mantigi burada da BIREBIR ayni sekilde (aktif yol karsilastirmasi) kuruldu.
+ * Expo Router'in kendi `Tabs` bilesenini KULLANMIYORUZ -- aktif sekme web'deki gibi yol
+ * karsilastirmasiyla (`usePathname`) bulunur.
  *
- * Gorsel (issue #159, kullanici referansi -- 5. revizyon): SVG bezier ile cizilen "flare" (tumsek)
- * denemeleri kullaniciya "damla/centik" gibi gorundu -- "+ butonunun yuvarlagi gibi olsun"
- * denildi. Bu surumde flare bir SVG egrisi DEGIL, dogrudan bir DAIRE (`FLARE_SIZE`) -- halka ve
- * "+" dugmesiyle AYNI merkezde (`CENTER_Y`), sadece daha buyuk. Uc daire de (flare > halo >
- * button) TAM ES MERKEZLI oldugu icin halka HER ACIDAN flare tarafindan sarilir (sadece
- * tepeden degil) -- "kesik" ya da "olu alan" gorunmez. Halka ile buton arasindaki serit ince
- * (`(HALO_SIZE-BUTTON_SIZE)/2` = 2px); flare ile halka arasindaki pay da dar tutuldu (6px) ki
- * flare gereksiz genis/yuksek durmasin.
+ * Cam: iOS'ta `expo-blur`un yerel bulanikligi, ustunde yari saydam `surface-2` perde -- renk
+ * platformun malzemesinden degil bizim paletimizden gelir (`expo-glass-effect` yalnizca iOS 26).
+ * Android'de bulaniklik YOK, perde neredeyse opak: `expo-blur`un Android yolu icerigin bir
+ * `BlurTargetView` ile sarilmasini ister ve emulatorde denendiginde bulanik yerine acik gri bir
+ * yuzey cizdi (#338) -- guvenilir olmayan bir efekt yerine tutarli bir yuzey secildi.
  *
- * "Olu alan" sikayetinin asil kaynagi (kullanici bulgusu): alttaki guvenli alan bosluğu
- * (`insets.bottom`, ev tusu cizgisi olan telefonlarda ~34px) `bg` renkteydi, cubugun kendi
- * rengiyle (`surface-1`) DEVAM ETMIYORDU -- ekranin en altinda, cubuktan farkli renkte, koyu
- * temada gorunmesi zor ama GERCEK bir seri/alan olusturuyordu. Simdi bu alan da `surface-1` --
- * cubuk gorsel olarak ekranin en altina kadar devam ediyor.
+ * Aktif sekme: arkasinda `surface-4` hap, ikon + etiket `accent-soft` (`accent` `surface-4` ustunde
+ * 3.9:1 ile 12'lik etiket icin yetmez, `accent-soft` 7.2:1). Pasifler `muted`.
  */
-const BAR_H = 48;
-const BUTTON_SIZE = 64;
-const HALO_SIZE = 68;
-const FLARE_SIZE = 80;
-/** Ucu de ayni merkezde (satirin dikey ortasindan biraz asagida) -- flare'in en yuksek noktasi
- * bardan 24px tasar ("cok yuksek olmasin" istegiyle uyumlu), halonun ustunden 6px, butonun
- * ustunden 10px daha yukaridadir; hicbiri birbirinin disina TASMAZ (yaricap sirasi: flare>halo>buton). */
-const CENTER_Y = 16;
-/** Flare'in bar'in UST kenarindan tastigi miktar (issue #159 devami): "olu alan" sikayeti asil
- * olarak buraya, TUM sayfalara global pb ile rezerve edilen bosluga aitti (kullanici karari:
- * genel bosluk KALDIRILSIN, sadece bunun gibi butonu/paneli sarkan spesifik bilesenler kendi
- * payini alsin). Sadece "+" halkasinin ustune KESINLIKLE binmemesi gereken sabit/mt-auto
- * bilesenler (ornek: AntrenmanAltAlani'ndaki "Hareket ekle", antrenman-bitir'deki "Antrenmanı bitir")
- * bu degeri kendi alt bosluguna EKLER; sıradan kaydirilabilir icerik (liste kartlari vb.) HİÇBİR
- * ek bosluk almaz, kaydirinca halkanin arkasina gecebilir -- bu artik kabul edilebilir. */
-export const TABBAR_HALKA_TASMASI = FLARE_SIZE / 2 - CENTER_Y;
+const IOS = Platform.OS === 'ios';
+const HAP_H = 48;
+const HAP_MIN_W = 72;
+const IC_BOSLUK = 6;
+const BAR_H = HAP_H + IC_BOSLUK * 2;
+/** Cubugun guvenli alanin ustunde biraktigi bosluk. */
+const ALT_BOSLUK = 8;
+/** Kaydirilan icerigin son satiri ile cubugun ust kenari arasinda kalan nefes payi. */
+const ICERIK_NEFES = 16;
 
-function EsMerkezliDaire({
-  boyut,
-  renkSinifi,
-  children,
-}: {
-  boyut: number;
-  renkSinifi: string;
-  children?: React.ReactNode;
-}) {
+const stiller = StyleSheet.create({
+  hap: {
+    height: HAP_H,
+    minWidth: HAP_MIN_W,
+    borderRadius: HAP_H / 2,
+    paddingHorizontal: 12,
+    gap: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balon: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: HAP_H / 2,
+    backgroundColor: renkler['surface-4'],
+  },
+});
+
+/**
+ * Cubuk icerigin ustunde yuzdugu icin, en alttaki satir/dugme arkasinda kalmasin diye icerigin
+ * sonuna birakilacak bosluk (guvenli alan dahil). Onceki `TABBAR_HALKA_TASMASI`in yerini alir.
+ */
+export function altMenuPayi(altInset: number): number {
+  return altInset + ALT_BOSLUK + BAR_H + ICERIK_NEFES;
+}
+
+export function useAltMenuPayi(): number {
+  return altMenuPayi(useSafeAreaInsets().bottom);
+}
+
+interface SekmeTanimi {
+  etiket: string;
+  hedef: Href;
+  Ikon: LucideIcon;
+  aktif: boolean;
+}
+
+/** Balonun acilisi: hafif tasmali yay -- "kucukten buyuge" ama sert degil. Kapanis kisa bir sonme. */
+const ACILIS_YAYI = { damping: 14, stiffness: 180, mass: 0.8 } as const;
+const KAPANIS_MS = 150;
+const BASLANGIC_OLCEGI = 0.5;
+
+function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
+  const router = useRouter();
+  const renk = aktif ? ikonRenk.accentSoft : ikonRenk.muted;
+
+  // 0 = pasif (balon kucuk ve gorunmez), 1 = aktif (balon tam boy).
+  const ilerleme = useSharedValue(aktif ? 1 : 0);
+  useEffect(() => {
+    ilerleme.value = aktif ? withSpring(1, ACILIS_YAYI) : withTiming(0, { duration: KAPANIS_MS });
+  }, [aktif, ilerleme]);
+  const balonStili = useAnimatedStyle(() => ({
+    // Yay 1'i biraz asar: olcek bu tasmayla "balon" gibi esner, opaklik 1'de kesilir.
+    opacity: Math.min(ilerleme.value, 1),
+    transform: [{ scale: BASLANGIC_OLCEGI + (1 - BASLANGIC_OLCEGI) * ilerleme.value }],
+  }));
+
   return (
-    <View
-      className={`absolute items-center justify-center rounded-full ${renkSinifi}`}
-      style={{
-        width: boyut,
-        height: boyut,
-        borderRadius: boyut / 2,
-        left: '50%',
-        marginLeft: -boyut / 2,
-        top: CENTER_Y - boyut / 2,
-      }}
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityLabel={etiket}
+      accessibilityState={{ selected: aktif }}
+      onPress={() => router.navigate(hedef)}
+      className="flex-1 items-center justify-center"
     >
-      {children}
-    </View>
+      {/* Balon (aktif zemin) her sekmede HEP yerinde durur, yalnizca olcegi/opakligi canlanir: zemini
+          sonradan eklemek Android'de koseleri dusuruyordu (#338, emulatorde goruldu). `collapsable`:
+          arkaplansiz hap Android'de "duzlestirilip" yerel tarafta hic olusturulmuyordu. */}
+      <View collapsable={false} style={stiller.hap}>
+        <Animated.View pointerEvents="none" style={[stiller.balon, balonStili]} />
+        <Ikon color={renk} size={22} />
+        <Text className={`text-label ${aktif ? 'text-accent-soft' : 'text-muted'}`}>{etiket}</Text>
+      </View>
+    </Pressable>
   );
 }
 
 export default function KabukTabBar() {
-  const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
-  const anaSayfaAktif = pathname === '/';
-  const profilAktif = pathname.startsWith('/profile');
+  const sekmeler: SekmeTanimi[] = [
+    { etiket: t('kabuk.anaSayfa'), hedef: '/', Ikon: Home, aktif: pathname === '/' },
+    {
+      etiket: t('kabuk.antrenman'),
+      hedef: '/antrenman',
+      Ikon: Dumbbell,
+      aktif: pathname.startsWith('/antrenman'),
+    },
+    { etiket: t('kabuk.profil'), hedef: '/profile', Ikon: User, aktif: pathname.startsWith('/profile') },
+  ];
 
   return (
-    <View style={{ paddingBottom: insets.bottom }} className="bg-surface-1">
-      <View style={{ height: BAR_H }} className="bg-surface-1">
-        <EsMerkezliDaire boyut={FLARE_SIZE} renkSinifi="bg-surface-1" />
-        <EsMerkezliDaire boyut={HALO_SIZE} renkSinifi="bg-bg" />
-        <EsMerkezliDaire boyut={BUTTON_SIZE} renkSinifi="bg-accent shadow-lg">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Antrenman başlat"
-            onPress={() => router.navigate('/antrenman')}
-            className="h-full w-full items-center justify-center"
-          >
-            <Plus color={ikonRenk.onAccent} size={28} />
-          </Pressable>
-        </EsMerkezliDaire>
-
-        <View className="h-full flex-row items-center px-4">
-          <View className="flex-1 items-center">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Ana sayfa"
-              onPress={() => router.navigate('/')}
-              className="h-10 min-w-16 items-center justify-center"
-            >
-              {anaSayfaAktif && <Parilti bicim="daire" />}
-              <Home color={anaSayfaAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
-            </Pressable>
-          </View>
-
-          <View className="flex-1" />
-
-          <View className="flex-1 items-center">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Profil"
-              onPress={() => router.navigate('/profile')}
-              className="h-10 min-w-16 items-center justify-center"
-            >
-              {profilAktif && <Parilti bicim="daire" />}
-              <User color={profilAktif ? ikonRenk.accent : ikonRenk.muted} size={22} />
-            </Pressable>
-          </View>
+    <View
+      pointerEvents="box-none"
+      className="absolute left-4 right-4"
+      style={{ bottom: insets.bottom + ALT_BOSLUK }}
+    >
+      <View
+        accessibilityRole="tablist"
+        accessibilityLabel={t('kabuk.gezinme')}
+        className="overflow-hidden rounded-full border border-surface-4"
+        style={{ height: BAR_H }}
+      >
+        {IOS && <BlurView tint="dark" intensity={40} style={StyleSheet.absoluteFill} />}
+        <View className={`absolute inset-0 ${IOS ? 'bg-surface-2/70' : 'bg-surface-2/95'}`} />
+        <View className="flex-1 flex-row items-center" style={{ paddingHorizontal: IC_BOSLUK }}>
+          {sekmeler.map((sekme) => (
+            <Sekme key={String(sekme.hedef)} {...sekme} />
+          ))}
         </View>
       </View>
     </View>

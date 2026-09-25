@@ -5,18 +5,20 @@ import { useTranslation } from 'react-i18next';
 import { useArkadasRekorlari } from '@grind/shared/api/queries';
 import RekorKarti from '../../../../../src/components/RekorKarti';
 import BosDurum from '../../../../../src/ui/BosDurum';
+import { useAltMenuPayi } from '../../../../../src/ui/KabukTabBar';
 
 /**
  * web/src/pages/ArkadasRekorlariPage.tsx ile ayni (#282/#284): kendi Rekorlar'inla ayni kart; seri ve
  * plato arkadasla paylasilmaz, cizilmez.
  */
 export default function ArkadasRekorlariScreen() {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
   const { data, isLoading, isError } = useArkadasRekorlari(ad, true);
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+    <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
       {isError && (
         <Text accessibilityRole="alert" className="text-body text-danger">

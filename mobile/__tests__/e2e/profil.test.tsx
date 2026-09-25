@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
 import * as ImagePicker from 'expo-image-picker';
 import { session } from '../../src/session';
@@ -127,7 +127,7 @@ test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok',
   expect(screen.getByLabelText('Takipçiler: 12')).toBeTruthy();
   expect(screen.getByLabelText('Takip edilenler: 7')).toBeTruthy();
 
-  const sekmeler = screen.getAllByRole('tab');
+  const sekmeler = within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab');
   expect(sekmeler.map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler']);
   expect(screen.getByRole('tab', { name: 'Geçmiş' }).props.accessibilityState).toEqual({ selected: true });
 }, 60_000);
@@ -140,7 +140,7 @@ test('Hesap ayarlari dugmesi sekmesiz hesap ekranini acar', async () => {
   await fireEvent.press(await screen.findByRole('button', { name: 'Hesap ayarları' }));
 
   expect(await screen.findByText('Şifre değiştir')).toBeTruthy();
-  expect(screen.queryAllByRole('tab')).toHaveLength(0);
+  expect(screen.queryByTestId('profil-sekmeleri')).toBeNull();
 }, 20_000);
 
 test('Profili duzenle ile isim kaydedilince PUT gider ve baslik yeni ismi gosterir', async () => {

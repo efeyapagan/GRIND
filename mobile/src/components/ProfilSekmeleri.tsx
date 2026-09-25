@@ -17,7 +17,7 @@ export default function ProfilSekmeleri({ sekmeler }: { sekmeler: readonly Profi
   const router = useRouter();
 
   return (
-    <View className="flex-row border-b border-surface-3">
+    <View testID="profil-sekmeleri" className="flex-row border-b border-surface-3">
       {sekmeler.map(({ to, etiketAnahtari, ikon }) => (
         <SekmeDugmesi key={to} ikon={ikon} secili={pathname === to} onPress={() => router.navigate(to)}>
           {t(etiketAnahtari)}

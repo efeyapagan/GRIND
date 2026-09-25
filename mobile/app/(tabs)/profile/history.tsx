@@ -11,6 +11,7 @@ import GecmisKarti from '../../../src/components/GecmisKarti';
 import BosDurum from '../../../src/ui/BosDurum';
 import GeriAlSeridi from '../../../src/ui/GeriAlSeridi';
 import GrindyMaskot from '../../../src/ui/GrindyMaskot';
+import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
  * web/src/pages/HistoryPage.tsx ile ayni (issue #46, sonsuz kaydirma #142). Sallama-ile-geri-alma
@@ -26,6 +27,7 @@ import GrindyMaskot from '../../../src/ui/GrindyMaskot';
  * onceki basligi temizler.
  */
 export default function HistoryScreen() {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
@@ -54,7 +56,8 @@ export default function HistoryScreen() {
       keyExtractor={(oturum) => String(oturum.sessionId)}
       renderItem={({ item }) => <GecmisKarti oturum={item} onSil={() => baslat(item)} />}
       ItemSeparatorComponent={() => <View className="h-4" />}
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) {
