@@ -14,9 +14,15 @@ namespace Grind.Api.Models.Dtos.Exercise;
 /// DEĞİL, "bu uçta hiç yüklenmedi" anlamına gelir; gerçek medya listesi için detay endpoint'i
 /// çağrılmalı.
 /// </param>
+/// <param name="AlternateName">
+/// Aynı hareketin salonlarda farklı adlandırıldığı durumlar için ikinci bir arama adı (ör.
+/// "Pec Deck" / "Chest Fly Machine"). Yalnızca global egzersizlerde seed veriyle set edilir —
+/// Create/Update uçlarından yazılamaz (kapsam: #335).
+/// </param>
 public record ExerciseResponse(
     long Id,
     string Name,
+    string? AlternateName,
     ExerciseCategory Category,
     bool IsArchived,
     bool IsGlobal,

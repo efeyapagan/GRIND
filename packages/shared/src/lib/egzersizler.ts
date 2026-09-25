@@ -43,6 +43,11 @@ export function aramaIcinSadelestir(metin: string): string {
  * Kullanimdan Gelen Istekler"). Kategori (#77) verilirse ayni gerekceyle istemcide, aramayla
  * birlikte (VE) uygulanir; `null` tum kategorilerdir.
  */
+/** Bir hareketin ADI ve varsa TAKMA ADI arama için tek bir metin havuzunda birleşir (#335). */
+function aramaAdaylari(eg: Egzersiz): string[] {
+  return eg.alternateName ? [eg.name, eg.alternateName] : [eg.name];
+}
+
 export function egzersizAra(
   egzersizler: readonly Egzersiz[],
   sorgu: string,
@@ -52,7 +57,8 @@ export function egzersizAra(
   return egzersizler.filter(
     (eg) =>
       (kategori === null || eg.category === kategori) &&
-      (aranan === '' || aramaIcinSadelestir(eg.name).includes(aranan)),
+      (aranan === '' ||
+        aramaAdaylari(eg).some((ad) => aramaIcinSadelestir(ad).includes(aranan))),
   );
 }
 
@@ -111,8 +117,13 @@ export function egzersizOner(
   return egzersizler
     .filter((eg) => kategori === null || eg.category === kategori)
     .map((eg) => {
-      const ad = aramaIcinSadelestir(eg.name);
-      return { eg, hata: parcaMesafesi(aranan, ad), fark: Math.abs(ad.length - aranan.length) };
+      // #335: takma ad varsa ikisinden DAHA İYİ (az hatalı) olan kazanır -- kullanıcı hangi
+      // isimle yazarsa yazsın aynı öneri kalitesini alır.
+      const adaylar = aramaAdaylari(eg).map((ad) => aramaIcinSadelestir(ad));
+      const enIyi = adaylar
+        .map((ad) => ({ hata: parcaMesafesi(aranan, ad), fark: Math.abs(ad.length - aranan.length) }))
+        .sort((a, b) => a.hata - b.hata || a.fark - b.fark)[0];
+      return { eg, hata: enIyi.hata, fark: enIyi.fark };
     })
     .filter(({ hata }) => hata <= esik)
     .sort((a, b) => a.hata - b.hata || a.fark - b.fark || a.eg.name.localeCompare(b.eg.name, 'tr'))

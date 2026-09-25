@@ -3856,6 +3856,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             name?: string | null;
+            alternateName?: string | null;
             category?: components["schemas"]["ExerciseCategory"];
             isArchived?: boolean;
             isGlobal?: boolean;

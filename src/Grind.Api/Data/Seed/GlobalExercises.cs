@@ -87,7 +87,8 @@ public static class GlobalExercises
         new { Id = 69L, UserId = (long?)null, Name = "Decline Dumbbell Bench Press",                  Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 70L, UserId = (long?)null, Name = "Neutral Grip Dumbbell Press",                   Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 71L, UserId = (long?)null, Name = "Flat Smith Machine Press",                      Category = ExerciseCategory.Push, IsArchived = false },
-        new { Id = 72L, UserId = (long?)null, Name = "Incline Smith Machine Press",                   Category = ExerciseCategory.Push, IsArchived = false },
+        // #335: "Smith Machine Low Incline Press" aynı hareket kabul edildi, takma isim.
+        new { Id = 72L, UserId = (long?)null, Name = "Incline Smith Machine Press",  AlternateName = "Smith Machine Low Incline Press", Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 73L, UserId = (long?)null, Name = "Decline Smith Machine Press",                   Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 74L, UserId = (long?)null, Name = "Machine Chest Press",                           Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 75L, UserId = (long?)null, Name = "Incline Machine Chest Press",                   Category = ExerciseCategory.Push, IsArchived = false },
@@ -98,7 +99,8 @@ public static class GlobalExercises
         new { Id = 80L, UserId = (long?)null, Name = "High-to-Low Cable Fly",                         Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 81L, UserId = (long?)null, Name = "Mid-Pulley Cable Fly",                          Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 82L, UserId = (long?)null, Name = "Low-to-High Cable Fly",                         Category = ExerciseCategory.Push, IsArchived = false },
-        new { Id = 83L, UserId = (long?)null, Name = "Pec Deck",                                      Category = ExerciseCategory.Push, IsArchived = false },
+        // #335: "Chest Fly Machine" aynı makine kabul edildi, takma isim.
+        new { Id = 83L, UserId = (long?)null, Name = "Pec Deck",                     AlternateName = "Chest Fly Machine",                Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 84L, UserId = (long?)null, Name = "Push-up",                                       Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 85L, UserId = (long?)null, Name = "Incline Push-up",                               Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 86L, UserId = (long?)null, Name = "Decline Push-up",                               Category = ExerciseCategory.Push, IsArchived = false },
@@ -126,7 +128,8 @@ public static class GlobalExercises
         new { Id = 108L, UserId = (long?)null, Name = "Seated Smith Machine Overhead Press",           Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 109L, UserId = (long?)null, Name = "Plate-Loaded Shoulder Press Machine",           Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 110L, UserId = (long?)null, Name = "Pin-Loaded Shoulder Press Machine",             Category = ExerciseCategory.Push, IsArchived = false },
-        new { Id = 111L, UserId = (long?)null, Name = "Standing Dumbbell Lateral Raise",               Category = ExerciseCategory.Push, IsArchived = false },
+        // #335: "Dumbell Lateral Raise" (yazım varyasyonu) aynı hareket kabul edildi, takma isim.
+        new { Id = 111L, UserId = (long?)null, Name = "Standing Dumbbell Lateral Raise", AlternateName = "Dumbell Lateral Raise",         Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 112L, UserId = (long?)null, Name = "Seated Dumbbell Lateral Raise",                 Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 113L, UserId = (long?)null, Name = "Incline Lean-Away Lateral Raise",               Category = ExerciseCategory.Push, IsArchived = false },
         new { Id = 114L, UserId = (long?)null, Name = "Cuff Cable Lateral Raise",                      Category = ExerciseCategory.Push, IsArchived = false },
@@ -189,6 +192,10 @@ public static class GlobalExercises
 
         // #207: göğüs destekli makine row varyasyonları.
         new { Id = 171L, UserId = (long?)null, Name = "Chest-Supported Wide-Grip Machine Row",         Category = ExerciseCategory.Pull, IsArchived = false },
-        new { Id = 172L, UserId = (long?)null, Name = "Chest-Supported Close-Grip Machine Row",        Category = ExerciseCategory.Pull, IsArchived = false }
+        new { Id = 172L, UserId = (long?)null, Name = "Chest-Supported Close-Grip Machine Row",        Category = ExerciseCategory.Pull, IsArchived = false },
+
+        // #335: mevcut "Machine Chest Press" (Id 74) pin-loaded; bu ayrı bir makine türü
+        // (bkz. Id 109/110'daki Plate-Loaded/Pin-Loaded Shoulder Press Machine ayrımıyla aynı gerekçe).
+        new { Id = 173L, UserId = (long?)null, Name = "Plate Loaded Chest Press",                      Category = ExerciseCategory.Push, IsArchived = false }
     ];
 }

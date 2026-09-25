@@ -10,6 +10,14 @@ public class Exercise
     public long? UserId { get; set; }
 
     public string Name { get; set; } = null!;
+
+    /// <summary>
+    /// Aynı hareketin farklı salonlarda/ekipmanda farklı adlandırıldığı durumlar için ikinci
+    /// bir arama adı (ör. "Pec Deck" için "Chest Fly Machine"). Yalnızca global egzersiz
+    /// seed'inde set edilir (#335) — kullanıcı kendi egzersizinde şimdilik kullanamaz.
+    /// </summary>
+    public string? AlternateName { get; set; }
+
     public ExerciseCategory Category { get; set; }
     public bool IsArchived { get; set; }
 
