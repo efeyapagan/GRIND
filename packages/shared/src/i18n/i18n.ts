@@ -18,10 +18,13 @@ declare module 'i18next' {
 /**
  * Ortak i18next ornegini baslatir (web: main.tsx, mobil: _layout.tsx, testler: kurulum dosyalari).
  * Kaynaklar paketin icinde oldugu icin baslatma senkrondur -- ag istegi ve yanip sonen dil yok.
- * Iki kez cagrilirsa yalnizca dili degistirir.
+ * Iki kez cagrilirsa kaynaklari guncel katalogla tazeler ve dili degistirir (#324): mobilde hot
+ * reload katalog dosyalarini yeniden calistirir ama i18next ornegi ilk acilistaki kaynaklarla
+ * kalirdi -- yeni anahtarlar tam yeniden yuklemeye kadar ekranda ham gorunuyordu.
  */
 export function i18nBaslat(dil: Dil): void {
   if (i18n.isInitialized) {
+    kaynaklariTazele();
     void i18n.changeLanguage(dil);
     return;
   }
@@ -33,6 +36,18 @@ export function i18nBaslat(dil: Dil): void {
     interpolation: { escapeValue: false },
     initAsync: false,
   });
+}
+
+function kaynaklariTazele(): void {
+  i18n.addResourceBundle('tr', 'translation', tr, true, true);
+  i18n.addResourceBundle('en', 'translation', en, true, true);
+}
+
+// Hot reload bu modulu (katalog degisince) yeniden calistirir ama `i18nBaslat`'i cagiran giris
+// dosyasina (_layout.tsx) her zaman ulasmaz -- aradaki bilesen modulleri guncellemeyi durdurur.
+// Ornek zaten baslatilmissa kaynaklar burada da tazelenir.
+if (i18n.isInitialized) {
+  kaynaklariTazele();
 }
 
 /** Etkin arayuz dili; dil degisince bileseni yeniden render eder (biçimlendiricilere verilir). */
