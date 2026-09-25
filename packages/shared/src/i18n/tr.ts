@@ -218,6 +218,7 @@ export const tr = {
     hareketiKaldir: 'Hareketi kaldır',
     hareketEkle: 'Hareket ekle',
     hareketEklemeyiKapat: 'Hareket eklemeyi kapat',
+    kartiKapat: 'Kartı kapat',
     hareketlerListesi: 'Hareketler',
     hareketBulundu_one: '{{count}} hareket bulundu',
     hareketBulundu_other: '{{count}} hareket bulundu',
