@@ -152,6 +152,9 @@ export const tr = {
     haftadaGun_other: 'Haftada {{count}} gün',
     hedefAlinamadi: 'Hedef alınamadı.',
     hedefKaydedilemedi: 'Hedef kaydedilemedi.',
+    hedefSorusu: 'Haftada spora kaç gün ayırabileceğini düşünüyorsun?',
+    gunSayisi_one: '{{count}} gün',
+    gunSayisi_other: '{{count}} gün',
     yas_one: '{{count}} yaş',
     yas_other: '{{count}} yaş',
     sayaclar: 'Profil sayaçları',
@@ -287,6 +290,7 @@ export const tr = {
     haftalikHedef: 'Haftalık hedef',
     haftalikHedefDegeri_one: 'Bu hafta {{count}} gün, hedef {{hedef}}',
     haftalikHedefDegeri_other: 'Bu hafta {{count}} gün, hedef {{hedef}}',
+    hedefBelirle: 'Hedef belirle',
   },
   sablonlar: {
     baslik: 'Şablonlar',

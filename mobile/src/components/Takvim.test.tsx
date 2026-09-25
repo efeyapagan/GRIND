@@ -125,10 +125,21 @@ test('haftalik hedef karti bu haftanin ilerlemesini x/hedef olarak gosterir', as
   expect(screen.queryByText('Hedef serisi')).toBeNull();
 });
 
-test('haftalik hedef yoksa hedef karti cizilmez', async () => {
+/** #324: hedef yokken kart kaybolmaz, hedef belirlemeye cagirir -- hedef ekranina ana sayfadan ulasilsin. */
+test('haftalik hedef yoksa kart hedef belirlemeye cagirir', async () => {
   await render(<Takvim bugun={BUGUN} />);
 
-  expect(screen.queryByText('Haftalık hedef')).toBeNull();
+  expect(screen.getByText('Haftalık hedef')).toBeTruthy();
+  expect(screen.getByText('Hedef belirle')).toBeTruthy();
+});
+
+test('haftalik hedef kartina dokununca hedef ekranina gidilir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
+  await render(<Takvim bugun={BUGUN} />);
+
+  await fireEvent.press(screen.getByText('Haftalık hedef'));
+
+  expect(mockPush).toHaveBeenCalledWith('/haftalik-hedef');
 });
 
 /** #324: seri karti buyuk sayi + ates ikonu; altinda en uzun seri ("Rekorun"). */

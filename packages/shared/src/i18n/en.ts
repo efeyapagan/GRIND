@@ -150,6 +150,9 @@ export const en: Katalog = {
     haftadaGun_other: '{{count}} days a week',
     hedefAlinamadi: 'Could not load the goal.',
     hedefKaydedilemedi: 'Could not save the goal.',
+    hedefSorusu: 'How many days a week do you think you can train?',
+    gunSayisi_one: '{{count}} day',
+    gunSayisi_other: '{{count}} days',
     yas_one: '{{count}} year old',
     yas_other: '{{count}} years old',
     sayaclar: 'Profile stats',
@@ -285,6 +288,7 @@ export const en: Katalog = {
     haftalikHedef: 'Weekly goal',
     haftalikHedefDegeri_one: 'This week {{count}} day, goal {{hedef}}',
     haftalikHedefDegeri_other: 'This week {{count}} days, goal {{hedef}}',
+    hedefBelirle: 'Set a goal',
   },
   sablonlar: {
     baslik: 'Templates',

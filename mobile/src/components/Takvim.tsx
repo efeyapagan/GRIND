@@ -145,7 +145,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
 
         {ozet && (
           // #324: solda haftalik seri (ates + en uzun seri), sagda bu haftanin hedef ilerlemesi (x/hedef).
-          // Hedef yoksa (#97) hedef karti cizilmez, seri karti tam genisler.
+          // Hedef kartina dokununca hedef ekrani acilir; hedef yokken (#97) kart "Hedef belirle"ye cagirir.
           <View className="flex-row gap-2">
             <OzetKarti etiket={t('takvim.haftalikSeri')}>
               <View
@@ -160,8 +160,10 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
                 {t('takvim.rekorun', { count: ozet.longestWeekStreak })}
               </Text>
             </OzetKarti>
-            {ozet.weeklyTargetDays !== null && (
-              <OzetKarti etiket={t('takvim.haftalikHedef')}>
+            <OzetKarti etiket={t('takvim.haftalikHedef')} onPress={() => router.push('/haftalik-hedef')}>
+              {ozet.weeklyTargetDays === null ? (
+                <Text className="text-body-lg text-muted">{t('takvim.hedefBelirle')}</Text>
+              ) : (
                 <Text
                   accessibilityLabel={t('takvim.haftalikHedefDegeri', {
                     count: ozet.thisWeekTrainedDays,
@@ -172,8 +174,8 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
                   <Text className="text-accent">{ozet.thisWeekTrainedDays}</Text>
                   <Text className="text-muted">/{ozet.weeklyTargetDays}</Text>
                 </Text>
-              </OzetKarti>
-            )}
+              )}
+            </OzetKarti>
           </View>
         )}
       </View>
@@ -225,11 +227,25 @@ function GunHucresi({
   );
 }
 
-function OzetKarti({ etiket, children }: { etiket: string; children: React.ReactNode }) {
+/** Ozet karti; `onPress` verilirse kartin tamami dokunulabilir (hedef karti hedef ekranini acar). */
+function OzetKarti({
+  etiket,
+  onPress,
+  children,
+}: {
+  etiket: string;
+  onPress?: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <View className="flex-1 flex-col gap-1 rounded-xl bg-surface-1 p-4">
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      className="flex-1 flex-col gap-1 rounded-xl bg-surface-1 p-4"
+    >
       <Text className="text-label text-muted">{etiket}</Text>
       {children}
-    </View>
+    </Pressable>
   );
 }
