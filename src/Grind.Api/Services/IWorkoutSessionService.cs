@@ -31,8 +31,14 @@ public interface IWorkoutSessionService
     /// penceresi; (b) gün sınırı mantığını set servisinde tekrar yazmak — DRY ihlali.
     /// </summary>
     /// <returns><c>Created</c> true ise oturum YENİ oluşturuldu ve henüz Id'si yoktur.</returns>
+    /// <param name="clientStartedAt">
+    /// İstemcinin "başlat"a bastığı an (issue #262, yalnızca <c>StartAsync</c> yolundan gelir).
+    /// <c>SetEntryService</c>'in örtük açması (bir set eklenirken açık oturum yoksa) bunu
+    /// VERMEZ — o yolun kendi zaman damgası zaten setin <c>CreatedAt</c>'i, ayrı bir sorun değil.
+    /// </param>
     Task<(WorkoutSession Session, bool Created)> GetOrOpenTodayAsync(
-        long? templateId, string? notes, CancellationToken cancellationToken = default);
+        long? templateId, string? notes, DateTimeOffset? clientStartedAt = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// SERVİS-İÇİ SEAM — controller'dan ÇAĞRILMAZ, <c>SaveChangesAsync</c> ÇAĞIRMAZ (#62).
