@@ -28,13 +28,6 @@
       "expo-status-bar",
       "expo-audio",
       "@react-native-community/datetimepicker"
-    ],
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "34fe0180-b94b-434c-9f03-f1a907268e82"
-      }
-    },
-    "owner": "adakilinc"
+    ]
   }
 }
