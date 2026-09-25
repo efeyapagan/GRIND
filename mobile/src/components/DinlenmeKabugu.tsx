@@ -8,6 +8,7 @@ import { Timer } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAudioPlayer } from 'expo-audio';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { useOpenSession } from '@grind/shared/api/queries';
 import { useRestTimerGorunumu } from '@grind/shared/restTimer';
 import { useKalanSure } from '@grind/shared/useKalanSure';
 import { EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
@@ -75,6 +76,18 @@ export default function DinlenmeKabugu() {
     }
     setDinlenme(null);
   }, [bitti, antrenmandaMi, setDinlenme]);
+
+  // (3) #331: acik antrenman kalmadiysa (bitirildi/iptal edildi) sayac da kalkar. Oturumla bagi kuran
+  // `useDinlenme` yalnizca antrenman ekraninda monte; bitirme ekranina gecince o ekran kapandigi icin
+  // bu kural her zaman monte olan kabukta durur. Yalnizca sorgu "oturum yok" diye KESINLESINCE
+  // temizlenir -- yuklenirken/hatada sayaca dokunulmaz.
+  const { data: acikOturum, isSuccess: oturumBiliniyor } = useOpenSession();
+  const oturumYok = oturumBiliniyor && !acikOturum;
+  useEffect(() => {
+    if (oturumYok && dinlenme) {
+      setDinlenme(null);
+    }
+  }, [oturumYok, dinlenme, setDinlenme]);
 
   useEffect(() => {
     if (!calisiyor) {
