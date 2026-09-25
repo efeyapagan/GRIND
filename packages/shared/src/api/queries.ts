@@ -160,6 +160,10 @@ export type EgzersizKategorisi = components['schemas']['ExerciseCategory'];
 export interface Egzersiz {
   id: number;
   name: string;
+  // #335: ayni hareketin ikinci (takma) adi, ör. "Pec Deck" için "Chest Fly Machine" -- yalnizca
+  // global egzersizlerde seed'den gelir, aramada `name` ile birlikte kontrol edilir (bkz.
+  // `egzersizAra`). Optional: cogu test fixture'i ve mevcut kod bu alani hic bilmez.
+  alternateName?: string | null;
   // #77: hareket secicideki kategori filtresi icin.
   category: EgzersizKategorisi;
 }
@@ -237,7 +241,12 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
   if (yanit.id === undefined || !yanit.name || !yanit.category) {
     throw new Error('Sunucudan eksik egzersiz yaniti alindi.');
   }
-  return { id: yanit.id, name: yanit.name, category: yanit.category };
+  return {
+    id: yanit.id,
+    name: yanit.name,
+    alternateName: yanit.alternateName ?? null,
+    category: yanit.category,
+  };
 }
 
 export interface GecmisOturum {
