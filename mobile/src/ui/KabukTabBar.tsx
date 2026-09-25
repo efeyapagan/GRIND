@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { View, Pressable, Text, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useRouter, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell, Home, User, type LucideIcon } from 'lucide-react-native';
 import { renkler } from '@grind/shared/designTokens';
+import CamYuzey from './CamYuzey';
 import { ikonRenk } from './renkler';
 
 /**
@@ -18,16 +18,11 @@ import { ikonRenk } from './renkler';
  * Expo Router'in kendi `Tabs` bilesenini KULLANMIYORUZ -- aktif sekme web'deki gibi yol
  * karsilastirmasiyla (`usePathname`) bulunur.
  *
- * Cam: iOS'ta `expo-blur`un yerel bulanikligi, ustunde yari saydam `surface-2` perde -- renk
- * platformun malzemesinden degil bizim paletimizden gelir (`expo-glass-effect` yalnizca iOS 26).
- * Android'de bulaniklik YOK, perde neredeyse opak: `expo-blur`un Android yolu icerigin bir
- * `BlurTargetView` ile sarilmasini ister ve emulatorde denendiginde bulanik yerine acik gri bir
- * yuzey cizdi (#338) -- guvenilir olmayan bir efekt yerine tutarli bir yuzey secildi.
+ * Cam: `CamYuzey` (set paneliyle ortak, #350) -- iOS'ta bulaniklik, Android'de neredeyse opak perde.
  *
  * Aktif sekme: arkasinda `surface-4` hap, ikon + etiket `accent-soft` (`accent` `surface-4` ustunde
  * 3.9:1 ile 12'lik etiket icin yetmez, `accent-soft` 7.2:1). Pasifler `muted`.
  */
-const IOS = Platform.OS === 'ios';
 const HAP_H = 48;
 const HAP_MIN_W = 72;
 const IC_BOSLUK = 6;
@@ -145,8 +140,7 @@ export default function KabukTabBar() {
         className="overflow-hidden rounded-full border border-surface-4"
         style={{ height: BAR_H }}
       >
-        {IOS && <BlurView tint="dark" intensity={40} style={StyleSheet.absoluteFill} />}
-        <View className={`absolute inset-0 ${IOS ? 'bg-surface-2/70' : 'bg-surface-2/95'}`} />
+        <CamYuzey />
         <View className="flex-1 flex-row items-center" style={{ paddingHorizontal: IC_BOSLUK }}>
           {sekmeler.map((sekme) => (
             <Sekme key={String(sekme.hedef)} {...sekme} />

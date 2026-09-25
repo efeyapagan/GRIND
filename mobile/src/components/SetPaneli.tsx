@@ -10,6 +10,7 @@ import { ApiError } from '@grind/shared/api/problem';
 import { formatWeight } from '@grind/shared/lib/format';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
+import CamYuzey from '../ui/CamYuzey';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
@@ -95,7 +96,9 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
   }
 
   return (
-    <View className="flex-col gap-2 rounded-xl bg-surface-3 p-3">
+    // #350: alt menuyle ayni "liquid glass" yuzey (`CamYuzey`); duzen ayni, yalnizca zemin cam.
+    <View className="flex-col gap-2 overflow-hidden rounded-xl border border-surface-4 p-3">
+      <CamYuzey />
       <View className="flex-row items-center justify-between gap-2">
         <Text className="pl-1 text-label text-muted uppercase">{t('setler.yeniSetIcin', { ad: egzersizAdi })}</Text>
         <IkonDugmesi etiket={t('setler.paneliKapat')} onPress={onKapat}>

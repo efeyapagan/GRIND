@@ -93,6 +93,9 @@ Renk kuralları:
   `accent-soft` 7.2:1. Pasifler `muted`. Sekme değişince aktif hap (balon) küçükten büyüğe açılır:
   ölçek 0.5 → 1 hafif taşmalı yayla, opaklık 0 → 1; bırakılan sekmenin balonu 150 ms'de söner. Kaydırılabilir içerik sonuna `useAltMenuPayi()` kadar yer
   bırakır. Web alt menüsü (dondurulmuş) değişmedi.
+  **#350:** mobilde antrenmanın yüzer set paneli de aynı cam yüzeyi taşır (tek kaynak
+  `mobile/src/ui/CamYuzey.tsx`, alt menüyle ortak); `surface-3` zemin yerine cam + 1 px `surface-4`
+  kenar, köşe (`xl`) ve iç düzen aynı. Klavye açıkken panel klavyenin 8 üstüne çıkar.
   **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
   soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
   durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`
