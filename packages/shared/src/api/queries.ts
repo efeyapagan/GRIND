@@ -904,13 +904,18 @@ export function useDeleteSession() {
  * `POST /api/sessions { templateId }`. Bugun acik oturum varsa sunucu onu 200 ile oldugu gibi doner
  * ve `templateId` UYGULANMAZ (Faz 7 karari) -- cagiran taraf donen oturumun `templateId`'sine bakar.
  * `templateId: null` bos (sablonsuz) antrenman acar (#186).
+ *
+ * `startedAt` (#262) her cagrida CIHAZIN o anki saatiyle otomatik doldurulur -- cagiran taraf
+ * (web/mobil) ayrica bir sey yapmaz, DRY. Mobilde zayif salon baglantisi/istek gecikmesi
+ * "basla"ya basilan anla sunucunun aldigi an arasinda fark yaratabilir; sunucu 5 dakikalik
+ * tolerans disindaki bir gelecek zamani reddeder (`ClientTimestamp`, BodyWeightLog #119 ile ayni).
  */
 export function useStartSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (templateId: number | null): Promise<AcikOturum> => {
-      const govde: StartSessionRequest = { templateId };
+      const govde: StartSessionRequest = { templateId, startedAt: new Date().toISOString() };
       const yanit = await request<SessionResponse>('/sessions', {
         method: 'POST',
         body: JSON.stringify(govde),
