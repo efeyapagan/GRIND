@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { SlideInLeft, SlideInRight } from 'react-native-reanimated';
-import { CalendarDays } from 'lucide-react-native';
+import { CalendarDays, Check, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useDil } from '@grind/shared/i18n';
@@ -22,17 +22,10 @@ import {
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { ikonRenk } from '../ui/renkler';
 
-const GUN_KISALTMALARI = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
 
 /** Kaydirmanin donem degistirmesi icin gereken yatay mesafe (px). */
 const KAYDIRMA_ESIGI = 40;
-
-/**
- * #315: antrenman yapilan gun YESIL, yapilmayan notr (web/src/components/Takvim.tsx ile ayni).
- * Set sayisina gore kademeli tonlar kalkti: ara opakliklarda ne acik ne koyu yazi 4.5:1'i tutturuyordu.
- */
-const ANTRENMANLI_SINIFI = 'bg-success';
-const BOS_SINIFI = 'bg-surface-2';
 
 interface Props {
   bugun?: string;
@@ -59,7 +52,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const satirlar = gorunum === 'ay' ? ayIzgarasi(gosterilen) : [haftaGunleri(gosterilen)];
   const donemBasligi =
     gorunum === 'ay' ? ayBasligi(gosterilen, dil) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`, dil);
-  const bosMetin = gorunum === 'ay' ? 'Bu ay antrenman yok.' : 'Bu hafta antrenman yok.';
+  const bosMetin = t(gorunum === 'ay' ? 'takvim.buAyYok' : 'takvim.buHaftaYok');
 
   function gorunumDegistir() {
     setGorunum(gorunum === 'ay' ? 'hafta' : 'ay');
@@ -111,56 +104,39 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
           key={gosterilen}
           entering={(yon === 1 ? SlideInRight : SlideInLeft).duration(200)}
           testID="takvim-izgara"
-          className={`w-full flex-col ${gorunum === 'ay' ? 'gap-1' : 'gap-2'}`}
+          className="w-full flex-col gap-1"
         >
-          <View className={`flex-row ${gorunum === 'ay' ? 'gap-1' : 'gap-2'}`}>
-            {GUN_KISALTMALARI.map((kisaltma) => (
-              <Text key={kisaltma} className="flex-1 text-center text-label-xs text-muted uppercase">
-                {kisaltma}
+          <View className="flex-row gap-1">
+            {GUN_ANAHTARLARI.map((anahtar) => (
+              <Text key={anahtar} className="flex-1 text-center text-label-xs text-muted uppercase">
+                {t(`takvim.gunKisaltmalari.${anahtar}`)}
               </Text>
             ))}
           </View>
           {satirlar.map((hafta, haftaSira) => (
-            <View key={haftaSira} className={`flex-row ${gorunum === 'ay' ? 'gap-1' : 'gap-2'}`}>
-              {hafta.map((gun, sira) => {
-                if (gun === null) {
-                  return <View key={`bos-${sira}`} className={`flex-1 ${gorunum === 'ay' ? 'h-9' : 'aspect-square'}`} />;
-                }
-                const kayit = gunler.get(gun);
-                // #261: `ring-*` BASTAN var, yalnizca RENGI degisir. Ilk render'dan sonra eklenen
-                // bir `ring-*` NativeWind'de bileseni "yukseltiyor"; uyarisini basarken prop'lari
-                // (elementlerin `_owner` fiber'lari dahil) JSON'a ceviriyor ve bu cevirme navigasyon
-                // context'inin varsayilan degerindeki getter'a carpip "Couldn't find a navigation
-                // context" ile cokuyordu -- HareketKartlari'nda ayni tuzak belgeli.
-                const vurguSinifi = gun === bugun ? 'ring-1 ring-muted' : 'ring-1 ring-transparent';
-                return (
-                  <View key={gun} className="flex-1 items-center">
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${gunBasligi(gun, dil)}: ${kayit ? `${kayit.setCount} set` : 'antrenman yok'}`}
+            <View key={haftaSira} className="flex-row gap-1">
+              {hafta.map((gun, sira) =>
+                gun === null ? (
+                  <View key={`bos-${sira}`} className="flex-1" />
+                ) : (
+                  <GunHucresi
+                    key={gun}
+                    gun={gun}
+                    bugunMu={gun === bugun}
+                    setSayisi={gunler.get(gun)?.setCount ?? null}
                     onPress={() => router.push(`/gun/${gun}`)}
-                    // #315: gun kutulari DAIRE. Haftalikta daire sutunu doldurur; aylikta sabit 36 px
-                    // daire sutunda ortalanir -- 5-6 satir sutun genisliginde daire olsaydi izgara uzardi.
-                    // `w-full`: sarmalayici `items-center` oldugu icin `flex-1` burada genislik
-                    // vermez (capraz eksen) -- daire sutunu ancak tam genislikle doldurur.
-                    className={`items-center justify-center rounded-full ${
-                      gorunum === 'ay' ? 'size-9' : 'aspect-square w-full'
-                    } ${kayit ? ANTRENMANLI_SINIFI : BOS_SINIFI} ${vurguSinifi}`}
-                  >
-                    <Text className={`text-label ${kayit ? 'text-on-success' : 'text-muted'}`}>{ayinGunu(gun)}</Text>
-                  </Pressable>
-                  </View>
-                );
-              })}
+                  />
+                ),
+              )}
             </View>
           ))}
         </Animated.View>
         </GestureDetector>
 
-        {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+        {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
         {isError && (
           <Text accessibilityRole="alert" className="text-body text-danger">
-            Takvim alınamadı.
+            {t('takvim.hata')}
           </Text>
         )}
         {ozet && !isPlaceholderData && ozet.days.length === 0 && (
@@ -168,15 +144,35 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
         )}
 
         {ozet && (
-          // #315: ozet yalnizca IKI seri -- "Antrenman gunu" ve "Bu hafta" kaldirildi. Ikisi yan yana
-          // kart; hedef yoksa (#97) hedef serisi anlamsiz oldugu icin cizilmez, aktif seri tam genisler.
+          // #324: solda haftalik seri (ates + en uzun seri), sagda bu haftanin hedef ilerlemesi (x/hedef).
+          // Hedef yoksa (#97) hedef karti cizilmez, seri karti tam genisler.
           <View className="flex-row gap-2">
-            <OzetDegeri etiket={t('takvim.aktifSeri')} deger={t('takvim.haftaSayisi', { count: ozet.currentWeekStreak })} />
+            <OzetKarti etiket={t('takvim.haftalikSeri')}>
+              <View
+                accessible
+                accessibilityLabel={t('takvim.haftaSayisi', { count: ozet.currentWeekStreak })}
+                className="flex-row items-center gap-1"
+              >
+                <Text className="text-metric text-accent">{ozet.currentWeekStreak}</Text>
+                <Flame color={ikonRenk.accent} fill={ikonRenk.accent} size={24} />
+              </View>
+              <Text className="text-label text-muted">
+                {t('takvim.rekorun', { count: ozet.longestWeekStreak })}
+              </Text>
+            </OzetKarti>
             {ozet.weeklyTargetDays !== null && (
-              <OzetDegeri
-                etiket={t('takvim.hedefSerisi')}
-                deger={t('takvim.haftaSayisi', { count: ozet.currentTargetStreak ?? 0 })}
-              />
+              <OzetKarti etiket={t('takvim.haftalikHedef')}>
+                <Text
+                  accessibilityLabel={t('takvim.haftalikHedefDegeri', {
+                    count: ozet.thisWeekTrainedDays,
+                    hedef: ozet.weeklyTargetDays,
+                  })}
+                  className="text-metric"
+                >
+                  <Text className="text-accent">{ozet.thisWeekTrainedDays}</Text>
+                  <Text className="text-muted">/{ozet.weeklyTargetDays}</Text>
+                </Text>
+              </OzetKarti>
             )}
           </View>
         )}
@@ -185,11 +181,55 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   );
 }
 
-function OzetDegeri({ etiket, deger }: { etiket: string; deger: string }) {
+/**
+ * #324: haftalik ve aylik gorunumun ORTAK gun hucresi -- iki gorunum yalnizca satir sayisinda ayrilir.
+ * Gun numarasi ve altinda kucuk bir isaret: antrenmanli gunde yesil daire icinde onay (#315'in yesili),
+ * antrenmansiz gunde bos halka. Bugun hafif gri bir zeminle vurgulanir.
+ *
+ * #261 notu: `ring-*` ilk render'dan SONRA eklenince NativeWind bileseni "yukseltip" navigasyon
+ * context'inde cokuyordu. Bugun vurgusu artik yalnizca zemin rengi (`bg-*`) degisimi -- o tuzaga girmez.
+ */
+function GunHucresi({
+  gun,
+  bugunMu,
+  setSayisi,
+  onPress,
+}: {
+  gun: string;
+  bugunMu: boolean;
+  setSayisi: number | null;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const dil = useDil();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${gunBasligi(gun, dil)}: ${
+        setSayisi !== null ? t('setler.setSayisi', { count: setSayisi }) : t('takvim.antrenmanYok')
+      }`}
+      onPress={onPress}
+      className={`flex-1 items-center gap-1 rounded-lg py-1.5 ${bugunMu ? 'bg-surface-2' : 'bg-transparent'}`}
+    >
+      <Text className={`text-label ${bugunMu ? 'text-fg' : 'text-muted'}`}>{ayinGunu(gun)}</Text>
+      <View className="size-5 items-center justify-center">
+        {setSayisi !== null ? (
+          <View testID="gun-isareti-antrenmanli" className="size-5 items-center justify-center rounded-full bg-success">
+            <Check color={ikonRenk.onSuccess} size={12} strokeWidth={3} />
+          </View>
+        ) : (
+          <View testID="gun-isareti-bos" className="size-3 rounded-full border-2 border-surface-4" />
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function OzetKarti({ etiket, children }: { etiket: string; children: React.ReactNode }) {
   return (
     <View className="flex-1 flex-col gap-1 rounded-xl bg-surface-1 p-4">
       <Text className="text-label text-muted">{etiket}</Text>
-      <Text className="text-metric text-fg">{deger}</Text>
+      {children}
     </View>
   );
 }
