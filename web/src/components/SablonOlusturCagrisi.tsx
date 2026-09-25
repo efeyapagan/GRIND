@@ -10,10 +10,12 @@ import BirincilDugme from '../ui/BirincilDugme';
  * Backend'e dokunulmadi: `POST /api/sets`in oturumu kendiliginden acmasi API'de duruyor, arayuz
  * artik onu KULLANMIYOR.
  *
- * `/templates/new`'e `donus: '/'` state'iyle gider: sablon BURADAN olusturulduysa kaydedince
- * Bugun'e donulur (bkz. SablonDuzenlePage). Sablonlar ekranindaki "Yeni sablon" dugmesi ayni
- * hedefe state VERMEDEN gider, o yuzden kendi varsayilan davranisini (/templates'e donmeyi) korur
- * -- SablonlarPage'deki "Yeni sablon" ile AYNI desen (BirincilDugme + onClick + navigate).
+ * `/templates/new`'e `donus: '/antrenman'` state'iyle gider: sablon BURADAN olusturulduysa
+ * kaydedince BU ekrana donulur (bkz. SablonDuzenlePage). #272'ye kadar donus `/` (ana sayfa/takvim)
+ * idi -- kullanici sablonu olusturuyor ama onunla antrenmana baslamak icin bir ekran geri gelmek
+ * zorunda kaliyordu; sablon kartlari ve "Sablonla basla" burada. Sablonlar ekranindaki "Yeni sablon"
+ * dugmesi ayni hedefe state VERMEDEN gider, o yuzden kendi varsayilan davranisini (/templates'e
+ * donmeyi) korur -- SablonlarPage'deki "Yeni sablon" ile AYNI desen.
  *
  * #93: eskiden AddSetForm gibi ekranin altina yapisikti (sticky, issue #61 Karar 2); Bugun Takvimle bir ana
  * sayfaya donunce sayfa en ustteyken de gorunup "Şablonla başla" kartlarini ortuyordu. Artik sayfanin
@@ -26,7 +28,7 @@ export default function SablonOlusturCagrisi() {
 
   return (
     <div className="pb-2">
-      <BirincilDugme yukseklik="normal" onClick={() => navigate('/templates/new', { state: { donus: '/' } })}>
+      <BirincilDugme yukseklik="normal" onClick={() => navigate('/templates/new', { state: { donus: '/antrenman' } })}>
         <Plus aria-hidden size={20} />
         {t('sablonlar.olustur')}
       </BirincilDugme>

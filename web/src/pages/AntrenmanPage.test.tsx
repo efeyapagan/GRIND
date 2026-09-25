@@ -932,7 +932,8 @@ test('bos durumda alt alandaki Sablon oluştur dugmesi /templates/new\'e donus s
 
   await kullanici.click(await screen.findByRole('button', { name: 'Şablon oluştur' }));
 
-  expect(await screen.findByText('donus=/')).toBeInTheDocument();
+  // #272: kaydedince ana sayfa yerine sablon kartlarinin oldugu bu ekrana donulur.
+  expect(await screen.findByText('donus=/antrenman')).toBeInTheDocument();
 });
 
 test('sablonlu oturumda kartlar sunucunun sirasiyla gorunur; varsayilan secim tamamlanmamis ilk harekettir', async () => {
