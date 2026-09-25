@@ -98,6 +98,10 @@ Renk kuralları:
   kenar, köşe (`xl`); iç boşluk 16, satır arası 12. Açılırken alttan 48 pt yukarı, alt menü balonuyla
   aynı hafif taşmalı yayla belirir; kapanırken 150 ms'de aşağı kayıp söner. Klavye açıkken panel
   klavyenin 8 üstüne çıkar.
+  **#354:** panel açıkken seçili hareketin kartı da aynı cam yüzeyle (cam + 1 px `surface-4`, köşe `xl`)
+  öne çıkar: içerik alanının üstünden (8) panelin 12 üstüne kadar kalan yüksekliği doldurur, içi kendi
+  içinde kayar; ölçek 0.92 → 1 panelle aynı yayla büyür, kapanırken 150 ms'de söner. Arkada `black/40`
+  perde (dokununca ikisi kapanır). Liste kartları artık yerinde açılmaz, yalnızca başlık + setler.
   **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
   soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
   durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`

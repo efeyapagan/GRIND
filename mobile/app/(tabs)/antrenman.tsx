@@ -1,6 +1,14 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { Dimensions, View, Text, Pressable, type ScrollView } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import { useCallback, useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  withSpring,
+  withTiming,
+  type EntryAnimationsValues,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
@@ -24,7 +32,6 @@ import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { varsayilanHareket } from '@grind/shared/lib/ilerleme';
 import { dinlenmeBaslat, dinlenmeSuresi } from '@grind/shared/lib/dinlenme';
-import { kartHizalamaKaydirmasi } from '@grind/shared/lib/kartHizalama';
 import { oturumdanSablonHareketleri } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import SetList from '../../src/components/SetList';
@@ -35,6 +42,7 @@ import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 import { useKlavyeYuksekligi } from '../../src/ui/useKlavyeYuksekligi';
 import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
+import OdakKarti from '../../src/components/OdakKarti';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
@@ -54,6 +62,24 @@ const PANEL_ACILISI = FadeInDown.springify()
   .mass(0.8)
   .withInitialValues({ transform: [{ translateY: 48 }] });
 const PANEL_KAPANISI = FadeOutDown.duration(150);
+/** Odak kartiyla set paneli arasindaki bosluk (#354). */
+const ODAK_BOSLUGU = 12;
+/**
+ * Odak kartinin acilisi (#354): hafif kucukten, set paneliyle ayni yayla buyur. Hazir `ZoomIn` 0'dan
+ * buyudugu icin fazla sert kaciyordu; baslangic olcegi burada verilir.
+ */
+function odakAcilisi(_degerler: EntryAnimationsValues) {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ scale: 0.92 }] },
+    animations: {
+      opacity: withTiming(1, { duration: 150 }),
+      transform: [{ scale: withSpring(1, { damping: 14, stiffness: 180, mass: 0.8 }) }],
+    },
+  };
+}
+const ODAK_KAPANISI = FadeOut.duration(150);
+const kaydirmaYok = () => undefined;
 
 const SABLON_UYGULANMADI ='Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
 
@@ -164,54 +190,19 @@ export default function AntrenmanScreen() {
   function kartSec(exerciseId: number) {
     if (secimYap(exerciseId)) {
       setPanelAcik(true);
-      hizalanacak.current = true;
     }
   }
 
-  // Panel artik kartin altinda DEGIL, alt sekme cubugunun hemen ustunde yuzen ayri bir kutu (bkz.
-  // asagidaki `panelRef`) -- kart secilince/panel acilinca ekran, kart panelin tam ustune gelecek
-  // kadar kayar -- web ile ayni karar (`kartHizalamaKaydirmasi`), sinir artik panelin OLCULEN ust
-  // kenari. Klavye acilinca da (EkranKaydirici'nin varsayilan "en alta kay"i yerine) ayni hizalama
-  // klavyenin ustune yapilir.
-  const kaydiriciRef = useRef<ScrollView>(null);
-  const kaydirmaY = useRef(0);
-  const seciliKartRef = useRef<View>(null);
-  const panelRef = useRef<View>(null);
+  // #354: set paneli acikken secili hareketin karti da buyuyerek one cikar (`OdakKarti`) ve panelin
+  // ust kenarina kadar kalan alani doldurur -- ikisi birlikte ekrani kaplar. Onceki "karti panelin
+  // ustune kaydir" hizalamasi (#274) bu yuzden kalkti: kart artik zaten panelin ustunde.
+  const odakHareketi = panelAcik ? gorunenIlerleme.find((hareket) => hareket.exerciseId === etkinSecim) : undefined;
   const [panelYuksekligi, setPanelYuksekligi] = useState(0);
-  const hizalanacak = useRef(false);
   const altMenuPayi = useAltMenuPayi();
   // #350: yuzer panel klavyeden habersizdi -- klavye acilinca arkasinda kaliyordu. Klavye acikken
   // klavyenin hemen ustunde, kapaliyken alt menunun ustunde durur.
   const klavyeYuksekligi = useKlavyeYuksekligi();
   const panelAlti = klavyeYuksekligi > 0 ? klavyeYuksekligi + KLAVYE_BOSLUGU : altMenuPayi;
-  function kartiHizala(klavyeYuksekligi: number) {
-    const kaydirici = kaydiriciRef.current;
-    const kart = seciliKartRef.current;
-    const panel = panelRef.current;
-    kaydirici?.getNativeScrollRef()?.measureInWindow((_x, alanY) => {
-      kart?.measureInWindow((_kx, kartY, _kg, kartH) => {
-        const varsayilanAlt = Dimensions.get('window').height - Math.max(klavyeYuksekligi, altMenuPayi);
-        const hizala = (panelUst: number) => {
-          const alanAlt = Math.min(panelUst, varsayilanAlt);
-          // Klavye acikken kart (gecmis) cogu zaman sigmaz; o zaman "ustu oncelikli" kurali
-          // girdileri klavyenin arkasina iterdi. Yalnizca kartin ALT kenari hizalanir.
-          const kartAlt = kartY + kartH;
-          const kaydirma = kartHizalamaKaydirmasi(
-            { ust: klavyeYuksekligi > 0 ? kartAlt : kartY, alt: kartAlt },
-            { ust: alanY, alt: alanAlt },
-          );
-          if (kaydirma !== 0) {
-            kaydirici.scrollTo({ y: Math.max(0, kaydirmaY.current + kaydirma), animated: true });
-          }
-        };
-        if (panel) {
-          panel.measureInWindow((_px, panelY) => hizala(panelY));
-        } else {
-          hizala(varsayilanAlt);
-        }
-      });
-    });
-  }
 
   function hareketEkle(exerciseId: number) {
     if (!gorunenOturum) {
@@ -270,14 +261,10 @@ export default function AntrenmanScreen() {
   return (
     <View style={{ flex: 1 }}>
       <EkranKaydirici
-        ref={kaydiriciRef}
         contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
-        scrollEventThrottle={16}
-        onScroll={(e) => {
-          kaydirmaY.current = e.nativeEvent.contentOffset.y;
-        }}
-        onKlavyeAcildi={panelAcik ? kartiHizala : undefined}
-        altBosluk={panelAcik ? panelYuksekligi : 0}
+        // Klavye yalnizca set panelinden acilir; liste o an odak kartinin arkasinda. Varsayilan "en
+        // alta kay" listeyi camin arkasinda oynatir ve kart kapaninca kullanici baska yerde kalirdi.
+        onKlavyeAcildi={panelAcik ? kaydirmaYok : undefined}
       >
         <View className="flex-col gap-1">
           <View className="flex-row items-center justify-between gap-2">
@@ -366,18 +353,8 @@ export default function AntrenmanScreen() {
               <HareketKartlari
                 ilerleme={gorunenIlerleme}
                 setler={gorunenSetler}
-                secilenId={etkinSecim}
                 onSec={kartSec}
                 onSetSil={setiSilmeyeBasla}
-                onHareketKaldir={hareketiKaldirmayaBasla}
-                onSiraDegis={siraDegistir}
-                seciliKartRef={seciliKartRef}
-                onSeciliKartYerlesti={() => {
-                  if (hizalanacak.current) {
-                    hizalanacak.current = false;
-                    kartiHizala(0);
-                  }
-                }}
               />
             ) : (
               <>
@@ -447,21 +424,50 @@ export default function AntrenmanScreen() {
           karsiligi. `altMenuPayi`: alt menu icerigin ustunde yuzdugu icin (#338, bkz. KabukTabBar.tsx)
           panel onun UZERINE binmesin diye menunun kapladigi alanin ustunde durur; klavye acikken
           klavyenin ustune cikar (#350, `panelAlti`).
-          #350: panel alttan yaylanarak acilir, asagi kayip soner. Dis kabuk (olculen, `panelRef`)
-          oturum boyunca yerinde durur, yalnizca icteki katman canlanir: kart hizalamasi kabugu olcer,
-          animasyonun ara konumunu degil; cikis animasyonu da ancak kabuk yerindeyken oynayabilir. */}
+          #350: panel alttan yaylanarak acilir, asagi kayip soner. Dis kabuk (olculen) oturum boyunca
+          yerinde durur, yalnizca icteki katman canlanir: odak karti kabugun yuksekligine gore yerlesir,
+          animasyonun ara konumuna gore degil; cikis animasyonu da ancak kabuk yerindeyken oynayabilir.
+          #354: panelin ustunde, ekranin kalanini kaplayan odak katmani -- once cizilir ki panel ustte
+          kalsin. Kartin disindaki bosluk (perde) ikisini birlikte kapatir. */}
+      {odakHareketi && (
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <Animated.View entering={FadeIn.duration(150)} exiting={ODAK_KAPANISI} style={StyleSheet.absoluteFill}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('antrenman.kartiKapat')}
+              onPress={() => setPanelAcik(false)}
+              className="flex-1 bg-black/40"
+            />
+          </Animated.View>
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: 0,
+              right: 0,
+              bottom: panelAlti + panelYuksekligi + ODAK_BOSLUGU,
+            }}
+            className="px-4"
+          >
+            <Animated.View entering={odakAcilisi} exiting={ODAK_KAPANISI} className="flex-1">
+              <OdakKarti
+                hareket={odakHareketi}
+                idler={gorunenIlerleme.map((hareket) => hareket.exerciseId)}
+                setler={gorunenSetler.filter((kayit) => kayit.exerciseId === odakHareketi.exerciseId)}
+                onSetSil={setiSilmeyeBasla}
+                onSiraDegis={siraDegistir}
+                onKaldir={() => hareketiKaldirmayaBasla(odakHareketi.exerciseId)}
+              />
+            </Animated.View>
+          </View>
+        </View>
+      )}
       {gorunenOturum && (
         <View
-          ref={panelRef}
           testID="set-paneli"
           pointerEvents="box-none"
-          onLayout={(e) => {
-            setPanelYuksekligi(e.nativeEvent.layout.height);
-            if (hizalanacak.current) {
-              hizalanacak.current = false;
-              kartiHizala(0);
-            }
-          }}
+          onLayout={(e) => setPanelYuksekligi(e.nativeEvent.layout.height)}
           style={{ position: 'absolute', left: 0, right: 0, bottom: panelAlti }}
           className="px-4"
         >

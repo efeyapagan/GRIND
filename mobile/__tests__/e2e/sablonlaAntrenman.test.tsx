@@ -70,6 +70,8 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   expect(state.setler[0]).toMatchObject({ weight: 60, reps: 8, exerciseId: 1, rir: 2.5 });
   expect(await screen.findByText('RIR 2–3')).toBeTruthy();
   await waitFor(() => expect(screen.getByLabelText(/Bench Press, 1 \/ 3 set/)).toBeTruthy());
+  // #354: set eklenince panelle birlikte odak karti da kapanir; eklenen set listedeki kartta gorunur.
+  await waitFor(() => expect(screen.queryByTestId('odak-karti')).toBeNull());
 
   // #153: "Antrenmanı bitir" artık oturumu kapatmaz, ayrı zorluk ekranına götürür; kadrandan
   // "Zor" seçilip bitirilir. Bu adım GERÇEK rotayla gezinmeyi de doğrular (izole ekran testi yapamaz).

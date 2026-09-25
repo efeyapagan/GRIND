@@ -29,20 +29,14 @@ import { useKlavyeYuksekligi } from './useKlavyeYuksekligi';
 interface Props extends ScrollViewProps {
   /**
    * #274: klavye acilinca varsayilan davranis en alta (`scrollToEnd`) kaymaktir -- formu listenin
-   * sonunda olan ekranlar icin. Formu listenin ICINDE olan ekran (antrenman: set paneli secili
-   * kartin altinda) kendi hizalamasini verir; ayni gecikmeli tick'te, klavye yuksekligiyle cagrilir.
+   * sonunda olan ekranlar icin. Formu listenin DISINDA olan ekran (antrenman: yuzer set paneli, #354)
+   * bunun yerine kendi davranisini verir; ayni gecikmeli tick'te, klavye yuksekligiyle cagrilir.
    */
   onKlavyeAcildi?: (klavyeYuksekligi: number) => void;
-  /**
-   * Yuzer bir alt panel (antrenman: `SetPaneli`) icerigin ustune bindiginde, son satirin panelin
-   * ARKASINDA kalmamasi icin eklenen ekstra alt bosluk (px) -- web'deki `sticky` panelin kendi akis
-   * icinde yer kaplamasiyla AYNI etki, burada elle verilir (panel `position: absolute`).
-   */
-  altBosluk?: number;
 }
 
 const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
-  { contentContainerClassName, children, onKlavyeAcildi, altBosluk = 0, ...props },
+  { contentContainerClassName, children, onKlavyeAcildi, ...props },
   disariAcilanRef,
 ) {
   const icRef = useRef<ScrollView>(null);
@@ -68,7 +62,7 @@ const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
       contentContainerClassName={contentContainerClassName}
       // Alt menu icerigin ustunde yuzer (#338); klavye acikken menu klavyenin arkasinda kalir, bu
       // yuzden ikisinden buyugu kadar yer birakilir.
-      contentContainerStyle={{ paddingBottom: Math.max(klavyeYuksekligi, altMenuPayi) + altBosluk }}
+      contentContainerStyle={{ paddingBottom: Math.max(klavyeYuksekligi, altMenuPayi) }}
       keyboardShouldPersistTaps="handled"
       {...props}
     >
