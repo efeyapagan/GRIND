@@ -16,7 +16,7 @@ const ETIKET_ANAHTARI = {
 
 /**
  * Antrenman geçmişi ve rekorların başkalarına görünürlüğü (#294). Web'in yerel `<select>`inin RN
- * karşılığı yok -- HaftalikHedefSecici ile aynı "kapalı kutu + seçince kapanan liste" Modal seçici.
+ * karşılığı yok -- "kapalı kutu + seçince kapanan liste" Modal seçici.
  */
 export default function GizlilikSeviyesiSecici() {
   const { t } = useTranslation();

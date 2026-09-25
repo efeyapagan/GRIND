@@ -88,6 +88,13 @@ Renk kuralları:
   durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`
   nötr kalır. Tek kaynak `RirAlani` (web `web/src/components/RirAlani.tsx`, mobil
   `mobile/src/components/RirAlani.tsx`).
+  **#324 genişlemesi (kullanıcının fitness uygulaması ana sayfa referansı; yalnızca mobil — web
+  donduruldu, #326):** Ana sayfa Takvim özetinde "Haftalık seri" kartının büyük sayısı ve yanındaki
+  dolgulu `Flame` ikonu, "Haftalık hedef" kartında `x/hedef`'in `x`'i (bu hafta antrenman yapılan gün) —
+  `surface-1` üstünde `accent` metin, ölçülen **5.43:1** (`metric` boyutunda). Kartların etiketi,
+  "Rekorun: N hafta" satırı ve `/hedef` kısmı `muted` kalır. Takvim gün hücresindeki onay işareti
+  accent DEĞİL: #315'in yeşili (`success` daire + `on-success` onay, 7.68:1); antrenmansız gün
+  `surface-4` boş halka, bugün `surface-2` zemin — nötr.
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.

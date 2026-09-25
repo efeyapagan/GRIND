@@ -19,8 +19,8 @@ interface Props<T> {
 
 /**
  * Web'in yerel `<select>`inin RN karsiligi (RN'de native select yok). Kapali kutu secili degeri
- * gosterir, dokununca Modal icinde secenek listesi acilir -- HaftalikHedefSecici ve
- * SablonFormu'nun dinlenme seciminde ortak (DRY).
+ * gosterir, dokununca Modal icinde secenek listesi acilir -- SablonFormu'nun dinlenme seciminde
+ * ve benzeri secimlerde ortak (DRY).
  */
 export default function SecimKutusu<T extends string | number>({
   baslik,

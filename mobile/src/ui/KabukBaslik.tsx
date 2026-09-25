@@ -1,11 +1,12 @@
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
-import { ChevronLeft, Menu, Search } from 'lucide-react-native';
+import { Bell, ChevronLeft, Menu, Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
+import GrindyMaskot from './GrindyMaskot';
 import { ikonRenk } from './renkler';
 
 /**
@@ -20,6 +21,9 @@ import { ikonRenk } from './renkler';
  * #293 (devami): Profil'in kok ekranlarinda (Gecmis/Rekorlar/Olculer) bu bar TAMAMEN kalkar --
  * `profilAnaEkraniMi` -- yerine yalnizca arama + hesap ayarlari kisayollarini tasiyan ince, kisa bir
  * satir gelir; fotograf ve isim (ProfilBasligi) boylece guvenli alanin hemen altindan baslar.
+ *
+ * #324: Ana sayfada sagdaki "GRIND" yazisinin yerini bildirim (zil) ve GRINDY kisayollari alir;
+ * diger ekranlarda bar degismez.
  */
 export default function KabukBaslik() {
   const baslik = useHeaderTitle();
@@ -81,7 +85,28 @@ export default function KabukBaslik() {
         <Text numberOfLines={1} className="flex-1 text-heading text-fg">
           {baslik}
         </Text>
-        <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+        {pathname === '/' ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('ortak.bildirimler')}
+              onPress={() => router.push('/bildirimler')}
+              className="size-10 shrink-0 items-center justify-center"
+            >
+              <Bell color={ikonRenk.fg} size={22} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('kabuk.grindyyeGit')}
+              onPress={() => router.push('/insights')}
+              className="size-10 shrink-0 items-center justify-center"
+            >
+              <GrindyMaskot boyut={28} dekoratif />
+            </Pressable>
+          </>
+        ) : (
+          <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+        )}
         {/* EN SON cocuk: ust uste binen kardeslerin (baslik, GRIND) USTUNDE kalsin -- yoksa baslik
             yazisi gostergenin uzerine cizilir ve dokunusu yakalayabilir. */}
         <DinlenmeGostergesi />
