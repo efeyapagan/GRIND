@@ -248,12 +248,13 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Takma_adi_olan_uc_egzersiz_beklenenle_birebir_eslesir()
+    public void Takma_adi_olan_dort_egzersiz_beklenenle_birebir_eslesir()
     {
         // #335: "Aynısı varsa iki isimle de aranabilir" kararı — takma isimler tek yerde sabitlenir,
         // AlternateName kolonu üzerinden aramaya girer (bkz. packages/shared/src/lib/egzersizler.ts).
         (long Id, string AlternateName)[] expected =
         [
+            (43L, "Over Head Rope Extension"),
             (72L, "Smith Machine Low Incline Press"),
             (83L, "Chest Fly Machine"),
             (111L, "Dumbell Lateral Raise"),
