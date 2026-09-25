@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { enYakinRirDegeri, rirEtiketi } from './rir';
 import { setGirdisiMetni } from './setGirdisi';
 

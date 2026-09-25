@@ -8,7 +8,9 @@ on:
     branches: [master, dev]
     paths: ['mobile/**', 'packages/shared/**', 'package.json', 'package-lock.json', '.github/workflows/mobile.yml']
 
-# DIKKAT: grup adi diger CI'lardan (web-..., ci-...) FARKLI olmali; ayni grup ayni branch'te
+# #326: web donduruldu, Web CI kaldirildi; ortak paketin (packages/shared) tip kontrolu ve
+# testleri de burada kosar -- mobil onu kullanir.
+# DIKKAT: grup adi diger CI'lardan (ci-...) FARKLI olmali; ayni grup ayni branch'te
 # birbirlerini iptal eder.
 concurrency:
   group: mobile-${{ github.ref }}
@@ -34,6 +36,12 @@ jobs:
       # `mobile/` icinde tek basina `npm ci` calistirmak bu paketi cozemez (registry'de yok).
       - name: Bagimliliklari kur (kok, workspaces)
         run: npm ci
+
+      - name: Ortak paket tip kontrolu
+        run: npm run typecheck --workspace @grind/shared
+
+      - name: Ortak paket testleri
+        run: npm run test --workspace @grind/shared
 
       - name: Tip kontrolu
         run: npm run typecheck --workspace mobile

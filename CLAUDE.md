@@ -7,6 +7,8 @@ tekrar rekoru). Antrenman verileri (hacim, geçmiş, rekorlar) dışa aktarılab
 veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 
 ## Kapsam ve Sıra — ÖNEMLİ
+- **Web donduruldu (#326, 2026-09-25).** Yeni geliştirme yalnızca `mobile/`'a yapılır, Web CI
+  kaldırıldı. Aşağıdaki web maddeleri tarihçedir; ayrıntı "Web DONDURULDU" bölümünde.
 - **Backend tamamlandı (Faz 0-13, 2026-09-12).** Frontend kararı verildi: **React + Vite +
   TypeScript, kurulabilir PWA** — repo kökünde `web/` klasöründe. Mimari plan:
   [docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md](docs/superpowers/specs/2026-09-12-frontend-react-pwa-design.md).
@@ -77,7 +79,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | ORM | Entity Framework Core — Code-First, Migrations |
 | Veritabanı | PostgreSQL (Npgsql provider) |
 | Mimari | Katmanlı: Controller → Service → Repository / Unit of Work |
-| Frontend | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu, çeviri i18next + react-i18next |
+| Mobil (aktif istemci) | React Native + Expo (`mobile/`), expo-router, NativeWind, TanStack Query, i18next; testler jest-expo |
+| Ortak paket | `packages/shared` (npm workspace — API sorguları, i18n kataloğu, yardımcılar); testler vitest |
+| Frontend (web — DONDURULDU, #326) | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu, çeviri i18next + react-i18next |
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.
@@ -98,8 +102,9 @@ yoktur (#202).
   "Katalog kuralları".
 - Tarih/sayı gösterimi `useDil()`'den gelen `dil` ile `format*` yardımcılarından geçer; `tr-TR`
   gibi sabit yerel ayar yazılmaz. Saat dilimi `Europe/Istanbul` kalır.
-- Bitti sayılmadan önce: `katalog.test.ts` ve `cevrilmemisMetin.test.ts` yeşil; yeni ekran/metin
-  İngilizcede de gözle kontrol edilir (Profil → Dil → English).
+- Bitti sayılmadan önce: `packages/shared/src/i18n/katalog.test.ts` yeşil (iki katalog aynı
+  anahtarları taşır). (`cevrilmemisMetin.test.ts` ve Profil → Dil → English kontrolü web'e aitti;
+  web donduruldu, bkz. aşağısı.)
 - **Mobil** (dilim 3'e kadar arayüzü Türkçe sabit): yeni ya da değişen mobil metin de katalogdan
   gelir ve İngilizcesiyle eklenir — dilim 3'ü büyütmemek için.
 - **Backend** (dilim 2'ye kadar): yeni hata mesajları bugünkü gibi Türkçe `detail` taşır; dilim 2
@@ -108,19 +113,26 @@ yoktur (#202).
 - Kapsam dışı: AI yorumu içeriği ve export metninin dili (#199); kullanıcının girdiği veriler
   (egzersiz/şablon adları, notlar) çevrilmez.
 
-## Web + Mobil — ZORUNLU
-Kullanıcıya görünen her geliştirme hem `web/` hem `mobile/` için **aynı işte** yapılır; "önce
-web, mobil sonra" (ya da tersi) yoktur (#211). Çok Dil kuralıyla aynı mantık.
-- Issue açarken kapsam iki platformu da yazar (dokunulacak web ve mobil dosyaları); bir platform
-  bilerek dışarıda bırakılacaksa gerekçesi issue'da yazılır ve kullanıcıya sorulur.
-- Platforma uygun etkileşim serbesttir (mobilde döner kadran, web'de seçenek satırı gibi); aynı
-  olması gereken şey özelliğin kendisi ve API'den gelen veridir — hesap iki istemcide de sunucudan
-  gelir.
-- Mevcut platform farkları kural değil, geçici durumdur: mobil tema koyu kalır (açık tema), mobil
-  arayüz dili dilim 3'e kadar Türkçe sabit (Çok Dil). Bunlar kendi dilimlerinde kapanır.
-- Yalnızca backend'e, dokümana ya da altyapıya dokunan işler bu kuralın dışındadır.
-- Bitti sayılmadan önce: iki platformun testleri ve tip kontrolü yeşil, özellik iki platformda da
-  gözle denenmiş.
+## Web DONDURULDU — yalnızca Mobil — ZORUNLU
+**Karar (kullanıcı, #326, 2026-09-25):** `web/` için artık geliştirme yapılmaz. Web istemcisi
+olduğu hâliyle dondurulmuştur; kullanıcıya görünen her yeni geliştirme yalnızca `mobile/`'a gelir.
+Bu karar #211'deki "Web + Mobil aynı işte" kuralının yerini alır.
+- `web/`'e yeni özellik, ekran, düzeltme ya da test eklenmez; issue kapsamına web dosyası yazılmaz.
+  Açık bir issue web'i de kapsıyorsa (ör. #324) yalnızca mobil kısmı yapılır ve issue'ya bir not
+  düşülür. Web'e dokunmak gerekirse (ör. ortak paketteki bir değişiklik web'in derlemesini
+  bozuyorsa) önce kullanıcıya sorulur.
+- `web/` klasörü silinmez: kod referans olarak kalır ve Mobile CI Node sürümünü `web/.nvmrc`'den
+  okur.
+- **Web CI kaldırıldı** (`.github/workflows/web.yml` yok). Web'in testleri ve tip kontrolü
+  CI'da koşmaz; bir iş bitmeden önce web testlerini koşmak gerekmez.
+- Ortak paketin (`packages/shared` — API sorguları, i18n kataloğu, `format`/`rir`/`grafik`/
+  `takvim`/`zorlukKadrani` gibi yardımcılar) testleri `packages/shared/src/**/*.test.ts`'tedir
+  (vitest, `npm run test --workspace @grind/shared`) ve Mobile CI'da ortak paketin tip kontrolüyle
+  birlikte koşar. Ortak koda yeni test buraya yazılır, `web/`'e değil.
+- Mevcut mobil farkları kendi dilimlerinde kapanır: mobil tema koyu kalır (açık tema), mobil
+  arayüz dili dilim 3'e kadar Türkçe sabit (Çok Dil).
+- Bitti sayılmadan önce: `mobile` ve `@grind/shared` testleri ve tip kontrolü yeşil, özellik
+  mobilde gözle denenmiş.
 
 ## Yetkilendirme Kuralı — ZORUNLU
 `Exercise.UserId` gibi nullable-sahiplik alanı olan her kaynakta, bir kullanıcı SADECE kendi

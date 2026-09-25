@@ -1,5 +1,6 @@
-import { tr } from '@grind/shared/i18n/tr';
-import { en } from '@grind/shared/i18n/en';
+import { expect, test } from 'vitest';
+import { tr } from './tr';
+import { en } from './en';
 
 type Dugum = { [anahtar: string]: string | Dugum };
 
