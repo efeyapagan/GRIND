@@ -11,6 +11,7 @@ const KAYIT: SetKaydi = {
   sessionId: 40,
   exerciseId: 1,
   exerciseName: 'Dips',
+  exercisePosition: 1,
   weight: 70,
   reps: 12,
   recordType: 'None',

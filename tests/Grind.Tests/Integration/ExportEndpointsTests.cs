@@ -99,8 +99,8 @@ public class ExportEndpointsTests(GrindApiFactory factory) : IClassFixture<Grind
         var metin = await response.Content.ReadAsStringAsync();
         Assert.StartsWith("# GRIND antrenman verisi\n", metin);
         Assert.Contains("Oluşturulma:", metin);
-        // "×" ve "ğ/ü" UTF-8 ile bozulmadan gelmeli.
-        Assert.Contains($"- {exercise.Name}: 100×8", metin);
+        // "×" ve "ğ/ü" UTF-8 ile bozulmadan gelmeli. #230: hareket adinin basinda pozisyon numarasi.
+        Assert.Contains($"- 1. {exercise.Name}: 100×8", metin);
     }
 
     [Theory]

@@ -1,4 +1,5 @@
 using Grind.Api.Common.Exceptions;
+using Grind.Api.Common.Progress;
 using Grind.Api.Common.Rest;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Validation;
@@ -93,7 +94,8 @@ public class SetEntryService(
         var sets = await setEntryRepository.GetForSessionAsync(
             sessionId, currentUser.UserId, cancellationToken);
 
-        return HistoryMapping.ToSetResponses(sets, RestIntervalCalculator.ForSession(sets));
+        return HistoryMapping.ToSetResponses(
+            sets, RestIntervalCalculator.ForSession(sets), ExercisePositionCalculator.ForSession(sets));
     }
 
     public async Task<SetEntryResponse> PatchAsync(
@@ -167,7 +169,8 @@ public class SetEntryService(
         var sessionSets = await setEntryRepository.GetForSessionAsync(
             set.WorkoutSessionId, currentUser.UserId, cancellationToken);
 
-        return HistoryMapping.ToSetResponses(sessionSets, RestIntervalCalculator.ForSession(sessionSets))
+        return HistoryMapping.ToSetResponses(
+                sessionSets, RestIntervalCalculator.ForSession(sessionSets), ExercisePositionCalculator.ForSession(sessionSets))
             .Single(s => s.Id == set.Id);
     }
 }

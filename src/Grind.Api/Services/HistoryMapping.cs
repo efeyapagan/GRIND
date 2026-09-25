@@ -1,3 +1,4 @@
+using Grind.Api.Common.Progress;
 using Grind.Api.Common.Rest;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.History;
@@ -38,8 +39,11 @@ internal static class HistoryMapping
         WorkoutSession session, IReadOnlyList<SetEntry> sets, long? exerciseId)
     {
         var rests = RestIntervalCalculator.ForSession(sets);
+        // #230: pozisyon da (rest gibi) oturumun TÜM setlerinden hesaplanır -- egzersiz filtresi
+        // uygulandıktan SONRA görünmeyen bir hareketin pozisyonu kaymasın diye.
+        var positions = ExercisePositionCalculator.ForSession(sets);
         var shown = ToSetResponses(
-            exerciseId is { } id ? sets.Where(s => s.ExerciseId == id) : sets, rests);
+            exerciseId is { } id ? sets.Where(s => s.ExerciseId == id) : sets, rests, positions);
 
         return new HistorySessionResponse(
             session.Id,
@@ -59,10 +63,14 @@ internal static class HistoryMapping
 
     /// <summary>
     /// Setleri kronolojik sırayla DTO'ya çevirir; <paramref name="rests"/>
-    /// <see cref="RestIntervalCalculator.ForSession"/>'ın oturumun tüm setleri için ürettiği sözlüktür.
+    /// <see cref="RestIntervalCalculator.ForSession"/>'ın, <paramref name="positions"/>
+    /// <see cref="ExercisePositionCalculator.ForSession"/>'ın oturumun tüm setleri için ürettiği
+    /// sözlüktür.
     /// </summary>
     public static IReadOnlyList<SetEntryResponse> ToSetResponses(
-        IEnumerable<SetEntry> sets, IReadOnlyDictionary<long, int?> rests) => sets
+        IEnumerable<SetEntry> sets,
+        IReadOnlyDictionary<long, int?> rests,
+        IReadOnlyDictionary<long, int> positions) => sets
         .OrderBy(s => s.CreatedAt)
         .ThenBy(s => s.Id)
         .Select(s => new SetEntryResponse(
@@ -70,6 +78,7 @@ internal static class HistoryMapping
             s.WorkoutSessionId,
             s.ExerciseId,
             s.Exercise.Name,
+            positions[s.ExerciseId],
             s.Weight,
             s.Reps,
             s.RecordType,

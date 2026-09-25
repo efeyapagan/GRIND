@@ -3824,6 +3824,9 @@ export interface components {
             setCount?: number;
             /** Format: double */
             estimatedOneRepMax?: number | null;
+            /** Format: int32 */
+            position?: number;
+            positionChanged?: boolean;
         };
         ExerciseProgressResponse: {
             /** Format: int64 */
@@ -4093,6 +4096,8 @@ export interface components {
             /** Format: int64 */
             exerciseId?: number;
             exerciseName?: string | null;
+            /** Format: int32 */
+            exercisePosition?: number;
             /** Format: double */
             weight?: number;
             /** Format: int32 */

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '@grind/shared/api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
-import CizgiGrafik from '../ui/CizgiGrafik';
+import CizgiGrafik, { type CizgiNoktasi } from '../ui/CizgiGrafik';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
 import { ikonRenk } from '../ui/renkler';
 
@@ -114,10 +114,23 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           </View>
           <Text className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt, dil)}</Text>
           <CizgiGrafik
-            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt, dil), deger }))}
+            noktalar={cizilecekler.map(
+              ({ nokta, deger }): CizgiNoktasi => ({
+                etiket: formatKisaTarih(nokta.startedAt, dil),
+                deger,
+                // #230: farkli pozisyonlu nokta ince bir isaretle ayirt edilir.
+                vurgula: nokta.positionChanged,
+              }),
+            )}
             birim="kg"
             baslik={`${exerciseName} ${sekme.ozetAdi}, ${cizilecekler.length} antrenman`}
           />
+          {cizilecekler.some(({ nokta }) => nokta.positionChanged) && (
+            <Text className="text-label text-muted">
+              Kesikli halkalı nokta: hareket o antrenmanda genelden farklı bir sırada yapıldı; değişim bundan
+              kaynaklanıyor olabilir.
+            </Text>
+          )}
         </>
       );
     }

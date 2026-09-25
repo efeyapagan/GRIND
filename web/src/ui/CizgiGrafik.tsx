@@ -7,6 +7,13 @@ import { useGenislik } from '../lib/useGenislik';
 export interface CizgiNoktasi {
   etiket: string;
   deger: number;
+  /**
+   * Iceren bilesenin (ör. HareketGecmisi, issue #230) noktaya eklemek istedigi kisa bir not --
+   * grafik bunun ANLAMINI bilmez (veri bilmeyen bilesen, DRY), yalnizca varsa ekran okuyucu
+   * listesine ekler ve `vurgula` true ise gorsel olarak ince bir isaretle ayirt eder.
+   */
+  not?: string;
+  vurgula?: boolean;
 }
 
 interface Props {
@@ -137,6 +144,26 @@ function Cizim({ noktalar, birim, baslik }: Props) {
               className="fill-bg"
             />
           ))}
+          {/*
+           * #230: "ince bir işaret" -- vurgulanan noktanın etrafında notr, kesikli bir halka.
+           * `currentColor`'dan (accent-fg) BİLEREK ayrı: bu isaret veri cizgisinin bir parcasi
+           * degil, ayri bir bilgi katmani (pozisyon degisimi).
+           */}
+          {koordinatlar.map(
+            (k, sira) =>
+              noktalar[sira].vurgula && (
+                <circle
+                  key={`vurgu-${sira}`}
+                  cx={k.x}
+                  cy={k.y}
+                  r={9}
+                  fill="none"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                  className="stroke-muted"
+                />
+              ),
+          )}
           {etiketliSiralar.map((sira) => {
             const metin = formatWeight(noktalar[sira].deger, dil);
             const etiketGenisligi = metin.length * 8 + 16;
@@ -171,7 +198,10 @@ function Cizim({ noktalar, birim, baslik }: Props) {
       </svg>
       <ul className="sr-only">
         {noktalar.map((nokta, sira) => (
-          <li key={`${nokta.etiket}-${sira}`}>{`${nokta.etiket}: ${formatWeight(nokta.deger, dil)} ${birim}`}</li>
+          <li key={`${nokta.etiket}-${sira}`}>
+            {`${nokta.etiket}: ${formatWeight(nokta.deger, dil)} ${birim}`}
+            {nokta.not && ` (${nokta.not})`}
+          </li>
         ))}
       </ul>
     </div>

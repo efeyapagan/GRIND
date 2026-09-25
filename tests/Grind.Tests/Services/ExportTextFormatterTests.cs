@@ -24,8 +24,8 @@ public class ExportTextFormatterTests
 
     private static SetEntryResponse Set(
         long exerciseId, string name, decimal weight, int reps,
-        RecordType recordType = RecordType.None, decimal? rir = null) =>
-        new(0, 1, exerciseId, name, weight, reps, recordType, rir, An, RestSeconds: null);
+        RecordType recordType = RecordType.None, decimal? rir = null, int position = 1) =>
+        new(0, 1, exerciseId, name, position, weight, reps, recordType, rir, An, RestSeconds: null);
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
@@ -61,12 +61,12 @@ public class ExportTextFormatterTests
                     4500,
                     "Push Day A", "omuz sıkıştı", SessionDifficulty.Medium, 2785m, 6, null,
                     [
-                        Set(1, "Bench Press", 80m, 8),
-                        Set(1, "Bench Press", 80m, 7, rir: 1),
-                        Set(1, "Bench Press", 85m, 5, RecordType.Weight),
-                        Set(2, "Overhead Press", 40m, 10),
-                        Set(2, "Overhead Press", 40m, 10),
-                        Set(2, "Overhead Press", 40m, 9)
+                        Set(1, "Bench Press", 80m, 8, position: 1),
+                        Set(1, "Bench Press", 80m, 7, rir: 1, position: 1),
+                        Set(1, "Bench Press", 85m, 5, RecordType.Weight, position: 1),
+                        Set(2, "Overhead Press", 40m, 10, position: 2),
+                        Set(2, "Overhead Press", 40m, 10, position: 2),
+                        Set(2, "Overhead Press", 40m, 9, position: 2)
                     ]),
                 new HistorySessionResponse(42,
                     new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, null, 0m, 0, null, [])
@@ -95,6 +95,7 @@ public class ExportTextFormatterTests
             - RIR = yedekte kalan tekrar.
             - [PR: ağırlık] = o egzersizde o ana kadarki en ağır set.
             - [PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.
+            - Hareket adının başındaki sayı ("1.", "2."...) o oturumda kaçıncı sırada yapıldığıdır; sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma yaparken dikkate alınmalıdır.
 
             ## Özet
             - Antrenman günü: 1
@@ -114,8 +115,8 @@ public class ExportTextFormatterTests
             ### 2026-03-02 Pzt 18:30–19:45 · Push Day A
             Not: omuz sıkıştı
             Zorluk: Orta
-            - Bench Press: 80×8, 80×7 (RIR 1), 85×5 [PR: ağırlık]
-            - Overhead Press: 40×10, 40×10, 40×9
+            - 1. Bench Press: 80×8, 80×7 (RIR 1), 85×5 [PR: ağırlık]
+            - 2. Overhead Press: 40×10, 40×10, 40×9
             Toplam: 6 set, 2785 kg
 
             ### 2026-03-04 Çar 07:10–(bitirilmedi)
@@ -151,7 +152,7 @@ public class ExportTextFormatterTests
             });
 
             Assert.Contains("- Toplam hacim: 12340.5 kg\n", metin);
-            Assert.Contains("- Bench: 82.5×8\n", metin);
+            Assert.Contains("- 1. Bench: 82.5×8\n", metin);
             Assert.DoesNotContain("82,5", metin);
         }
         finally
@@ -175,24 +176,24 @@ public class ExportTextFormatterTests
         var metin = Formatla(Oturum(An, null,
             Set(1, "Barfiks", decimal.Parse(agirlik, CultureInfo.InvariantCulture), 8)));
 
-        Assert.Contains($"- Barfiks: {beklenen}\n", metin);
+        Assert.Contains($"- 1. Barfiks: {beklenen}\n", metin);
     }
 
     [Fact]
     public void Setler_egzersiz_bazinda_ilk_gorunme_sirasiyla_gruplanir()
     {
         var metin = Formatla(Oturum(An, null,
-            Set(2, "Squat", 100m, 5),
-            Set(1, "Bench", 60m, 10),
-            Set(2, "Squat", 100m, 4),
-            Set(1, "Bench", 60m, 9)));
+            Set(2, "Squat", 100m, 5, position: 1),
+            Set(1, "Bench", 60m, 10, position: 2),
+            Set(2, "Squat", 100m, 4, position: 1),
+            Set(1, "Bench", 60m, 9, position: 2)));
 
-        Assert.Contains("- Squat: 100×5, 100×4\n", metin);
-        Assert.Contains("- Bench: 60×10, 60×9\n", metin);
+        Assert.Contains("- 1. Squat: 100×5, 100×4\n", metin);
+        Assert.Contains("- 2. Bench: 60×10, 60×9\n", metin);
         // Squat oturumda ilk görünen egzersiz: önce o yazılır (id sırası değil, görünme sırası).
         Assert.True(
-            metin.IndexOf("- Squat:", StringComparison.Ordinal)
-            < metin.IndexOf("- Bench:", StringComparison.Ordinal));
+            metin.IndexOf("- 1. Squat:", StringComparison.Ordinal)
+            < metin.IndexOf("- 2. Bench:", StringComparison.Ordinal));
     }
 
     /// <summary>RIR 0 geçerli bir değerdir ("tükenişe kadar"); null ile karıştırılıp atlanmamalı.</summary>
@@ -204,7 +205,7 @@ public class ExportTextFormatterTests
             Set(1, "Bench", 80m, 9, RecordType.Reps),
             Set(1, "Bench", 80m, 7, rir: 0)));
 
-        Assert.Contains("- Bench: 80×8 (RIR 2) [PR: ağırlık], 80×9 [PR: tekrar], 80×7 (RIR 0)\n", metin);
+        Assert.Contains("- 1. Bench: 80×8 (RIR 2) [PR: ağırlık], 80×9 [PR: tekrar], 80×7 (RIR 0)\n", metin);
     }
 
     /// <summary>
@@ -218,7 +219,7 @@ public class ExportTextFormatterTests
             Set(1, "Bench", 80m, 8, rir: 2.5m),
             Set(1, "Bench", 60m, 12, rir: 7m)));
 
-        Assert.Contains("- Bench: 80×8 (RIR 2–3), 60×12 (RIR 4+)\n", metin);
+        Assert.Contains("- 1. Bench: 80×8 (RIR 2–3), 60×12 (RIR 4+)\n", metin);
     }
 
     [Fact]
@@ -338,6 +339,6 @@ public class ExportTextFormatterTests
         var metin = ExportTextFormatter.Format(export);
 
         Assert.DoesNotContain("\n## Sahte", metin);
-        Assert.Contains("- Bench ## Sahte: 80×8\n", metin);
+        Assert.Contains("- 1. Bench ## Sahte: 80×8\n", metin);
     }
 }

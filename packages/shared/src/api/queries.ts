@@ -143,6 +143,9 @@ export interface SetKaydi {
   sessionId: number;
   exerciseId: number;
   exerciseName: string;
+  // #230: bu hareketin o oturumda kacinci sirada yapildigi (1'den baslar), sunucudan -- istemci
+  // kendisi HESAPLAMAZ (ikinci dogruluk kaynagi olmasin diye).
+  exercisePosition: number;
   weight: number;
   reps: number;
   recordType: components['schemas']['RecordType'];
@@ -207,6 +210,7 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     yanit.sessionId === undefined ||
     yanit.exerciseId === undefined ||
     !yanit.exerciseName ||
+    yanit.exercisePosition === undefined ||
     yanit.weight === undefined ||
     yanit.reps === undefined ||
     !yanit.recordType ||
@@ -219,6 +223,7 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     sessionId: yanit.sessionId,
     exerciseId: yanit.exerciseId,
     exerciseName: yanit.exerciseName,
+    exercisePosition: yanit.exercisePosition,
     weight: yanit.weight,
     reps: yanit.reps,
     recordType: yanit.recordType,
@@ -455,6 +460,11 @@ export interface IlerlemeNoktasi {
   setCount: number;
   // Tahmin edilemeyen oturumda null (0 kg ya da 12'den fazla tekrar).
   estimatedOneRepMax: number | null;
+  // #230: hareketin o oturumda kacinci sirada yapildigi (1'den baslar), sunucudan.
+  position: number;
+  // #230: bu noktanin pozisyonu KENDISINDEN ONCEKI (kronolojik) noktadan farkliysa true; ilk
+  // nokta icin her zaman false.
+  positionChanged: boolean;
 }
 
 /** `0` gecerli bir deger: kontroller `=== undefined` ile, `!` ile degil. */
@@ -466,7 +476,9 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     yanit.topWeightReps === undefined ||
     yanit.volume === undefined ||
     yanit.setCount === undefined ||
-    yanit.estimatedOneRepMax === undefined
+    yanit.estimatedOneRepMax === undefined ||
+    yanit.position === undefined ||
+    yanit.positionChanged === undefined
   ) {
     throw new Error('Sunucudan eksik ilerleme noktasi alindi.');
   }
@@ -478,6 +490,8 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     volume: yanit.volume,
     setCount: yanit.setCount,
     estimatedOneRepMax: yanit.estimatedOneRepMax,
+    position: yanit.position,
+    positionChanged: yanit.positionChanged,
   };
 }
 
