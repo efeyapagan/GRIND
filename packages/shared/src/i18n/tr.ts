@@ -352,6 +352,9 @@ export const tr = {
     grafikEtiket: '{{ad}} grafiği',
     grafikBasligi_one: '{{ad}} {{ozet}}, {{count}} antrenman',
     grafikBasligi_other: '{{ad}} {{ozet}}, {{count}} antrenman',
+    noktaPozisyonu: '{{n}}. hareket',
+    pozisyonDegistiIpucu:
+      'Kesikli halkalı nokta: hareket o antrenmanda genelden farklı bir sırada yapıldı; değişim bundan kaynaklanıyor olabilir.',
   },
   rekorlar: {
     altBaslik: 'Kişisel en iyiler',

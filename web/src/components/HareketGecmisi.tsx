@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '../api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '../lib/format';
-import CizgiGrafik from '../ui/CizgiGrafik';
+import CizgiGrafik, { type CizgiNoktasi } from '../ui/CizgiGrafik';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
 
 type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar';
@@ -128,7 +128,16 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           </dl>
           <p className="text-label text-muted">{formatAralik(ilk.nokta.startedAt, son.nokta.startedAt, dil)}</p>
           <CizgiGrafik
-            noktalar={cizilecekler.map(({ nokta, deger }) => ({ etiket: formatKisaTarih(nokta.startedAt, dil), deger }))}
+            noktalar={cizilecekler.map(
+              ({ nokta, deger }): CizgiNoktasi => ({
+                etiket: formatKisaTarih(nokta.startedAt, dil),
+                deger,
+                // #230: pozisyon her noktanin detayinda ("N. hareket"); farkli pozisyonlu nokta
+                // ince bir isaretle ayirt edilir.
+                not: t('hareketGecmisi.noktaPozisyonu', { n: nokta.position }),
+                vurgula: nokta.positionChanged,
+              }),
+            )}
             birim="kg"
             baslik={t('hareketGecmisi.grafikBasligi', {
               ad: exerciseName,
@@ -136,6 +145,9 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
               count: cizilecekler.length,
             })}
           />
+          {cizilecekler.some(({ nokta }) => nokta.positionChanged) && (
+            <p className="text-label text-muted">{t('hareketGecmisi.pozisyonDegistiIpucu')}</p>
+          )}
         </>
       );
     }

@@ -350,6 +350,9 @@ export const en: Katalog = {
     grafikEtiket: '{{ad}} chart',
     grafikBasligi_one: '{{ad}} {{ozet}}, {{count}} workout',
     grafikBasligi_other: '{{ad}} {{ozet}}, {{count}} workouts',
+    noktaPozisyonu: 'Exercise #{{n}} that day',
+    pozisyonDegistiIpucu:
+      'Dashed ring: the exercise was done in a different position than usual that workout — the change may be due to that.',
   },
   rekorlar: {
     altBaslik: 'Personal bests',
