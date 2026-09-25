@@ -55,7 +55,9 @@ public static class GlobalExercises
         new { Id = 40L, UserId = (long?)null, Name = "Cable Kickback",                                 Category = ExerciseCategory.Legs,  IsArchived = false },
         new { Id = 41L, UserId = (long?)null, Name = "Cable Lateral Raise",                            Category = ExerciseCategory.Push,  IsArchived = false },
         new { Id = 42L, UserId = (long?)null, Name = "Cable Low to High Chop",                         Category = ExerciseCategory.Other, IsArchived = false },
-        new { Id = 43L, UserId = (long?)null, Name = "Cable Overhead Extension",                       Category = ExerciseCategory.Push,  IsArchived = false },
+        // #340: "Over Head Rope Extension" aynı hareket kabul edildi (ip aparatı bu hareketin
+        // standart yapılışı), takma isim.
+        new { Id = 43L, UserId = (long?)null, Name = "Cable Overhead Extension", AlternateName = "Over Head Rope Extension", Category = ExerciseCategory.Push,  IsArchived = false },
         new { Id = 44L, UserId = (long?)null, Name = "Cable Pallof Hold",                              Category = ExerciseCategory.Other, IsArchived = false },
         new { Id = 45L, UserId = (long?)null, Name = "Machine Assisted Dips",                          Category = ExerciseCategory.Push,  IsArchived = false },
         new { Id = 46L, UserId = (long?)null, Name = "Machine Assisted Pull Up",                       Category = ExerciseCategory.Pull,  IsArchived = false },
