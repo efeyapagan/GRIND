@@ -90,7 +90,8 @@ Renk kuralları:
   alanın 8 üstünde. İçinde üç eşit, etiketli sekme (Ana sayfa · Antrenman · Profil; eski taşan "+"
   kalktı, "Antrenman" sekmesi oldu). Aktif sekmenin arkasında en az 72 × 48 `surface-4` hap; aktif ikon
   + etiket (`label`) `accent-soft` — `accent` `surface-4` üstünde 3.9:1 ile 12'lik etiket için yetmez,
-  `accent-soft` 7.2:1. Pasifler `muted`. Kaydırılabilir içerik sonuna `useAltMenuPayi()` kadar yer
+  `accent-soft` 7.2:1. Pasifler `muted`. Sekme değişince aktif hap (balon) küçükten büyüğe açılır:
+  ölçek 0.5 → 1 hafif taşmalı yayla, opaklık 0 → 1; bırakılan sekmenin balonu 150 ms'de söner. Kaydırılabilir içerik sonuna `useAltMenuPayi()` kadar yer
   bırakır. Web alt menüsü (dondurulmuş) değişmedi.
   **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
   soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
