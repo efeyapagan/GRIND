@@ -37,7 +37,8 @@ test('kullanıcı açık antrenmanda hareketi aşağı taşır, yeni sıra sunuc
 
   await renderRouterAsync('./app', { initialUrl: '/antrenman' });
 
-  // Sahte backend'in egzersiz listesinde yalnizca Bench Press var: secilebilen ve varsayilan secili kart o.
+  // #354: siralama dugmeleri artik listede degil, karta dokununca acilan odak kartinda.
+  await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 4 set/));
   await fireEvent.press(await screen.findByRole('button', { name: 'Bench Press: aşağı taşı' }));
 
   await waitFor(() =>
