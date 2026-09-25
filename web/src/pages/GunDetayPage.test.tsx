@@ -31,6 +31,7 @@ function set(id: number, exerciseName: string, weight: number, reps: number, rir
     sessionId: 1,
     exerciseId: 1,
     exerciseName,
+    exercisePosition: 1,
     weight,
     reps,
     rir,
