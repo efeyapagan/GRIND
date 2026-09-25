@@ -12,6 +12,7 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
     public void Configure(EntityTypeBuilder<Exercise> builder)
     {
         builder.Property(e => e.Name).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.AlternateName).HasMaxLength(100);
         builder.Property(e => e.Category).HasConversion(new EnumToStringConverter<ExerciseCategory>()).HasMaxLength(20).IsRequired();
 
         builder.HasOne(e => e.User)

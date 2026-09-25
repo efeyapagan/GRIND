@@ -206,6 +206,7 @@ public class ExerciseService(
     private static ExerciseResponse ToResponse(Exercise exercise) => new(
         exercise.Id,
         exercise.Name,
+        exercise.AlternateName,
         exercise.Category,
         exercise.IsArchived,
         IsGlobal: exercise.UserId is null,

@@ -257,6 +257,39 @@ public class ExerciseServiceTests
         }
     }
 
+    // ---- Takma ad (#335) ----
+
+    [Fact]
+    public async Task AlternateName_GetById_ve_GetAll_yanitina_yansir()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var egzersiz = TestDatabase.NewExercise(user, UniqueName());
+            egzersiz.AlternateName = "Takma Ad";
+            context.Add(egzersiz);
+            await context.SaveChangesAsync();
+
+            var detay = await service.GetByIdAsync(egzersiz.Id);
+            var liste = await service.GetAllAsync();
+
+            Assert.Equal("Takma Ad", detay.AlternateName);
+            Assert.Contains(liste, e => e.Id == egzersiz.Id && e.AlternateName == "Takma Ad");
+        }
+    }
+
+    [Fact]
+    public async Task AlternateName_verilmemis_egzersizde_null_doner()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName()));
+
+            Assert.Null(olusan.AlternateName);
+        }
+    }
+
     // ---- Medya ----
 
     [Fact]

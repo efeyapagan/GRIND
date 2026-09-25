@@ -40,6 +40,33 @@ test('kategori verilince yalnizca o kategori kalir, arama ile birlikte uygulanir
   expect(egzersizAra(HAVUZ, '', 'Legs')).toHaveLength(0);
 });
 
+// #335: ayni hareket iki isimle de aranabilmeli (ör. "Pec Deck" / "Chest Fly Machine").
+const TAKMA_ADLI_HAVUZ: Egzersiz[] = [
+  { id: 1, name: 'Pec Deck', alternateName: 'Chest Fly Machine', category: 'Push' },
+  { id: 2, name: 'Incline Smith Machine Press', alternateName: 'Smith Machine Low Incline Press', category: 'Push' },
+];
+
+test('takma isimle de bulunur, asil isim de calismaya devam eder', () => {
+  expect(egzersizAra(TAKMA_ADLI_HAVUZ, 'chest fly').map((eg) => eg.id)).toEqual([1]);
+  expect(egzersizAra(TAKMA_ADLI_HAVUZ, 'pec deck').map((eg) => eg.id)).toEqual([1]);
+  expect(egzersizAra(TAKMA_ADLI_HAVUZ, 'low incline').map((eg) => eg.id)).toEqual([2]);
+});
+
+test('takma isim de Turkce sadelestirmeden gecer', () => {
+  const havuz: Egzersiz[] = [{ id: 1, name: 'X', alternateName: 'Sırt Çekişi', category: 'Pull' }];
+  expect(egzersizAra(havuz, 'sirt').map((eg) => eg.id)).toEqual([1]);
+});
+
+test('takma ismi OLMAYAN egzersizde arama patlamaz', () => {
+  expect(egzersizAra(HAVUZ, 'bench').map((eg) => eg.id)).toEqual([1]);
+});
+
+test('yazim hatasi takma isimdeki parcayla da eslesir (#231 ile ayni mekanizma)', () => {
+  expect(
+    egzersizOner(TAKMA_ADLI_HAVUZ, 'chset fly machine').map((eg) => eg.id),
+  ).toEqual([1]);
+});
+
 test('siralama Turkce alfabetik kalir', () => {
   expect(adaGoreSirala(HAVUZ).map((eg) => eg.name)).toEqual([
     'Bench Press',

@@ -10,9 +10,9 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Yuzyetmisiki_global_egzersiz_seed_edilmistir()
+    public void Yuzyetmisuc_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(172, Seed().Count);
+        Assert.Equal(173, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +28,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_yuzyetmisikiye_kadar_benzersizdir()
+    public void Seed_id_leri_birden_yuzyetmisuce_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 172).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 173).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -233,12 +233,38 @@ public class SeedDataTests
 
             // #207: göğüs destekli makine row varyasyonları.
             ("Chest-Supported Wide-Grip Machine Row", ExerciseCategory.Pull),
-            ("Chest-Supported Close-Grip Machine Row", ExerciseCategory.Pull)
+            ("Chest-Supported Close-Grip Machine Row", ExerciseCategory.Pull),
+
+            // #335: mevcut "Machine Chest Press" (Id 74) pin-loaded; bu ayrı bir makine türü.
+            ("Plate Loaded Chest Press", ExerciseCategory.Push)
         ];
 
         var actual = Seed()
             .OrderBy(row => (long)row["Id"]!)
             .Select(row => ((string)row["Name"]!, (ExerciseCategory)row["Category"]!))
+            .ToArray();
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Takma_adi_olan_uc_egzersiz_beklenenle_birebir_eslesir()
+    {
+        // #335: "Aynısı varsa iki isimle de aranabilir" kararı — takma isimler tek yerde sabitlenir,
+        // AlternateName kolonu üzerinden aramaya girer (bkz. packages/shared/src/lib/egzersizler.ts).
+        (long Id, string AlternateName)[] expected =
+        [
+            (72L, "Smith Machine Low Incline Press"),
+            (83L, "Chest Fly Machine"),
+            (111L, "Dumbell Lateral Raise"),
+        ];
+
+        // Satırın anonim nesnesi AlternateName'i hiç belirtmediyse GetSeedData() sözlüğünde
+        // anahtarın kendisi YOKTUR (değer null değil, key absent) -- doğrudan indexlemek atar.
+        var actual = Seed()
+            .Where(row => row.TryGetValue("AlternateName", out var deger) && deger is not null)
+            .OrderBy(row => (long)row["Id"]!)
+            .Select(row => ((long)row["Id"]!, (string)row["AlternateName"]!))
             .ToArray();
 
         Assert.Equal(expected, actual);
