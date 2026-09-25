@@ -1,4 +1,5 @@
-import { dilAlgila } from '@grind/shared/i18n';
+import { expect, test } from 'vitest';
+import { dilAlgila } from './i18n';
 
 test('listede desteklenen ilk dil kazanir', () => {
   expect(dilAlgila(['tr-TR', 'en'])).toBe('tr');

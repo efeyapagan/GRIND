@@ -1,4 +1,9 @@
+import { beforeAll, expect, test } from 'vitest';
+import { i18nBaslat } from '../i18n/i18n';
 import { parseProblem } from './problem';
+
+// Govdesiz yanitin mesaji katalogdan gelir; web'de bunu test kurulumu yapiyordu.
+beforeAll(() => i18nBaslat('tr'));
 
 test('alan bazli dogrulama hatasi alanlara ayrilir', () => {
   const hata = parseProblem(400, {

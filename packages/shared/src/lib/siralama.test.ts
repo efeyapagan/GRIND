@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { anahtaraGoreTasi, yonleTasi } from './siralama';
 
 const LISTE = [{ anahtar: 1 }, { anahtar: 2 }, { anahtar: 3 }, { anahtar: 4 }];

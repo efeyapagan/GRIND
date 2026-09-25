@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { adaGoreSirala, aramaIcinSadelestir, egzersizAra, egzersizOner } from './egzersizler';
 import type { Egzersiz } from '../api/queries';
 

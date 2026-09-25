@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { durakAcisi, durakKonumu, enYakinDurak, yayYolu, ZORLUK_KADEMELERI } from './zorlukKadrani';
 
 /**
