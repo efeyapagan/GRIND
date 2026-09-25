@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import AnaSayfaPage from './pages/AnaSayfaPage';
 import AntrenmanPage from './pages/AntrenmanPage';
 import AntrenmanBitirPage from './pages/AntrenmanBitirPage';
+import GunDetayPage from './pages/GunDetayPage';
 import HistoryPage from './pages/HistoryPage';
 import RecordsPage from './pages/RecordsPage';
 import SablonlarPage from './pages/SablonlarPage';
@@ -54,6 +55,8 @@ export const router = createBrowserRouter([
       { path: 'templates/new', element: <SablonDuzenlePage /> },
       { path: 'templates/:id', element: <SablonDuzenlePage /> },
       { path: 'insights', element: <InsightsPage /> },
+      // #261/#315: takvimde bir gune dokununca acilan gun detayi ("YYYY-MM-DD").
+      { path: 'gun/:gun', element: <GunDetayPage /> },
       {
         path: 'profile',
         element: <ProfileLayout />,
