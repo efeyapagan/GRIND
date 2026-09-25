@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { View, Pressable, Text, Platform, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useRouter, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -45,7 +47,15 @@ const stiller = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  aktifHap: { backgroundColor: renkler['surface-4'] },
+  balon: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: HAP_H / 2,
+    backgroundColor: renkler['surface-4'],
+  },
 });
 
 /**
@@ -67,9 +77,25 @@ interface SekmeTanimi {
   aktif: boolean;
 }
 
+/** Balonun acilisi: hafif tasmali yay -- "kucukten buyuge" ama sert degil. Kapanis kisa bir sonme. */
+const ACILIS_YAYI = { damping: 14, stiffness: 180, mass: 0.8 } as const;
+const KAPANIS_MS = 150;
+const BASLANGIC_OLCEGI = 0.5;
+
 function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
   const router = useRouter();
   const renk = aktif ? ikonRenk.accentSoft : ikonRenk.muted;
+
+  // 0 = pasif (balon kucuk ve gorunmez), 1 = aktif (balon tam boy).
+  const ilerleme = useSharedValue(aktif ? 1 : 0);
+  useEffect(() => {
+    ilerleme.value = aktif ? withSpring(1, ACILIS_YAYI) : withTiming(0, { duration: KAPANIS_MS });
+  }, [aktif, ilerleme]);
+  const balonStili = useAnimatedStyle(() => ({
+    // Yay 1'i biraz asar: olcek bu tasmayla "balon" gibi esner, opaklik 1'de kesilir.
+    opacity: Math.min(ilerleme.value, 1),
+    transform: [{ scale: BASLANGIC_OLCEGI + (1 - BASLANGIC_OLCEGI) * ilerleme.value }],
+  }));
 
   return (
     <Pressable
@@ -79,10 +105,11 @@ function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
       onPress={() => router.navigate(hedef)}
       className="flex-1 items-center justify-center"
     >
-      {/* `collapsable={false}`: arkaplansiz (pasif) hap Android'de yerel tarafta "duzlestirilip" hic
-          olusturulmuyordu; sekme aktif olunca arkaplan kosesiz ciziliyor, hap koseli gorunuyordu
-          (#338, emulatorde goruldu). Hap hep gercek bir View olarak kalir. */}
-      <View collapsable={false} style={[stiller.hap, aktif && stiller.aktifHap]}>
+      {/* Balon (aktif zemin) her sekmede HEP yerinde durur, yalnizca olcegi/opakligi canlanir: zemini
+          sonradan eklemek Android'de koseleri dusuruyordu (#338, emulatorde goruldu). `collapsable`:
+          arkaplansiz hap Android'de "duzlestirilip" yerel tarafta hic olusturulmuyordu. */}
+      <View collapsable={false} style={stiller.hap}>
+        <Animated.View pointerEvents="none" style={[stiller.balon, balonStili]} />
         <Ikon color={renk} size={22} />
         <Text className={`text-label ${aktif ? 'text-accent-soft' : 'text-muted'}`}>{etiket}</Text>
       </View>
