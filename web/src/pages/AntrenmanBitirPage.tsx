@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useFinishSession, useOpenSession, type Zorluk } from '../api/queries';
-import { oturumdanSablonHareketleri, type SablonTaslakHareketi } from '../lib/sablonTaslagi';
+import { useFinishSession, useOpenSession, useTemplate, type Zorluk } from '../api/queries';
+import {
+  oturumdanSablonHareketleri,
+  sablondaOlmayanHareketVarMi,
+  type SablonTaslakHareketi,
+} from '../lib/sablonTaslagi';
 import { usePageTitle } from '../ui/PageTitleContext';
 import BirincilDugme from '../ui/BirincilDugme';
-import IkincilDugme from '../ui/IkincilDugme';
 import ZorlukKadrani from '../components/ZorlukKadrani';
 
 /** Kadran burada acilir: ortadaki kademe, hic dokunmadan bitirenin gonderecegi degerdir. */
@@ -25,7 +28,10 @@ const METIN_EYLEMI = 'flex min-h-11 items-center rounded-lg px-2 text-label text
  * #186: SABLONSUZ ve hareketi olan bir antrenman kapaninca sayfa ikinci adima gecer: "sablon olarak
  * kaydedilsin mi?". Hareket listesi bitirmeden ONCE alinir -- kapaninca acik oturum sorgusu bosalir.
  * Bu adimdayken "acik antrenman yok" yonlendirmesi calismaz (antrenman az once kapandi, beklenen bu).
- * Sablonla baslamis antrenmanda sorulmaz: listesi zaten bir sablondan geldi.
+ *
+ * Ayni soru SABLONLA baslamis antrenmanda da sorulur, ama yalnizca liste o sablondan SAPMISSA:
+ * sablonda olmayan bir hareket eklendiyse (`sablondaOlmayanHareketVarMi`) artik yeni bir sablon
+ * adayidir. Sapma yoksa sorulmaz -- liste zaten var olan sablonun aynisidir.
  */
 export default function AntrenmanBitirPage() {
   const { t } = useTranslation();
@@ -34,24 +40,41 @@ export default function AntrenmanBitirPage() {
   const { data: oturum, isLoading, isError } = useOpenSession();
   const bitirMutasyonu = useFinishSession();
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
-  const [kaydetSorusu, setKaydetSorusu] = useState<SablonTaslakHareketi[] | null>(null);
+  // `sapma`: soru sablonla baslamis ama degismis bir antrenmandan mi geliyor (aciklama metni degisir).
+  const [kaydetSorusu, setKaydetSorusu] = useState<{ hareketler: SablonTaslakHareketi[]; sapma: boolean } | null>(
+    null,
+  );
+  // Sapma karsilastirmasi icin oturumun sablonu; `templateId` null iken sorgu calismaz.
+  const { data: sablon } = useTemplate(oturum?.templateId ?? null);
 
   if (kaydetSorusu) {
     return (
       <div className="flex min-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col gap-6 pt-6 pb-4">
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
           <p className="text-heading">{t('antrenman.sablonSorusu')}</p>
-          <p className="text-body text-muted">{t('antrenman.sablonSorusuAciklama')}</p>
+          <p className="text-body text-muted">
+            {t(kaydetSorusu.sapma ? 'antrenman.sablonSorusuSapmaAciklama' : 'antrenman.sablonSorusuAciklama')}
+          </p>
         </div>
         <div className="flex w-full flex-col gap-2">
           {/* replace: geri tusu kapanmis antrenmanin bitirme sayfasina donmesin. */}
           <BirincilDugme
             yukseklik="buyuk"
-            onClick={() => navigate('/templates/new', { replace: true, state: { donus: '/', hareketler: kaydetSorusu } })}
+            onClick={() =>
+              navigate('/templates/new', {
+                replace: true,
+                state: { donus: '/', hareketler: kaydetSorusu.hareketler },
+              })
+            }
           >
             {t('antrenman.sablonOlarakKaydet')}
           </BirincilDugme>
-          <IkincilDugme onClick={() => navigate('/', { replace: true })}>{t('antrenman.simdiDegil')}</IkincilDugme>
+          {/* "Simdi degil" kart/dugme DEGIL: "Atla"/"Devam et" ile ayni sessiz metin eylemi. */}
+          <div className="flex justify-center">
+            <button type="button" onClick={() => navigate('/', { replace: true })} className={METIN_EYLEMI}>
+              {t('antrenman.simdiDegil')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -67,15 +90,32 @@ export default function AntrenmanBitirPage() {
     return <Navigate to="/antrenman" replace />;
   }
 
+  /**
+   * Bitirdikten sonra "sablon olarak kaydedilsin mi?" sorulacak mi? Liste bitirmeden ONCE okunur:
+   * oturum kapaninca acik oturum sorgusu bosalir. Sablon henuz yuklenmediyse (ya da alinamadiysa)
+   * SORULMAZ -- bitirmeyi bir sorgu icin bekletmek, kacirilan bir sorudan daha kotudur.
+   */
+  function kaydetTaslagi(): { hareketler: SablonTaslakHareketi[]; sapma: boolean } | null {
+    if (oturum!.progress.length === 0) {
+      return null;
+    }
+    if (oturum!.templateId === null) {
+      return { hareketler: oturumdanSablonHareketleri(oturum!.progress), sapma: false };
+    }
+    if (!sablon || !sablondaOlmayanHareketVarMi(oturum!.progress, sablon.exercises)) {
+      return null;
+    }
+    return { hareketler: oturumdanSablonHareketleri(oturum!.progress), sapma: true };
+  }
+
   function bitir(secilen: Zorluk | null) {
-    const sablonsuzHareketler =
-      oturum!.templateId === null && oturum!.progress.length > 0 ? oturumdanSablonHareketleri(oturum!.progress) : null;
+    const taslak = kaydetTaslagi();
     bitirMutasyonu.mutate(
       { sessionId: oturum!.id, zorluk: secilen },
       {
         onSuccess: () => {
-          if (sablonsuzHareketler) {
-            setKaydetSorusu(sablonsuzHareketler);
+          if (taslak) {
+            setKaydetSorusu(taslak);
           } else {
             navigate('/', { replace: true });
           }

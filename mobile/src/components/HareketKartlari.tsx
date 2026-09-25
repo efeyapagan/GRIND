@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react';
+import type { Ref } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, ChevronUp, CirclePlay, Plus, Trash2 } from 'lucide-react-native';
@@ -18,9 +18,8 @@ interface Props {
   onHareketKaldir: (exerciseId: number) => void;
   // #229: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur.
   onSiraDegis: (exerciseIds: number[]) => void;
-  // #274: secili kartin hemen altinda cizilir (set paneli) -- kart ve panel alt alta durur.
-  seciliKartAlti?: ReactNode;
-  // Secili kartin olcumu ve boyutu degisince haber: ekran, karti gorunur alana kaydirir.
+  // Secili kartin olcumu ve boyutu degisince haber: ekran, karti gorunur alana kaydirir (set paneli
+  // artik kartin altinda DEGIL, yuzer bir panel -- bkz. antrenman.tsx).
   seciliKartRef?: Ref<View>;
   onSeciliKartYerlesti?: () => void;
 }
@@ -43,7 +42,6 @@ export default function HareketKartlari({
   onSetSil,
   onHareketKaldir,
   onSiraDegis,
-  seciliKartAlti,
   seciliKartRef,
   onSeciliKartYerlesti,
 }: Props) {
@@ -58,8 +56,9 @@ export default function HareketKartlari({
         const sayac = setSayaci(hareket);
 
         return (
-          // #274: olcum (ref/onLayout) className'i HIC degismeyen bu sarmalayicida; panel kartin DISINDA,
-          // hemen altinda ayri bir kutu (web ile ayni gorunum).
+          // Olcum (ref/onLayout) className'i HIC degismeyen bu sarmalayicida -- set paneli artik
+          // kartin altinda DEGIL, yuzer bir panel (bkz. antrenman.tsx); bu ref/callback yalnizca
+          // otomatik hizalama icin kartin konumunu olcmeye yarar.
           //
           // DIKKAT: `ring-*` CSS degiskeni tanimlar (`--tw-ring-*`). Ilk render'dan SONRA eklenirse
           // NativeWind bileseni "yukseltir" ve uyarisini basarken prop'lari -- elementlerin `_owner`
@@ -133,7 +132,6 @@ export default function HareketKartlari({
                 </>
               )}
             </View>
-            {secili && seciliKartAlti}
           </View>
         );
       })}

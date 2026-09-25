@@ -4,6 +4,7 @@ import { Slot, Redirect, usePathname, useRouter } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
+import { RestTimerProvider } from '@grind/shared/restTimer';
 import {
   KENAR_GENISLIGI,
   YON_KARAR_ESIGI,
@@ -11,6 +12,7 @@ import {
   geriHedefi,
 } from '@grind/shared/lib/geriKaydirma';
 import { useAuth } from '../../src/auth/AuthContext';
+import DinlenmeKabugu from '../../src/components/DinlenmeKabugu';
 import KabukBaslik from '../../src/ui/KabukBaslik';
 import KabukTabBar from '../../src/ui/KabukTabBar';
 
@@ -30,16 +32,22 @@ export default function TabsLayout() {
 
   return (
     <PageTitleProvider>
-      <View className="flex-1 bg-bg">
-        <KabukBaslik />
-        {/* Global bir alt bosluk BILEREK yok (issue #159, kullanici karari): "+" dugmesinin
-            halkasindan pay ayirmak icin TUM sayfalara rezerve edilen bosluk "olu alan" olarak
-            goruldu. Bunun yerine sadece halkanin KESINLIKLE ustune binmemesi gereken spesifik
-            bilesenler (bkz. `KabukTabBar`'daki `TABBAR_HALKA_TASMASI`) kendi payini alir; sıradan
-            kaydirilabilir icerik halkanin arkasina gecebilir. */}
-        <GeriKaydirilabilirIcerik />
-        <KabukTabBar />
-      </View>
+      <RestTimerProvider>
+        <View className="flex-1 bg-bg">
+          <KabukBaslik />
+          {/* Global bir alt bosluk BILEREK yok (issue #159, kullanici karari): "+" dugmesinin
+              halkasindan pay ayirmak icin TUM sayfalara rezerve edilen bosluk "olu alan" olarak
+              goruldu. Bunun yerine sadece halkanin KESINLIKLE ustune binmemesi gereken spesifik
+              bilesenler (bkz. `KabukTabBar`'daki `TABBAR_HALKA_TASMASI`) kendi payini alir; sıradan
+              kaydirilabilir icerik halkanin arkasina gecebilir. */}
+          <GeriKaydirilabilirIcerik />
+          <KabukTabBar />
+          {/* Dinlenme sayacinin genis paneli ust barin USTUNE cizilir ve onu kaplar (en son cocuk =
+              en ustte); kucultulmus hali barin ortasinda `DinlenmeGostergesi` olarak durur. Ikisi
+              ayni anda gorunmez. */}
+          <DinlenmeKabugu />
+        </View>
+      </RestTimerProvider>
     </PageTitleProvider>
   );
 }

@@ -5,6 +5,7 @@ import { ChevronLeft, Menu, Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
+import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
 import { ikonRenk } from './renkler';
 
 /**
@@ -39,7 +40,7 @@ export default function KabukBaslik() {
   if (profilAnaEkraniMi(pathname)) {
     return (
       <View style={{ paddingTop: insets.top }} className="bg-bg">
-        <View className="h-10 flex-row items-center justify-end gap-3 px-4">
+        <View className="relative h-10 flex-row items-center justify-end gap-3 px-4">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('takip.kullaniciAra')}
@@ -56,6 +57,9 @@ export default function KabukBaslik() {
           >
             <Menu color={ikonRenk.fg} size={22} />
           </Pressable>
+          {/* EN SON cocuk: ust uste binen kardeslerin (baslik, ikonlar) USTUNDE kalsin -- yoksa
+              baslik yazisi gostergenin uzerine cizilir ve dokunusu yakalayabilir. */}
+          <DinlenmeGostergesi />
         </View>
       </View>
     );
@@ -63,7 +67,7 @@ export default function KabukBaslik() {
 
   return (
     <View style={{ paddingTop: insets.top }} className="bg-bg">
-      <View className="h-16 flex-row items-center gap-2 px-4">
+      <View className="relative h-16 flex-row items-center gap-2 px-4">
         {altEkranMi(pathname) && (
           <Pressable
             accessibilityRole="button"
@@ -78,6 +82,9 @@ export default function KabukBaslik() {
           {baslik}
         </Text>
         <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+        {/* EN SON cocuk: ust uste binen kardeslerin (baslik, GRIND) USTUNDE kalsin -- yoksa baslik
+            yazisi gostergenin uzerine cizilir ve dokunusu yakalayabilir. */}
+        <DinlenmeGostergesi />
       </View>
     </View>
   );

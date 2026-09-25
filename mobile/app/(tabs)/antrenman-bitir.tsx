@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useRouter } from 'expo-router';
-import { useFinishSession, useOpenSession, type Zorluk } from '@grind/shared/api/queries';
-import { oturumdanSablonHareketleri, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
+import { useFinishSession, useOpenSession, useTemplate, type Zorluk } from '@grind/shared/api/queries';
+import {
+  oturumdanSablonHareketleri,
+  sablondaOlmayanHareketVarMi,
+  type SablonTaslakHareketi,
+} from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
-import IkincilDugme from '../../src/ui/IkincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
 import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
 
@@ -38,6 +41,10 @@ function MetinEylemi({ etiket, disabled, onPress }: { etiket: string; disabled: 
  * #186: web/src/pages/AntrenmanBitirPage.tsx ile ayni -- ŞABLONSUZ ve hareketi olan antrenman kapanınca
  * ekran "şablon olarak kaydedilsin mi?" adımına geçer. Liste bitirmeden ÖNCE alınır; bu adımdayken
  * "açık antrenman yok" yönlendirmesi çalışmaz.
+ *
+ * Aynı soru ŞABLONLA başlamış antrenmanda da sorulur, ama yalnızca liste o şablondan SAPMIŞSA:
+ * şablonda olmayan bir hareket eklendiyse (`sablondaOlmayanHareketVarMi`) artık yeni bir şablon
+ * adayıdır. Sapma yoksa sorulmaz -- liste zaten var olan şablonun aynısıdır.
  */
 export default function AntrenmanBitirScreen() {
   const { t } = useTranslation();
@@ -48,14 +55,21 @@ export default function AntrenmanBitirScreen() {
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
   // Kadran cevrilirken ekran kaymaz: iOS ScrollView jesti aksi halde dikey hareketi calar (#182).
   const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
-  const [kaydetSorusu, setKaydetSorusu] = useState<SablonTaslakHareketi[] | null>(null);
+  // `sapma`: soru şablonla başlamış ama değişmiş bir antrenmandan mı geliyor (açıklama metni değişir).
+  const [kaydetSorusu, setKaydetSorusu] = useState<{ hareketler: SablonTaslakHareketi[]; sapma: boolean } | null>(
+    null,
+  );
+  // Sapma karşılaştırması için oturumun şablonu; `templateId` null iken sorgu çalışmaz.
+  const { data: sablon } = useTemplate(oturum?.templateId ?? null);
 
   if (kaydetSorusu) {
     return (
       <EkranKaydirici contentContainerClassName="flex-grow gap-6 px-4 pt-6 pb-4">
         <View className="flex-1 items-center justify-center gap-2">
           <Text className="text-center text-heading text-fg">{t('antrenman.sablonSorusu')}</Text>
-          <Text className="text-center text-body text-muted">{t('antrenman.sablonSorusuAciklama')}</Text>
+          <Text className="text-center text-body text-muted">
+            {t(kaydetSorusu.sapma ? 'antrenman.sablonSorusuSapmaAciklama' : 'antrenman.sablonSorusuAciklama')}
+          </Text>
         </View>
         <View className="w-full gap-2" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
           {/* replace: geri tuşu kapanmış antrenmanın bitirme ekranına dönmesin. */}
@@ -64,13 +78,16 @@ export default function AntrenmanBitirScreen() {
             onPress={() =>
               router.replace({
                 pathname: '/templates/new',
-                params: { donus: '/', hareketler: JSON.stringify(kaydetSorusu) },
+                params: { donus: '/', hareketler: JSON.stringify(kaydetSorusu.hareketler) },
               })
             }
           >
             {t('antrenman.sablonOlarakKaydet')}
           </BirincilDugme>
-          <IkincilDugme onPress={() => router.replace('/')}>{t('antrenman.simdiDegil')}</IkincilDugme>
+          {/* "Şimdi değil" kart/düğme DEĞİL: "Atla"/"Devam et" ile aynı sessiz metin eylemi. */}
+          <View className="items-center">
+            <MetinEylemi etiket={t('antrenman.simdiDegil')} disabled={false} onPress={() => router.replace('/')} />
+          </View>
         </View>
       </EkranKaydirici>
     );
@@ -90,15 +107,32 @@ export default function AntrenmanBitirScreen() {
     return <Redirect href="/antrenman" />;
   }
 
+  /**
+   * Bitirdikten sonra "şablon olarak kaydedilsin mi?" sorulacak mı? Liste bitirmeden ÖNCE okunur:
+   * oturum kapanınca açık oturum sorgusu boşalır. Şablon henüz yüklenmediyse (ya da alınamadıysa)
+   * SORULMAZ -- bitirmeyi bir sorgu için bekletmek, kaçırılan bir sorudan daha kötüdür.
+   */
+  function kaydetTaslagi(): { hareketler: SablonTaslakHareketi[]; sapma: boolean } | null {
+    if (oturum!.progress.length === 0) {
+      return null;
+    }
+    if (oturum!.templateId === null) {
+      return { hareketler: oturumdanSablonHareketleri(oturum!.progress), sapma: false };
+    }
+    if (!sablon || !sablondaOlmayanHareketVarMi(oturum!.progress, sablon.exercises)) {
+      return null;
+    }
+    return { hareketler: oturumdanSablonHareketleri(oturum!.progress), sapma: true };
+  }
+
   function bitir(secilen: Zorluk | null) {
-    const sablonsuzHareketler =
-      oturum!.templateId === null && oturum!.progress.length > 0 ? oturumdanSablonHareketleri(oturum!.progress) : null;
+    const taslak = kaydetTaslagi();
     bitirMutasyonu.mutate(
       { sessionId: oturum!.id, zorluk: secilen },
       {
         onSuccess: () => {
-          if (sablonsuzHareketler) {
-            setKaydetSorusu(sablonsuzHareketler);
+          if (taslak) {
+            setKaydetSorusu(taslak);
           } else {
             router.replace('/');
           }

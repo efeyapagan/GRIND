@@ -80,3 +80,48 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   // Tek testte şablon oluşturma + antrenman + set + bitirme var; gerçek rotalarla bu akış
   // jest'in 5 sn'lik varsayılanına sığmıyor (#153 adımlarıyla ~5 sn'ye dayandı).
 }, 20_000);
+
+/**
+ * Yuzer set paneli (antrenman.tsx) acik oturum yokken de cizilebiliyordu: set girmeden antrenmani
+ * iptal edince panel "Sablonla basla" ekraninin uzerinde asili kaliyordu (kullanici bulgusu).
+ */
+test('set paneli acikken antrenman iptal edilince panel ekranda kalmaz', async () => {
+  await session.write('tok', ileriTarih(60_000), 'efe');
+  const { sahteRequest, state } = sahteBackendOlustur();
+  requestMock.mockImplementation(sahteRequest);
+  state.sablonlar.push({
+    id: 1,
+    name: 'Push Day E2E',
+    createdAt: new Date().toISOString(),
+    exercises: [
+      {
+        id: 1,
+        exerciseId: 1,
+        exerciseName: 'Bench Press',
+        category: 'Push',
+        isArchived: false,
+        orderIndex: 0,
+        plannedSets: 3,
+        restSeconds: 90,
+      },
+    ],
+  });
+  state.siradakiSablonId = 2;
+
+  await renderRouterAsync('./app', { initialUrl: '/antrenman' });
+
+  await fireEvent.press(await screen.findByText('Push Day E2E'));
+  await waitFor(() => expect(state.acikOturum).not.toBeNull());
+
+  // Karta dokunmak set panelini acar.
+  await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
+  expect(await screen.findByLabelText('Ağırlık')).toBeTruthy();
+
+  // Set girilmedigi icin alt alanda "Antrenmani iptal et" durur (setler sorgusu yuklenince).
+  await fireEvent.press(await screen.findByRole('button', { name: 'Antrenmanı iptal et' }));
+
+  await waitFor(() => expect(state.acikOturum).toBeNull());
+  // Istemci acik oturum sorgusunu tazeleyince panel de kalkmali.
+  await waitFor(() => expect(screen.queryByLabelText('Ağırlık')).toBeNull());
+  expect(await screen.findByText('Şablonla başla')).toBeTruthy();
+}, 20_000);

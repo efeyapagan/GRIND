@@ -1,7 +1,9 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Home, Menu, Plus, Search, User, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { RestTimerProvider } from '@grind/shared/restTimer';
 import { PageTitleProvider, useHeaderTitle } from './ui/PageTitleContext';
+import DinlenmeKabugu, { DinlenmeGostergesi } from './components/DinlenmeKabugu';
 import TemaDugmesi from './components/TemaDugmesi';
 import Parilti from './ui/Parilti';
 import { useGeriKaydirma } from './lib/useGeriKaydirma';
@@ -39,7 +41,9 @@ import { altEkranMi, geriHedefi, profilAnaEkraniMi } from './lib/geriKaydirma';
 export default function App() {
   return (
     <PageTitleProvider>
-      <Kabuk />
+      <RestTimerProvider>
+        <Kabuk />
+      </RestTimerProvider>
     </PageTitleProvider>
   );
 }
@@ -65,6 +69,9 @@ function Kabuk() {
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
+      {/* Dinlenme sayacinin genis paneli ust barin USTUNE cizilir (z-50) ve onu kaplar; kucultulmus
+          hali asagida, barin ortasinda `DinlenmeGostergesi` olarak durur. Ikisi ayni anda gorunmez. */}
+      <DinlenmeKabugu />
       {profilKok ? (
         /* #293 (devami): Profil'in kok ekranlarinda ust bar (baslik + GRIND) TAMAMEN kalkar --
          * fotograf ve isim (ProfilBasligi) yukarida bosalan yerden baslasin diye. Geriye kalan
@@ -72,7 +79,7 @@ function Kabuk() {
          * alanin hemen altindan baslar ("tam ustten"). NOT: tema dugmesi (#194) bu ekranlarda
          * GORUNMEZ -- baska bir ekrandan degistirilebilir, burada ayrica bir yer ayrilmadi. */
         <div className="fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top)]">
-          <div className="mx-auto flex h-10 max-w-md items-center justify-end gap-3 px-4">
+          <div className="relative mx-auto flex h-10 max-w-md items-center justify-end gap-3 px-4">
             <Link
               to="/search"
               aria-label={t('takip.kullaniciAra')}
@@ -89,11 +96,13 @@ function Kabuk() {
             >
               <Menu aria-hidden size={22} />
             </Link>
+            {/* EN SON kardes: ust uste binen ogelerin USTUNDE kalsin (z-index'siz siralama). */}
+            <DinlenmeGostergesi />
           </div>
         </div>
       ) : (
         <header data-kabuk-baslik className="fixed inset-x-0 top-0 z-40 bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-          <div className="mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
+          <div className="relative mx-auto flex h-16 max-w-md items-center justify-between gap-2 px-4">
             <div className="flex min-w-0 items-center gap-2">
               {/* #255: kok sekmeler ve Profil'in kendi alt sekmeleri DISINDAKI her ekranda (sablonlar,
                   GRINDY, antrenman bitirme...) tutarli bir geri dugmesi -- daha once her ekran kendi
@@ -115,6 +124,8 @@ function Kabuk() {
               <TemaDugmesi />
               <span className="text-label text-muted uppercase">GRIND</span>
             </div>
+            {/* EN SON kardes: baslik/GRIND ile ust uste binerse onlarin USTUNDE kalsin. */}
+            <DinlenmeGostergesi />
           </div>
         </header>
       )}
