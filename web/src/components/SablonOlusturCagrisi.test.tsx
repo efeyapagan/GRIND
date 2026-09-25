@@ -19,11 +19,15 @@ function olustur() {
   );
 }
 
-test('dugme /templates/new\'e donus: / state\'iyle gider (issue #61 Karar 3)', async () => {
+/**
+ * #272: kaydedince ANA SAYFAYA (takvime) donuluyordu -- kullanici sablonu hemen kullanamiyordu.
+ * Donus artik `/antrenman`: sablon kartlarinin oldugu ve birine dokununca antrenmanin basladigi ekran.
+ */
+test("dugme /templates/new'e donus: /antrenman state'iyle gider (#272)", async () => {
   const kullanici = userEvent.setup();
   olustur();
 
   await kullanici.click(screen.getByRole('button', { name: 'Şablon oluştur' }));
 
-  expect(await screen.findByText('donus=/')).toBeInTheDocument();
+  expect(await screen.findByText('donus=/antrenman')).toBeInTheDocument();
 });
