@@ -382,6 +382,10 @@ export const en: Katalog = {
     kalcaDegeri: '{{cm}} cm hip',
     silmeOnayi: 'This measurement will be permanently deleted.',
     olcuyuSil: 'Delete measurement',
+    cakismaBaslik: "You've already logged another measurement today.",
+    cakismaYerineKaydet: 'Update the measurement',
+    cakismaEkstraOlcum: 'Add as extra',
+    guncellenemedi: 'Could not update the measurement',
   },
   yorumlar: {
     baslik: "What's GRINDY saying?",
