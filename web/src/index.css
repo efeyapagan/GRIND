@@ -56,6 +56,8 @@
 
   /* Durum gostergesi (#226): "Devam ediyor" rozetinin noktasi. Metin DEGIL, 3:1 esigi yeter. */
   --color-success: #6fdc8c;
+  /* #315: takvimde antrenman yapilan gunun dolgusu yesil; uzerindeki gun rakami bu token. */
+  --color-on-success: #00391b;
 
   --text-title: 26px;
   --text-title--line-height: 32px;
@@ -82,6 +84,33 @@
   --text-label-xs--line-height: 12px;
   --text-label-xs--letter-spacing: 0.06em;
   --text-label-xs--font-weight: 700;
+
+  /* #315: takvimde donem degisince kartlar yandan girer -- ekran bir anda degismesin.
+     Yon: ileri gidilince sagdan, geri gidilince soldan. */
+  --animate-takvim-sagdan: takvim-sagdan 200ms ease-out;
+  --animate-takvim-soldan: takvim-soldan 200ms ease-out;
+
+  @keyframes takvim-sagdan {
+    from {
+      transform: translateX(30%);
+      opacity: 0.3;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes takvim-soldan {
+    from {
+      transform: translateX(-30%);
+      opacity: 0.3;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
 }
 
 @layer base {
@@ -114,6 +143,7 @@
     --color-on-danger-bg: #410002;
     --color-accent-fg: #a03500;
     --color-success: #1b7a36;
+    --color-on-success: #ffffff;
   }
 
   body {

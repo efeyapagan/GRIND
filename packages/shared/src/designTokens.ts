@@ -20,6 +20,7 @@ export const renkler = {
   'danger-bg': '#93000a',
   'on-danger-bg': '#ffdad6',
   success: '#6fdc8c',
+  'on-success': '#00391b',
 } as const;
 
 export const yaziBoyutlari = {
