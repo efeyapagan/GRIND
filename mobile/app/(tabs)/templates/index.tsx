@@ -7,14 +7,16 @@ import BosDurum from '../../../src/ui/BosDurum';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import SablonKarti from '../../../src/ui/SablonKarti';
 import { ikonRenk } from '../../../src/ui/renkler';
+import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /** web/src/pages/SablonlarPage.tsx ile ayni (spec Karar 3). */
 export default function SablonlarScreen() {
+  const altMenuPayi = useAltMenuPayi();
   usePageTitle('Şablonlar');
   const { data: sablonlar, isLoading, isError } = useTemplates();
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-4 pt-2 pb-4">
+    <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
 
       {isError && (

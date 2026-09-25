@@ -21,6 +21,7 @@ import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
 import { ikonRenk } from '../../src/ui/renkler';
+import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 
 /**
  * web/src/pages/InsightsPage.tsx ile ayni (issue #76; GRINDY adi ve maskotu #239). Sayfalama Onceki/Sonraki dugmeleri
@@ -28,6 +29,7 @@ import { ikonRenk } from '../../src/ui/renkler';
  * `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi ceker.
  */
 export default function InsightsScreen() {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   usePageTitle(t('yorumlar.baslik'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
@@ -88,7 +90,8 @@ export default function InsightsScreen() {
         />
       )}
       ItemSeparatorComponent={() => <View className="h-3" />}
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) {

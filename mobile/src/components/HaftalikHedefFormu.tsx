@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { useGuncelTakvimOzeti, useSetWeeklyTarget } from '@grind/shared/api/queries';
 import EkranKaydirici from '../ui/EkranKaydirici';
 import BirincilDugme from '../ui/BirincilDugme';
-import { TABBAR_HALKA_TASMASI } from '../ui/KabukTabBar';
 
 const HEDEF_GUNLERI = [1, 2, 3, 4, 5, 6, 7];
 
@@ -59,7 +58,7 @@ export default function HaftalikHedefFormu() {
         </Text>
       )}
 
-      <View className="mt-auto w-full" style={{ marginBottom: TABBAR_HALKA_TASMASI }}>
+      <View className="mt-auto w-full">
         <BirincilDugme yukseklik="buyuk" disabled={kaydedilemez} onPress={kaydet}>
           {t('ortak.kaydet')}
         </BirincilDugme>

@@ -6,6 +6,7 @@ import { useTakipListesi, type TakipListesiTuru } from '@grind/shared/api/querie
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../ui/BosDurum';
 import KullaniciSatiri from './KullaniciSatiri';
+import { useAltMenuPayi } from '../ui/KabukTabBar';
 
 const METINLER = {
   friends: { baslik: 'profil.arkadaslar', bos: 'takip.arkadasYok' },
@@ -18,6 +19,7 @@ const METINLER = {
  * bu tek ekrani `liste` ile cizer; sonsuz kaydirma Gecmis'teki gibi `onEndReached`.
  */
 export default function TakipListesi({ liste }: { liste: TakipListesiTuru }) {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
   usePageTitle(t(METINLER[liste].baslik));
@@ -30,7 +32,8 @@ export default function TakipListesi({ liste }: { liste: TakipListesiTuru }) {
       keyExtractor={(kisi) => kisi.username}
       renderItem={({ item }) => <KullaniciSatiri kisi={item} />}
       ItemSeparatorComponent={() => <View className="h-2" />}
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) {
