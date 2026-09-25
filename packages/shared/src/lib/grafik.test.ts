@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { eksenDegerleri } from './grafik';
 
 test('eksen degerleri 1-2-2,5-5 adimlariyla araligi kapsar', () => {

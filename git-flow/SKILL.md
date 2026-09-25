@@ -55,8 +55,9 @@ gh issue develop <no> --base master --name feature/<no>-kisa-ad --checkout
   sonra testleri geçiren kodu yaz.
 - Büyük iş (faz/dilim): superpowers:brainstorming → spec → plan → superpowers:subagent-driven-development.
 - Testleri yalnızca ilgili kapsamda koştur. Yeni entity/tablo eklendiyse filtreye
-  `FullyQualifiedName~Grind.Tests.Data`'yı da kat. Frontend: `npx vitest run <yol>`, `npm run typecheck`
-  (`tsc -b`, `--noEmit` değil).
+  `FullyQualifiedName~Grind.Tests.Data`'yı da kat. Mobil: `npm run test --workspace mobile`,
+  `npm run typecheck --workspace mobile`; ortak paket: `npm run test --workspace @grind/shared`,
+  `npm run typecheck --workspace @grind/shared`. Web donduruldu (#326) — web testi koşulmaz.
 
 ## 3. Commit
 

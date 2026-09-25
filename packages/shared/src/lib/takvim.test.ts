@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { ayBasligi, ayIzgarasi, gezilebilirMi, gunBasligi, haftaGunleri, kaydir, setKademesi } from './takvim';
 
 test('ay izgarasi Pazartesi baslar; ay disindaki hucreler bostur', () => {

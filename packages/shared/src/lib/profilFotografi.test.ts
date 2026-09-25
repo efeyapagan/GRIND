@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest';
 import { basHarf, kareKirpma } from './profilFotografi';
 
 /**
