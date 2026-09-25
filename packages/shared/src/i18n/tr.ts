@@ -109,6 +109,7 @@ export const tr = {
     geri: 'Geri',
     anaSayfa: 'Ana sayfa',
     antrenmanBaslat: 'Antrenman başlat',
+    antrenman: 'Antrenman',
     profil: 'Profil',
     acikTemayaGec: 'Açık temaya geç',
     koyuTemayaGec: 'Koyu temaya geç',

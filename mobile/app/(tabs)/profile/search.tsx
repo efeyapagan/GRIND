@@ -8,9 +8,11 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import Alan from '../../../src/ui/Alan';
 import BosDurum from '../../../src/ui/BosDurum';
 import KullaniciSatiri from '../../../src/components/KullaniciSatiri';
+import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /** web/src/pages/KullaniciAraPage.tsx ile ayni (#284): yazma durunca sunucuda aranir, satir profile goturur. */
 export default function KullaniciAraScreen() {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   usePageTitle(t('takip.kullaniciAra'));
   const [yazilan, setYazilan] = useState('');
@@ -28,7 +30,8 @@ export default function KullaniciAraScreen() {
       renderItem={({ item }) => <KullaniciSatiri kisi={item} />}
       ItemSeparatorComponent={() => <View className="h-2" />}
       keyboardShouldPersistTaps="handled"
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       ListHeaderComponent={
         <View className="mb-4 flex-col gap-4">
           <Alan

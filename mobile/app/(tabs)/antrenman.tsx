@@ -30,7 +30,7 @@ import SetList from '../../src/components/SetList';
 import AntrenmanAltAlani from '../../src/components/AntrenmanAltAlani';
 import SetPaneli from '../../src/components/SetPaneli';
 import { useDinlenme } from '../../src/components/useDinlenme';
-import { TABBAR_HALKA_TASMASI } from '../../src/ui/KabukTabBar';
+import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
@@ -164,13 +164,14 @@ export default function AntrenmanScreen() {
   const panelRef = useRef<View>(null);
   const [panelYuksekligi, setPanelYuksekligi] = useState(0);
   const hizalanacak = useRef(false);
+  const altMenuPayi = useAltMenuPayi();
   function kartiHizala(klavyeYuksekligi: number) {
     const kaydirici = kaydiriciRef.current;
     const kart = seciliKartRef.current;
     const panel = panelRef.current;
     kaydirici?.getNativeScrollRef()?.measureInWindow((_x, alanY) => {
       kart?.measureInWindow((_kx, kartY, _kg, kartH) => {
-        const varsayilanAlt = Dimensions.get('window').height - klavyeYuksekligi - TABBAR_HALKA_TASMASI;
+        const varsayilanAlt = Dimensions.get('window').height - Math.max(klavyeYuksekligi, altMenuPayi);
         const hizala = (panelUst: number) => {
           const alanAlt = Math.min(panelUst, varsayilanAlt);
           // Klavye acikken kart (gecmis) cogu zaman sigmaz; o zaman "ustu oncelikli" kurali
@@ -424,8 +425,8 @@ export default function AntrenmanScreen() {
 
       {/* Set giris paneli artik secili kartin altinda DEGIL, alt sekme cubugunun hemen ustunde
           yuzer bir panel (`position: absolute`) -- web/AddSetForm.tsx'in sticky panelinin RN
-          karsiligi. `TABBAR_HALKA_TASMASI`: "+" dugmesinin halkasi cubugun ustune tastigi icin
-          (bkz. KabukTabBar.tsx), panel onun UZERINE binmesin diye ayni pay eklenir. */}
+          karsiligi. `altMenuPayi`: alt menu icerigin ustunde yuzdugu icin (#338, bkz. KabukTabBar.tsx)
+          panel onun UZERINE binmesin diye menunun kapladigi alanin ustunde durur. */}
       {gorunenOturum && panelAcik && etkinSecim !== null && seciliEgzersizAdi && (
         <View
           ref={panelRef}
@@ -436,8 +437,8 @@ export default function AntrenmanScreen() {
               kartiHizala(0);
             }
           }}
-          style={{ position: 'absolute', left: 0, right: 0, bottom: TABBAR_HALKA_TASMASI }}
-          className="px-4 pb-2"
+          style={{ position: 'absolute', left: 0, right: 0, bottom: altMenuPayi }}
+          className="px-4"
         >
           <SetPaneli
             egzersizId={etkinSecim}

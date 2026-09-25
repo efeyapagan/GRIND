@@ -152,7 +152,7 @@ test('arkadasin profili: baslik, Takibi birak, yalniz Gecmis ve Rekorlar; gecmis
   expect(screen.getByText('24 yaş')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Takibi bırak' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Profili düzenle' })).toBeNull();
-  expect(screen.getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar']);
+  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar']);
 
   await fireEvent.press(await screen.findByText('Push Day'));
 
@@ -165,7 +165,7 @@ test('gizli hesapta yalniz Rekorlar sekmesi; gecmis istenmez; Takip et POST atar
   await renderRouterAsync('./app', { initialUrl: '/profile/u/mehmet' });
 
   expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeTruthy();
-  expect(screen.getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Rekorlar']);
+  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Rekorlar']);
 
   await fireEvent.press(screen.getByRole('button', { name: 'Takip et' }));
 

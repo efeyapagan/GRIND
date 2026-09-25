@@ -83,6 +83,15 @@ Renk kuralları:
   → saydam doğrusal degrade, alt menüde aktif Ana Sayfa/Profil ikonunun arkasında `accent/30` → saydam
   dairesel hale (48 px). Tek kaynak `Parilti` bileşeni (web `web/src/ui/Parilti.tsx`, mobil
   `mobile/src/ui/Parilti.tsx`); metin taşımaz, kontrastı etkilemez, iki temada aynıdır.
+  **#338 (mobil alt menü, kullanıcının iOS 26 "liquid glass" referansı):** mobilde alt menü artık
+  parıltı taşımaz. İçeriğin üstünde yüzen, tam yuvarlak cam bir hap: iOS'ta `expo-blur` bulanıklığı
+  üstünde `surface-2/70` perde, Android'de bulanıklıksız `surface-2/95` (emülatörde bulanıklık açık gri
+  çizdi); 1 px `surface-4` kenar; yükseklik 60 (48 + 6 iç boşluk), yanlarda 16, güvenli
+  alanın 8 üstünde. İçinde üç eşit, etiketli sekme (Ana sayfa · Antrenman · Profil; eski taşan "+"
+  kalktı, "Antrenman" sekmesi oldu). Aktif sekmenin arkasında en az 72 × 48 `surface-4` hap; aktif ikon
+  + etiket (`label`) `accent-soft` — `accent` `surface-4` üstünde 3.9:1 ile 12'lik etiket için yetmez,
+  `accent-soft` 7.2:1. Pasifler `muted`. Kaydırılabilir içerik sonuna `useAltMenuPayi()` kadar yer
+  bırakır. Web alt menüsü (dondurulmuş) değişmedi.
   **#266 genişlemesi (kullanıcının kırmızı RIR kaydırıcısı referansı):** RIR kaydırıcısının rayı —
   soldan sağa `accent` → `surface-4` doğrusal degrade (0 = tükeniş = en canlı). Ray metin taşımaz;
   durak noktaları `bg`, seçili durağın tutamacı `fg`, üstteki rakamlar ve alttaki açıklama `fg`/`muted`

@@ -5,12 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { useArkadasGecmisi } from '@grind/shared/api/queries';
 import GecmisKarti from '../../../../../src/components/GecmisKarti';
 import BosDurum from '../../../../../src/ui/BosDurum';
+import { useAltMenuPayi } from '../../../../../src/ui/KabukTabBar';
 
 /**
  * web/src/pages/ArkadasGecmisiPage.tsx ile ayni (#282/#284): kendi Gecmis'inle ayni kart, salt-okunur
  * (`onSil` yok). Yalnizca ust duzen arkadas oldugunu gordukten sonra cizilir.
  */
 export default function ArkadasGecmisiScreen() {
+  const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useArkadasGecmisi(ad, true);
@@ -22,7 +24,8 @@ export default function ArkadasGecmisiScreen() {
       keyExtractor={(oturum) => String(oturum.sessionId)}
       renderItem={({ item }) => <GecmisKarti oturum={item} />}
       ItemSeparatorComponent={() => <View className="h-4" />}
-      contentContainerClassName="px-4 pt-2 pb-4"
+      contentContainerClassName="px-4 pt-2"
+      contentContainerStyle={{ paddingBottom: altMenuPayi }}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) {
