@@ -62,6 +62,23 @@ export function kaydir(gorunum: TakvimGorunumu, gun: string, yon: -1 | 1): strin
 }
 
 /**
+ * Gosterilen donemden `yon` yonune gidilebilir mi? Gelecege gezinilmez (#81): bugunun donemindeyken
+ * ileri gitmek kapali, geriye gitmek her zaman acik. #315'ten beri gezinme kaydirmayla oldugu icin
+ * karar iki platformda da BURADAN okunur -- bir dugmenin `disabled`i degil, hareketin kendisi susar.
+ */
+export function gezilebilirMi(
+  gorunum: TakvimGorunumu,
+  gosterilen: string,
+  yon: -1 | 1,
+  bugun: string,
+): boolean {
+  if (yon === -1) {
+    return true;
+  }
+  return gorunumAraligi(gorunum, kaydir(gorunum, gosterilen, 1)).from <= bugun;
+}
+
+/**
  * Hucre rengi kademesi, set sayisina gore: 1-8, 9-16, 17-24, 25+. Sunum esigidir; set sayisinin
  * kendisi sunucudan gelir.
  */

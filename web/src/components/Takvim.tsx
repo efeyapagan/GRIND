@@ -1,81 +1,36 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
-import { useDil, type Dil } from '@grind/shared/i18n';
-import {
-  useCalendar,
-  useGunGecmisi,
-  type GecmisOturum,
-  type TakvimGunu,
-} from '../api/queries';
+import { useDil } from '@grind/shared/i18n';
+import { useCalendar } from '../api/queries';
 import { formatAralik, trBugundenOnce } from '../lib/format';
 import {
   ayBasligi,
   ayinGunu,
   ayIzgarasi,
+  gezilebilirMi,
   gorunumAraligi,
   gunBasligi,
   haftaGunleri,
   kaydir,
-  setKademesi,
-  type SetKademesi,
   type TakvimGorunumu,
 } from '../lib/takvim';
 import IkonDugmesi from '../ui/IkonDugmesi';
-import SekmeDugmesi from '../ui/SekmeDugmesi';
-
-const GORUNUMLER = [
-  { anahtar: 'ay' as TakvimGorunumu, etiket: 'takvim.aylik', bosMetin: 'takvim.buAyYok' },
-  { anahtar: 'hafta' as TakvimGorunumu, etiket: 'takvim.haftalik', bosMetin: 'takvim.buHaftaYok' },
-] as const;
 
 const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
 
-/**
- * Spec Karar 2 genislemesi (#81): kademe tonlari `accent` opakligi. Numaranin kontrasti her kademede
- * olculdu: fg /20 11.2, /40 7.7, /60 5.2; tam accent uzerinde on-accent 4.54.
- */
-const KADEME_SINIFI: Record<SetKademesi, string> = {
-  0: 'bg-surface-2 text-muted',
-  1: 'bg-accent/20 text-fg',
-  2: 'bg-accent/40 text-fg',
-  3: 'bg-accent/60 text-fg',
-  4: 'bg-accent text-on-accent',
-};
-
-function sekmeId(anahtar: TakvimGorunumu): string {
-  return `takvim-sekme-${anahtar}`;
-}
+/** Kaydirmanin donem degistirmesi icin gereken yatay mesafe (px). */
+const KAYDIRMA_ESIGI = 40;
 
 /**
- * Secili gunun ozeti (#90): "14 Eylül · Push Day, Şablonsuz · 26 set". Sablon adlari eskiden yeniye;
- * seti olmayan oturum takvim gibi atlanir. Adlar yuklenirken "…", alinamazsa antrenman sayisi yazar.
+ * #315: antrenman yapilan gun YESIL, yapilmayan notr. Once set sayisina gore kademeli `accent`
+ * tonlari vardi; kullanici karari tek ton yesil. Ara opakliklarda ne acik ne koyu yazi 4.5:1'i
+ * tutturdugu icin (olculdu: /60 uzerinde fg 3.15, on-success 3.2) kademe YOK -- dolu ton uzerinde
+ * `on-success` iki temada da esigi gecer (bkz. paletKontrast.test.ts).
  */
-function gunOzeti(
-  gun: string,
-  kayit: TakvimGunu | undefined,
-  oturumlar: GecmisOturum[] | undefined,
-  gecmisHatali: boolean,
-  dil: Dil,
-  t: TFunction,
-): string {
-  if (!kayit) {
-    return `${gunBasligi(gun, dil)} · ${t('takvim.antrenmanYok')}`;
-  }
-  const setliOturumlar = (oturumlar ?? [])
-    .filter((oturum) => oturum.setCount > 0)
-    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  let sablonlar: string;
-  if (gecmisHatali || (oturumlar && setliOturumlar.length === 0)) {
-    sablonlar = t('takvim.antrenmanSayisi', { count: kayit.sessionCount });
-  } else if (!oturumlar) {
-    sablonlar = '…'; // i18n-muaf: sablon adlari yuklenirken kisa bir yer tutucu, dile bagli metin degil.
-  } else {
-    sablonlar = setliOturumlar.map((oturum) => oturum.templateName ?? t('takvim.sablonsuz')).join(', ');
-  }
-  return `${gunBasligi(gun, dil)} · ${sablonlar} · ${t('setler.setSayisi', { count: kayit.setCount })}`;
-}
+const ANTRENMANLI_SINIFI = 'bg-success text-on-success';
+const BOS_SINIFI = 'bg-surface-2 text-muted';
 
 interface Props {
   // "YYYY-MM-DD", TR gunu. Testte sabitlenir; uygulamada cihaz saatinden TR bugunu.
@@ -91,64 +46,86 @@ interface Props {
 export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const { t } = useTranslation();
   const dil = useDil();
-  const [gorunum, setGorunum] = useState<TakvimGorunumu>('ay');
+  const navigate = useNavigate();
+  // #315: uygulama HAFTALIK acilir -- kullanici en cok icinde bulundugu haftayla ilgilenir.
+  const [gorunum, setGorunum] = useState<TakvimGorunumu>('hafta');
   const [gosterilen, setGosterilen] = useState(bugun);
-  const [secili, setSecili] = useState<string | null>(null);
   const { from, to } = gorunumAraligi(gorunum, gosterilen);
   const { data: ozet, isLoading, isError, isPlaceholderData } = useCalendar(from, to);
 
   const gunler = new Map((ozet?.days ?? []).map((kayit) => [kayit.date, kayit]));
-  const seciliKayit = secili ? gunler.get(secili) : undefined;
-  // #90: sablon adlari yalnizca ANTRENMANLI bir gun secilince istenir.
-  const { data: gunOturumlari, isError: gunGecmisiHatali } = useGunGecmisi(seciliKayit ? secili : null);
   const satirlar = gorunum === 'ay' ? ayIzgarasi(gosterilen) : [haftaGunleri(gosterilen)];
-  const sonrakiKapali = gorunumAraligi(gorunum, kaydir(gorunum, gosterilen, 1)).from > bugun;
   const donemBasligi =
     gorunum === 'ay' ? ayBasligi(gosterilen, dil) : formatAralik(`${from}T12:00:00Z`, `${to}T12:00:00Z`, dil);
-  const bosMetin = GORUNUMLER.find((aday) => aday.anahtar === gorunum)?.bosMetin;
+  const bosMetin = gorunum === 'ay' ? 'takvim.buAyYok' : 'takvim.buHaftaYok';
+  const kaydirmaBaslangici = useRef<number | null>(null);
+  // Son gezinme yonu: giris animasyonu hangi taraftan gelecegini buradan okur.
+  const [yon, setYon] = useState<-1 | 1>(1);
 
-  function gorunumSec(yeni: TakvimGorunumu) {
-    setGorunum(yeni);
+  function gorunumDegistir() {
+    setGorunum(gorunum === 'ay' ? 'hafta' : 'ay');
     setGosterilen(bugun);
-    setSecili(null);
   }
 
-  function gezin(yon: -1 | 1) {
-    setGosterilen(kaydir(gorunum, gosterilen, yon));
-    setSecili(null);
+  /** Gelecege gezinilmez (#81): kapali yonde hareket sessizce yok sayilir. */
+  function gezin(gidilenYon: -1 | 1) {
+    if (!gezilebilirMi(gorunum, gosterilen, gidilenYon, bugun)) {
+      return;
+    }
+    setYon(gidilenYon);
+    setGosterilen(kaydir(gorunum, gosterilen, gidilenYon));
   }
 
   return (
     // #117: gorunur baslik kaldirildi; bolge adi aria-label ile.
     <section aria-label={t('takvim.bolgeAdi')} className="flex flex-col gap-3">
 
-      <div role="tablist" aria-label={t('takvim.gorunumAriaEtiket')} className="flex border-b border-surface-3">
-        {GORUNUMLER.map((aday) => (
-          <SekmeDugmesi
-            key={aday.anahtar}
-            id={sekmeId(aday.anahtar)}
-            secili={aday.anahtar === gorunum}
-            aria-controls="takvim-paneli"
-            onClick={() => gorunumSec(aday.anahtar)}
-          >
-            {t(aday.etiket)}
-          </SekmeDugmesi>
-        ))}
-      </div>
-
-      <div id="takvim-paneli" role="tabpanel" aria-labelledby={sekmeId(gorunum)} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
+        {/* #315: donem basligi ve SAG kosesinde gorunum ikonu -- ikon gun kartlarinin DISINDA. */}
         <div className="flex items-center justify-between gap-2">
-          <IkonDugmesi etiket={t('takvim.onceki')} onClick={() => gezin(-1)}>
-            <ChevronLeft aria-hidden size={20} />
-          </IkonDugmesi>
           <p className="text-body-lg tabular-nums">{donemBasligi}</p>
-          <IkonDugmesi etiket={t('takvim.sonraki')} onClick={() => gezin(1)} disabled={sonrakiKapali}>
-            <ChevronRight aria-hidden size={20} />
+          <IkonDugmesi
+            etiket={t(gorunum === 'ay' ? 'takvim.haftalikGorunumeGec' : 'takvim.aylikGorunumeGec')}
+            onClick={gorunumDegistir}
+          >
+            <CalendarDays aria-hidden size={20} />
           </IkonDugmesi>
         </div>
 
-        {/* #84: izgara tam genislik degil, en fazla 256 px -- telefonda hucre ~33 px, ekrani kaplamasin. */}
-        <div className="mx-auto grid w-full max-w-64 grid-cols-7 gap-1">
+        {/* #84: izgara tam genislik degil, en fazla 256 px -- telefonda hucre ~33 px, ekrani kaplamasin.
+            #315: donem degistirmenin yolu YATAY KAYDIRMA; ok dugmeleri kalkti. Kaydirma dokunmatige
+            ozgu oldugu icin fare/klavye kullanicisina ok TUSLARI birakildi (gorunur dugme degil). */}
+        <div
+          // `key`: donem degisince izgara yeniden monte olur ve giris animasyonu bastan oynar.
+          key={gosterilen}
+          data-testid="takvim-izgara"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              e.preventDefault();
+              gezin(e.key === 'ArrowRight' ? 1 : -1);
+            }
+          }}
+          onTouchStart={(e) => {
+            kaydirmaBaslangici.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const baslangic = kaydirmaBaslangici.current;
+            kaydirmaBaslangici.current = null;
+            const bitis = e.changedTouches[0]?.clientX;
+            if (baslangic === null || bitis === undefined || Math.abs(bitis - baslangic) < KAYDIRMA_ESIGI) {
+              return;
+            }
+            // Sola kaydirma (parmak sola) ileri, saga kaydirma geri.
+            gezin(bitis < baslangic ? 1 : -1);
+          }}
+          // #315: izgara iki gorunumde de TAM GENISLIGE yayilir (#84'un 256 px siniri kalkti).
+          // Aylikta hucre kare DEGIL basik (h-9): 5-6 satir kare olsaydi izgara ekrani yutardi --
+          // genisleme boya degil ENE gider. Haftalikta tek satir oldugu icin kare kalabilir.
+          className={`grid w-full touch-pan-y grid-cols-7 ${gorunum === 'ay' ? 'gap-1' : 'gap-2'} ${
+            yon === 1 ? 'motion-safe:animate-takvim-sagdan' : 'motion-safe:animate-takvim-soldan'
+          }`}
+        >
           {GUN_ANAHTARLARI.map((anahtar) => (
             <span key={anahtar} aria-hidden className="text-center text-label-xs text-muted uppercase">
               {t(`takvim.gunKisaltmalari.${anahtar}`)}
@@ -159,8 +136,10 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
               return <span key={`bos-${sira}`} aria-hidden />;
             }
             const kayit = gunler.get(gun);
-            const seciliMi = gun === secili;
-            const vurgu = seciliMi ? 'ring-2 ring-fg' : gun === bugun ? 'ring-1 ring-muted' : '';
+            // Her hucre `ring-1`i BASTAN tasir, yalnizca rengi degisir (#261 ile ayni tuzak:
+            // NativeWind'de `ring-*` sonradan eklenince bilesen "yukseltilip" prop'lari JSON'a
+            // cevriliyor ve navigasyon context'i getter'ina carpip cokuyordu).
+            const vurgu = gun === bugun ? 'ring-1 ring-muted' : 'ring-1 ring-transparent';
             return (
               <button
                 key={gun}
@@ -168,24 +147,21 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
                 aria-label={`${gunBasligi(gun, dil)}: ${
                   kayit ? t('setler.setSayisi', { count: kayit.setCount }) : t('takvim.antrenmanYok')
                 }`}
-                aria-pressed={seciliMi}
                 aria-current={gun === bugun ? 'date' : undefined}
-                onClick={() => setSecili(gun)}
+                onClick={() => navigate(`/gun/${gun}`)}
                 // min-h-0: base katmanindaki 44 px dugme alt siniri kare hucreyi uzatmasin (#84; kullanici
                 // kucuk izgarayi dokunma hedefinden one aldi).
-                className={`flex aspect-square min-h-0 w-full items-center justify-center rounded-md text-label tabular-nums ${
-                  KADEME_SINIFI[setKademesi(kayit?.setCount ?? 0)]
-                } ${vurgu}`}
+                // #315: gun kutulari DAIRE. Haftalikta daire sutunu doldurur; aylikta sabit 36 px
+                // daire sutunda ortalanir -- 5-6 satir sutun genisliginde daire olsaydi izgara uzardi.
+                className={`flex min-h-0 items-center justify-center rounded-full text-label tabular-nums ${
+                  gorunum === 'ay' ? 'size-9 justify-self-center' : 'aspect-square w-full'
+                } ${kayit ? ANTRENMANLI_SINIFI : BOS_SINIFI} ${vurgu}`}
               >
                 {ayinGunu(gun)}
               </button>
             );
           })}
         </div>
-
-        <p aria-live="polite" className="min-h-5 text-body text-muted tabular-nums">
-          {secili ? gunOzeti(secili, seciliKayit, gunOturumlari, gunGecmisiHatali, dil, t) : ''}
-        </p>
 
         {isLoading && <p className="text-body text-muted">{t('ortak.yukleniyor')}</p>}
         {isError && (
@@ -194,26 +170,23 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
           </p>
         )}
         {ozet && !isPlaceholderData && ozet.days.length === 0 && (
-          <p className="text-body text-muted">{bosMetin && t(bosMetin)}</p>
+          <p className="text-body text-muted">{t(bosMetin)}</p>
         )}
 
         {ozet && (
-          <dl className="flex flex-wrap gap-x-6 gap-y-3">
-            {/* #96: seriler hafta; #97: hedef satirlari yalnizca hedef varken. Hepsi API degeri. #117: en uzun
-                seri Rekorlar'a, hedef secicisi Profil'e tasindi. */}
-            <OzetDegeri etiket={t('takvim.seri')} deger={t('takvim.haftaSayisi', { count: ozet.currentWeekStreak })} />
-            <OzetDegeri etiket={t('takvim.antrenmanGunu')} deger={t('takvim.gunSayisi', { count: ozet.trainedDayCount })} />
+          // #315: ozet yalnizca IKI seri -- "Antrenman gunu" ve "Bu hafta" kaldirildi. Ikisi yan yana
+          // kart; hedef yoksa (#97) hedef serisi anlamsiz oldugu icin cizilmez, aktif seri tam genisler.
+          <dl className="grid grid-cols-2 gap-2">
+            <OzetDegeri
+              etiket={t('takvim.aktifSeri')}
+              deger={t('takvim.haftaSayisi', { count: ozet.currentWeekStreak })}
+              tekBasina={ozet.weeklyTargetDays === null}
+            />
             {ozet.weeklyTargetDays !== null && (
-              <>
-                <OzetDegeri
-                  etiket={t('takvim.buHafta')}
-                  deger={t('takvim.haftaHedefi', { yapilan: ozet.thisWeekTrainedDays, count: ozet.weeklyTargetDays })}
-                />
-                <OzetDegeri
-                  etiket={t('takvim.hedefSerisi')}
-                  deger={t('takvim.haftaSayisi', { count: ozet.currentTargetStreak ?? 0 })}
-                />
-              </>
+              <OzetDegeri
+                etiket={t('takvim.hedefSerisi')}
+                deger={t('takvim.haftaSayisi', { count: ozet.currentTargetStreak ?? 0 })}
+              />
             )}
           </dl>
         )}
@@ -222,11 +195,11 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   );
 }
 
-function OzetDegeri({ etiket, deger }: { etiket: string; deger: string }) {
+function OzetDegeri({ etiket, deger, tekBasina }: { etiket: string; deger: string; tekBasina?: boolean }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className={`flex flex-col gap-1 rounded-xl bg-surface-1 p-4 ${tekBasina ? 'col-span-2' : ''}`}>
       <dt className="text-label text-muted">{etiket}</dt>
-      <dd className="text-body-lg tabular-nums">{deger}</dd>
+      <dd className="text-metric tabular-nums">{deger}</dd>
     </div>
   );
 }

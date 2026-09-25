@@ -172,6 +172,8 @@ test('accent dolgusu ve hata kutusu kendi metinleriyle 4.5:1 saglar', () => {
   for (const palet of Object.values(paletler)) {
     expect(kontrast(palet['on-accent'], palet.accent)).toBeGreaterThanOrEqual(4.5);
     expect(kontrast(palet['on-danger-bg'], palet['danger-bg'])).toBeGreaterThanOrEqual(4.5);
+    // #315: takvimdeki yesil dolgunun uzerindeki gun rakami.
+    expect(kontrast(palet['on-success'], palet.success)).toBeGreaterThanOrEqual(4.5);
   }
 });
 

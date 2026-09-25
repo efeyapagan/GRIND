@@ -1,4 +1,4 @@
-import { ayBasligi, ayIzgarasi, gunBasligi, haftaGunleri, setKademesi } from './takvim';
+import { ayBasligi, ayIzgarasi, gezilebilirMi, gunBasligi, haftaGunleri, kaydir, setKademesi } from './takvim';
 
 test('ay izgarasi Pazartesi baslar; ay disindaki hucreler bostur', () => {
   // 1 Eylul 2026 Salı, 30 Eylul Carsamba.
@@ -45,4 +45,28 @@ test('ayBasligi ve gunBasligi TR baslik yazar', () => {
 test('Ingilizce ay ve gun basligi', () => {
   expect(ayBasligi('2026-09-14', 'en')).toBe('September 2026');
   expect(gunBasligi('2026-09-14', 'en')).toBe('14 September');
+});
+
+/**
+ * #315: gezinme artik ok dugmeleriyle degil kaydirmayla. "Gelecege gezinilmez" kurali bu yuzden
+ * bir dugmenin `disabled`i olmaktan cikip saf bir karara dondu; iki platform da bunu kullanir.
+ */
+test('bugunun doneminden ileri gezilmez, geriye her zaman gezilir', () => {
+  const bugun = '2026-09-25';
+
+  // Haftalik: bugunun haftasindan ileri kapali, onceki haftadan ileri (bugune dogru) acik.
+  expect(gezilebilirMi('hafta', bugun, 1, bugun)).toBe(false);
+  expect(gezilebilirMi('hafta', bugun, -1, bugun)).toBe(true);
+  expect(gezilebilirMi('hafta', '2026-09-18', 1, bugun)).toBe(true);
+
+  // Aylik: ayni kural ay biriminde.
+  expect(gezilebilirMi('ay', bugun, 1, bugun)).toBe(false);
+  expect(gezilebilirMi('ay', '2026-08-10', 1, bugun)).toBe(true);
+});
+
+test('kaydirma haftalikta 7 gun, aylikta bir ay ilerler', () => {
+  expect(kaydir('hafta', '2026-09-25', 1)).toBe('2026-10-02');
+  expect(kaydir('hafta', '2026-09-25', -1)).toBe('2026-09-18');
+  expect(kaydir('ay', '2026-09-25', 1)).toBe('2026-10-01');
+  expect(kaydir('ay', '2026-09-25', -1)).toBe('2026-08-01');
 });
