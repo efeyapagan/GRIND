@@ -44,7 +44,8 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   await waitFor(() => expect(state.sablonlar).toHaveLength(1));
   expect(state.sablonlar[0]).toMatchObject({ name: 'Push Day E2E' });
 
-  // Kaydetme "/" ye döner (SablonOlusturCagrisi'nin donuş yolu) -- Antrenman'a tekrar gir.
+  // #272: kaydetme artık doğrudan /antrenman'a döner; alt menüdeki "+" aynı ekranı açtığı için
+  // bu dokunuş zararsız ve akışı gerçek kullanımdaki gibi bırakır.
   await fireEvent.press(await screen.findByLabelText('Antrenman başlat'));
   const sablonKarti = await screen.findByText('Push Day E2E');
   await fireEvent.press(sablonKarti);
