@@ -1,5 +1,7 @@
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { DeviceEventEmitter, StyleSheet } from 'react-native';
+import { act, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
+import { altMenuPayi } from '../../src/ui/KabukTabBar';
 import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
 import { renderRouterAsync } from '../../src/testUtils/renderRouterAsync';
@@ -124,4 +126,46 @@ test('set paneli acikken antrenman iptal edilince panel ekranda kalmaz', async (
   // Istemci acik oturum sorgusunu tazeleyince panel de kalkmali.
   await waitFor(() => expect(screen.queryByLabelText('Ağırlık')).toBeNull());
   expect(await screen.findByText('Şablonla başla')).toBeTruthy();
+}, 20_000);
+
+/**
+ * #350: yuzer set paneli alt menunun ustune sabitti; "Agirlik"a dokunup klavye acilinca klavyenin
+ * ARKASINDA kaliyordu ve sayisal klavyede "Bitti" olmadigi icin oradan hic cikmiyordu. Panel klavye
+ * acikken klavyenin ustune cikar, kapaninca alt menunun ustune doner.
+ */
+test('klavye acilinca set paneli klavyenin ustune cikar, kapaninca geri iner', async () => {
+  await session.write('tok', ileriTarih(60_000), 'efe');
+  const { sahteRequest, state } = sahteBackendOlustur();
+  requestMock.mockImplementation(sahteRequest);
+  state.sablonlar.push({
+    id: 1,
+    name: 'Push Day E2E',
+    createdAt: new Date().toISOString(),
+    exercises: [
+      {
+        id: 1,
+        exerciseId: 1,
+        exerciseName: 'Bench Press',
+        category: 'Push',
+        isArchived: false,
+        orderIndex: 0,
+        plannedSets: 3,
+        restSeconds: 90,
+      },
+    ],
+  });
+  state.siradakiSablonId = 2;
+
+  await renderRouterAsync('./app', { initialUrl: '/antrenman' });
+  await fireEvent.press(await screen.findByText('Push Day E2E'));
+  await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
+  await screen.findByLabelText('Ağırlık');
+  const panelAlti = () => StyleSheet.flatten(screen.getByTestId('set-paneli').props.style).bottom;
+  expect(panelAlti()).toBe(altMenuPayi(0));
+
+  await act(() => DeviceEventEmitter.emit('keyboardWillShow', { endCoordinates: { height: 300 } }));
+  await waitFor(() => expect(panelAlti()).toBeGreaterThanOrEqual(300));
+
+  await act(() => DeviceEventEmitter.emit('keyboardWillHide', { endCoordinates: { height: 0 } }));
+  await waitFor(() => expect(panelAlti()).toBe(altMenuPayi(0)));
 }, 20_000);
