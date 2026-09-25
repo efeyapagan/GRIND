@@ -57,7 +57,11 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
     >
       <View className="min-w-0 flex-1 flex-row items-center gap-4">
         <Text className="w-12 shrink-0 text-label text-muted">{sira}. Set</Text>
-        <View className="min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+        {/* Rekor rozeti HER ZAMAN alt satirda (kullanici karari): sigdiginda yan yana, sigmadiginda
+            alta inen bir duzen satirdan satira farkli gorunuyordu. `SetList`teki gecmis satirlari da
+            ayni duzeni kullanir. `flex-1` ayrica sart: RN'de varsayilan `flexShrink: 0`dir (web'in
+            tersine), bu kutu daralmazsa uzun rozet sagdaki dinlenme/RIR haplarinin USTUNE tasar. */}
+        <View className="min-w-0 flex-1 flex-col items-start gap-1">
           <Text className="text-metric text-fg">
             {formatWeight(kayit.weight, dil)} <Text className="text-body text-muted">kg</Text>{' '}
             <Text className="font-light text-muted">×</Text> {kayit.reps}

@@ -6,7 +6,9 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw';
 import { AuthProvider } from '../auth/AuthContext';
 import { session } from '../auth/session';
+import { RestTimerProvider } from '@grind/shared/restTimer';
 import AntrenmanPage from './AntrenmanPage';
+import DinlenmeKabugu from '../components/DinlenmeKabugu';
 import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 import { tamMetin } from '../test/metin';
@@ -48,13 +50,19 @@ function antrenmanSayfasiniOlustur(client: QueryClient = testeOzelSorguIstemcisi
     <QueryClientProvider client={client}>
       <AuthProvider>
         <PageTitleProvider>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path="/" element={<AntrenmanPage />} />
-              <Route path="/antrenman/bitir" element={<p>bitirme sayfasi</p>} />
-              <Route path="/templates/new" element={<AlinanRota />} />
-            </Routes>
-          </MemoryRouter>
+          <RestTimerProvider>
+            <MemoryRouter initialEntries={['/antrenman']}>
+              {/* Sayac artik ortak kabukta yasar (App.tsx); sayfayi tek basina cizen bu testler de
+                  ayni kabugu taklit etmeli, yoksa dinlenme paneli hic monte olmaz. Yonlendiricinin
+                  ICINDE olmali: temizleme kurali bulunulan yola bakar. */}
+              <DinlenmeKabugu />
+              <Routes>
+                <Route path="/antrenman" element={<AntrenmanPage />} />
+                <Route path="/antrenman/bitir" element={<p>bitirme sayfasi</p>} />
+                <Route path="/templates/new" element={<AlinanRota />} />
+              </Routes>
+            </MemoryRouter>
+          </RestTimerProvider>
         </PageTitleProvider>
       </AuthProvider>
     </QueryClientProvider>,
@@ -417,9 +425,6 @@ test('set eklenince listede gorunur ve POST govdesi exerciseId, weight, reps tas
 
   expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
   expect(ortam.sonGonderilenGovde()).toMatchObject({ exerciseId: 1, weight: 60, reps: 8 });
-  // Basarili gonderimden sonra odak agirlik alanina doner (spec Karar 6) -- ust uste ayni seti
-  // girmek en sik akis, kullanici her seferinde alana tekrar tiklamak zorunda kalmamali.
-  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveFocus();
 });
 
 test('recordType Weight donen set icin rekor rozeti gorunur', async () => {
@@ -710,6 +715,22 @@ test('setsiz acik oturumda bitir yerine iptal cikar ve DELETE ile bos duruma don
   expect(ortam.silinenOturumlar()).toEqual([7]);
 });
 
+/** Panel acikken iptal edilince, set girisi "Sablonla basla" ekraninin uzerinde asili kaliyordu. */
+test('acik set paneli antrenman iptal edilince ekranda kalmaz', async () => {
+  sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
+  const kullanici = userEvent.setup();
+  antrenmanSayfasiniOlustur();
+
+  await seciliKartaBekle('Bench Press');
+  await paneliAc(kullanici);
+  expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
+
+  await kullanici.click(screen.getByRole('button', { name: 'Antrenmanı iptal et' }));
+
+  expect(await screen.findByRole('heading', { name: 'Şablonla başla' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('Ağırlık (kg)')).not.toBeInTheDocument();
+});
+
 test('set girilince iptal dugmesi yerini bitir dugmesine birakir', async () => {
   // #62: set, antrenmandaki bir hareketin kartindan girilir; setsiz sablonlu oturum.
   sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
@@ -866,9 +887,9 @@ test('ag hatasi sonrasi acik oturum ve setler invalidate edilir (baglanti geri g
   await waitFor(() => expect(acikOturumIstekSayisi).toBeGreaterThan(ilkIstekSayisi));
 });
 
-test('set eklenince durum satiri eklenen seti duyurur', async () => {
-  // Spec davranis 5: sabit panel listeyi kismen ortebilir; eklenen set hem gorunur hem ekran
-  // okuyucuya (role=status, polite) duyurulur. Dugmenin adi DEGISMEZ.
+test('set eklenince eklenen set ekran okuyucuya duyurulur', async () => {
+  // Panel set eklenince kapandigi icin duyuru panelin DISINDAKI kalici canli bolgede yasar
+  // (role=status, polite); gorsel geri bildirim kartta beliren set satiridir.
   sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
 
   const kullanici = userEvent.setup();
@@ -878,7 +899,6 @@ test('set eklenince durum satiri eklenen seti duyurur', async () => {
   await setEkle(kullanici, '82,5', '5');
 
   expect(await screen.findByText('Eklendi: 82,5 kg × 5')).toHaveAttribute('role', 'status');
-  expect(screen.getByRole('button', { name: 'Set ekle' })).toBeInTheDocument();
 });
 
 test('bos durumda sablon kartina dokunmak templateId ile oturum baslatir ve hareket kartlari gorunur', async () => {
@@ -958,13 +978,19 @@ test('bos durumda alt alandaki Sablon oluştur dugmesi /templates/new\'e donus s
     <QueryClientProvider client={testeOzelSorguIstemcisi()}>
       <AuthProvider>
         <PageTitleProvider>
-          <MemoryRouter initialEntries={['/']}>
-            <Routes>
-              <Route path="/" element={<AntrenmanPage />} />
-              <Route path="/antrenman/bitir" element={<p>bitirme sayfasi</p>} />
-              <Route path="/templates/new" element={<AlinanRota />} />
-            </Routes>
-          </MemoryRouter>
+          <RestTimerProvider>
+            <MemoryRouter initialEntries={['/antrenman']}>
+              {/* Sayac artik ortak kabukta yasar (App.tsx); sayfayi tek basina cizen bu testler de
+                  ayni kabugu taklit etmeli, yoksa dinlenme paneli hic monte olmaz. Yonlendiricinin
+                  ICINDE olmali: temizleme kurali bulunulan yola bakar. */}
+              <DinlenmeKabugu />
+              <Routes>
+                <Route path="/antrenman" element={<AntrenmanPage />} />
+                <Route path="/antrenman/bitir" element={<p>bitirme sayfasi</p>} />
+                <Route path="/templates/new" element={<AlinanRota />} />
+              </Routes>
+            </MemoryRouter>
+          </RestTimerProvider>
         </PageTitleProvider>
       </AuthProvider>
     </QueryClientProvider>,
@@ -1015,10 +1041,11 @@ test('karta dokunmak paneldeki hareketi degistirir; hareket tamamlaninca secim s
   await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
+  // Hedefi tamamlansa da (1/1) secim Bench Press'te KALIR, kendiliginden sonrakine atlamaz.
   const bench = await screen.findByRole('button', { name: 'Bench Press, 1 / 1 set' });
   expect(bench).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('heading', { name: 'Yeni set: Bench Press' })).toBeInTheDocument();
 
+  // Panel set eklenince kapandi; baska bir karta dokunmak onu o hareket icin yeniden acar.
   await kullanici.click(screen.getByRole('button', { name: 'Squat, 0 / 3 set' }));
 
   expect(screen.getByRole('heading', { name: 'Yeni set: Squat' })).toBeInTheDocument();
@@ -1154,7 +1181,9 @@ test('hareket kartina dokunmak hareketi secer ve set panelini acar, grafigi acma
   expect(ortam.ilerlemeAramalari()).toHaveLength(0);
 });
 
-test('set eklendikten sonra panel acik kalir', async () => {
+/** Kullanici karari: TEK set girildikten sonra panel kapanir -- eklenen set ve dinlenme sayaci
+ *  panelin arkasinda kalmasin. Yazilanlar korunur, panel yeniden acilinca yerindedir. */
+test('set eklendikten sonra panel kapanir, yazilanlar korunur', async () => {
   sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
   const kullanici = userEvent.setup();
   antrenmanSayfasiniOlustur();
@@ -1162,9 +1191,12 @@ test('set eklendikten sonra panel acik kalir', async () => {
   await seciliKartaBekle('Bench Press');
   await setEkle(kullanici, '60', '8');
 
-  expect(await screen.findByText('Eklendi: 60 kg × 8')).toBeInTheDocument();
-  expect(screen.getByLabelText('Ağırlık (kg)')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Paneli kapat' })).toBeInTheDocument();
+  expect(await screen.findByText(tamMetin('60 kg × 8'))).toBeInTheDocument();
+  expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
+
+  // Yeniden acilinca girilen degerler yerinde.
+  await paneliAc(kullanici);
+  expect(screen.getByLabelText('Ağırlık (kg)')).toHaveValue('60');
 });
 
 describe('set duzenleme ve silme (#57)', () => {
@@ -1296,14 +1328,17 @@ describe('antrenman hareketleri (#60, #62)', () => {
     expect(await screen.findByRole('button', { name: 'Squat, 0 set' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('Hareket ekle alta yapisik panelde degil, hareket kartlarindan sonra akisin icinde durur (#226)', async () => {
+  test('Hareket ekle ust baslikta durur, hareket kartlarindan ONCE gelir ve alta yapisik degildir', async () => {
+    // Yeni tasarim (bitir/iptal birlestirmesi): "Hareket ekle" artik oturum durumundan bagimsiz
+    // HER ZAMAN ust baslikta sabit durur -- "Antrenmani bitir"/"Antrenmani iptal et" AYNI konumda
+    // (alta yapisik kutuda) kalir.
     sahteSunucuyuKur({ baslangicOturumu: sablonluOturum([ilerleme(1, 'Bench Press', 4, 0)]) });
     antrenmanSayfasiniOlustur();
 
     const dugme = await screen.findByRole('button', { name: 'Hareket ekle' });
     const kart = screen.getByRole('button', { name: 'Bench Press, 0 / 4 set' });
 
-    expect(kart.compareDocumentPosition(dugme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(kart.compareDocumentPosition(dugme) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(dugme.closest('.sticky')).toBeNull();
   });
 
@@ -1424,11 +1459,10 @@ describe('dinlenme sayaci', () => {
 
     await seciliKartaBekle('Bench Press');
     await setEkle(kullanici, '60', '8');
-    expect(await screen.findByText('1:30')).toBeInTheDocument();
 
-    await kullanici.click(screen.getByRole('button', { name: 'Paneli kapat' }));
-
-    expect(screen.getByText('1:30')).toBeVisible();
+    // Panel set eklenince kapanir; sayac ust barda kalir.
+    expect(await screen.findByText('1:30')).toBeVisible();
+    expect(screen.getByLabelText('Ağırlık (kg)')).not.toBeVisible();
     expect(screen.getByRole('button', { name: 'Atla' })).toBeInTheDocument();
   });
 

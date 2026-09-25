@@ -11,6 +11,7 @@ import { PageTitleProvider } from '../ui/PageTitleContext';
 import type { components } from '../api/schema';
 
 type SessionResponse = components['schemas']['SessionResponse'];
+type TemplateResponse = components['schemas']['TemplateResponse'];
 
 const ACIK_OTURUM: SessionResponse = {
   id: 7,
@@ -24,10 +25,18 @@ const ACIK_OTURUM: SessionResponse = {
 };
 
 /** Acik oturumu ve bitirme ucunu taklit eder; bitirme govdelerini toplar. */
-function sahteSunucuyuKur(opsiyonlar: { oturum?: SessionResponse | null; bitirmeHatasi?: boolean } = {}) {
+function sahteSunucuyuKur(
+  opsiyonlar: { oturum?: SessionResponse | null; bitirmeHatasi?: boolean; sablon?: TemplateResponse } = {},
+) {
   let oturum = opsiyonlar.oturum === undefined ? ACIK_OTURUM : opsiyonlar.oturum;
   const bitirmeGovdeleri: unknown[] = [];
   server.use(
+    // Oturumun sablonu: "liste sablondan sapti mi?" karsilastirmasi buradan okunur.
+    http.get('/api/templates/:id', () =>
+      opsiyonlar.sablon
+        ? HttpResponse.json(opsiyonlar.sablon)
+        : HttpResponse.json({ title: 'Not Found', status: 404 }, { status: 404 }),
+    ),
     http.get('/api/sessions/open', () =>
       oturum
         ? HttpResponse.json(oturum)
@@ -153,7 +162,7 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
 
-    expect(await screen.findByText('Bu antrenman şablon olarak kaydedilsin mi?')).toBeInTheDocument();
+    expect(await screen.findByText('Şablon olarak kaydedilsin mi?')).toBeInTheDocument();
     expect(ortam.bitirmeGovdeleri()).toEqual([{ difficulty: 'Medium' }]);
     expect(screen.queryByText('antrenman sayfasi')).not.toBeInTheDocument();
   });
@@ -185,14 +194,75 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
     expect(await screen.findByText('ana sayfa')).toBeInTheDocument();
   });
 
-  /** Sablonla baslamis antrenmanin listesi zaten bir sablondan geldi: soru sorulmaz. */
-  test('sablonlu antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
-    sahteSunucuyuKur({ oturum: { ...SABLONSUZ_HAREKETLI, templateId: 10, templateName: 'Push Day' } });
+  /** Sablon satiri: karsilastirma yalnizca `exerciseId`ye bakar, digerleri sunucu bicimi icin. */
+  function sablonHareketi(exerciseId: number, exerciseName: string) {
+    return { id: exerciseId, exerciseId, exerciseName, isArchived: false, orderIndex: 0, plannedSets: 3, restSeconds: 90 };
+  }
+
+  const SABLONLU_OTURUM: SessionResponse = { ...SABLONSUZ_HAREKETLI, templateId: 10, templateName: 'Push Day' };
+
+  /** Liste sablonun aynisi: yeni bir sablon adayi yok, soru sorulmaz. */
+  test('sablonundan sapmamis antrenman bitince soru sorulmaz, ana sayfaya donulur', async () => {
+    sahteSunucuyuKur({
+      oturum: SABLONLU_OTURUM,
+      sablon: {
+        id: 10,
+        name: 'Push Day',
+        exercises: [sablonHareketi(1, 'Bench Press'), sablonHareketi(2, 'Squat')],
+      },
+    });
     sayfayiOlustur();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
 
     expect(await screen.findByText('ana sayfa')).toBeInTheDocument();
-    expect(screen.queryByText('Bu antrenman şablon olarak kaydedilsin mi?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Şablon olarak kaydedilsin mi?')).not.toBeInTheDocument();
+  });
+
+  /** Sablonda olmayan bir hareket eklendiyse liste artik yeni bir sablon adayidir. */
+  test('sablonunda olmayan hareket eklenmis antrenman bitince soru cikar', async () => {
+    sahteSunucuyuKur({
+      oturum: SABLONLU_OTURUM,
+      sablon: { id: 10, name: 'Push Day', exercises: [sablonHareketi(1, 'Bench Press')] },
+    });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(await screen.findByText('Şablon olarak kaydedilsin mi?')).toBeInTheDocument();
+    // Aciklama sablonsuz halinkinden farkli: neden soruldugunu anlatir.
+    expect(
+      screen.getByText('Şablonunda olmayan hareketler eklemişsin. Bu listeyi yeni bir şablon olarak kaydedebilirsin.'),
+    ).toBeInTheDocument();
+  });
+
+  test('sapan antrenmanda Sablon olarak kaydet TUM hareketlerle yeni sablon formuna gider', async () => {
+    sahteSunucuyuKur({
+      oturum: SABLONLU_OTURUM,
+      sablon: { id: 10, name: 'Push Day', exercises: [sablonHareketi(1, 'Bench Press')] },
+    });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Şablon olarak kaydet' }));
+
+    expect(
+      await screen.findByText(
+        `sablon formu donus=/ hareketler=${JSON.stringify([
+          { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 },
+          { exerciseId: 2, exerciseName: 'Squat', plannedSets: 3, restSeconds: 120 },
+        ])}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /** Sablon alinamazsa bitirme BEKLETILMEZ: soru sorulmadan ana sayfaya donulur. */
+  test('sablon sorgusu basarisizsa soru sorulmaz', async () => {
+    sahteSunucuyuKur({ oturum: SABLONLU_OTURUM });
+    sayfayiOlustur();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Antrenmanı bitir' }));
+
+    expect(await screen.findByText('ana sayfa')).toBeInTheDocument();
   });
 });

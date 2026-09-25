@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, X } from 'lucide-react-native';
+import { ClipboardList, Plus } from 'lucide-react-native';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -122,10 +122,21 @@ export default function AntrenmanScreen() {
   }
   const etkinSecim = secim ?? sablonVarsayilani ?? adaGoreSirala(egzersizler ?? [])[0]?.id ?? null;
   const seciliEgzersizAdi = egzersizler?.find((eg) => eg.id === etkinSecim)?.name ?? null;
-  const [dinlenme, setDinlenme] = useDinlenme(etkinSecim);
+  // Sayacin kendisi ortak kabukta cizilir (DinlenmeKabugu); burada yalnizca set eklenince
+  // baslatilir. Kanca ayrica kalici depo senkronunu yurutur.
+  const [, setDinlenme] = useDinlenme(etkinSecim);
 
   const antrenmandakiIdler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
   const eklenebilirEgzersizler = adaGoreSirala(egzersizler ?? []).filter((eg) => !antrenmandakiIdler.has(eg.id));
+
+  // Antrenman iptal edilince/bitince acik kalan panel "Sablonla basla" ekraninin uzerinde
+  // asili kaliyordu (kullanici bulgusu). Durum render sirasinda sifirlanir -- `varsayilanUygulananOturum`
+  // ile ayni desen. `oturumYok`: yukleniyor/hata degil, GERCEKTEN oturum yok demek.
+  const oturumYok = !oturumYukleniyor && !oturumHataliMi && !oturum;
+  if (oturumYok && (panelAcik || hareketEkleAcik)) {
+    setPanelAcik(false);
+    setHareketEkleAcik(false);
+  }
 
   function secimYap(exerciseId: number): boolean {
     if (!secilebilirIdler.has(exerciseId)) {
@@ -142,31 +153,41 @@ export default function AntrenmanScreen() {
     }
   }
 
-  // #274: panel secili kartin altinda acilir; kart genisleyip yerlesince (onLayout) ekran, kart +
-  // panel gorunecek kadar kayar -- web ile ayni karar (`kartHizalamaKaydirmasi`). Klavye acilinca da
-  // (EkranKaydirici'nin varsayilan "en alta kay"i yerine) ayni hizalama klavyenin ustune yapilir.
+  // Panel artik kartin altinda DEGIL, alt sekme cubugunun hemen ustunde yuzen ayri bir kutu (bkz.
+  // asagidaki `panelRef`) -- kart secilince/panel acilinca ekran, kart panelin tam ustune gelecek
+  // kadar kayar -- web ile ayni karar (`kartHizalamaKaydirmasi`), sinir artik panelin OLCULEN ust
+  // kenari. Klavye acilinca da (EkranKaydirici'nin varsayilan "en alta kay"i yerine) ayni hizalama
+  // klavyenin ustune yapilir.
   const kaydiriciRef = useRef<ScrollView>(null);
   const kaydirmaY = useRef(0);
   const seciliKartRef = useRef<View>(null);
+  const panelRef = useRef<View>(null);
+  const [panelYuksekligi, setPanelYuksekligi] = useState(0);
   const hizalanacak = useRef(false);
   function kartiHizala(klavyeYuksekligi: number) {
     const kaydirici = kaydiriciRef.current;
     const kart = seciliKartRef.current;
-    kaydirici?.getNativeScrollRef()?.measureInWindow((_x, alanY, _g, alanH) => {
+    const panel = panelRef.current;
+    kaydirici?.getNativeScrollRef()?.measureInWindow((_x, alanY) => {
       kart?.measureInWindow((_kx, kartY, _kg, kartH) => {
-        const alanAlt = Math.min(
-          alanY + alanH - TABBAR_HALKA_TASMASI,
-          Dimensions.get('window').height - klavyeYuksekligi,
-        );
-        // Klavye acikken kart (gecmis + panel) cogu zaman sigmaz; o zaman "ustu oncelikli" kurali
-        // girdileri klavyenin arkasina iterdi. Yalnizca kartin ALT kenari (panelin sonu) hizalanir.
-        const kartAlt = kartY + kartH;
-        const kaydirma = kartHizalamaKaydirmasi(
-          { ust: klavyeYuksekligi > 0 ? kartAlt : kartY, alt: kartAlt },
-          { ust: alanY, alt: alanAlt },
-        );
-        if (kaydirma !== 0) {
-          kaydirici.scrollTo({ y: Math.max(0, kaydirmaY.current + kaydirma), animated: true });
+        const varsayilanAlt = Dimensions.get('window').height - klavyeYuksekligi - TABBAR_HALKA_TASMASI;
+        const hizala = (panelUst: number) => {
+          const alanAlt = Math.min(panelUst, varsayilanAlt);
+          // Klavye acikken kart (gecmis) cogu zaman sigmaz; o zaman "ustu oncelikli" kurali
+          // girdileri klavyenin arkasina iterdi. Yalnizca kartin ALT kenari hizalanir.
+          const kartAlt = kartY + kartH;
+          const kaydirma = kartHizalamaKaydirmasi(
+            { ust: klavyeYuksekligi > 0 ? kartAlt : kartY, alt: kartAlt },
+            { ust: alanY, alt: alanAlt },
+          );
+          if (kaydirma !== 0) {
+            kaydirici.scrollTo({ y: Math.max(0, kaydirmaY.current + kaydirma), animated: true });
+          }
+        };
+        if (panel) {
+          panel.measureInWindow((_px, panelY) => hizala(panelY));
+        } else {
+          hizala(varsayilanAlt);
         }
       });
     });
@@ -227,39 +248,32 @@ export default function AntrenmanScreen() {
   }
 
   return (
-    <EkranKaydirici
-      ref={kaydiriciRef}
-      contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
-      scrollEventThrottle={16}
-      onScroll={(e) => {
-        kaydirmaY.current = e.nativeEvent.contentOffset.y;
-      }}
-      onKlavyeAcildi={panelAcik ? kartiHizala : undefined}
-    >
-      <View className="flex-col gap-1">
-        <View className="flex-row items-center justify-between gap-2">
-          {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
-              soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
-          {gorunenOturum?.isOpen && (
-            <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-              <View className="size-2 rounded-full bg-success" />
-              <Text className="text-label text-fg">Devam ediyor</Text>
-            </View>
-          )}
-          {gorunenOturum?.isOpen &&
-            setlerYuklendi &&
-            (oturumBos ? (
-              <Pressable
-                onPress={() => iptalMutasyonu.mutate(gorunenOturum.id)}
-                disabled={iptalMutasyonu.isPending}
-                className={`min-h-11 flex-row items-center gap-1 rounded-lg px-2 ${iptalMutasyonu.isPending ? 'opacity-60' : ''}`}
-              >
-                <X color={ikonRenk.danger} size={18} />
-                <Text className="text-label text-danger">Antrenmanı iptal et</Text>
-              </Pressable>
-            ) : (
-              // #273: "Hareket ekle" artik ust baslikta sade bir metin -- "Antrenmani bitir" en sik
-              // yapilan islem oldugu icin alt alandaki turuncu kutuya tasindi (AntrenmanAltAlani).
+    <View style={{ flex: 1 }}>
+      <EkranKaydirici
+        ref={kaydiriciRef}
+        contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          kaydirmaY.current = e.nativeEvent.contentOffset.y;
+        }}
+        onKlavyeAcildi={panelAcik ? kartiHizala : undefined}
+        altBosluk={panelAcik ? panelYuksekligi : 0}
+      >
+        <View className="flex-col gap-1">
+          <View className="flex-row items-center justify-between gap-2">
+            {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
+                soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
+            {gorunenOturum?.isOpen && (
+              <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
+                <View className="size-2 rounded-full bg-success" />
+                <Text className="text-label text-fg">Devam ediyor</Text>
+              </View>
+            )}
+            {/* "Hareket ekle" artik oturum durumundan BAGIMSIZ HER ZAMAN burada durur (yeni tasarim):
+                "Antrenmani iptal et" / "Antrenmani bitir" ise AYNI konumda -- alt alanda (bkz.
+                AntrenmanAltAlani `bitirCagrisi`/`iptalCagrisi`), boylece bos oturumda da dolu
+                oturumda da bu iki eylem hep AYNI yerde durur. */}
+            {gorunenOturum?.isOpen && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setHareketEkleAcik(true)}
@@ -268,8 +282,8 @@ export default function AntrenmanScreen() {
                 <Plus color={ikonRenk.muted} size={18} />
                 <Text className="text-label text-muted">Hareket ekle</Text>
               </Pressable>
-            ))}
-        </View>
+            )}
+          </View>
         {gorunenOturum && (
           <View className="mt-2 flex-row items-center justify-between gap-2">
             <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
@@ -344,18 +358,6 @@ export default function AntrenmanScreen() {
                     kartiHizala(0);
                   }
                 }}
-                seciliKartAlti={
-                  panelAcik && etkinSecim !== null && seciliEgzersizAdi ? (
-                    <SetPaneli
-                      egzersizId={etkinSecim}
-                      egzersizAdi={seciliEgzersizAdi}
-                      onKapat={() => setPanelAcik(false)}
-                      onSetEklendi={(exerciseId) =>
-                        setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
-                      }
-                    />
-                  ) : undefined
-                }
               />
             ) : (
               <>
@@ -399,21 +401,54 @@ export default function AntrenmanScreen() {
 
       {gorunenOturum ? (
         <AntrenmanAltAlani
-          dinlenme={dinlenme}
-          onDinlenmeDegis={setDinlenme}
           egzersizler={eklenebilirEgzersizler}
           onHareketEkle={hareketEkle}
           acik={hareketEkleAcik}
           onAcikDegis={setHareketEkleAcik}
-          // #273: bos oturumda (#47) hala "Hareket ekle" gosterilir -- "bitir" bos bir antrenmani
-          // gecmise birakirdi. #153: bitirme burada kapanmaz, zorluk kadraninin oldugu ekrana
-          // goturur -- antrenman oradan kapanir. `push` (replace degil): kullanici vazgecip geri
-          // donebilmeli.
+          // #153: bitirme burada kapanmaz, zorluk kadraninin oldugu ekrana goturur -- antrenman
+          // oradan kapanir. `push` (replace degil): kullanici vazgecip geri donebilmeli.
           bitirCagrisi={oturumBos ? undefined : { onBitir: () => router.push('/antrenman-bitir') }}
+          // Issue #47: set GIRILMEMIS acik oturumda "bitir" yerine "iptal et" -- yanlislikla
+          // dokunulan bir sablon kartinin geri alinmasi budur ("bitir" bu durumda gecmise BOS bir
+          // antrenman birakirdi, sorunun ta kendisi).
+          iptalCagrisi={
+            oturumBos
+              ? { onIptal: () => iptalMutasyonu.mutate(gorunenOturum.id), beklemede: iptalMutasyonu.isPending }
+              : undefined
+          }
         />
       ) : (
         <SablonOlusturCagrisi />
       )}
-    </EkranKaydirici>
+      </EkranKaydirici>
+
+      {/* Set giris paneli artik secili kartin altinda DEGIL, alt sekme cubugunun hemen ustunde
+          yuzer bir panel (`position: absolute`) -- web/AddSetForm.tsx'in sticky panelinin RN
+          karsiligi. `TABBAR_HALKA_TASMASI`: "+" dugmesinin halkasi cubugun ustune tastigi icin
+          (bkz. KabukTabBar.tsx), panel onun UZERINE binmesin diye ayni pay eklenir. */}
+      {gorunenOturum && panelAcik && etkinSecim !== null && seciliEgzersizAdi && (
+        <View
+          ref={panelRef}
+          onLayout={(e) => {
+            setPanelYuksekligi(e.nativeEvent.layout.height);
+            if (hizalanacak.current) {
+              hizalanacak.current = false;
+              kartiHizala(0);
+            }
+          }}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: TABBAR_HALKA_TASMASI }}
+          className="px-4 pb-2"
+        >
+          <SetPaneli
+            egzersizId={etkinSecim}
+            egzersizAdi={seciliEgzersizAdi}
+            onKapat={() => setPanelAcik(false)}
+            onSetEklendi={(exerciseId) =>
+              setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
+            }
+          />
+        </View>
+      )}
+    </View>
   );
 }

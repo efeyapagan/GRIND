@@ -31,10 +31,16 @@ interface Props extends ScrollViewProps {
    * kartin altinda) kendi hizalamasini verir; ayni gecikmeli tick'te, klavye yuksekligiyle cagrilir.
    */
   onKlavyeAcildi?: (klavyeYuksekligi: number) => void;
+  /**
+   * Yuzer bir alt panel (antrenman: `SetPaneli`) icerigin ustune bindiginde, son satirin panelin
+   * ARKASINDA kalmamasi icin eklenen ekstra alt bosluk (px) -- web'deki `sticky` panelin kendi akis
+   * icinde yer kaplamasiyla AYNI etki, burada elle verilir (panel `position: absolute`).
+   */
+  altBosluk?: number;
 }
 
 const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
-  { contentContainerClassName, children, onKlavyeAcildi, ...props },
+  { contentContainerClassName, children, onKlavyeAcildi, altBosluk = 0, ...props },
   disariAcilanRef,
 ) {
   const icRef = useRef<ScrollView>(null);
@@ -80,7 +86,7 @@ const EkranKaydirici = forwardRef<ScrollView, Props>(function EkranKaydirici(
         }
       }}
       contentContainerClassName={contentContainerClassName}
-      contentContainerStyle={{ paddingBottom: klavyeYuksekligi }}
+      contentContainerStyle={{ paddingBottom: klavyeYuksekligi + altBosluk }}
       keyboardShouldPersistTaps="handled"
       {...props}
     >

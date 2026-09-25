@@ -76,7 +76,10 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
       >
         <span className="flex min-w-0 items-center gap-4">
           <span className="w-12 shrink-0 text-label text-muted">{t('setler.setSirasiGoster', { sira })}</span>
-          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          {/* Rekor rozeti HER ZAMAN alt satirda (kullanici karari): sigdiginda yan yana, sigmadiginda
+              alta inen bir duzen satirdan satira farkli gorunuyordu. `SetList`teki gecmis satirlari
+              da ayni duzeni kullanir. */}
+          <span className="flex min-w-0 flex-col items-start gap-1">
             <span className="text-metric tabular-nums">
               {formatWeight(kayit.weight, dil)} <span className="text-body text-muted">kg</span>{' '}
               <span className="font-light text-muted">×</span> {kayit.reps}

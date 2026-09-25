@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { useOpenSession } from '@grind/shared/api/queries';
-import {
-  DINLENME_DEPO_ANAHTARI,
-  dinlenmeKaydiAyristir,
-  dinlenmeKaydiUret,
-  type Dinlenme,
-} from '@grind/shared/lib/dinlenme';
+import { useRestTimer } from '@grind/shared/restTimer';
+import { DINLENME_DEPO_ANAHTARI, dinlenmeKaydiAyristir, dinlenmeKaydiUret } from '@grind/shared/lib/dinlenme';
 
 /**
  * Dinlenme sayaci durumu (#274 ile set panelinden ayrildi: panel kartin icinde, sayac listenin
- * sonunda -- ikisi de ekrandan bu tek durumu kullanir).
+ * sonunda -- ikisi de ekrandan bu tek durumu kullanir). Durumun kendisi artik burada DEGIL,
+ * paylasilan Context'te yasar (bkz. restTimer.tsx) -- ust kabuktaki kompakt gosterge AYNI degeri
+ * okuyabilsin diye. Bu kanca yalnizca kalici depo (SecureStore) ile GERI YUKLEME/senkronizasyon
+ * mantigini yurutmeye devam eder.
  *
  * Issue #190: sayfa degisip geri donulunce (bilesen unmount/remount olunca -- sekme degisimi,
  * uygulama arka plana atilip geri gelmesi) sayac kaybolmasin. `bitisMs` mutlak zaman damgasi
@@ -19,7 +18,7 @@ import {
  */
 export function useDinlenme(egzersizId: number | null) {
   const { data: acikOturum, isLoading: oturumYukleniyor } = useOpenSession();
-  const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
+  const [dinlenme, setDinlenme] = useRestTimer();
 
   // Bu oturum icin GERI YUKLEME yalnizca BIR KEZ denenir -- aksi halde "Atla" ile temizlenen bir
   // sayac depodan geri gelebilir.
