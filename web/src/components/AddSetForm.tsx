@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, X } from 'lucide-react';
+import { CircleCheck, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
+import { useRestTimer } from '@grind/shared/restTimer';
 import { queryKeys, useAddSet, useExercises, useOpenSession, type Egzersiz } from '../api/queries';
 import { apiHatasiniAyir } from '../lib/apiErrors';
 import { adaGoreSirala } from '../lib/egzersizler';
@@ -14,7 +15,6 @@ import {
   dinlenmeKaydiAyristir,
   dinlenmeKaydiUret,
   dinlenmeSuresi,
-  type Dinlenme,
 } from '../lib/dinlenme';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '../lib/setGirdisi';
 import { sesiHazirla } from '../lib/uyari';
@@ -23,7 +23,6 @@ import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
 import SecimKutusu from '../ui/SecimKutusu';
-import DinlenmeSayaci from './DinlenmeSayaci';
 import HareketEklePaneli from './HareketEklePaneli';
 
 /**
@@ -49,13 +48,25 @@ interface Props {
   acik: boolean;
   onAcikDegis: (acik: boolean) => void;
   /**
-   * Acik antrenmanda verilir (#62). Verildiginde kapali alan "Hareket ekle"dir ve paneldeki hareket
-   * secimi KALKAR: hareket karttan gelir, panel basligi onu gosterir. Verilmezse (antrenman yokken)
-   * bugunku davranis (#61'e kadar) korunur.
+   * Acik antrenmanda verilir (#62). Verildiginde paneldeki hareket secimi KALKAR: hareket karttan
+   * gelir, panel basligi onu gosterir. Verilmezse (antrenman yokken) bugunku davranis (#61'e kadar)
+   * korunur. Acilip kapanma durumu artik AntrenmanPage'de tutulur (issue #273) -- ust basliktaki
+   * "Hareket ekle" kisayolu da AYNI durumu acabilsin diye.
    */
   hareketEkleme?: {
     egzersizler: readonly Egzersiz[];
     onEkle: (exerciseId: number) => void;
+    acik: boolean;
+    onAcikDegis: (acik: boolean) => void;
+    /**
+     * Set girilmis (dolu) bir oturumda alta yapisik kutuda "Antrenmani bitir" durur. Bos oturumda
+     * (#47) yerine `iptalCagrisi` verilir -- ikisi ASLA ayni anda verilmez, kutu HER ZAMAN
+     * ikisinden birini gosterir (yeni ust bas tasarim: "Hareket ekle" artik ust baslikta sabit,
+     * bu kutu yalnizca bitirme/iptal icin).
+     */
+    bitirCagrisi?: { onBitir: () => void };
+    /** Bos oturumda (#47) "Antrenmani bitir" yerine gosterilen iptal eylemi -- bkz. `bitirCagrisi`. */
+    iptalCagrisi?: { onIptal: () => void; beklemede?: boolean };
   };
 }
 
@@ -77,7 +88,6 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
 
   const siraliEgzersizler = useMemo(() => adaGoreSirala(egzersizler ?? []), [egzersizler]);
   const seciliEgzersizAdi = siraliEgzersizler.find((eg) => eg.id === egzersizId)?.name ?? '';
-  const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -90,7 +100,10 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
   const [sonEklenen, setSonEklenen] = useState<string | null>(null);
 
   // Spec Karar 6: her basarili set sonrasi yeniden baslar; hareket secimini degistirmek durdurmaz.
-  const [dinlenme, setDinlenme] = useState<Dinlenme | null>(null);
+  // Durum artik burada DEGIL, paylasilan Context'te yasar (bkz. restTimer.tsx) -- ust kabuktaki
+  // kompakt gosterge AYNI degeri okuyabilsin diye. Kalici depoya (localStorage) kaydetme mantigi
+  // asagida DEGISMEDI, sadece durumun kendisi tasindi.
+  const [dinlenme, setDinlenme] = useRestTimer();
 
   // Issue #190: sayfa degisip geri donulunce (bilesen unmount/remount olunca) sayac kaybolmasin --
   // `bitisMs` mutlak zaman damgasi oldugu icin kalici depodan (localStorage) okunan kayit dogru
@@ -198,13 +211,14 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
         reps: ayristirilmisTekrar,
         rir: ayristirilmisRir,
       });
-      // Basarili gonderimden sonra egzersiz/agirlik/tekrar KORUNUR -- ust uste ayni seti girmek
-      // en sik akis (spec Karar 6). Odak agirlik alanina doner.
+      // Set eklenince panel KAPANIR (kullanici karari; spec Karar 6'nin "acik kalsin" davranisi
+      // geri alindi): eklenen set kartta gorunur ve dinlenme sayaci ust barda baslar -- ikisi de
+      // panelin arkasinda kalirdi. Yazilanlar korunur, panel yeniden acilinca yerindedir.
       setSonEklenen(
         t('setler.eklendi', { agirlik: formatWeight(ayristirilmisAgirlik, dil), tekrar: ayristirilmisTekrar }),
       );
       setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(acikOturum?.progress ?? [], egzersizId)));
-      agirlikRef.current?.focus();
+      onAcikDegis(false);
     } catch (hata) {
       if (hata instanceof ApiError) {
         // Sunucu CreateSetRequest icin alan bazli DataAnnotations hatalari (orn. Weight/Reps
@@ -232,31 +246,50 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
     }
   }
 
-  // #226: alta yapisik kutu yalnizca bir sey gosterirken cizilir (sayac calisiyor ya da set paneli
-  // acik). Sarmalayici yine de kalir -- DinlenmeSayaci'nin canli bolgesi hep bagli olmali.
-  const altPanelGorunur = !hareketEkleme || acik || dinlenme !== null;
+  // Alta yapisik kutu yalnizca bir sey gosterirken cizilir (hareket ekle paneli acik ya da set
+  // paneli acik). Sarmalayici yine de kalir -- canli bolgeler hep bagli olmali.
+  const altPanelGorunur = !hareketEkleme || acik;
 
   return (
     <>
+      {/* Eklenen seti duyuran canli bolge panelin DISINDA ve HER ZAMAN monte: set eklenince panel
+          kapandigi icin form icindeki bir bolge okunmadan yok olurdu. Gorsel karsiligi yok --
+          geri bildirim kartta beliren set satiri ve ust bardaki dinlenme sayacidir. */}
+      <p role="status" className="sr-only">
+        {sonEklenen}
+      </p>
       {hareketEkleme && (
-        // #62: acik antrenmanda set ekleme karta dokununca acilir. #226: "Hareket ekle" alta yapisik
-        // DEGIL, kartlarin hemen ardinda akisin icindedir -- uzun listede ekrani ortuyordu.
+        // #62: acik antrenmanda set ekleme karta dokununca acilir. #226: bu kutu alta yapisik DEGIL,
+        // kartlarin hemen ardinda akisin icindedir -- uzun listede ekrani ortuyordu. Bitir/iptal
+        // yer degisimi (#273 devami): "Hareket ekle" artik ust baslikta HER ZAMAN sabit durur; bu
+        // kutu artik yalnizca "Antrenmani bitir" (dolu oturum) ya da "Antrenmani iptal et" (bos
+        // oturum) gosterir -- ikisi AYNI konumda, oturum durumuna gore biri.
         <div className="flex flex-col gap-2">
-          {hareketEkleAcik ? (
+          {hareketEkleme.acik ? (
             <HareketEklePaneli
               egzersizler={hareketEkleme.egzersizler}
               onSec={(exerciseId) => {
-                setHareketEkleAcik(false);
+                hareketEkleme.onAcikDegis(false);
                 hareketEkleme.onEkle(exerciseId);
               }}
-              onKapat={() => setHareketEkleAcik(false)}
+              onKapat={() => hareketEkleme.onAcikDegis(false)}
             />
-          ) : (
-            <BirincilDugme yukseklik="normal" aria-expanded={false} onClick={() => setHareketEkleAcik(true)}>
-              <Plus aria-hidden size={20} />
-              {t('antrenman.hareketEkle')}
+          ) : hareketEkleme.bitirCagrisi ? (
+            <BirincilDugme yukseklik="normal" onClick={hareketEkleme.bitirCagrisi.onBitir}>
+              <CircleCheck aria-hidden size={20} />
+              {t('antrenman.bitir')}
             </BirincilDugme>
-          )}
+          ) : hareketEkleme.iptalCagrisi ? (
+            <button
+              type="button"
+              onClick={hareketEkleme.iptalCagrisi.onIptal}
+              disabled={hareketEkleme.iptalCagrisi.beklemede}
+              className="flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-surface-3 text-body-lg font-bold text-danger disabled:opacity-60"
+            >
+              <X aria-hidden size={20} />
+              {t('antrenman.iptalEt')}
+            </button>
+          ) : null}
         </div>
       )}
       {/* I1 (review bulgusu): `fixed` yerine `sticky` -- TodayPage'in koku bu bilesenin son cocugu
@@ -271,7 +304,6 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
             altPanelGorunur ? 'mx-auto flex max-w-md flex-col gap-2 rounded-xl bg-surface-3 p-3 shadow-2xl' : undefined
           }
         >
-          <DinlenmeSayaci dinlenme={dinlenme} onDegis={setDinlenme} />
           {!acik && !hareketEkleme && (
             <BirincilDugme
               ref={acmaDugmesiRef}
@@ -350,9 +382,6 @@ export default function AddSetForm({ egzersizId, onEgzersizSec, acik, onAcikDegi
                 hata={alanHatalari.rir}
               />
             </div>
-            <p role="status" className="min-h-4 text-label text-muted">
-              {sonEklenen}
-            </p>
             <BirincilDugme type="submit" yukseklik="buyuk" disabled={eklemeMutasyonu.isPending}>
               <Plus aria-hidden size={24} />
               {t('setler.setEkle')}

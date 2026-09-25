@@ -25,3 +25,18 @@ export function oturumdanSablonHareketleri(ilerleme: readonly HareketIlerlemesi[
     restSeconds: hareket.restSeconds,
   }));
 }
+
+/**
+ * Antrenman bir sablonla baslamis olsa bile, sablonda OLMAYAN bir hareket eklendiyse listesi artik
+ * o sablonu yansitmaz -- bitirirken "yeni bir sablon olarak kaydedilsin mi?" diye sorulur.
+ *
+ * Yalnizca EKLEME sayilir: sablondaki bir hareketi atlamak (ya da kaldirmak) yeni bir sablon
+ * istegi anlamina gelmez -- o gun o hareketi yapmamis olmak sablonu degistirmez.
+ */
+export function sablondaOlmayanHareketVarMi(
+  ilerleme: readonly HareketIlerlemesi[],
+  sablonHareketleri: readonly { exerciseId: number }[],
+): boolean {
+  const sablondakiler = new Set(sablonHareketleri.map((hareket) => hareket.exerciseId));
+  return ilerleme.some((hareket) => !sablondakiler.has(hareket.exerciseId));
+}

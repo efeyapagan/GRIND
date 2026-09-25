@@ -105,6 +105,13 @@ export function sahteBackendOlustur() {
       return state.acikOturum;
     }
 
+    // #47: set girilmemis antrenmani iptal etmek -- gercek backend gibi oturumu tamamen siler.
+    if (method === 'DELETE' && /^\/sessions\/\d+$/.test(path)) {
+      state.acikOturum = null;
+      state.setler = [];
+      return undefined;
+    }
+
     if (method === 'POST' && /^\/sessions\/\d+\/finish$/.test(path)) {
       const bitmis = {
         ...state.acikOturum,
