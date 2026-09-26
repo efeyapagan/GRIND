@@ -97,9 +97,14 @@ Detaylı kurallar `solid-dry-kiss` skill'inde — kod yazmadan veya inceleme yap
 devreye girmeli. Bir tasarım kararı bu prensiplerden birine aykırıysa, kararı uygulamadan önce
 gerekçesini açıkla.
 
-## Çok Dil (Türkçe + İngilizce) — ZORUNLU
-Uygulama iki dillidir (#177); her geliştirme İngilizceyi de kapsar, "önce Türkçe, İngilizce sonra"
-yoktur (#202).
+## Çok Dil — ZORUNLU
+Uygulama çok dillidir (#177, #263); her geliştirme desteklenen TÜM dilleri kapsar, "önce Türkçe,
+diğerleri sonra" yoktur (#202).
+- **Kullanıcı kararı (2026-09-26): mobilde yapılan HER iş, o an elimizdeki BÜTÜN dilleri kapsar.**
+  Desteklenen dillerin listesi `packages/shared/src/i18n/dil.ts`teki `DILLER`'dir; bugün `tr` + `en`,
+  yarın bir dil eklenirse kural kendiliğinden onu da kapsar. Bir ekran/metin yalnızca bir dilde
+  eklenip "diğerleri sonraki dilimde" denmez — eksik anahtar zaten `katalog.test.ts`te patlar,
+  ama kural testten önce gelir: yeni metin **aynı commit'te** her katalogda olur.
 - Kullanıcıya görünen yeni ya da değişen her metin — etiket, buton, boş durum, hata/uyarı, onay
   diyaloğu, `aria-label`/`title`/`placeholder`, sayfa başlığı — satır içi yazılmaz;
   `packages/shared/src/i18n/tr.ts` ve `en.ts`'e **aynı commit'te** eklenir ve `t(...)` ile kullanılır.
