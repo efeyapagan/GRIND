@@ -15,3 +15,10 @@ public record RecordSessionEvent(long SessionId, DateTime OccurredAt, UserRef Ac
 public record RecordSetRow(
     long SessionId, long ExerciseId, string ExerciseName, decimal Weight, int Reps,
     RecordType RecordType, DateTime CreatedAt, int? OrderIndex);
+
+/// <summary>
+/// #419: bir arkadaşın haftalık hedefe sayılabilecek bir antrenmanı. Hangi oturumun hedefi
+/// TAMAMLADIĞI burada değil <c>WeeklyGoalCompletion</c>'da karara bağlanır -- sorgu yalnızca ham
+/// satırları getirir (hedef de satırla birlikte gelir ki kişi başına ikinci sorgu gerekmesin).
+/// </summary>
+public record FriendSessionDayRow(long SessionId, DateTime StartedAt, int WeeklyTargetDays, UserRef Actor);

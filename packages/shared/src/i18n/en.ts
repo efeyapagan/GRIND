@@ -441,6 +441,7 @@ export const en: Katalog = {
     bos: 'No notifications yet',
     bosAciklama: 'New notifications will show up here.',
     takipEtti: '{{ad}} started following you',
+    hedefiTamamladi: '{{ad}} completed their weekly goal',
     artikArkadassiniz: "You're now friends",
     rekorKirdi_one: '{{ad}} set a record in {{count}} exercise',
     rekorKirdi_other: '{{ad}} set records in {{count}} exercises',
