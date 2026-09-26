@@ -359,6 +359,7 @@ export const en: Katalog = {
     saatBirimi: 'h',
     dakikaBirimi: 'min',
     bosDurumMetni: 'No sets in this workout.',
+    detayiKapat: 'Close workout details',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Est. 1RM',
