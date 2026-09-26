@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, CirclePlay, Plus, X } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import { hedefTamamlandi } from '@grind/shared/lib/ilerleme';
+import { gecilmisRekorIdleri } from '@grind/shared/lib/rekor';
 import SetSatiri from './SetSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { useIkonRenk } from '../ui/renkler';
@@ -34,6 +36,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
   const { t } = useTranslation();
   const tamamlandi = hedefTamamlandi(hareket);
   const sayac = setSayaci(hareket);
+  const gecilmisRekorlar = useMemo(() => gecilmisRekorIdleri(setler), [setler]);
   const baslik = (
     <>
       <View className="min-w-0 flex-1 flex-row items-center gap-2">
@@ -74,7 +77,13 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
       {setler.length > 0 && (
         <View className="flex-col gap-1">
           {setler.map((kayit, setSirasi) => (
-            <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onDuzenle={onSetDuzenle} />
+            <SetSatiri
+              key={kayit.id}
+              kayit={kayit}
+              sira={setSirasi + 1}
+              rekorGecildi={gecilmisRekorlar.has(kayit.id)}
+              onDuzenle={onSetDuzenle}
+            />
           ))}
         </View>
       )}
