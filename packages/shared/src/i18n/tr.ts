@@ -52,6 +52,7 @@ export const tr = {
   rekor: {
     agirlik: 'Ağırlık rekoru',
     tekrar: 'Tekrar rekoru',
+    gecildi: 'geçildi',
   },
   setGirdisi: {
     agirlikGerekli: 'Ağırlık girilmeli.',

@@ -50,6 +50,7 @@ export const en: Katalog = {
   rekor: {
     agirlik: 'Weight PR',
     tekrar: 'Reps PR',
+    gecildi: 'surpassed',
   },
   setGirdisi: {
     agirlikGerekli: 'Enter a weight.',
