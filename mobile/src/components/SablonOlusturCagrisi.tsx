@@ -2,7 +2,7 @@ import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import BirincilDugme from '../ui/BirincilDugme';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 /**
  * web/src/components/SablonOlusturCagrisi.tsx ile ayni (issue #61). #272: kaydedince donulen yer
@@ -10,6 +10,7 @@ import { ikonRenk } from '../ui/renkler';
  * olusturdugu sablonla hemen antrenmana baslayabilsin.
  */
 export default function SablonOlusturCagrisi() {
+  const ikonRenk = useIkonRenk();
   const router = useRouter();
 
   return (

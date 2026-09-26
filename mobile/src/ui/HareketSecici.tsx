@@ -4,7 +4,7 @@ import { Check, Search, X } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
   { deger: null, etiket: 'Tümü' },
@@ -47,6 +47,7 @@ export default function HareketSecici({
   listeYukari = false,
   onKapat,
 }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');

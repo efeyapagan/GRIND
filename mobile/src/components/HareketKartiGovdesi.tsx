@@ -4,7 +4,7 @@ import { Check, CirclePlay, Plus, X } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import SetSatiri from './SetSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   hareket: HareketIlerlemesi;
@@ -29,6 +29,7 @@ function setSayaci(hareket: HareketIlerlemesi): string {
  * birlikte acilan odak karti (`OdakKarti`) ayni govdeyi cizer; yuzeyi ve ek ayrintilari cagiran verir.
  */
 export default function HareketKartiGovdesi({ hareket, sira, setler, onSetSil, onSec, onKapat }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const tamamlandi = hareket.plannedSets !== null && hareket.completedSets >= hareket.plannedSets;
   const sayac = setSayaci(hareket);

@@ -13,7 +13,8 @@ import BirincilDugme from '../../../src/ui/BirincilDugme';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import HaftalikHedefSatiri from '../../../src/components/HaftalikHedefSatiri';
 import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
-import { ikonRenk } from '../../../src/ui/renkler';
+import TemaSecici from '../../../src/components/TemaSecici';
+import { useIkonRenk } from '../../../src/ui/renkler';
 
 const MIN_SIFRE_KARAKTER = 8;
 const MAKS_SIFRE_BAYT = 72;
@@ -32,6 +33,7 @@ function sifreUzunlugunuDogrula(sifre: string): string | null {
  * sekme degil, profil basligindaki Hesap ayarlari dugmesinin actigi ekran.
  */
 export default function AccountScreen() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   usePageTitle(t('ortak.hesapAyarlari'));
   const { username, updateProfile, logout } = useAuth();
@@ -46,6 +48,7 @@ export default function AccountScreen() {
       </View>
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <GizlilikSeviyesiSecici />
+        <TemaSecici />
       </View>
       <Pressable
         onPress={logout}

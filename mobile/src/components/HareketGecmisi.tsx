@@ -6,7 +6,7 @@ import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from 
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
 import CizgiGrafik, { type CizgiNoktasi } from '../ui/CizgiGrafik';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar';
 
@@ -41,6 +41,7 @@ interface Props {
 
 /** web/src/components/HareketGecmisi.tsx ile ayni (#50): varsayilan KAPALI acilir bolum. */
 export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
+  const ikonRenk = useIkonRenk();
   const [acik, setAcik] = useState(false);
 
   return (

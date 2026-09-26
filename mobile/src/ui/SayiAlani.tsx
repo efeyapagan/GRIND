@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { View, Text, TextInput, type TextInput as TextInputType } from 'react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props {
   id: string;
@@ -21,6 +21,7 @@ const SayiAlani = forwardRef<TextInputType, Props>(function SayiAlani(
   { id, etiket, birim, inputMode, placeholder, value, onChange, hata },
   ref,
 ) {
+  const ikonRenk = useIkonRenk();
   return (
     <View className="flex flex-col gap-1">
       <View className="relative">

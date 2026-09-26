@@ -1,6 +1,6 @@
 import { View, Text, TextInput, type TextInputProps } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 export interface AlanProps extends TextInputProps {
   id: string;
@@ -16,6 +16,7 @@ export interface AlanProps extends TextInputProps {
  * Giris/kayit alani (spec, ortak auth duzeni): etiket ustte, solda sus ikonu, altta ipucu ve hata.
  */
 export default function Alan({ id, etiket, ikon: Ikon, ipucu, hata, sagEk, ...girdi }: AlanProps) {
+  const ikonRenk = useIkonRenk();
   return (
     <View className="flex flex-col gap-1">
       <Text nativeID={`${id}-etiket`} className="text-label text-fg">

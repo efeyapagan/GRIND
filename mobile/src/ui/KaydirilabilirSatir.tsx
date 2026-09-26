@@ -8,7 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Trash2 } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 const ACILMA_GENISLIGI = 96;
 const ACILMA_ESIGI = ACILMA_GENISLIGI / 2;
@@ -41,6 +41,7 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
   { onSil, silEtiketi, children },
   ref,
 ) {
+  const ikonRenk = useIkonRenk();
   const translateX = useSharedValue(0);
   const baslangicX = useSharedValue(0);
   const [acik, setAcik] = useState(false);

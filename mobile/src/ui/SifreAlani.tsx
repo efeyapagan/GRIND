@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Eye, EyeOff, Lock, type LucideIcon } from 'lucide-react-native';
 import Alan, { type AlanProps } from './Alan';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 type Props = Omit<AlanProps, 'secureTextEntry' | 'sagEk' | 'ikon'> & {
   ikon?: LucideIcon;
@@ -11,6 +11,7 @@ type Props = Omit<AlanProps, 'secureTextEntry' | 'sagEk' | 'ikon'> & {
 
 /** Sifre alani + goster/gizle dugmesi (spec davranis 2). */
 export default function SifreAlani({ ikon = Lock, gosterEtiketi = 'Şifreyi göster', ...alan }: Props) {
+  const ikonRenk = useIkonRenk();
   const [gorunur, setGorunur] = useState(false);
   const GozIkonu = gorunur ? EyeOff : Eye;
 

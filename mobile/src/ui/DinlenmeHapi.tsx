@@ -1,10 +1,11 @@
 import { View, Text } from 'react-native';
 import { Timer } from 'lucide-react-native';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 /** Setten once GERCEKTE ne kadar dinlenildigi (#71), `m:ss`. `null` = oturumun ilk seti. */
 export default function DinlenmeHapi({ saniye }: { saniye: number | null }) {
+  const ikonRenk = useIkonRenk();
   if (saniye === null) {
     return null;
   }

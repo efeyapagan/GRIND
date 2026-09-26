@@ -9,7 +9,7 @@ import Alan from '../src/ui/Alan';
 import SifreAlani from '../src/ui/SifreAlani';
 import HataKutusu from '../src/ui/HataKutusu';
 import BirincilDugme from '../src/ui/BirincilDugme';
-import { ikonRenk } from '../src/ui/renkler';
+import { useIkonRenk } from '../src/ui/renkler';
 
 // Sunucudaki DataAnnotations kurallarinin AYNISI (Grind.Api RegisterRequest) -- web/src/pages/RegisterPage.tsx.
 const KULLANICI_ADI_DESENI = /^[a-zA-Z0-9_-]{3,50}$/;
@@ -18,6 +18,7 @@ const MAKS_SIFRE_BAYT = 72;
 const BILINEN_ALANLAR = ['username', 'password'];
 
 export default function RegisterScreen() {
+  const ikonRenk = useIkonRenk();
   const { register } = useAuth();
   const router = useRouter();
 

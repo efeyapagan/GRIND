@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Tema renkleri (#271). Tailwind sınıfları (`bg-surface-1`, `text-muted` ...) bu değişkenleri
+ * okur; NativeWind koyu temada kök elemana `dark` sınıfını takar, bu yüzden koyu blok
+ * `.dark:root` seçicisindedir (`.dark` TEK BAŞINA çalışmaz — ilk denemede tam olarak bu yüzden
+ * CSS açık, JS koyu kalmıştı).
+ *
+ * Değerler `packages/shared/src/designTokens.ts`teki paletlerin birebir kopyasıdır: NativeWind
+ * (Tailwind v3) CSS değişkenlerini derleme zamanında bir CSS dosyasından okumak zorunda, JS
+ * tarafı (lucide ikonları, SVG grafikler) ise aynı değerleri TS'ten okur. İkisinin kayması
+ * `mobile/src/ui/renkler.test.ts` ile engellenir — elle güncellerken ORAYA da bak.
+ */
+@layer base {
+  :root {
+    --color-bg: #fdf8f6;
+    --color-inset: #ffffff;
+    --color-surface-1: #f8f2ef;
+    --color-surface-2: #f2ece9;
+    --color-surface-3: #ece6e3;
+    --color-surface-4: #e7e0dd;
+    --color-fg: #1d1b1a;
+    --color-muted: #5b5654;
+    --color-accent: #ff5722;
+    --color-on-accent: #541200;
+    --color-accent-soft: #a03500;
+    --color-accent-fg: #a03500;
+    --color-danger: #ba1a1a;
+    --color-danger-bg: #ffdad6;
+    --color-on-danger-bg: #410002;
+    --color-success: #1b7a36;
+    --color-on-success: #ffffff;
+  }
+
+  .dark:root {
+    --color-bg: #121316;
+    --color-inset: #0d0e11;
+    --color-surface-1: #1b1b1f;
+    --color-surface-2: #1f1f23;
+    --color-surface-3: #292a2d;
+    --color-surface-4: #343538;
+    --color-fg: #e3e2e6;
+    --color-muted: #c5c6c8;
+    --color-accent: #ff5722;
+    --color-on-accent: #541200;
+    --color-accent-soft: #ffb5a0;
+    --color-accent-fg: #ff5722;
+    --color-danger: #ffb4ab;
+    --color-danger-bg: #93000a;
+    --color-on-danger-bg: #ffdad6;
+    --color-success: #6fdc8c;
+    --color-on-success: #00391b;
+  }
+}

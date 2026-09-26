@@ -5,9 +5,8 @@ import { useRouter, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell, Home, User, type LucideIcon } from 'lucide-react-native';
-import { renkler } from '@grind/shared/designTokens';
 import CamYuzey from './CamYuzey';
-import { ikonRenk } from './renkler';
+import { useIkonRenk, useRenkPaleti } from './renkler';
 
 /**
  * Alt menu (issue #338, kullanici referansi: iOS 26 "liquid glass" sekme cubugu): icerigin USTUNDE
@@ -42,6 +41,8 @@ const stiller = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Balonun RENGI burada degil, cizim sirasinda paletten okunur (#271): StyleSheet modul
+  // seviyesinde bir kez hesaplanir ve tema degisince guncellenmezdi.
   balon: {
     position: 'absolute',
     top: 0,
@@ -49,7 +50,6 @@ const stiller = StyleSheet.create({
     bottom: 0,
     left: 0,
     borderRadius: HAP_H / 2,
-    backgroundColor: renkler['surface-4'],
   },
 });
 
@@ -78,7 +78,9 @@ const KAPANIS_MS = 150;
 const BASLANGIC_OLCEGI = 0.5;
 
 function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
+  const ikonRenk = useIkonRenk();
   const router = useRouter();
+  const palet = useRenkPaleti();
   const renk = aktif ? ikonRenk.accentSoft : ikonRenk.muted;
 
   // 0 = pasif (balon kucuk ve gorunmez), 1 = aktif (balon tam boy).
@@ -104,7 +106,7 @@ function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
           sonradan eklemek Android'de koseleri dusuruyordu (#338, emulatorde goruldu). `collapsable`:
           arkaplansiz hap Android'de "duzlestirilip" yerel tarafta hic olusturulmuyordu. */}
       <View collapsable={false} style={stiller.hap}>
-        <Animated.View pointerEvents="none" style={[stiller.balon, balonStili]} />
+        <Animated.View pointerEvents="none" style={[stiller.balon, { backgroundColor: palet['surface-4'] }, balonStili]} />
         <Ikon color={renk} size={22} />
         <Text className={`text-label ${aktif ? 'text-accent-soft' : 'text-muted'}`}>{etiket}</Text>
       </View>

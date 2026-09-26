@@ -1,7 +1,7 @@
 import { Pressable, Text, type PressableProps } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import Parilti from './Parilti';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props extends PressableProps {
   secili: boolean;
@@ -15,6 +15,7 @@ interface Props extends PressableProps {
  * Aktif sekmede alt cizgiden yukari sonen turuncu parilti (#243).
  */
 export default function SekmeDugmesi({ secili, children, ikon: Ikon, ...dugme }: Props) {
+  const ikonRenk = useIkonRenk();
   return (
     <Pressable
       accessibilityRole="tab"

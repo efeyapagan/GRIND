@@ -19,7 +19,7 @@ import IkincilDugme from '../../../src/ui/IkincilDugme';
 import IkonDugmesi from '../../../src/ui/IkonDugmesi';
 import BosDurum from '../../../src/ui/BosDurum';
 import HataKutusu from '../../../src/ui/HataKutusu';
-import { ikonRenk } from '../../../src/ui/renkler';
+import { useIkonRenk } from '../../../src/ui/renkler';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
@@ -47,6 +47,7 @@ interface OlcumGovdesi {
  * 409 doner.
  */
 export default function MeasurementsScreen() {
+  const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
@@ -340,6 +341,7 @@ interface OlcuKartiProps {
 }
 
 function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+  const ikonRenk = useIkonRenk();
   const dil = useDil();
   if (onayAcik) {
     return (

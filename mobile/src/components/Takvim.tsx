@@ -20,7 +20,7 @@ import {
   type TakvimGorunumu,
 } from '@grind/shared/lib/takvim';
 import IkonDugmesi from '../ui/IkonDugmesi';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
 
@@ -37,6 +37,7 @@ interface Props {
  * duz `flex-row` satirlariyla kurulur (web'deki `grid-cols-7` yerine).
  */
 export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   const router = useRouter();
@@ -209,6 +210,7 @@ function GunHucresi({
   setSayisi: number | null;
   onPress: () => void;
 }) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   return (

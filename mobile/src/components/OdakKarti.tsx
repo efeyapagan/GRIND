@@ -7,7 +7,7 @@ import HareketGecmisi from './HareketGecmisi';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
 import CamYuzey from '../ui/CamYuzey';
 import IkonDugmesi from '../ui/IkonDugmesi';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   hareket: HareketIlerlemesi;
@@ -29,6 +29,7 @@ interface Props {
  * gecmisi, siralama, kaldirma) kendi icinde kayar.
  */
 export default function OdakKarti({ hareket, idler, setler, onSetSil, onSiraDegis, onKaldir, onKapat }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
   return (

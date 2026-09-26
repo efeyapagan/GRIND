@@ -1,7 +1,8 @@
 import { useId } from 'react';
 import { View } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { renkler } from '@grind/shared/designTokens';
+import { useRenkPaleti } from './renkler';
+
 
 interface Props {
   /** `alt`: sekmenin alt cizgisinden yukari sonen serit. `daire`: ikonun arkasinda disa sonen hale. */
@@ -17,6 +18,7 @@ const DAIRE_BOYUTU = 48;
  * bundan SONRA gelmeli ki parilti onun altinda kalsin.
  */
 export default function Parilti({ bicim }: Props) {
+  const palet = useRenkPaleti();
   // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir.
   const id = `parilti${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const daire = bicim === 'daire';
@@ -38,13 +40,13 @@ export default function Parilti({ bicim }: Props) {
         <Defs>
           {daire ? (
             <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={renkler.accent} stopOpacity={0.3} />
-              <Stop offset="0.7" stopColor={renkler.accent} stopOpacity={0} />
+              <Stop offset="0" stopColor={palet.accent} stopOpacity={0.3} />
+              <Stop offset="0.7" stopColor={palet.accent} stopOpacity={0} />
             </RadialGradient>
           ) : (
             <LinearGradient id={id} x1="0" y1="1" x2="0" y2="0">
-              <Stop offset="0" stopColor={renkler.accent} stopOpacity={0.2} />
-              <Stop offset="1" stopColor={renkler.accent} stopOpacity={0} />
+              <Stop offset="0" stopColor={palet.accent} stopOpacity={0.2} />
+              <Stop offset="1" stopColor={palet.accent} stopOpacity={0} />
             </LinearGradient>
           )}
         </Defs>

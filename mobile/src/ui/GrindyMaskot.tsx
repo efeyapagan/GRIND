@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
-import { renkler } from '@grind/shared/designTokens';
+import { useRenkPaleti } from './renkler';
+
 
 interface Props {
   boyut?: number;
@@ -15,8 +16,9 @@ interface Props {
  */
 export default function GrindyMaskot({ boyut = 56, dekoratif = false }: Props) {
   const { t } = useTranslation();
-  const govde = renkler.accent;
-  const yuz = renkler['on-accent'];
+  const palet = useRenkPaleti();
+  const govde = palet.accent;
+  const yuz = palet['on-accent'];
   return (
     <View
       {...(dekoratif
