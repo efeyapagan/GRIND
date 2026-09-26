@@ -1,9 +1,11 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { useFinishSession, useOpenSession, useTemplate } from '@grind/shared/api/queries';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { oturumBittiTazele, useFinishSession, useOpenSession, useTemplate } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import AntrenmanBitirScreen from '../../../app/(tabs)/antrenman-bitir';
 
 jest.mock('@grind/shared/api/queries', () => ({
+  oturumBittiTazele: jest.fn(),
   useFinishSession: jest.fn(),
   useOpenSession: jest.fn(),
   useTemplate: jest.fn(),
@@ -20,6 +22,7 @@ jest.mock('expo-router', () => ({
 const useOpenSessionMock = useOpenSession as jest.Mock;
 const useFinishSessionMock = useFinishSession as jest.Mock;
 const useTemplateMock = useTemplate as jest.Mock;
+const oturumBittiTazeleMock = oturumBittiTazele as jest.Mock;
 
 const ACIK_OTURUM = {
   id: 7,
@@ -33,15 +36,18 @@ const ACIK_OTURUM = {
 
 function ekraniOlustur() {
   return render(
-    <PageTitleProvider>
-      <AntrenmanBitirScreen />
-    </PageTitleProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <PageTitleProvider>
+        <AntrenmanBitirScreen />
+      </PageTitleProvider>
+    </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
   mockReplace.mockReset();
   mockBack.mockReset();
+  oturumBittiTazeleMock.mockReset();
   useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
   useFinishSessionMock.mockReturnValue({ mutate: jest.fn(), isPending: false, isError: false });
   // Varsayilan: sablonsuz oturum -- sapma karsilastirmasi icin sablon yok.
@@ -92,6 +98,33 @@ test('bitince ana sayfaya donulur', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
 
   await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+});
+
+/**
+ * #363: ana sayfa bitirmenin hemen ardından açılır; açık oturum önbelleği o anda temizlenmezse biten
+ * antrenmanın "Devam ediyor" kartı bir an çizilip kalkar ve takvim yerinden zıplar.
+ */
+test('bitince acik oturum onbellegi temizlenir', async () => {
+  const mutate = jest.fn((_govde, { onSuccess }) => onSuccess());
+  useFinishSessionMock.mockReturnValue({ mutate, isPending: false, isError: false });
+  await ekraniOlustur();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+
+  expect(oturumBittiTazeleMock).toHaveBeenCalled();
+});
+
+/**
+ * #363: önbellek temizlenince bu ekran, ana sayfaya geçmeden bir kez daha "açık oturum yok" ile
+ * çizilebilir. Bu, "kapatılacak antrenman yok" durumu DEĞİL — antrenmanı az önce kendisi kapattı;
+ * antrenman ekranına yönlendirmek ana sayfaya geçişi ezerdi.
+ */
+test('bitirdikten sonra acik oturum bosalinca antrenman ekranina yonlendirilmez', async () => {
+  useOpenSessionMock.mockReturnValue({ data: null, isLoading: false, isError: false });
+  useFinishSessionMock.mockReturnValue({ mutate: jest.fn(), isPending: false, isError: false, isSuccess: true });
+  await ekraniOlustur();
+
+  expect(screen.queryByText('yonlendirme:/antrenman')).toBeNull();
 });
 
 /**

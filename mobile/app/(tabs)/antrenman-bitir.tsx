@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useRouter } from 'expo-router';
-import { useFinishSession, useOpenSession, useTemplate, type Zorluk } from '@grind/shared/api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  oturumBittiTazele,
+  useFinishSession,
+  useOpenSession,
+  useTemplate,
+  type Zorluk,
+} from '@grind/shared/api/queries';
 import {
   oturumdanSablonHareketleri,
   sablondaOlmayanHareketVarMi,
@@ -49,6 +56,7 @@ export default function AntrenmanBitirScreen() {
   const { t } = useTranslation();
   usePageTitle(t('antrenman.nasilGecti'));
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: oturum, isLoading, isError } = useOpenSession();
   const bitirMutasyonu = useFinishSession();
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
@@ -100,6 +108,13 @@ export default function AntrenmanBitirScreen() {
     );
   }
 
+  // #363: antrenmanı bu ekran az önce kapattı ve açık oturum önbelleği boşaldı; ekran ana sayfaya
+  // geçerken bir kez daha çizilebilir. Bu "kapatılacak antrenman yok" değil -- aşağıdaki yönlendirme
+  // ana sayfaya geçişi ezerdi.
+  if (bitirMutasyonu.isSuccess) {
+    return null;
+  }
+
   // Kapatılacak antrenman yok (doğrudan açıldı ya da başka bir yerde kapandı): boş bir kadran
   // göstermek yerine antrenman ekranına dönülür.
   if (isError || !oturum) {
@@ -135,6 +150,8 @@ export default function AntrenmanBitirScreen() {
           } else {
             router.replace('/');
           }
+          // #363: ana sayfa biten antrenmanı "devam ediyor" diye bir an bile çizmesin.
+          oturumBittiTazele(queryClient);
         },
       },
     );
