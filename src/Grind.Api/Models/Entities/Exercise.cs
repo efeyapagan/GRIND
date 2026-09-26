@@ -19,6 +19,15 @@ public class Exercise
     public string? AlternateName { get; set; }
 
     public ExerciseCategory Category { get; set; }
+
+    /// <summary>
+    /// Hareketin ekipmanı (#413) — set girişindeki "Teki" / "Toplam" ibaresi buna bakar.
+    /// <c>null</c> = bilinmiyor, ibare gösterilmez. <see cref="AlternateName"/> gibi yalnızca global
+    /// egzersiz seed'inde set edilir; Create/Update uçları bu alanı kabul etmez (kullanıcının
+    /// hareket oluşturma arayüzü geldiğinde açılır).
+    /// </summary>
+    public ExerciseEquipment? Equipment { get; set; }
+
     public bool IsArchived { get; set; }
 
     public User? User { get; set; }

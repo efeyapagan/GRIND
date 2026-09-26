@@ -15,6 +15,7 @@ import CamYuzey from '../ui/CamYuzey';
 import IkincilDugme from '../ui/IkincilDugme';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
+import { useAgirlikIbaresi } from './useAgirlikIbaresi';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -33,6 +34,7 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const duzeltme = useUpdateSet();
+  const agirlikIbaresi = useAgirlikIbaresi(kayit.exerciseId);
   const [girdi, setGirdi] = useState(() => setGirdisiMetni(kayit));
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
@@ -76,6 +78,7 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
             id={`set-${kayit.id}-agirlik`}
             etiket={t('setGirdisi.agirlikEtiket')}
             birim="kg"
+            ipucu={agirlikIbaresi}
             inputMode="decimal"
             placeholder="0"
             value={girdi.agirlik}

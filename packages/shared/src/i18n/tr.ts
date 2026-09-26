@@ -61,6 +61,10 @@ export const tr = {
     tekrarTamSayiOlmali: 'Tekrar sayısı tam sayı olmalı.',
     agirlikEtiket: 'Ağırlık',
     agirlikBirimEki: ' (kg)',
+    // #413: ağırlık kutusunun sağ üstünde, hangi ağırlığın girileceğini söyler -- dumbbell'de TEK
+    // dumbbell'ın, makinede TOPLAM ağırlık. Kısa kalmalı: "kg"nin üstünde tek satır.
+    ibareTeki: 'Teki',
+    ibareToplam: 'Toplam',
     tekrarEtiket: 'Tekrar',
     tekrarBirimi: 'tekrar',
     rirEtiket: 'RIR',

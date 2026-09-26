@@ -6,6 +6,13 @@ interface Props {
   id: string;
   etiket: string;
   birim: string;
+  /**
+   * #413: birimin ne anlama geldigini soyleyen kisa ibare -- kutunun sag ust kosesinde, "kg"nin
+   * tam ustunde. Verilmezse hic cizilmez, kutu bugunku gibi kalir. Buyuk harfe CEVRILMEZ: sol
+   * ustteki etiketin `uppercase`i RN'de Turkce'ye duyarsizdir ("Teki" → "TEKI") ve zaten "kg" da
+   * kucuk yazilir.
+   */
+  ipucu?: string;
   inputMode: 'decimal' | 'numeric';
   placeholder: string;
   value: string;
@@ -18,7 +25,7 @@ interface Props {
  * TAMAMIDIR; etiket ve birim onun ustune bindirilir.
  */
 const SayiAlani = forwardRef<TextInputType, Props>(function SayiAlani(
-  { id, etiket, birim, inputMode, placeholder, value, onChange, hata },
+  { id, etiket, birim, ipucu, inputMode, placeholder, value, onChange, hata },
   ref,
 ) {
   const ikonRenk = useIkonRenk();
@@ -41,6 +48,11 @@ const SayiAlani = forwardRef<TextInputType, Props>(function SayiAlani(
         <Text className="pointer-events-none absolute top-2 left-2 text-label-xs text-muted uppercase">
           {etiket}
         </Text>
+        {ipucu && (
+          <Text className="pointer-events-none absolute top-2 right-2 text-label-xs text-muted">
+            {ipucu}
+          </Text>
+        )}
         <Text className="pointer-events-none absolute right-2 bottom-2.5 text-label-xs text-muted">
           {birim}
         </Text>

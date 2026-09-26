@@ -19,11 +19,19 @@ namespace Grind.Api.Models.Dtos.Exercise;
 /// "Pec Deck" / "Chest Fly Machine"). Yalnızca global egzersizlerde seed veriyle set edilir —
 /// Create/Update uçlarından yazılamaz (kapsam: #335).
 /// </param>
+/// <param name="Equipment">
+/// Hareketin ekipmanı (#413) — istemci ağırlık kutusuna buna göre "Teki" (dumbbell) ya da "Toplam"
+/// (makine) ibaresini koyar; eşleme <c>packages/shared/src/lib/agirlikIbaresi.ts</c>'te.
+/// <c>null</c> = bilinmiyor, ibare çizilmez. <paramref name="AlternateName"/> gibi yalnızca global
+/// egzersiz seed'inde set edilir — Create/Update uçlarından yazılamaz, yani kullanıcının kendi
+/// egzersizinde her zaman <c>null</c>.
+/// </param>
 public record ExerciseResponse(
     long Id,
     string Name,
     string? AlternateName,
     ExerciseCategory Category,
+    ExerciseEquipment? Equipment,
     bool IsArchived,
     bool IsGlobal,
     IReadOnlyList<ExerciseMediaResponse> Media);

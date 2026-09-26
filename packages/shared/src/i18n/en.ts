@@ -59,6 +59,8 @@ export const en: Katalog = {
     tekrarTamSayiOlmali: 'Reps must be a whole number.',
     agirlikEtiket: 'Weight',
     agirlikBirimEki: ' (kg)',
+    ibareTeki: 'Each',
+    ibareToplam: 'Total',
     tekrarEtiket: 'Reps',
     tekrarBirimi: 'reps',
     rirEtiket: 'RIR',

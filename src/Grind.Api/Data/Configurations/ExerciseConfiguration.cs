@@ -14,6 +14,9 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(e => e.Name).HasMaxLength(100).IsRequired();
         builder.Property(e => e.AlternateName).HasMaxLength(100);
         builder.Property(e => e.Category).HasConversion(new EnumToStringConverter<ExerciseCategory>()).HasMaxLength(20).IsRequired();
+        // #413: Category ile aynı desen — adıyla saklanır, yeni bir ekipman türü migration gerektirmez
+        // ama var olan adı değiştirmek eski satırları okunamaz yapar. Nullable: null = bilinmiyor.
+        builder.Property(e => e.Equipment).HasConversion(new EnumToStringConverter<ExerciseEquipment>()).HasMaxLength(20);
 
         builder.HasOne(e => e.User)
             .WithMany(u => u.Exercises)
