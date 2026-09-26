@@ -20,6 +20,18 @@ public class TemplatesController(IWorkoutTemplateService templateService) : Cont
         CancellationToken cancellationToken)
         => Ok(await templateService.GetAllAsync(cancellationToken));
 
+    /// <summary>
+    /// Şablon sırasını toptan yazar (#344). Gövde kullanıcının TÜM şablon id'lerini istenen
+    /// sırayla taşır; yanıt yeni sıradaki listedir — istemci ayrıca GET atmaz.
+    /// Rota <c>{id:long}</c> kalıbıyla çakışmaz: "order" long'a parse edilmez.
+    /// </summary>
+    [HttpPut("order")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<TemplateResponse>>> Reorder(
+        ReorderTemplatesRequest request, CancellationToken cancellationToken)
+        => Ok(await templateService.ReorderAsync(request, cancellationToken));
+
     [HttpGet("{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

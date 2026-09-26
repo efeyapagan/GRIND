@@ -38,3 +38,38 @@ export function yonleTasi<T>(liste: readonly T[], indeks: number, yon: -1 | 1): 
   [yeni[indeks], yeni[hedef]] = [yeni[hedef], yeni[indeks]];
   return yeni;
 }
+
+/**
+ * `anahtaraGoreTasi`nin indeksle calisan kardesi (#344): surukleme sirasinda elde anahtar degil
+ * konum vardir. Ayni tasima mantigi -- oge cikarilir, hedef konuma sokulur, aradakiler kayar.
+ */
+export function indeksleTasi<T>(liste: readonly T[], eskiIndeks: number, yeniIndeks: number): T[] {
+  const yeni = [...liste];
+  if (eskiIndeks === yeniIndeks || eskiIndeks < 0 || eskiIndeks >= liste.length) {
+    return yeni;
+  }
+  const [tasinan] = yeni.splice(eskiIndeks, 1);
+  yeni.splice(yeniIndeks, 0, tasinan);
+  return yeni;
+}
+
+/**
+ * Basili tutup surukleyerek sira degistirme (#344, mobil): parmagin dikey otelemesini hedef
+ * indekse cevirir. Bir satirin YARISINI gecen her oteleme bir sira tasir (`Math.round`), sonuc
+ * listenin uclarina sabitlenir. Hesap jestten ayri durur: gercek surukleme testte simule
+ * edilemez, ama bu formul edilebilir.
+ *
+ * `satirYuksekligi` 0 ise (satir henuz olculmediyse) bolme NaN uretirdi; oge yerinde birakilir.
+ */
+export function surukleHedefIndeksi(
+  baslangicIndeksi: number,
+  otelemeY: number,
+  satirYuksekligi: number,
+  adet: number,
+): number {
+  if (satirYuksekligi <= 0) {
+    return baslangicIndeksi;
+  }
+  const hedef = baslangicIndeksi + Math.round(otelemeY / satirYuksekligi);
+  return Math.min(adet - 1, Math.max(0, hedef));
+}

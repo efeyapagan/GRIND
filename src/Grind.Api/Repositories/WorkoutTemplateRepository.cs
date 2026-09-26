@@ -11,7 +11,10 @@ public class WorkoutTemplateRepository(AppDbContext context)
         long userId, CancellationToken cancellationToken = default)
         => await WithExercises(Set)
             .Where(t => t.UserId == userId)
-            .OrderBy(t => t.Name)
+            // #344: kullanıcının kendi sırası önce. Hiç sürüklenmemişse tüm OrderIndex'ler 0'dır
+            // ve liste ada göre sıralı kalır — bugünkü davranış, veri taşımadan korunur.
+            .OrderBy(t => t.OrderIndex)
+            .ThenBy(t => t.Name)
             .ToListAsync(cancellationToken);
 
     public Task<WorkoutTemplate?> GetOwnedByIdAsync(
