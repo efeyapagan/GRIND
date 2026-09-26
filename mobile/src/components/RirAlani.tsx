@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { View, Text, Pressable, PanResponder, Keyboard, type GestureResponderEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { Info } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -68,6 +69,8 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
 
   function sec(rir: number) {
     if (rir !== degerRef.current) {
+      // #388: her yeni durakta alt menudeki (#379) hafif tik -- surukleme, dokunus ve artir/azalt ortak.
+      void Haptics.selectionAsync();
       degerRef.current = rir;
       onDegisRef.current(rir);
     }
