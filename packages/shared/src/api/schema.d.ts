@@ -2600,7 +2600,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/social/friends/weekly": {
+    "/api/social/weekly": {
         parameters: {
             query?: never;
             header?: never;
@@ -2622,9 +2622,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["FriendWeeklyResponse"][];
-                        "application/json": components["schemas"]["FriendWeeklyResponse"][];
-                        "text/json": components["schemas"]["FriendWeeklyResponse"][];
+                        "text/plain": components["schemas"]["WeeklyStandingResponse"][];
+                        "application/json": components["schemas"]["WeeklyStandingResponse"][];
+                        "text/json": components["schemas"]["WeeklyStandingResponse"][];
                     };
                 };
                 /** @description Unauthorized */
@@ -4212,22 +4212,6 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
-        FriendWeeklyResponse: {
-            username?: string | null;
-            displayName?: string | null;
-            hasAvatar?: boolean;
-            /** Format: int64 */
-            avatarVersion?: number | null;
-            /** Format: int32 */
-            trainedDaysThisWeek?: number;
-            /** Format: int32 */
-            weeklyTargetDays?: number | null;
-            trainedToday?: boolean;
-            /** Format: int32 */
-            weeklySetCount?: number;
-            /** Format: double */
-            weeklyVolume?: number;
-        };
         GenerateInsightRequest: {
             /** Format: date */
             from?: string | null;
@@ -4528,6 +4512,23 @@ export interface components {
         };
         UsernameAvailabilityResponse: {
             available?: boolean;
+        };
+        WeeklyStandingResponse: {
+            username?: string | null;
+            displayName?: string | null;
+            hasAvatar?: boolean;
+            /** Format: int64 */
+            avatarVersion?: number | null;
+            /** Format: int32 */
+            trainedDaysThisWeek?: number;
+            /** Format: int32 */
+            weeklyTargetDays?: number | null;
+            trainedToday?: boolean;
+            /** Format: int32 */
+            weeklySetCount?: number;
+            /** Format: double */
+            weeklyVolume?: number;
+            isSelf?: boolean;
         };
     };
     responses: never;

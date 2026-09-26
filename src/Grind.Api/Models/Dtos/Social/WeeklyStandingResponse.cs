@@ -1,7 +1,9 @@
 namespace Grind.Api.Models.Dtos.Social;
 
 /// <summary>
-/// Bir arkadaşın BU HAFTAKİ özeti (#418) — ana ekrandaki karşılaştırma listesinin satırı.
+/// Haftalık sıralamanın bir satırı (#418, #425): bir arkadaşın ya da ÇAĞIRANIN KENDİSİNİN bu
+/// haftaki özeti. Kullanıcı kendini de listede görür (#425) — kendi satırı gizlilik seviyesinden
+/// etkilenmez ve sıralamada ayrıcalığı yoktur, aynı kurala girer.
 ///
 /// Hafta Pazartesi–Pazar, gün TR yerel günüdür (CLAUDE.md); aynı gün içindeki birden fazla
 /// antrenman BİR gün sayılır. <see cref="WeeklyTargetDays"/> <c>null</c> ise kullanıcı hedef
@@ -11,7 +13,7 @@ namespace Grind.Api.Models.Dtos.Social;
 /// satırların nereye düşeceği de öyle; hesap `packages/shared/src/lib/arkadasSiralamasi.ts`te
 /// saf bir fonksiyonda ve testlidir.
 /// </summary>
-public record FriendWeeklyResponse(
+public record WeeklyStandingResponse(
     string Username,
     string? DisplayName,
     bool HasAvatar,
@@ -20,4 +22,6 @@ public record FriendWeeklyResponse(
     int? WeeklyTargetDays,
     bool TrainedToday,
     int WeeklySetCount,
-    decimal WeeklyVolume);
+    decimal WeeklyVolume,
+    /// <summary>Satır çağıranın kendisi mi (#425) — istemci kendi satırını vurgular.</summary>
+    bool IsSelf);

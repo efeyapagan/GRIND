@@ -1,4 +1,5 @@
 using Grind.Api.Common;
+using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Social;
@@ -9,7 +10,7 @@ using Grind.Api.Repositories;
 namespace Grind.Api.Services;
 
 /// <summary>
-/// Ana ekrandaki arkadaş karşılaştırması (#418).
+/// Ana ekrandaki haftalık sıralama (#418) -- ÇAĞIRAN ve arkadaşları (#425).
 ///
 /// YETKİLENDİRME (CLAUDE.md'deki "herkese açık antrenman verisi" istisnasının genişlemesi):
 /// haftalık özet yalnızca ARKADAŞLARA (karşılıklı takip, #281) ve yalnızca gizlilik seviyesi
@@ -22,22 +23,27 @@ namespace Grind.Api.Services;
 /// </summary>
 public class FriendWeeklyService(
     IFollowRepository followRepository,
+    IUserRepository userRepository,
     IWorkoutSessionRepository sessionRepository,
     IUserAvatarRepository avatarRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFriendWeeklyService
 {
-    public async Task<IReadOnlyList<FriendWeeklyResponse>> GetAsync(
+    public async Task<IReadOnlyList<WeeklyStandingResponse>> GetAsync(
         CancellationToken cancellationToken = default)
     {
         var arkadaslar = (await followRepository.GetFriendsForWeeklyAsync(currentUser.UserId, cancellationToken))
             .Where(a => a.PrivacyLevel != PrivacyLevel.Gizli)
             .ToList();
 
-        if (arkadaslar.Count == 0)
-        {
-            return [];
-        }
+        // #425: kullanici siralamada kendini de gorur. Kendi satiri gizlilikten etkilenmez.
+        var kendisi = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
+                      ?? throw new NotFoundException("Kullanıcı bulunamadı.");
+        var satirSahipleri = arkadaslar
+            .Append(new FriendRef(
+                kendisi.Id, kendisi.Username, kendisi.DisplayName,
+                kendisi.PrivacyLevel, kendisi.WeeklyTargetDays))
+            .ToList();
 
         var bugun = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
         var haftaBasi = StreakCalculator.WeekStart(bugun);
@@ -45,28 +51,31 @@ public class FriendWeeklyService(
         var (baslangicUtc, _) = TurkeyDay.RangeForLocalDate(haftaBasi);
         var (_, bitisUtc) = TurkeyDay.RangeForLocalDate(haftaBasi.AddDays(6));
 
-        var idler = arkadaslar.Select(a => a.Id).ToList();
+        var idler = satirSahipleri.Select(a => a.Id).ToList();
         var oturumlar = await sessionRepository.GetSessionAggregatesForUsersAsync(
             idler, baslangicUtc, bitisUtc, cancellationToken);
         var avatarlar = await avatarRepository.GetUpdatedAtsAsync(idler, cancellationToken);
 
         var kisiBasi = oturumlar.ToLookup(o => o.UserId);
 
-        return arkadaslar.Select(arkadas => Satir(arkadas, kisiBasi[arkadas.Id], bugun, avatarlar)).ToList();
+        return satirSahipleri
+            .Select(kisi => Satir(kisi, kisiBasi[kisi.Id], bugun, avatarlar, kisi.Id == currentUser.UserId))
+            .ToList();
     }
 
-    private static FriendWeeklyResponse Satir(
+    private static WeeklyStandingResponse Satir(
         FriendRef arkadas,
         IEnumerable<UserSessionAggregate> oturumlar,
         DateOnly bugun,
-        IReadOnlyDictionary<long, DateTime> avatarlar)
+        IReadOnlyDictionary<long, DateTime> avatarlar,
+        bool kendisi)
     {
         var liste = oturumlar.ToList();
         // Aynı gün içindeki birden fazla antrenman BİR gün sayılır (takvim/seri kuralıyla aynı).
         var gunler = liste.Select(o => TurkeyDay.LocalDateOf(o.StartedAt)).ToHashSet();
         var avatarGuncelleme = avatarlar.TryGetValue(arkadas.Id, out var an) ? an : (DateTime?)null;
 
-        return new FriendWeeklyResponse(
+        return new WeeklyStandingResponse(
             arkadas.Username,
             arkadas.DisplayName,
             avatarGuncelleme is not null,
@@ -75,6 +84,7 @@ public class FriendWeeklyService(
             arkadas.WeeklyTargetDays,
             gunler.Contains(bugun),
             liste.Sum(o => o.SetCount),
-            liste.Sum(o => o.Volume));
+            liste.Sum(o => o.Volume),
+            kendisi);
     }
 }

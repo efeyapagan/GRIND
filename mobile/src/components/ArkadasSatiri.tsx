@@ -27,6 +27,7 @@ export default function ArkadasSatiri({ arkadas, lider }: Props) {
   const router = useRouter();
   const ikonRenk = useIkonRenk();
 
+  const kendisi = arkadas.isSelf === true;
   const ad = arkadas.displayName ?? arkadas.username ?? '';
   const gun = arkadas.trainedDaysThisWeek ?? 0;
   const oran = hedefOrani(arkadas);
@@ -36,7 +37,8 @@ export default function ArkadasSatiri({ arkadas, lider }: Props) {
       accessibilityRole="button"
       accessibilityLabel={t('arkadaslar.satirEtiketi', { ad })}
       onPress={() => router.push(`/profile/u/${arkadas.username}`)}
-      className="min-h-16 w-full flex-row items-center gap-3 rounded-xl bg-surface-2 p-3"
+      // #425: kendi satiri bir ton acik zeminde -- kullanici kendini listede hemen bulsun.
+      className={`min-h-16 w-full flex-row items-center gap-3 rounded-xl p-3 ${kendisi ? 'bg-surface-4' : 'bg-surface-2'}`}
     >
       <ProfilFotografi
         profil={{
@@ -52,6 +54,7 @@ export default function ArkadasSatiri({ arkadas, lider }: Props) {
           <Text numberOfLines={1} className="min-w-0 flex-1 text-body font-semibold text-fg">
             {ad}
           </Text>
+          {kendisi && <Text className="shrink-0 text-label-xs text-muted">{t('arkadaslar.sen')}</Text>}
           {lider && (
             <View className="flex-row items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5">
               <Crown color={ikonRenk.accentSoft} size={12} />

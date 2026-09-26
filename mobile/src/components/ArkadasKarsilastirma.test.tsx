@@ -23,6 +23,7 @@ function arkadas(username: string, kismi: Record<string, unknown> = {}) {
     trainedToday: false,
     weeklySetCount: 0,
     weeklyVolume: 0,
+    isSelf: false,
     ...kismi,
   };
 }
@@ -36,10 +37,37 @@ beforeEach(() => {
   veriVer([]);
 });
 
-test('arkadas yokken bos durum gosterilir', async () => {
+/** #425: liste artik hic bos olmaz -- kendi satiri hep gelir; arkadas yoksa ipucu satiri cizilir. */
+test('yalnizca kendi satiri varken ipucu gosterilir', async () => {
+  veriVer([arkadas('ben', { isSelf: true, trainedDaysThisWeek: 1, weeklyTargetDays: 3 })]);
   await render(<ArkadasKarsilastirma />);
 
-  expect(screen.getByText('Henüz arkadaşın yok')).toBeTruthy();
+  expect(screen.getByText('Arkadaş ekleyince burada onlarla karşılaştırılırsın.')).toBeTruthy();
+  expect(screen.getByLabelText('ben profilini aç')).toBeTruthy();
+});
+
+test('arkadas varken ipucu cizilmez', async () => {
+  veriVer([
+    arkadas('ben', { isSelf: true, trainedDaysThisWeek: 1, weeklyTargetDays: 3 }),
+    arkadas('ali', { trainedDaysThisWeek: 2, weeklyTargetDays: 3 }),
+  ]);
+  await render(<ArkadasKarsilastirma />);
+
+  expect(screen.queryByText('Arkadaş ekleyince burada onlarla karşılaştırılırsın.')).toBeNull();
+});
+
+/** Kendi satiri siralamada AYRICALIKLI DEGIL: ayni kurala girer, lider olabilir. */
+test('kendi satiri isaretlenir ve lider olabilir', async () => {
+  veriVer([
+    arkadas('ali', { trainedDaysThisWeek: 1, weeklyTargetDays: 4 }),
+    arkadas('ben', { isSelf: true, trainedDaysThisWeek: 4, weeklyTargetDays: 4 }),
+  ]);
+  await render(<ArkadasKarsilastirma />);
+
+  const adlar = screen.getAllByRole('button').map((d) => d.props.accessibilityLabel);
+  expect(adlar).toEqual(['ben profilini aç', 'ali profilini aç']);
+  expect(screen.getByText('Sen')).toBeTruthy();
+  expect(screen.getAllByText('Lider')).toHaveLength(1);
 });
 
 /** #418: sira hedefe ulasma oranina gore; hedefsizler en sonda (ortak paketteki kural). */
