@@ -1,5 +1,5 @@
 import { DeviceEventEmitter, StyleSheet } from 'react-native';
-import { act, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
 import { altMenuPayi } from '../../src/ui/KabukTabBar';
 import { session } from '../../src/session';
@@ -68,9 +68,11 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   // Set gerçekten sunucuya gitmiş ve ilerleme güncellenmiş olmalı.
   await waitFor(() => expect(state.setler).toHaveLength(1));
   expect(state.setler[0]).toMatchObject({ weight: 60, reps: 8, exerciseId: 1, rir: 2.5 });
-  expect(await screen.findByText('RIR 2–3')).toBeTruthy();
+  // #385: odak karti acik kaldigi icin set hem listedeki kartta hem odak kartinda gorunur.
+  expect((await screen.findAllByText('RIR 2–3')).length).toBeGreaterThan(0);
   await waitFor(() => expect(screen.getByLabelText(/Bench Press, 1 \/ 3 set/)).toBeTruthy());
-  // #354: set eklenince panelle birlikte odak karti da kapanir; eklenen set listedeki kartta gorunur.
+  // #385: hedef (3 set) dolmadigi icin panel acik kalir; kullanici odak kartini [x]'le kapatir.
+  await fireEvent.press(within(screen.getByTestId('odak-karti')).getByRole('button', { name: 'Paneli kapat' }));
   await waitFor(() => expect(screen.queryByTestId('odak-karti')).toBeNull());
 
   // #153: "Antrenmanı bitir" artık oturumu kapatmaz, ayrı zorluk ekranına götürür; kadrandan

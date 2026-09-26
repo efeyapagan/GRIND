@@ -30,7 +30,7 @@ import {
 import { formatSaat } from '@grind/shared/lib/format';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
-import { varsayilanHareket } from '@grind/shared/lib/ilerleme';
+import { hedefTamamlandi, varsayilanHareket } from '@grind/shared/lib/ilerleme';
 import { dinlenmeBaslat, dinlenmeSuresi } from '@grind/shared/lib/dinlenme';
 import { oturumdanSablonHareketleri } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
@@ -199,6 +199,29 @@ export default function AntrenmanScreen() {
   // ust kenarina kadar kalan alani doldurur -- ikisi birlikte ekrani kaplar. Onceki "karti panelin
   // ustune kaydir" hizalamasi (#274) bu yuzden kalkti: kart artik zaten panelin ustunde.
   const odakHareketi = panelAcik ? gorunenIlerleme.find((hareket) => hareket.exerciseId === etkinSecim) : undefined;
+
+  // #385: set eklenince panel kapanmaz, ilk acildigi hale doner (`formSurumu` SetPaneli'ni yeniden
+  // kurar). Yalnizca hedefe ULASILAN setten sonra kapanir: set eklenirken hedef henuz dolmamissa
+  // hareket "bekleyen" olarak not edilir, sunucudan tazelenen ilerleme hedefe varinca panel kapanir
+  // -- sayim istemcide yeniden yapilmaz. Hedefsiz ya da zaten dolu harekette panel yalnizca [x]'le kapanir.
+  const [formSurumu, setFormSurumu] = useState(0);
+  const [hedefBekleyenId, setHedefBekleyenId] = useState<number | null>(null);
+  if (hedefBekleyenId !== null && hedefBekleyenId !== odakHareketi?.exerciseId) {
+    setHedefBekleyenId(null);
+  } else if (odakHareketi && hedefBekleyenId !== null && hedefTamamlandi(odakHareketi)) {
+    setHedefBekleyenId(null);
+    setPanelAcik(false);
+  }
+
+  function setEklendi(exerciseId: number) {
+    setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)));
+    setFormSurumu((surum) => surum + 1);
+    const hareket = ilerleme.find((kayit) => kayit.exerciseId === exerciseId);
+    if (hareket && hareket.plannedSets !== null && !hedefTamamlandi(hareket)) {
+      setHedefBekleyenId(exerciseId);
+    }
+  }
+
   const [panelYuksekligi, setPanelYuksekligi] = useState(0);
   const altMenuPayi = useAltMenuPayi();
   // #350: yuzer panel klavyeden habersizdi -- klavye acilinca arkasinda kaliyordu. Klavye acikken
@@ -479,12 +502,10 @@ export default function AntrenmanScreen() {
           {panelAcik && etkinSecim !== null && seciliEgzersizAdi && (
             <Animated.View entering={PANEL_ACILISI} exiting={PANEL_KAPANISI}>
               <SetPaneli
+                key={formSurumu}
                 egzersizId={etkinSecim}
                 egzersizAdi={seciliEgzersizAdi}
-                onKapat={() => setPanelAcik(false)}
-                onSetEklendi={(exerciseId) =>
-                  setDinlenme(dinlenmeBaslat(Date.now(), dinlenmeSuresi(ilerleme, exerciseId)))
-                }
+                onSetEklendi={setEklendi}
               />
             </Animated.View>
           )}
