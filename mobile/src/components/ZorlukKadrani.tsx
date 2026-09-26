@@ -1,17 +1,32 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, PanResponder, type GestureResponderEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import type { Zorluk } from '@grind/shared/api/queries';
 
 import {
   altDurakDerinligi,
   durakKonumu,
-  enYakinDurak,
+  kadranTitresimi,
+  yayKonumu,
   yayYolu,
   ZORLUK_KADEMELERI,
+  type KadranTitresimi,
 } from '@grind/shared/lib/zorlukKadrani';
 import { useRenkPaleti } from '../ui/renkler';
+
+/**
+ * #388 "tiiiirt": duraklar arasinda alt menunun (#379) hafif tiki, secim bir duraga oturunca tok
+ * (`Heavy`) bir vurus.
+ */
+function titret(tur: KadranTitresimi) {
+  if (tur === 'tok') {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  } else if (tur === 'ince') {
+    void Haptics.selectionAsync();
+  }
+}
 
 interface Props {
   deger: Zorluk;
@@ -56,10 +71,14 @@ export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
   // guncel `onDegis`/`onSurukleme`ye ref uzerinden ulasir.
   const onDegisRef = useRef(onDegis);
   const onSuruklemeRef = useRef(onSurukleme);
+  const seciliSiraRef = useRef(seciliSira);
   useEffect(() => {
     onDegisRef.current = onDegis;
     onSuruklemeRef.current = onSurukleme;
-  }, [onDegis, onSurukleme]);
+    seciliSiraRef.current = seciliSira;
+  }, [onDegis, onSurukleme, seciliSira]);
+  /** Parmagin son yay konumu (`yayKonumu`) -- titresim bir onceki konuma gore secilir (#388). */
+  const konumRef = useRef(0);
 
   const kutuRef = useRef<View>(null);
   /** Kadranin penceredeki sol ust kosesi -- jest basinda olculur. */
@@ -76,6 +95,8 @@ export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (olay: GestureResponderEvent) => {
         onSuruklemeRef.current?.(true);
+        // Jest secili duraktan basliyormus gibi olculur: parmak baska bir duraga degerse ilk anda tok vurus.
+        konumRef.current = seciliSiraRef.current;
         const { pageX, pageY } = olay.nativeEvent;
         kutuRef.current?.measureInWindow((x, y) => {
           kutuKonumuRef.current = { x, y };
@@ -97,12 +118,15 @@ export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
     if (!kutu) {
       return;
     }
-    const sira = enYakinDurak(pageX - kutu.x - MERKEZ, pageY - kutu.y - MERKEZ);
-    onDegisRef.current(ZORLUK_KADEMELERI[sira]);
+    const konum = yayKonumu(pageX - kutu.x - MERKEZ, pageY - kutu.y - MERKEZ);
+    titret(kadranTitresimi(konumRef.current, konum));
+    konumRef.current = konum;
+    onDegisRef.current(ZORLUK_KADEMELERI[Math.round(konum)]);
   }
 
   function sirayiSec(sira: number) {
     if (sira >= 0 && sira < ZORLUK_KADEMELERI.length && sira !== seciliSira) {
+      titret('tok');
       onDegis(ZORLUK_KADEMELERI[sira]);
     }
   }

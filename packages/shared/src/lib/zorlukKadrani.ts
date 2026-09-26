@@ -28,26 +28,47 @@ export function durakKonumu(sira: number, merkez: number, yaricap: number): { x:
   return { x: merkez + yaricap * Math.cos(aci), y: merkez + yaricap * Math.sin(aci) };
 }
 
-/** Iki aci arasindaki en kisa mesafe (derece, 0–180). */
-function aciFarki(a: number, b: number): number {
-  const fark = (((a - b) % 360) + 360) % 360;
-  return fark > 180 ? 360 - fark : fark;
+/**
+ * Merkeze gore (dx, dy) noktasindaki dokunusun yay uzerindeki SUREKLI konumu, durak biriminde
+ * (0 = ilk durak, 4 = son durak; iki durak arasi ondalik) -- #388, cevirirken titresim bununla
+ * olculur. Yayin altindaki bosluga dusen dokunus en yakin uca kirpilir: bosluk tam ortasindan
+ * (en alttan) ikiye bolunur.
+ */
+export function yayKonumu(dx: number, dy: number): number {
+  const dokunusAcisi = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const bastanAci = (((dokunusAcisi - BASLANGIC_ACI) % 360) + 360) % 360;
+  if (bastanAci > YAY_ACISI) {
+    return bastanAci < (YAY_ACISI + 360) / 2 ? ZORLUK_KADEMELERI.length - 1 : 0;
+  }
+  return bastanAci / ARALIK_ACI;
 }
 
 /**
- * Merkeze gore (dx, dy) noktasindaki dokunusun acisina EN YAKIN durak -- parmagin yaya tam oturmasi
- * gerekmez. Yayin altindaki bosluga dokunus en yakin uca duser: bosluk iki ucun tam ortasinda
- * bolundugu icin cember uzerindeki en kisa mesafe bunu kendiliginden verir.
+ * Dokunusun acisina EN YAKIN durak -- parmagin yaya tam oturmasi gerekmez; alt bosluktaki dokunus
+ * en yakin uca duser (`yayKonumu`).
  */
 export function enYakinDurak(dx: number, dy: number): number {
-  const dokunusAcisi = (Math.atan2(dy, dx) * 180) / Math.PI;
-  let enYakin = 0;
-  for (let sira = 1; sira < ZORLUK_KADEMELERI.length; sira += 1) {
-    if (aciFarki(dokunusAcisi, durakAcisi(sira)) < aciFarki(dokunusAcisi, durakAcisi(enYakin))) {
-      enYakin = sira;
-    }
+  return Math.round(yayKonumu(dx, dy));
+}
+
+/** Iki durak arasindaki ince "tik" sayisi (#388). */
+const INCE_ADIM_SAYISI = 4;
+
+export type KadranTitresimi = 'tok' | 'ince' | null;
+
+/**
+ * Kadran `onceki`den `yeni` konuma (`yayKonumu`) cevrilince verilecek titresim (#388, "tiiiirt"):
+ * secim yeni bir duraga oturduysa tok vurus, duraklar arasinda bir ince adim gecildiyse ince tik,
+ * yoksa hic.
+ */
+export function kadranTitresimi(onceki: number, yeni: number): KadranTitresimi {
+  if (Math.round(yeni) !== Math.round(onceki)) {
+    return 'tok';
   }
-  return enYakin;
+  if (Math.round(yeni * INCE_ADIM_SAYISI) !== Math.round(onceki * INCE_ADIM_SAYISI)) {
+    return 'ince';
+  }
+  return null;
 }
 
 /**
