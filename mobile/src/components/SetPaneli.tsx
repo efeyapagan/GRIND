@@ -11,6 +11,7 @@ import BirincilDugme from '../ui/BirincilDugme';
 import CamYuzey from '../ui/CamYuzey';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
+import { useAgirlikIbaresi } from './useAgirlikIbaresi';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -38,6 +39,7 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
   const queryClient = useQueryClient();
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
+  const agirlikIbaresi = useAgirlikIbaresi(egzersizId);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
@@ -109,6 +111,7 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
             id="set-agirlik"
             etiket={t('setGirdisi.agirlikEtiket')}
             birim="kg"
+            ipucu={agirlikIbaresi}
             inputMode="decimal"
             placeholder="0"
             value={agirlik}
