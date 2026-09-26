@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Plus, X } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useOpenSession } from '@grind/shared/api/queries';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
@@ -11,7 +11,6 @@ import { formatWeight } from '@grind/shared/lib/format';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
 import CamYuzey from '../ui/CamYuzey';
-import IkonDugmesi from '../ui/IkonDugmesi';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
 import { ikonRenk } from '../ui/renkler';
@@ -19,7 +18,7 @@ import { ikonRenk } from '../ui/renkler';
 interface Props {
   egzersizId: number;
   egzersizAdi: string;
-  /** Set eklenince de cagrilir: panel tek bir setten sonra kapanir. */
+  /** Set eklenince cagrilir: panel tek bir setten sonra kapanir (#357'den beri kapatma dugmesi odak kartinda). */
   onKapat: () => void;
   // Basarili set sonrasi dinlenme sayaci baslar -- sayac listenin sonunda, ekranda yasar.
   onSetEklendi: (exerciseId: number) => void;
@@ -99,12 +98,9 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
     // #350: alt menuyle ayni "liquid glass" yuzey (`CamYuzey`), biraz daha ferah ic bosluk.
     <View className="flex-col gap-3 overflow-hidden rounded-xl border border-surface-4 p-4">
       <CamYuzey />
-      <View className="flex-row items-center justify-between gap-2">
-        <Text className="pl-1 text-label text-muted uppercase">{t('setler.yeniSetIcin', { ad: egzersizAdi })}</Text>
-        <IkonDugmesi etiket={t('setler.paneliKapat')} onPress={onKapat}>
-          <X color={ikonRenk.muted} size={20} />
-        </IkonDugmesi>
-      </View>
+      {/* #357: "Yeni set: " oneki ve kapatma dugmesi kalkti -- uzun adda dugme ekrandan tasiyordu;
+          kapatma artik odak kartinin sol ust kosesinde (`HareketKartiGovdesi` `onKapat`). */}
+      <Text className="pl-1 text-label text-muted uppercase">{egzersizAdi}</Text>
       {genelHata && (
         <Text accessibilityRole="alert" className="text-label text-danger">
           {genelHata}

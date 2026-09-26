@@ -47,12 +47,24 @@ test('liste karti yerinde acilmaz, karta dokununca odak karti set paneliyle acil
   expect(screen.getByLabelText('Ağırlık')).toBeTruthy();
 }, 20_000);
 
-test('panelin kapatma dugmesi odak kartini da kapatir', async () => {
+// #357: uzun hareket adi "Yeni set: <ad>" basligini tasirip kapatma dugmesini ekrandan itiyordu.
+test('set panelinin basligi yalnizca hareket adidir, kapatma dugmesi panelde degil', async () => {
   await acikAntrenmanlaAc();
   await fireEvent.press(screen.getByLabelText(/Bench Press, 0 \/ 4 set/));
   await screen.findByTestId('odak-karti');
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Paneli kapat' }));
+  const panel = screen.getByTestId('set-paneli');
+  expect(within(panel).getByText('Bench Press')).toBeTruthy();
+  expect(within(panel).queryByText(/Yeni set/)).toBeNull();
+  expect(within(panel).queryByRole('button', { name: 'Paneli kapat' })).toBeNull();
+}, 20_000);
+
+test('odak kartinin kapatma dugmesi karti ve set panelini birlikte kapatir', async () => {
+  await acikAntrenmanlaAc();
+  await fireEvent.press(screen.getByLabelText(/Bench Press, 0 \/ 4 set/));
+  const odak = await screen.findByTestId('odak-karti');
+
+  await fireEvent.press(within(odak).getByRole('button', { name: 'Paneli kapat' }));
 
   await waitFor(() => expect(screen.queryByTestId('odak-karti')).toBeNull());
   expect(screen.queryByLabelText('Ağırlık')).toBeNull();
