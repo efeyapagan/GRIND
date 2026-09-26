@@ -1717,11 +1717,11 @@ export interface BildirimRekoru {
 
 /** Sunucuda saklanmaz, takip ve rekor satirlarindan turetilir; `actor` BAKANIN gozunden. */
 export interface Bildirim {
-  kind: 'Follow' | 'Records';
+  kind: 'Follow' | 'Records' | 'WeeklyGoal';
   occurredAt: string;
   isUnread: boolean;
   actor: KullaniciOzeti;
-  /** `Follow`'da bos. */
+  /** Yalnizca `Records`ta dolu; `Follow` ve `WeeklyGoal`da bos. */
   records: BildirimRekoru[];
 }
 

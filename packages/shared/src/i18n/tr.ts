@@ -443,6 +443,7 @@ export const tr = {
     bos: 'Henüz bildirim yok',
     bosAciklama: 'Yeni bir bildirim olduğunda burada görünecek.',
     takipEtti: '{{ad}} seni takip etmeye başladı',
+    hedefiTamamladi: '{{ad}} haftalık hedefini tamamladı',
     artikArkadassiniz: 'Artık arkadaşsınız',
     rekorKirdi_one: '{{ad}} {{count}} harekette rekor kırdı',
     rekorKirdi_other: '{{ad}} {{count}} harekette rekor kırdı',

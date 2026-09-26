@@ -4,5 +4,8 @@ namespace Grind.Api.Models.Enums;
 public enum NotificationKind
 {
     Follow,
-    Records
+    Records,
+
+    /// <summary>Arkadaş haftalık hedefini tamamladı (#419).</summary>
+    WeeklyGoal
 }

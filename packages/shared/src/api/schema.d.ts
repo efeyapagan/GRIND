@@ -4272,7 +4272,7 @@ export interface components {
         /** @enum {string} */
         MediaType: "Video" | "Gif";
         /** @enum {string} */
-        NotificationKind: "Follow" | "Records";
+        NotificationKind: "Follow" | "Records" | "WeeklyGoal";
         NotificationRecordResponse: {
             /** Format: int64 */
             exerciseId?: number;

@@ -7,9 +7,9 @@ import { formatGoreliTarih, formatWeight } from '@grind/shared/lib/format';
 import ProfilFotografi from './ProfilFotografi';
 
 /**
- * Bildirim ekraninda bir satir (#325): takip ya da takip edilen birinin rekorlu antrenmani. Okunmamis
- * satir bu ziyaret boyunca bir ton acik zeminde durur. Dokunmak kisinin profilini (rekorda Rekorlar
- * sekmesini) acar.
+ * Bildirim ekraninda bir satir (#325): takip, rekorlu antrenman ya da arkadasin haftalik hedefini
+ * tamamlamasi (#419). Okunmamis satir bu ziyaret boyunca bir ton acik zeminde durur. Dokunmak
+ * kisinin profilini acar -- rekorda dogrudan Rekorlar sekmesini.
  */
 export default function BildirimSatiri({ bildirim }: { bildirim: Bildirim }) {
   const { t } = useTranslation();
@@ -23,15 +23,15 @@ export default function BildirimSatiri({ bildirim }: { bildirim: Bildirim }) {
     <Pressable
       testID={`bildirim-${bildirim.kind}-${kisi.username}`}
       accessibilityRole="link"
-      onPress={() => router.push(bildirim.kind === 'Follow' ? profil : `${profil}/records`)}
+      onPress={() => router.push(bildirim.kind === 'Records' ? `${profil}/records` : profil)}
       className={`flex-row gap-3 rounded-xl p-3 ${bildirim.isUnread ? 'bg-surface-4' : 'bg-surface-2'}`}
     >
       <ProfilFotografi profil={kisi} boyut="kucuk" />
       <View className="min-w-0 flex-1 flex-col gap-1">
         <Text className="text-body text-fg">
-          {bildirim.kind === 'Follow'
-            ? t('bildirimler.takipEtti', { ad })
-            : t('bildirimler.rekorKirdi', { ad, count: bildirim.records.length })}
+          {bildirim.kind === 'Follow' && t('bildirimler.takipEtti', { ad })}
+          {bildirim.kind === 'WeeklyGoal' && t('bildirimler.hedefiTamamladi', { ad })}
+          {bildirim.kind === 'Records' && t('bildirimler.rekorKirdi', { ad, count: bildirim.records.length })}
         </Text>
         {bildirim.kind === 'Follow' && kisi.relation === 'Friends' && (
           <Text className="text-body text-muted">{t('bildirimler.artikArkadassiniz')}</Text>

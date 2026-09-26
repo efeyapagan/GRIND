@@ -43,4 +43,23 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                     .Select(x => (int?)x.OrderIndex)
                     .FirstOrDefault()))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<FriendSessionDayRow>> GetFriendGoalSessionsAsync(
+        long userId, DateTime since, CancellationToken cancellationToken = default)
+        => await (
+                from f in context.Set<Follow>()
+                where f.FollowerId == userId
+                      && f.Followee.DeletedAt == null
+                      && f.Followee.WeeklyTargetDays != null
+                      && f.Followee.PrivacyLevel != PrivacyLevel.Gizli
+                      // Karsilikli takip = arkadaslik (#281): tek yonlu takip bildirim uretmez.
+                      && context.Set<Follow>().Any(g => g.FollowerId == f.FolloweeId && g.FolloweeId == userId)
+                join s in context.Set<WorkoutSession>() on f.FolloweeId equals s.UserId
+                where s.StartedAt >= since && s.StartedAt > f.CreatedAt && s.SetEntries.Any()
+                select new FriendSessionDayRow(
+                    s.Id,
+                    s.StartedAt,
+                    f.Followee.WeeklyTargetDays!.Value,
+                    new UserRef(f.Followee.Id, f.Followee.Username, f.Followee.DisplayName)))
+            .ToListAsync(cancellationToken);
 }
