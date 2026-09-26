@@ -43,28 +43,43 @@ test('yonleTasi listenin disina tasimaz, liste aynen doner', () => {
 
 // #344: mobilde basili tutup surukleyerek sablon siralama. Surukleme mesafesini hedef indekse
 // ceviren hesap burada, jestten bagimsiz test edilir (gercek surukleme RNTL'de simule edilemez).
+// #407: hesap artik her satirin kendi yuksekligini alir (antrenman kartlari set sayisina gore uzar).
+const ESIT = [64, 64, 64, 64];
+
 test('yarim satirdan az surukleme sirayi degistirmez', () => {
-  expect(surukleHedefIndeksi(1, 20, 64, 4)).toBe(1);
-  expect(surukleHedefIndeksi(1, -31, 64, 4)).toBe(1);
+  expect(surukleHedefIndeksi(1, 20, ESIT)).toBe(1);
+  expect(surukleHedefIndeksi(1, -31, ESIT)).toBe(1);
 });
 
 test('yarim satiri gecen surukleme bir sira tasir', () => {
-  expect(surukleHedefIndeksi(1, 33, 64, 4)).toBe(2);
-  expect(surukleHedefIndeksi(1, -33, 64, 4)).toBe(0);
+  expect(surukleHedefIndeksi(1, 33, ESIT)).toBe(2);
+  expect(surukleHedefIndeksi(1, -33, ESIT)).toBe(0);
 });
 
 test('bir bucuk satirlik surukleme iki sira tasir', () => {
-  expect(surukleHedefIndeksi(0, 96, 64, 4)).toBe(2);
+  expect(surukleHedefIndeksi(0, 96, ESIT)).toBe(2);
 });
 
 test('listenin disina tasan surukleme uclara sabitlenir', () => {
-  expect(surukleHedefIndeksi(3, 500, 64, 4)).toBe(3);
-  expect(surukleHedefIndeksi(0, -500, 64, 4)).toBe(0);
+  expect(surukleHedefIndeksi(3, 500, ESIT)).toBe(3);
+  expect(surukleHedefIndeksi(0, -500, ESIT)).toBe(0);
 });
 
 // Satir yuksekligi olculmeden (0) birakilirsa bolme NaN uretir; oge yerinde kalmali.
 test('satir yuksekligi bilinmiyorsa oge yerinde kalir', () => {
-  expect(surukleHedefIndeksi(2, 120, 0, 4)).toBe(2);
+  expect(surukleHedefIndeksi(2, 120, [64, 64, 0, 64])).toBe(2);
+});
+
+// #407: bir komsunun yerine gecmek icin O KOMSUNUN yarisini gecmek gerekir -- esit yukseklik
+// varsayimi uzun bir kartin ustunden erken atlardi.
+test('uzun bir komsunun yarisini gecmeyen surukleme sirayi degistirmez', () => {
+  expect(surukleHedefIndeksi(0, 80, [60, 200, 60])).toBe(0);
+  expect(surukleHedefIndeksi(2, -80, [60, 200, 60])).toBe(2);
+});
+
+test('uzun bir komsunun yarisini gecen surukleme bir sira tasir', () => {
+  expect(surukleHedefIndeksi(0, 110, [60, 200, 60])).toBe(1);
+  expect(surukleHedefIndeksi(2, -110, [60, 200, 60])).toBe(1);
 });
 
 test('indeksleTasi ogeyi hedef indekse tasir, aradakiler kayar', () => {
