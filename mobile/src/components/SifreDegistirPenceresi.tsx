@@ -5,6 +5,7 @@ import Modal from '../ui/Modal';
 import SifreAlani from '../ui/SifreAlani';
 import BirincilDugme from '../ui/BirincilDugme';
 import HataKutusu from '../ui/HataKutusu';
+import type { ProfilGuncelleme } from '../auth/AuthContext';
 
 const MIN_SIFRE_KARAKTER = 8;
 const MAKS_SIFRE_BAYT = 72;
@@ -12,7 +13,7 @@ const MAKS_SIFRE_BAYT = 72;
 interface Props {
   acik: boolean;
   onKapat: () => void;
-  updateProfile: (mevcutSifre: string, yeniKullaniciAdi?: string, yeniSifre?: string) => Promise<void>;
+  updateProfile: (girdi: ProfilGuncelleme) => Promise<void>;
 }
 
 /**
@@ -57,7 +58,7 @@ export default function SifreDegistirPenceresi({ acik, onKapat, updateProfile }:
     }
     setGonderiliyor(true);
     try {
-      await updateProfile(mevcutSifre, undefined, yeniSifre);
+      await updateProfile({ mevcutSifre, yeniSifre });
       setMevcutSifre('');
       setYeniSifre('');
       setYeniSifreTekrari('');

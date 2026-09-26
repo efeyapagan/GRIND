@@ -20,11 +20,17 @@ interface AuthContextValue {
   login: (kullaniciAdi: string, sifre: string) => Promise<void>;
   register: (kullaniciAdi: string, sifre: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (
-    mevcutSifre: string,
-    yeniKullaniciAdi?: string,
-    yeniSifre?: string,
-  ) => Promise<void>;
+  updateProfile: (girdi: ProfilGuncelleme) => Promise<void>;
+}
+
+/**
+ * `mevcutSifre` YALNIZCA sifre degisiminde gerekir (#378): kullanici adi degistirmek teyit
+ * istemez. Sunucu, gonderildiyse -- gerekmese bile -- dogrular.
+ */
+export interface ProfilGuncelleme {
+  mevcutSifre?: string;
+  yeniKullaniciAdi?: string;
+  yeniSifre?: string;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -88,8 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(
-    async (mevcutSifre: string, yeniKullaniciAdi?: string, yeniSifre?: string) => {
-      const govde: Record<string, string> = { currentPassword: mevcutSifre };
+    async ({ mevcutSifre, yeniKullaniciAdi, yeniSifre }: ProfilGuncelleme) => {
+      const govde: Record<string, string> = {};
+      if (mevcutSifre !== undefined) {
+        govde.currentPassword = mevcutSifre;
+      }
       if (yeniKullaniciAdi !== undefined) {
         govde.newUsername = yeniKullaniciAdi;
       }

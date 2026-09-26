@@ -30,7 +30,8 @@ public interface IAuthService
 
     /// <summary>
     /// Kullanıcı adı ve/veya şifre değiştirir (issue #65). <see cref="UpdateProfileRequest.CurrentPassword"/>
-    /// HER ZAMAN doğrulanır; yanlışsa UnauthorizedException. Yeni kullanıcı adı başkasına aitse
+    /// yalnızca ŞİFRE değişiminde zorunludur (#378); gönderildiyse her hâlükârda doğrulanır ve
+    /// yanlışsa UnauthorizedException. Yeni kullanıcı adı başkasına aitse
     /// ConflictException. En az biri (yeni ad ya da yeni şifre) verilmemişse ValidationException.
     /// Başarılı değişiklik sonrası YENİ bir token döner (register/login ile aynı şekilde) — kullanıcı
     /// adı değişince eski token'ın içindeki isim bayatlar, kullanıcı yeniden giriş yapmak zorunda

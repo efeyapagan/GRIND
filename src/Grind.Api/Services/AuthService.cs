@@ -124,7 +124,14 @@ public class AuthService(
         var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken)
                    ?? throw new UnauthorizedException(InvalidCredentials);
 
-        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        // #378: mevcut sifre YALNIZCA sifre degisiminde zorunlu. Gonderildiyse -- gerekmese bile --
+        // dogrulanir: yanlis bir sifreyi sessizce yok saymak, istemcideki bayat bir degeri gizler.
+        if (request.NewPassword is not null && request.CurrentPassword is null)
+        {
+            throw new ValidationException("Şifre değiştirmek için mevcut şifre zorunlu.");
+        }
+
+        if (request.CurrentPassword is { } teyit && !BCrypt.Net.BCrypt.Verify(teyit, user.PasswordHash))
         {
             throw new UnauthorizedException(InvalidCredentials);
         }
