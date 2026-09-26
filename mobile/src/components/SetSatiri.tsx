@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { formatWeight } from '@grind/shared/lib/format';
@@ -12,6 +13,8 @@ import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 interface Props {
   kayit: SetKaydi;
   sira: number;
+  /** #401: bu antrenmanda sonradan gecilen rekor -- rozet soluk ve ustu cizili. */
+  rekorGecildi?: boolean;
   /** #396: duzenleyici satirin yerinde degil ekranin ortasinda acilir -- acmak ekranin isi. */
   onDuzenle: (kayit: SetKaydi, sira: number) => void;
 }
@@ -20,14 +23,15 @@ interface Props {
  * Bugun ekraninin set satiri (issue #57): satirin KENDISI bir dugmedir, dokununca `SetDuzenleyici`
  * acilir (#396'dan beri ekranin ortasinda, bkz. antrenman.tsx).
  */
-export default function SetSatiri({ kayit, sira, onDuzenle }: Props) {
+export default function SetSatiri({ kayit, sira, rekorGecildi = false, onDuzenle }: Props) {
   const dil = useDil();
+  const { t } = useTranslation();
 
   const rozet = rekorRozetiMetni(kayit);
   const erisilebilirAd = [
     `${sira}. set`,
     `${formatWeight(kayit.weight, dil)} kg × ${kayit.reps}`,
-    rozet,
+    rozet && rekorGecildi ? `${rozet} ${t('rekor.gecildi')}` : rozet,
     kayit.rir !== null ? `RIR ${rirEtiketi(kayit.rir)}` : null,
     kayit.restSeconds !== null ? `dinlenme ${kalanSureMetni(kayit.restSeconds * 1000)}` : null,
     'düzenle',
@@ -53,7 +57,7 @@ export default function SetSatiri({ kayit, sira, onDuzenle }: Props) {
             {formatWeight(kayit.weight, dil)} <Text className="text-body text-muted">kg</Text>{' '}
             <Text className="font-light text-muted">×</Text> {kayit.reps}
           </Text>
-          {rozet && <Rozet>{rozet}</Rozet>}
+          {rozet && <Rozet gecildi={rekorGecildi}>{rozet}</Rozet>}
         </View>
       </View>
       <View className="shrink-0 flex-row items-center gap-2">
