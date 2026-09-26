@@ -101,7 +101,9 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
             Antrenman bitince ana sayfa acilirken "Devam ediyor" karti bir an cizilip kalkiyor ve
             takvim yukari kayiyordu; ilk montajdaki kayma animasyonu surerken gelen bu yerlesim
             degisikligi izgarayi ekranin disinda birakiyordu (sekme degisip yeniden monte olunca
-            duzeliyordu). `key` ile yeniden monte olan izgara yine animasyonla girer. */}
+            duzeliyordu). `key` ile yeniden monte olan izgara yine animasyonla girer.
+            #412 notu: o kart artik takvimin ALTINDA, yani bu belirtinin kaynagi kalkti; koruma yine de
+            durur -- ustte sonradan gelen baska bir yerlesim degisikligi ayni tuzagi kurabilir. */}
         <LayoutAnimationConfig skipEntering>
         <GestureDetector gesture={kaydirmaHareketi}>
         {/* #315: izgara iki gorunumde de TAM GENISLIGE yayilir (#84'un 256 px siniri kalkti). */}
