@@ -237,6 +237,7 @@ export const en: Katalog = {
     hareketEkle: 'Add exercise',
     hareketEklemeyiKapat: 'Close add exercise',
     kartiKapat: 'Close card',
+    duzenlemeyiKapat: 'Close editor',
     hareketlerListesi: 'Exercises',
     hareketBulundu_one: '{{count}} exercise found',
     hareketBulundu_other: '{{count}} exercises found',

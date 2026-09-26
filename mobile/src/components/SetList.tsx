@@ -17,7 +17,7 @@ interface OrtakProps {
 }
 
 type Props = OrtakProps &
-  ({ varyant?: 'bugun'; onSetSil: (kayit: SetKaydi) => void } | { varyant: 'gecmis' });
+  ({ varyant?: 'bugun'; onSetDuzenle: (kayit: SetKaydi, sira: number) => void } | { varyant: 'gecmis' });
 
 interface EgzersizGrubu {
   exerciseId: number;
@@ -118,7 +118,7 @@ export default function SetList(props: Props) {
           </View>
           <View className="flex-col gap-1">
             {grup.sets.map((kayit, setSirasi) => (
-              <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onSil={props.onSetSil} />
+              <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onDuzenle={props.onSetDuzenle} />
             ))}
           </View>
         </View>

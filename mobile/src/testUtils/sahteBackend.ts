@@ -147,6 +147,18 @@ export function sahteBackendOlustur() {
       return yeniSet;
     }
 
+    // #57: set duzeltme -- yalnizca gonderilen alanlar degisir, guncel set doner.
+    if (method === 'PATCH' && /^\/sets\/\d+$/.test(path)) {
+      const kayit = state.setler.find((s) => s.id === Number(path.split('/')[2]));
+      Object.assign(kayit, govde);
+      return kayit;
+    }
+
+    if (method === 'DELETE' && /^\/sets\/\d+$/.test(path)) {
+      state.setler = state.setler.filter((s) => s.id !== Number(path.split('/')[2]));
+      return undefined;
+    }
+
     if (method === 'GET' && path.startsWith('/stats/calendar')) {
       return {
         days: [],
