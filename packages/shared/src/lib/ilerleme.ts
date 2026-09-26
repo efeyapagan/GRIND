@@ -25,3 +25,8 @@ export function varsayilanHareket(
     ) ?? secilebilirIlerleme[0]
   ).exerciseId;
 }
+
+/** Hareketin hedef set sayisi doldu mu -- hedefsiz hareket (`plannedSets = null`) hicbir zaman dolmaz. */
+export function hedefTamamlandi(hareket: HareketIlerlemesi): boolean {
+  return hareket.plannedSets !== null && hareket.completedSets >= hareket.plannedSets;
+}

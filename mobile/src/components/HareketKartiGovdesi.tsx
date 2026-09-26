@@ -2,6 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, CirclePlay, Plus, X } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
+import { hedefTamamlandi } from '@grind/shared/lib/ilerleme';
 import SetSatiri from './SetSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { useIkonRenk } from '../ui/renkler';
@@ -31,7 +32,7 @@ function setSayaci(hareket: HareketIlerlemesi): string {
 export default function HareketKartiGovdesi({ hareket, sira, setler, onSetSil, onSec, onKapat }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
-  const tamamlandi = hareket.plannedSets !== null && hareket.completedSets >= hareket.plannedSets;
+  const tamamlandi = hedefTamamlandi(hareket);
   const sayac = setSayaci(hareket);
   const baslik = (
     <>
