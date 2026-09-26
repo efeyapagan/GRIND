@@ -34,7 +34,7 @@ export default function Modal({ acik, onKapat, baslik, children }: Props) {
               </IkonDugmesi>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled">
-              <View className="flex flex-col gap-4 p-4 pt-0">{children}</View>
+              <View testID="modal-govde" className="flex flex-col gap-4 p-4 pt-0">{children}</View>
             </ScrollView>
           </Pressable>
         </Pressable>

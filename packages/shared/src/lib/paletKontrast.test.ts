@@ -89,6 +89,12 @@ test('success her iki temada her yuzeyde en az 3:1', () => {
   expect(dusukOranlar('success', 3)).toEqual([]);
 });
 
+test('success METIN olarak kullanildigi yuzeylerde en az 4.5:1', () => {
+  // #372: "Bu kullanici adi uygun." satiri success rengiyle yazilir (pencere `surface-1`
+  // uzerinde). Nokta/rozet icin 3:1 yetiyordu, METIN 4.5:1 ister.
+  expect(dusukOranlar('success', 4.5, ['bg', 'surface-1', 'surface-2'])).toEqual([]);
+});
+
 test('dolgular kendi uzerlerindeki metinle 4.5:1 saglar', () => {
   for (const [temaAdi, palet] of Object.entries(paletler)) {
     expect(kontrast(palet['on-accent'], palet.accent), `${temaAdi}: on-accent/accent`).toBeGreaterThanOrEqual(4.5);

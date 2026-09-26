@@ -21,6 +21,14 @@ public interface IAuthService
     Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Verilen kullanıcı adı KAYIT için alınabilir mi (#372). Pasif hesapların adı da REZERVEDIR
+    /// (Faz 13 kararı), bu yüzden onlar da "alınmış" sayılır — `GET /api/users/{username}` bu soruya
+    /// doğru cevap veremez, orada pasif hesap 404'tür. Çağıranın KENDİ adı uygun sayılır.
+    /// </summary>
+    Task<UsernameAvailabilityResponse> IsUsernameAvailableAsync(
+        UsernameAvailabilityRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Kullanıcı adı ve/veya şifre değiştirir (issue #65). <see cref="UpdateProfileRequest.CurrentPassword"/>
     /// HER ZAMAN doğrulanır; yanlışsa UnauthorizedException. Yeni kullanıcı adı başkasına aitse
     /// ConflictException. En az biri (yeni ad ya da yeni şifre) verilmemişse ValidationException.

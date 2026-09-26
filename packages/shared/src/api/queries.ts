@@ -25,6 +25,7 @@ type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 type ReorderTemplatesRequest = components['schemas']['ReorderTemplatesRequest'];
+type UsernameAvailabilityResponse = components['schemas']['UsernameAvailabilityResponse'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
@@ -104,6 +105,9 @@ export const queryKeys = {
   measurementsInfinite: ['measurements', 'infinite'] as const,
   // #283: kendi profilin (#280) ve bir kullanicinin herkese acik basligi (#281, sayaclar).
   profil: ['profil'] as const,
+  // #372: kullanici adi uygunlugu. Ad anahtarin PARCASIDIR -- her ad kendi sonucunu onbellekler,
+  // ayni adi tekrar sormak ag istegi uretmez.
+  kullaniciAdiUygun: (kullaniciAdi: string) => ['kullaniciAdiUygun', kullaniciAdi] as const,
   kullaniciProfiliAll: ['kullaniciProfili'] as const,
   kullaniciProfili: (kullaniciAdi: string) => [...queryKeys.kullaniciProfiliAll, kullaniciAdi] as const,
   // Surum anahtarda: yeni fotograf yeni kayit, eskisi onbellekte bayat kalmaz.
@@ -1403,6 +1407,29 @@ export function useProfilim() {
   return useQuery({
     queryKey: queryKeys.profil,
     queryFn: async (): Promise<Profil> => dogrulanmisProfil(await request<ProfileResponse>('/profile')),
+  });
+}
+
+/**
+ * "Bu kullanici adi alinabilir mi?" (#372). `kullaniciAdi` bos verilirse sorgu HIC calismaz --
+ * cagiran taraf bicim kuralini kendisi uygular ve yalnizca gecerli bir ad icin sorar (uc bozuk
+ * girdiye 400 doner, onu kullaniciya "alinmis" gibi gostermek yanlis olurdu).
+ *
+ * Gecikme (debounce) burada DEGIL cagirandadir: bekleme suresi bir arayuz karari (#372'de 3 sn).
+ */
+export function useKullaniciAdiUygunMu(kullaniciAdi: string | null) {
+  return useQuery({
+    queryKey: queryKeys.kullaniciAdiUygun(kullaniciAdi ?? ''),
+    queryFn: async (): Promise<boolean> => {
+      const yanit = await request<UsernameAvailabilityResponse>(
+        `/auth/username-available?username=${encodeURIComponent(kullaniciAdi!)}`,
+      );
+      return yanit.available === true;
+    },
+    enabled: kullaniciAdi !== null && kullaniciAdi.length > 0,
+    // Ad alinmis/bos bilgisi birkac dakikada bir degisen bir sey degil; pencere kapanip acilinca
+    // ayni ad icin tekrar sorulmaz.
+    staleTime: 60_000,
   });
 }
 
