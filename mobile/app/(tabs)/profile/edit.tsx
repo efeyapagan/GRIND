@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Cake, ImagePlus, Trash2, UserRound, X } from 'lucide-react-native';
+import { Cake, ImagePlus, KeyRound, Pencil, Trash2, UserRound, X } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
   useFotografiKaldir,
@@ -24,6 +24,9 @@ import BirincilDugme from '../../../src/ui/BirincilDugme';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import ProfilFotografi from '../../../src/components/ProfilFotografi';
+import KullaniciAdiPenceresi from '../../../src/components/KullaniciAdiPenceresi';
+import SifreDegistirPenceresi from '../../../src/components/SifreDegistirPenceresi';
+import { useAuth } from '../../../src/auth/AuthContext';
 import { useIkonRenk } from '../../../src/ui/renkler';
 
 const MAKS_ISIM_KARAKTER = 50;
@@ -226,21 +229,88 @@ function BilgiFormu({ profil }: { profil: Profil }) {
   }
 
   return (
-    <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
+    <>
       {genelHata && <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={genelHata} />}
-      <Alan
-        id="profil-gorunen-isim"
-        etiket={t('profil.gorunenIsim')}
-        ikon={UserRound}
-        autoComplete="name"
-        maxLength={MAKS_ISIM_KARAKTER}
-        value={isim}
-        onChangeText={setIsim}
-      />
-      <DogumTarihiAlani deger={dogumTarihi} degistir={setDogumTarihi} />
-      <BirincilDugme yukseklik="normal" disabled={guncelle.isPending} onPress={gonder}>
-        {t('ortak.kaydet')}
-      </BirincilDugme>
+      <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
+        <Alan
+          id="profil-gorunen-isim"
+          etiket={t('profil.gorunenIsim')}
+          ikon={UserRound}
+          autoComplete="name"
+          maxLength={MAKS_ISIM_KARAKTER}
+          value={isim}
+          onChangeText={setIsim}
+        />
+      </View>
+      <KullaniciAdiKarti />
+      <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
+        <DogumTarihiAlani deger={dogumTarihi} degistir={setDogumTarihi} />
+        <BirincilDugme yukseklik="normal" disabled={guncelle.isPending} onPress={gonder}>
+          {t('ortak.kaydet')}
+        </BirincilDugme>
+      </View>
+      <SifreKarti />
+    </>
+  );
+}
+
+/**
+ * Kullanici adi karti (#372): ad salt-okunur, degistirmek sagdaki kalem ikonundan acilan pencereyle.
+ * Ad, profil yanitindan DEGIL `useAuth`tan okunur -- degisiklikten sonra yeni token'la birlikte
+ * oradaki deger aninda tazelenir (`AuthContext.updateProfile`).
+ */
+function KullaniciAdiKarti() {
+  const ikonRenk = useIkonRenk();
+  const { t } = useTranslation();
+  const { username, updateProfile } = useAuth();
+  const [acik, setAcik] = useState(false);
+
+  return (
+    <View className="flex-col gap-1 rounded-xl bg-surface-1 p-4">
+      <Text className="text-label text-fg">{t('ortak.kullaniciAdi')}</Text>
+      <View className="flex-row items-center gap-2">
+        <Text className="min-w-0 flex-1 text-body text-fg">@{username}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('profil.kullaniciAdiDegistir')}
+          onPress={() => setAcik(true)}
+          className="size-11 items-center justify-center rounded-xl bg-surface-2"
+        >
+          <Pencil color={ikonRenk.fg} size={18} />
+        </Pressable>
+      </View>
+      {acik && (
+        <KullaniciAdiPenceresi
+          acik={acik}
+          onKapat={() => setAcik(false)}
+          mevcutAd={username ?? ''}
+          updateProfile={updateProfile}
+        />
+      )}
     </View>
+  );
+}
+
+/** Sifre degistirme, ekranin EN ALTINDA tek bir dugme; form ortada acilan pencerede (#372). */
+function SifreKarti() {
+  const ikonRenk = useIkonRenk();
+  const { t } = useTranslation();
+  const { updateProfile } = useAuth();
+  const [acik, setAcik] = useState(false);
+
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setAcik(true)}
+        className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-surface-1 p-4"
+      >
+        <KeyRound color={ikonRenk.fg} size={18} />
+        <Text className="text-label text-fg">{t('profil.sifreDegistir')}</Text>
+      </Pressable>
+      {acik && (
+        <SifreDegistirPenceresi acik={acik} onKapat={() => setAcik(false)} updateProfile={updateProfile} />
+      )}
+    </>
   );
 }

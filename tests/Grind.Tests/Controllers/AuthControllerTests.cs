@@ -35,6 +35,12 @@ public class AuthControllerTests
         public Task DeactivateAsync(DeleteAccountRequest request, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
+        // #372: bu controller testleri uygunluk ucunu egzersiz etmiyor (entegrasyon testinde),
+        // arabirim uyesi oldugu icin burada yer aliyor.
+        public Task<UsernameAvailabilityResponse> IsUsernameAvailableAsync(
+            UsernameAvailabilityRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new UsernameAvailabilityResponse(true));
+
         public Task<AuthResponse> UpdateProfileAsync(
             UpdateProfileRequest request, CancellationToken cancellationToken = default)
         {
