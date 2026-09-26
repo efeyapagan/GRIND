@@ -72,12 +72,22 @@ interface SekmeTanimi {
   aktif: boolean;
 }
 
+interface SekmeProps extends SekmeTanimi {
+  onPressIn: () => void;
+  onPressOut: () => void;
+}
+
 /** Balonun acilisi: hafif tasmali yay -- "kucukten buyuge" ama sert degil. Kapanis kisa bir sonme. */
 const ACILIS_YAYI = { damping: 14, stiffness: 180, mass: 0.8 } as const;
 const KAPANIS_MS = 150;
 const BASLANGIC_OLCEGI = 0.5;
+/**
+ * Bir sekmeye parmak degdikce tum cam cubuk bu olcege buyur, kalkinca ayni yayla yerine oturur
+ * (#373, iOS 26 "liquid glass" dokunma hissi). Basili tutuldukca buyuk kalir.
+ */
+const BASILI_OLCEK = 1.04;
 
-function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
+function Sekme({ etiket, hedef, Ikon, aktif, onPressIn, onPressOut }: SekmeProps) {
   const ikonRenk = useIkonRenk();
   const router = useRouter();
   const palet = useRenkPaleti();
@@ -100,6 +110,8 @@ function Sekme({ etiket, hedef, Ikon, aktif }: SekmeTanimi) {
       accessibilityLabel={etiket}
       accessibilityState={{ selected: aktif }}
       onPress={() => router.navigate(hedef)}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       className="flex-1 items-center justify-center"
     >
       {/* Balon (aktif zemin) her sekmede HEP yerinde durur, yalnizca olcegi/opakligi canlanir: zemini
@@ -130,25 +142,38 @@ export default function KabukTabBar() {
     { etiket: t('kabuk.profil'), hedef: '/profile', Ikon: User, aktif: pathname.startsWith('/profile') },
   ];
 
+  const olcek = useSharedValue(1);
+  const cubukStili = useAnimatedStyle(() => ({ transform: [{ scale: olcek.value }] }));
+  const basildi = () => {
+    olcek.value = withSpring(BASILI_OLCEK, ACILIS_YAYI);
+  };
+  const birakildi = () => {
+    olcek.value = withSpring(1, ACILIS_YAYI);
+  };
+
   return (
     <View
       pointerEvents="box-none"
       className="absolute left-4 right-4"
       style={{ bottom: insets.bottom + ALT_BOSLUK }}
     >
-      <View
-        accessibilityRole="tablist"
-        accessibilityLabel={t('kabuk.gezinme')}
-        className="overflow-hidden rounded-full border border-surface-4"
-        style={{ height: BAR_H }}
-      >
-        <CamYuzey />
-        <View className="flex-1 flex-row items-center" style={{ paddingHorizontal: IC_BOSLUK }}>
-          {sekmeler.map((sekme) => (
-            <Sekme key={String(sekme.hedef)} {...sekme} />
-          ))}
+      {/* Olcek ayri bir sarmalayicida: kirpan (`overflow-hidden`) cam hap oldugu gibi kalir, butun
+          halinde buyur -- cam, kenarlik ve sekmeler birlikte. */}
+      <Animated.View style={cubukStili}>
+        <View
+          accessibilityRole="tablist"
+          accessibilityLabel={t('kabuk.gezinme')}
+          className="overflow-hidden rounded-full border border-surface-4"
+          style={{ height: BAR_H }}
+        >
+          <CamYuzey />
+          <View className="flex-1 flex-row items-center" style={{ paddingHorizontal: IC_BOSLUK }}>
+            {sekmeler.map((sekme) => (
+              <Sekme key={String(sekme.hedef)} {...sekme} onPressIn={basildi} onPressOut={birakildi} />
+            ))}
+          </View>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
