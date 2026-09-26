@@ -18,9 +18,13 @@ public static class DependencyInjection
         services.AddScoped<IBodyWeightLogService, BodyWeightLogService>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IAiInsightService, AiInsightService>();
+        services.AddScoped<IUserSummaryBuilder, UserSummaryBuilder>();
         services.AddScoped<IFollowService, FollowService>();
         services.AddScoped<IPublicActivityService, PublicActivityService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<INotificationSource, FollowNotificationSource>();
+        services.AddScoped<INotificationSource, RecordNotificationSource>();
+        services.AddScoped<INotificationService, NotificationService>();
         return services;
     }
 }

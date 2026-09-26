@@ -39,6 +39,12 @@ public class User
     /// </summary>
     public PrivacyLevel PrivacyLevel { get; set; } = PrivacyLevel.Kisitli;
 
+    /// <summary>
+    /// Kullanıcının bildirim ekranını en son açtığı an (UTC, #325); <c>null</c> = hiç açmadı. Bildirimler
+    /// saklanmaz, sorgu anında türetilir — okunmamış = bu andan sonra olmuş olan.
+    /// </summary>
+    public DateTime? NotificationsSeenAt { get; set; }
+
     public ICollection<Exercise> Exercises { get; set; } = [];
     public ICollection<WorkoutTemplate> WorkoutTemplates { get; set; } = [];
     public ICollection<WorkoutSession> WorkoutSessions { get; set; } = [];

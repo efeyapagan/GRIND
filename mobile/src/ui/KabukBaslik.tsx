@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Menu, Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { useOkunmamisBildirimSayisi } from '@grind/shared/api/queries';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
@@ -24,6 +25,8 @@ import { useIkonRenk } from './renkler';
  *
  * #324: Ana sayfada sagdaki "GRIND" yazisinin yerini bildirim (zil) ve GRINDY kisayollari alir;
  * diger ekranlarda bar degismez.
+ *
+ * #325: zilde okunmamis sayisi rozeti; sayi yalnizca ana sayfada istenir.
  */
 export default function KabukBaslik() {
   const ikonRenk = useIkonRenk();
@@ -32,6 +35,8 @@ export default function KabukBaslik() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
+  const anaSayfa = pathname === '/';
+  const { data: okunmamis = 0 } = useOkunmamisBildirimSayisi(anaSayfa);
 
   function geriGit() {
     const hedef = geriHedefi(pathname, router.canGoBack());
@@ -86,15 +91,31 @@ export default function KabukBaslik() {
         <Text numberOfLines={1} className="flex-1 text-heading text-fg">
           {baslik}
         </Text>
-        {pathname === '/' ? (
+        {anaSayfa ? (
           <>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('ortak.bildirimler')}
+              accessibilityLabel={
+                okunmamis > 0
+                  ? t('bildirimler.zilEtiketi', { count: okunmamis })
+                  : t('ortak.bildirimler')
+              }
               onPress={() => router.push('/bildirimler')}
               className="size-10 shrink-0 items-center justify-center"
             >
               <Bell color={ikonRenk.fg} size={22} />
+              {okunmamis > 0 && (
+                <View
+                  testID="zil-rozeti"
+                  importantForAccessibility="no-hide-descendants"
+                  accessibilityElementsHidden
+                  className="absolute right-0.5 top-0.5 min-w-4 items-center justify-center rounded-full bg-accent px-1"
+                >
+                  <Text className="text-label text-on-accent">
+                    {okunmamis > 9 ? '9+' : okunmamis}
+                  </Text>
+                </View>
+              )}
             </Pressable>
             <Pressable
               accessibilityRole="button"

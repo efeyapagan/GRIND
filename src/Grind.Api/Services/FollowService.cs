@@ -16,6 +16,7 @@ public class FollowService(
     IFollowRepository followRepository,
     IUserRepository userRepository,
     IUserAvatarRepository avatarRepository,
+    IUserSummaryBuilder summaryBuilder,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFollowService
@@ -64,7 +65,7 @@ public class FollowService(
     {
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var counts = await followRepository.GetCountsAsync(target.Id, cancellationToken);
-        var relations = await RelationsAsync([target.Id], cancellationToken);
+        var relations = await summaryBuilder.RelationsAsync([target.Id], cancellationToken);
         var avatarUpdatedAt = await avatarRepository.GetUpdatedAtAsync(target.Id, cancellationToken);
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
 
@@ -94,7 +95,7 @@ public class FollowService(
     {
         var users = await userRepository.SearchActiveAsync(
             UsernameNormalizer.Normalize(query), query.Trim(), currentUser.UserId, SearchLimit, cancellationToken);
-        return await SummariesAsync(users, cancellationToken);
+        return await summaryBuilder.BuildAsync(users, cancellationToken);
     }
 
     private async Task<PagedResponse<UserSummaryResponse>> ListAsync(
@@ -105,38 +106,6 @@ public class FollowService(
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var (items, total) = await fetch(target.Id, query.Skip(), query.PageSize, cancellationToken);
         return new PagedResponse<UserSummaryResponse>(
-            await SummariesAsync(items, cancellationToken), query.Page, query.PageSize, total);
-    }
-
-    private async Task<IReadOnlyList<UserSummaryResponse>> SummariesAsync(
-        IReadOnlyList<UserRef> users, CancellationToken cancellationToken)
-    {
-        var ids = users.Select(u => u.Id).ToList();
-        var relation = await RelationsAsync(ids, cancellationToken);
-        var avatars = await avatarRepository.GetUpdatedAtsAsync(ids, cancellationToken);
-        return users.Select(u => new UserSummaryResponse(
-            u.Username,
-            u.DisplayName,
-            avatars.ContainsKey(u.Id),
-            avatars.TryGetValue(u.Id, out var updatedAt) ? AvatarVersion.Of(updatedAt) : null,
-            relation(u.Id))).ToList();
-    }
-
-    /// <summary>Oturum açmış kullanıcının verilen kişilerle ilişkisi — tek sorgu, sonra bellekte.</summary>
-    private async Task<Func<long, FollowRelation>> RelationsAsync(
-        IReadOnlyCollection<long> otherIds, CancellationToken cancellationToken)
-    {
-        var viewerId = currentUser.UserId;
-        var (viewerFollows, followsViewer) = await followRepository.GetRelationsAsync(
-            viewerId, otherIds, cancellationToken);
-
-        return id => (id == viewerId, viewerFollows.Contains(id), followsViewer.Contains(id)) switch
-        {
-            (true, _, _) => FollowRelation.Self,
-            (_, true, true) => FollowRelation.Friends,
-            (_, true, false) => FollowRelation.Following,
-            (_, false, true) => FollowRelation.FollowedBy,
-            _ => FollowRelation.None
-        };
+            await summaryBuilder.BuildAsync(items, cancellationToken), query.Page, query.PageSize, total);
     }
 }

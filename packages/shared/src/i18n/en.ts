@@ -424,6 +424,15 @@ export const en: Katalog = {
   bildirimler: {
     bos: 'No notifications yet',
     bosAciklama: 'New notifications will show up here.',
+    takipEtti: '{{ad}} started following you',
+    artikArkadassiniz: "You're now friends",
+    rekorKirdi_one: '{{ad}} set a record in {{count}} exercise',
+    rekorKirdi_other: '{{ad}} set records in {{count}} exercises',
+    rekorSatiri: '{{hareket}} · {{agirlik}} kg × {{tekrar}}',
+    alinamadi: "Couldn't load notifications.",
+    tekrarDene: 'Try again',
+    zilEtiketi_one: 'Notifications, {{count}} unread',
+    zilEtiketi_other: 'Notifications, {{count}} unread',
   },
   yorumlar: {
     baslik: "What's GRINDY saying?",
