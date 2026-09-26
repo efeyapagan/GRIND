@@ -48,9 +48,16 @@ public class FollowServiceTests
     }
 
     /// <summary>Aynı context, farklı "oturum açmış" kullanıcı.</summary>
-    private static FollowService ServiceFor(AppDbContext context, User current) => new(
-        new FollowRepository(context), new UserRepository(context), new UserAvatarRepository(context), new UnitOfWork(context),
-        new StubCurrentUser(current), new SahteSaat());
+    private static FollowService ServiceFor(AppDbContext context, User current)
+    {
+        var followRepository = new FollowRepository(context);
+        var avatarRepository = new UserAvatarRepository(context);
+        var currentUser = new StubCurrentUser(current);
+        return new FollowService(
+            followRepository, new UserRepository(context), avatarRepository,
+            new UserSummaryBuilder(followRepository, avatarRepository, currentUser),
+            new UnitOfWork(context), currentUser, new SahteSaat());
+    }
 
     private static async Task<string[]> Adlar(Task<PagedResponse<UserSummaryResponse>> liste) =>
         (await liste).Items.Select(i => i.Username).ToArray();
