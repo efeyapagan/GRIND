@@ -290,6 +290,43 @@ public class ExerciseServiceTests
         }
     }
 
+    // ---- Ekipman (#413) ----
+
+    [Fact]
+    public async Task Equipment_GetById_ve_GetAll_yanitina_yansir()
+    {
+        // Mobil, set girişindeki "Teki"/"Toplam" ibaresini hareket listesinden okur — alan bu iki
+        // uçtan da gelmezse ibare hiç görünmez.
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var egzersiz = TestDatabase.NewExercise(user, UniqueName());
+            egzersiz.Equipment = ExerciseEquipment.Dumbbell;
+            context.Add(egzersiz);
+            await context.SaveChangesAsync();
+
+            var detay = await service.GetByIdAsync(egzersiz.Id);
+            var liste = await service.GetAllAsync();
+
+            Assert.Equal(ExerciseEquipment.Dumbbell, detay.Equipment);
+            Assert.Contains(liste, e => e.Id == egzersiz.Id && e.Equipment == ExerciseEquipment.Dumbbell);
+        }
+    }
+
+    [Fact]
+    public async Task Kullanicinin_olusturdugu_egzersizin_ekipmani_null_kalir()
+    {
+        // #413 kararı: ekipman şimdilik yalnızca seed'de set edilir (AlternateName/#335 ile aynı) —
+        // Create/Update uçları bu alanı kabul etmez, null = "bilinmiyor" ve ibare gösterilmez.
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName()));
+
+            Assert.Null(olusan.Equipment);
+        }
+    }
+
     // ---- Medya ----
 
     [Fact]

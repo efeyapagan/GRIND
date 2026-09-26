@@ -171,6 +171,7 @@ export interface SetKaydi {
 }
 
 export type EgzersizKategorisi = components['schemas']['ExerciseCategory'];
+export type EgzersizEkipmani = components['schemas']['ExerciseEquipment'];
 
 export interface Egzersiz {
   id: number;
@@ -181,6 +182,10 @@ export interface Egzersiz {
   alternateName?: string | null;
   // #77: hareket secicideki kategori filtresi icin.
   category: EgzersizKategorisi;
+  // #413: set girisindeki "Teki" / "Toplam" ibaresi icin (bkz. `lib/agirlikIbaresi`). null =
+  // bilinmiyor, ibare cizilmez -- yalnizca global hareketlerde seed'den gelir. `alternateName` ile
+  // ayni gerekceyle optional: ibareyle ilgisi olmayan test fixture'lari bu alani bilmez.
+  equipment?: EgzersizEkipmani | null;
 }
 
 /**
@@ -261,6 +266,7 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
     name: yanit.name,
     alternateName: yanit.alternateName ?? null,
     category: yanit.category,
+    equipment: yanit.equipment ?? null,
   };
 }
 

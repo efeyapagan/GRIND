@@ -21,6 +21,7 @@
     "./lib/profilFotografi": "./src/lib/profilFotografi.ts",
     "./lib/rir": "./src/lib/rir.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",
+    "./lib/agirlikIbaresi": "./src/lib/agirlikIbaresi.ts",
     "./lib/apiErrors": "./src/lib/apiErrors.ts",
     "./lib/arkadasSiralamasi": "./src/lib/arkadasSiralamasi.ts",
     "./lib/egzersizler": "./src/lib/egzersizler.ts",

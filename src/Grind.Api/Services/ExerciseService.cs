@@ -208,6 +208,7 @@ public class ExerciseService(
         exercise.Name,
         exercise.AlternateName,
         exercise.Category,
+        exercise.Equipment,
         exercise.IsArchived,
         IsGlobal: exercise.UserId is null,
         exercise.Media.Select(ToResponse).ToList());

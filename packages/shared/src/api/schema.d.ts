@@ -4069,6 +4069,8 @@ export interface components {
         };
         /** @enum {string} */
         ExerciseCategory: "Push" | "Pull" | "Legs" | "Other";
+        /** @enum {string} */
+        ExerciseEquipment: "Barbell" | "Dumbbell" | "Machine" | "Cable" | "Bodyweight" | "Other";
         ExerciseMediaResponse: {
             /** Format: int64 */
             id?: number;
@@ -4128,6 +4130,7 @@ export interface components {
             name?: string | null;
             alternateName?: string | null;
             category?: components["schemas"]["ExerciseCategory"];
+            equipment?: components["schemas"]["ExerciseEquipment"];
             isArchived?: boolean;
             isGlobal?: boolean;
             media?: components["schemas"]["ExerciseMediaResponse"][] | null;
