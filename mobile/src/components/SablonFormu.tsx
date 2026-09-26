@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, ClipboardList, Plus, Trash2, X } from 'lucide-react-native';
+import { ClipboardList, Plus, Trash2, X } from 'lucide-react-native';
 import {
   useCreateTemplate,
   useDeleteTemplate,
@@ -15,7 +15,6 @@ import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { VARSAYILAN_DINLENME_SN } from '@grind/shared/lib/dinlenme';
 import { VARSAYILAN_HEDEF_SET, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
-import { yonleTasi } from '@grind/shared/lib/siralama';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
 import Hap from '../ui/Hap';
@@ -24,7 +23,11 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import HareketSecici from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
+import SurukleSiraliListe from '../ui/SurukleSiraliListe';
 import { useIkonRenk } from '../ui/renkler';
+
+/** Satirlar arasi bosluk (Tailwind gap-3); surukleme hesabi da bunu bilmeli. */
+const SATIR_ARALIGI = 12;
 
 const DINLENME_SECENEKLERI = [
   { deger: 0, etiket: 'Yok' },
@@ -54,9 +57,9 @@ interface Props {
 }
 
 /**
- * web/src/pages/SablonDuzenlePage.tsx'teki `SablonFormu` ile ayni (spec Karar 3). Basili-tutup-
- * surukleme (dnd-kit, web'e ozgu) BILEREK atlandi -- web'de ZATEN erisilebilirlik icin var olan
- * yukari/asagi dugmeleri (`tasi`) burada TEK reorder yoludur, ikinci sinif bir alternatif degil.
+ * web/src/pages/SablonDuzenlePage.tsx'teki `SablonFormu` ile ayni (spec Karar 3). #407: hareket sirasi,
+ * satiri basili tutup surukleyerek degisir (`SurukleSiraliListe`, antrenman kartlariyla ayni);
+ * yukari/asagi dugmeleri kaldirildi.
  */
 export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }: Props) {
   const ikonRenk = useIkonRenk();
@@ -120,10 +123,6 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
     if (egzersiz) {
       satiriGuncelle(anahtar, { exerciseId: egzersiz.id, exerciseName: egzersiz.name, isArchived: false });
     }
-  }
-
-  function tasi(sira: number, yon: -1 | 1) {
-    setSatirlar((onceki) => yonleTasi(onceki, sira, yon));
   }
 
   function dogrula(): boolean {
@@ -205,13 +204,16 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
       <View className="flex-col gap-3">
         <Text className="text-heading text-fg">Hareketler</Text>
         {satirlar.length === 0 && <Text className="text-body text-muted">Henüz hareket yok.</Text>}
-        <View className="flex-col gap-3">
-          {satirlar.map((satir, sira) => (
+        <SurukleSiraliListe
+          ogeler={satirlar}
+          anahtar={(satir) => satir.anahtar}
+          aralik={SATIR_ARALIGI}
+          onSirala={setSatirlar}
+          satirCiz={(satir, suruklenen) => (
             <HareketSatiri
-              key={satir.anahtar}
               satir={satir}
-              sira={sira + 1}
-              sonMu={sira === satirlar.length - 1}
+              sira={satirlar.indexOf(satir) + 1}
+              suruklenen={suruklenen}
               egzersizler={siraliEgzersizler}
               baskaSatirdaSecilenler={
                 new Set(satirlar.filter((diger) => diger.anahtar !== satir.anahtar).map((diger) => diger.exerciseId))
@@ -220,12 +222,10 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
               onEgzersiz={(exerciseId) => egzersizSec(satir.anahtar, exerciseId)}
               onHedefSet={(deger) => satiriGuncelle(satir.anahtar, { plannedSets: deger })}
               onDinlenme={(saniye) => satiriGuncelle(satir.anahtar, { restSeconds: saniye })}
-              onYukari={() => tasi(sira, -1)}
-              onAsagi={() => tasi(sira, 1)}
               onKaldir={() => setSatirlar((onceki) => onceki.filter((diger) => diger.anahtar !== satir.anahtar))}
             />
-          ))}
-        </View>
+          )}
+        />
         <IkincilDugme onPress={hareketEkle} disabled={!eklenebilirEgzersiz}>
           <Plus color={ikonRenk.fg} size={18} />
           <Text className="text-label text-fg">Hareket ekle</Text>
@@ -276,30 +276,27 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
 interface HareketSatiriProps {
   satir: Satir;
   sira: number;
-  sonMu: boolean;
+  /** #407: parmagin altindaki satir -- kenarligi vurgulanir. */
+  suruklenen: boolean;
   egzersizler: Egzersiz[];
   baskaSatirdaSecilenler: Set<number>;
   setHatasi?: string;
   onEgzersiz: (exerciseId: number) => void;
   onHedefSet: (deger: string) => void;
   onDinlenme: (saniye: number) => void;
-  onYukari: () => void;
-  onAsagi: () => void;
   onKaldir: () => void;
 }
 
 function HareketSatiri({
   satir,
   sira,
-  sonMu,
+  suruklenen,
   egzersizler,
   baskaSatirdaSecilenler,
   setHatasi,
   onEgzersiz,
   onHedefSet,
   onDinlenme,
-  onYukari,
-  onAsagi,
   onKaldir,
 }: HareketSatiriProps) {
   const ikonRenk = useIkonRenk();
@@ -310,8 +307,10 @@ function HareketSatiri({
         (a, b) => a.deger - b.deger,
       );
 
+  // Kenarlik hep cizilir, yalnizca rengi degisir (SablonKarti'ndaki #261 tuzagi).
+  const kenarlik = suruklenen ? 'border-accent' : 'border-transparent';
   return (
-    <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
+    <View className={`flex-col gap-3 rounded-xl border bg-surface-2 p-4 ${kenarlik}`}>
       <View className="flex-row items-center justify-between gap-2">
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           <View className="size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
@@ -320,12 +319,6 @@ function HareketSatiri({
           {satir.isArchived && <Hap>Artık kullanılmıyor</Hap>}
         </View>
         <View className="shrink-0 flex-row items-center gap-1">
-          <IkonDugmesi etiket={`${onEk}: yukarı taşı`} onPress={onYukari} disabled={sira === 1}>
-            <ChevronUp color={ikonRenk.muted} size={20} />
-          </IkonDugmesi>
-          <IkonDugmesi etiket={`${onEk}: aşağı taşı`} onPress={onAsagi} disabled={sonMu}>
-            <ChevronDown color={ikonRenk.muted} size={20} />
-          </IkonDugmesi>
           <IkonDugmesi etiket={`${onEk}: kaldır`} onPress={onKaldir}>
             <X color={ikonRenk.muted} size={20} />
           </IkonDugmesi>

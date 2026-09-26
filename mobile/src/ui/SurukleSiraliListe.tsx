@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -13,7 +14,12 @@ import { indeksleTasi, surukleHedefIndeksi } from '@grind/shared/lib/siralama';
 const BASILI_TUTMA_MS = 250;
 /** Varsayilan satir araligi (Tailwind gap-2). Bir siranin yuksekligi = olculen satir + aralik. */
 const VARSAYILAN_ARALIK = 8;
-const KAYMA_SURESI_MS = 140;
+/** Komsu satirlarin yer acmak icin kaymasi ve birakilan satirin yuvasina oturmasi. */
+const KAYMA_SURESI_MS = 200;
+/** Suruklenen satir hafifce buyur: parmagin altinda "kalkik" oldugu gorulsun (#407). */
+const KALKIK_OLCEK = 1.03;
+/** Birakilinca yeni sira ust bilesenden gelmezse (ör. sira degismedi) otelemeler bu surede sifirlanir. */
+const SIFIRLAMA_YEDEGI_MS = 600;
 
 interface Props<T> {
   ogeler: readonly T[];
@@ -25,15 +31,21 @@ interface Props<T> {
   aralik?: number;
 }
 
-interface SatirProps {
-  indeks: number;
-  aralik: number;
+interface Durum {
   aktif: SharedValue<number>;
   hedef: SharedValue<number>;
   oteleme: SharedValue<number>;
-  yukseklikler: SharedValue<number[]>;
+  /** Suruklenen satirin sirasi (boy + aralik): komsular bu kadar kayar. */
+  suruklenenSira: SharedValue<number>;
+}
+
+interface SatirProps {
+  indeks: number;
+  durum: Durum;
+  hedefBul: (indeks: number, otelemeY: number) => number;
+  onOlcum: (indeks: number, yukseklik: number) => void;
   onBasla: (indeks: number) => void;
-  onBitir: (indeks: number, hedefIndeks: number) => void;
+  onBirak: (indeks: number, otelemeY: number) => void;
   children: ReactNode;
 }
 
@@ -42,17 +54,17 @@ interface SatirProps {
  * #407 — acik antrenmanin hareket kartlari).
  *
  * Kutuphane EKLENMEDI: hazir surukle-birak listeleri (draggable-flatlist gibi) bu ekran icin
- * gereginden buyuk ve Reanimated 4 / RN 0.86 uyumlulugu ayri bir bakim yuku olurdu. Her satir kendi
- * yuksekligini olcer (#407: hareket kartlari set sayisina gore uzar); parmagin dikey otelemesini
- * hedef indekse ceviren hesap ortak pakette ve test edilmis (`surukleHedefIndeksi`).
+ * gereginden buyuk ve Reanimated 4 / RN 0.86 uyumlulugu ayri bir bakim yuku olurdu.
  *
- * Jest callback'leri `runOnJS(true)` ile JS thread'inde calisir (Takvim ve DinlenmeKabugu'ndaki
- * gibi): hesap ortak paketten geldigi icin worklet'e kapatilamaz -- worklet'ten normal bir JS
- * fonksiyonu cagrilamaz. Liste kisa, her karede yapilan is birkac toplama.
+ * Her satir kendi yuksekligini olcer (#407: hareket kartlari set sayisina gore uzar); olcumler
+ * JS tarafinda bir ref'te durur, cunku jest callback'leri `runOnJS(true)` ile zaten JS thread'inde
+ * calisir ve hedef hesabi (`surukleHedefIndeksi`) ortak paketten gelir. UI thread'ine yalnizca
+ * animasyonun ihtiyac duydugu sayilar (suruklenen satir, hedef, oteleme, suruklenenin boyu) gider --
+ * bir diziyi paylasilan degerde tutmak, ayni karede gelen olcumlerin birbirini ezmesine yol aciyordu.
  *
- * Surukleme SIRASINDA dizi degismez: suruklenen satir parmagi takip eder, aradaki satirlar
- * suruklenen satirin boyu kadar yukari/asagi kayar. Dizi yalnizca parmak kalkinca, tek seferde
- * yeniden siralanir.
+ * Surukleme SIRASINDA dizi degismez: suruklenen satir parmagi takip eder, aradaki satirlar suruklenenin
+ * boyu kadar kayarak yer acar. Parmak kalkinca suruklenen satir yuvasina kayarak oturur, SONRA dizi
+ * tek seferde yeniden siralanir; otelemeler yeni sira gelince sifirlanir ki kartlar yerinden sicramasin.
  */
 export default function SurukleSiraliListe<T>({
   ogeler,
@@ -61,23 +73,75 @@ export default function SurukleSiraliListe<T>({
   onSirala,
   aralik = VARSAYILAN_ARALIK,
 }: Props<T>) {
-  const aktif = useSharedValue(-1);
-  const hedef = useSharedValue(-1);
-  const oteleme = useSharedValue(0);
-  const yukseklikler = useSharedValue<number[]>([]);
+  const durum: Durum = {
+    aktif: useSharedValue(-1),
+    hedef: useSharedValue(-1),
+    oteleme: useSharedValue(0),
+    suruklenenSira: useSharedValue(0),
+  };
+  const yukseklikler = useRef<number[]>([]);
+  const sifirlamaZamanlayici = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [suruklenenIndeks, setSuruklenenIndeks] = useState<number | null>(null);
+  const siraImzasi = ogeler.map(anahtar).join(',');
+
+  function sifirla() {
+    if (sifirlamaZamanlayici.current) {
+      clearTimeout(sifirlamaZamanlayici.current);
+      sifirlamaZamanlayici.current = null;
+    }
+    durum.aktif.value = -1;
+    durum.hedef.value = -1;
+    durum.oteleme.value = 0;
+  }
+
+  // Yeni sira geldi: satirlar yeni yerlerinde, otelemeler artik gereksiz. Bagimlilik bilerek yalnizca
+  // sira: ust bilesen her cizimde yeni dizi verebilir (ör. dinlenme sayaci), bu surukleme ortasinda sifirlardi.
+  useLayoutEffect(() => {
+    sifirla();
+  }, [siraImzasi]);
+
+  function olcum(indeks: number, yukseklik: number) {
+    yukseklikler.current[indeks] = yukseklik + aralik;
+  }
+
+  function olculenler() {
+    return Array.from({ length: ogeler.length }, (_, indeks) => yukseklikler.current[indeks] ?? 0);
+  }
+
+  function hedefBul(indeks: number, otelemeY: number) {
+    return surukleHedefIndeksi(indeks, otelemeY, olculenler());
+  }
 
   function basla(indeks: number) {
-    // Olcumler indekse gore tutulur; sira degismis ya da liste kisalmis olabilir, fazlasi atilir.
-    yukseklikler.value = yukseklikler.value.slice(0, ogeler.length);
+    sifirla();
+    durum.suruklenenSira.value = olculenler()[indeks];
+    durum.aktif.value = indeks;
+    durum.hedef.value = indeks;
     setSuruklenenIndeks(indeks);
   }
 
-  function bitir(indeks: number, hedefIndeks: number) {
+  function yerlesti(indeks: number, hedefIndeks: number) {
     setSuruklenenIndeks(null);
-    if (hedefIndeks !== indeks) {
-      onSirala(indeksleTasi(ogeler, indeks, hedefIndeks));
+    if (hedefIndeks === indeks) {
+      sifirla();
+      return;
     }
+    onSirala(indeksleTasi(ogeler, indeks, hedefIndeks));
+    sifirlamaZamanlayici.current = setTimeout(sifirla, SIFIRLAMA_YEDEGI_MS);
+  }
+
+  function birak(indeks: number, otelemeY: number) {
+    const hedefIndeks = hedefBul(indeks, otelemeY);
+    const siralar = olculenler();
+    // Yuva: suruklenen satirin yeni yerinin eski yerine uzakligi -- aradaki satirlarin toplam boyu.
+    const yuva =
+      hedefIndeks > indeks
+        ? siralar.slice(indeks + 1, hedefIndeks + 1).reduce((a, b) => a + b, 0)
+        : -siralar.slice(hedefIndeks, indeks).reduce((a, b) => a + b, 0);
+    durum.hedef.value = hedefIndeks;
+    durum.oteleme.value = withTiming(yuva, { duration: KAYMA_SURESI_MS }, () => {
+      runOnJS(yerlesti)(indeks, hedefIndeks);
+    });
   }
 
   return (
@@ -86,13 +150,11 @@ export default function SurukleSiraliListe<T>({
         <Satir
           key={anahtar(oge)}
           indeks={indeks}
-          aralik={aralik}
-          aktif={aktif}
-          hedef={hedef}
-          oteleme={oteleme}
-          yukseklikler={yukseklikler}
+          durum={durum}
+          hedefBul={hedefBul}
+          onOlcum={olcum}
           onBasla={basla}
-          onBitir={bitir}
+          onBirak={birak}
         >
           {satirCiz(oge, suruklenenIndeks === indeks)}
         </Satir>
@@ -101,52 +163,42 @@ export default function SurukleSiraliListe<T>({
   );
 }
 
-function Satir({ indeks, aralik, aktif, hedef, oteleme, yukseklikler, onBasla, onBitir, children }: SatirProps) {
+function Satir({ indeks, durum, hedefBul, onOlcum, onBasla, onBirak, children }: SatirProps) {
+  const { aktif, hedef, oteleme, suruklenenSira } = durum;
   const surukleme = Gesture.Pan()
     .runOnJS(true)
     .activateAfterLongPress(BASILI_TUTMA_MS)
     .onStart(() => {
       onBasla(indeks);
-      aktif.value = indeks;
-      hedef.value = indeks;
-      oteleme.value = 0;
     })
     .onUpdate((olay) => {
       oteleme.value = olay.translationY;
-      hedef.value = surukleHedefIndeksi(indeks, olay.translationY, yukseklikler.value);
+      hedef.value = hedefBul(indeks, olay.translationY);
     })
     .onEnd((olay) => {
-      const hedefIndeks = surukleHedefIndeksi(indeks, olay.translationY, yukseklikler.value);
-      aktif.value = -1;
-      hedef.value = -1;
-      oteleme.value = 0;
-      onBitir(indeks, hedefIndeks);
+      onBirak(indeks, olay.translationY);
     });
 
   const stil = useAnimatedStyle(() => {
     if (aktif.value === -1) {
-      return { transform: [{ translateY: 0 }], zIndex: 0 };
+      return { transform: [{ translateY: 0 }, { scale: 1 }], zIndex: 0 };
     }
     if (aktif.value === indeks) {
-      // Suruklenen satir parmagi birebir takip eder ve digerlerinin USTUNDE kalir.
-      return { transform: [{ translateY: oteleme.value }], zIndex: 2 };
+      // Suruklenen satir parmagi birebir takip eder, hafifce buyur ve digerlerinin USTUNDE kalir.
+      return { transform: [{ translateY: oteleme.value }, { scale: KALKIK_OLCEK }], zIndex: 2 };
     }
-    // Aradaki satirlar suruklenen satirin BOYU kadar kayar -- onun biraktigi boslugu doldururlar.
-    const suruklenenSirasi = yukseklikler.value[aktif.value] ?? 0;
+    // Aradaki satirlar suruklenenin BOYU kadar kayar -- onun biraktigi boslugu doldururlar.
     const asagidan = aktif.value < indeks && indeks <= hedef.value;
     const yukaridan = hedef.value <= indeks && indeks < aktif.value;
-    const kayma = asagidan ? -suruklenenSirasi : yukaridan ? suruklenenSirasi : 0;
+    const kayma = asagidan ? -suruklenenSira.value : yukaridan ? suruklenenSira.value : 0;
     return {
-      transform: [{ translateY: withTiming(kayma, { duration: KAYMA_SURESI_MS }) }],
+      transform: [{ translateY: withTiming(kayma, { duration: KAYMA_SURESI_MS }) }, { scale: 1 }],
       zIndex: 0,
     };
   });
 
-  // Bir "sira" satirin kendisi + aradaki bosluk; hesap bunun uzerinden yuruyor.
   function olculdu(olay: LayoutChangeEvent) {
-    const yeni = [...yukseklikler.value];
-    yeni[indeks] = olay.nativeEvent.layout.height + aralik;
-    yukseklikler.value = yeni;
+    onOlcum(indeks, olay.nativeEvent.layout.height);
   }
 
   return (

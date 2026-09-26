@@ -1,9 +1,9 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { Gesture } from 'react-native-gesture-handler';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
 import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
 import { renderRouterAsync } from '../../src/testUtils/renderRouterAsync';
+import { suruklemeCasusu } from '../../src/testUtils/surukleme';
 
 jest.mock('@grind/shared/api/client', () => {
   const actual = jest.requireActual('@grind/shared/api/client');
@@ -19,11 +19,9 @@ beforeEach(async () => {
 /**
  * #407 (#229'un yerine): açık antrenmanda hareket kartı basılı tutulup sürüklenerek taşınır; sunucuya
  * antrenmandaki TÜM hareketlerin yeni sırası gider ve kartlar yanıt beklenmeden o sırayla görünür.
- * Gerçek sürükleme RNTL'de simüle edilemez: `Gesture.Pan` casuslanır, basılı tutmayla açılan
- * (sürükleme) jestleri ayıklanıp son çizimdeki kartın jesti elle yürütülür (SurukleSiraliListe.test ile aynı).
  */
 test('kullanıcı açık antrenmanda hareketi sürükleyerek aşağı taşır, yeni sıra sunucuya kaydedilir', async () => {
-  const panSpy = jest.spyOn(Gesture, 'Pan');
+  const surukleme = suruklemeCasusu();
   const { sahteRequest, state } = sahteBackendOlustur();
   state.acikOturum = {
     id: 1,
@@ -45,18 +43,7 @@ test('kullanıcı açık antrenmanda hareketi sürükleyerek aşağı taşır, y
   await renderRouterAsync('./app', { initialUrl: '/antrenman' });
   await screen.findByLabelText(/Bench Press, 0 \/ 4 set/);
 
-  for (const satir of screen.getAllByTestId('surukle-satir')) {
-    satir.props.onLayout({ nativeEvent: { layout: { height: 120 } } });
-  }
-  const suruklemeJestleri = panSpy.mock.results
-    .map((sonuc) => sonuc.value)
-    .filter((pan) => pan.config.activateAfterLongPress > 0);
-  const benchJesti = suruklemeJestleri[suruklemeJestleri.length - 2].handlers;
-  await act(async () => {
-    benchJesti.onStart({ translationY: 0 });
-    benchJesti.onUpdate({ translationY: 140 });
-    benchJesti.onEnd({ translationY: 140 });
-  });
+  await surukleme.surukleBirak(0, 140);
 
   await waitFor(() =>
     expect(requestMock).toHaveBeenCalledWith(
@@ -66,7 +53,7 @@ test('kullanıcı açık antrenmanda hareketi sürükleyerek aşağı taşır, y
   );
   const kartlar = screen.getAllByRole('button', { name: /, \d+( \/ \d+)? set$/ });
   expect(kartlar.map((kart) => kart.props.accessibilityLabel)).toEqual(['Squat, 0 / 3 set', 'Bench Press, 0 / 4 set']);
-  panSpy.mockRestore();
+  surukleme.geriAl();
   // Gercek rotalarla ilk acilis, paralel kosuda jest'in 5 sn'lik varsayilanini asiyor (antrenmandanSablon ile ayni).
 }, 20_000);
 
