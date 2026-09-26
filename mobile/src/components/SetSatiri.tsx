@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
@@ -9,32 +8,20 @@ import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
-import SetDuzenleyici from './SetDuzenleyici';
 
 interface Props {
   kayit: SetKaydi;
   sira: number;
-  onSil: (kayit: SetKaydi) => void;
+  /** #396: duzenleyici satirin yerinde degil ekranin ortasinda acilir -- acmak ekranin isi. */
+  onDuzenle: (kayit: SetKaydi, sira: number) => void;
 }
 
 /**
- * Bugun ekraninin set satiri (issue #57): satirin KENDISI bir dugmedir, dokununca yerinde
- * `SetDuzenleyici` acilir.
+ * Bugun ekraninin set satiri (issue #57): satirin KENDISI bir dugmedir, dokununca `SetDuzenleyici`
+ * acilir (#396'dan beri ekranin ortasinda, bkz. antrenman.tsx).
  */
-export default function SetSatiri({ kayit, sira, onSil }: Props) {
+export default function SetSatiri({ kayit, sira, onDuzenle }: Props) {
   const dil = useDil();
-  const [duzenleniyor, setDuzenleniyor] = useState(false);
-
-  if (duzenleniyor) {
-    return (
-      <SetDuzenleyici
-        kayit={kayit}
-        sira={sira}
-        onKapat={() => setDuzenleniyor(false)}
-        onSil={() => onSil(kayit)}
-      />
-    );
-  }
 
   const rozet = rekorRozetiMetni(kayit);
   const erisilebilirAd = [
@@ -52,7 +39,7 @@ export default function SetSatiri({ kayit, sira, onSil }: Props) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={erisilebilirAd}
-      onPress={() => setDuzenleniyor(true)}
+      onPress={() => onDuzenle(kayit, sira)}
       className="w-full flex-row items-center justify-between gap-2 rounded-lg bg-surface-2 p-2"
     >
       <View className="min-w-0 flex-1 flex-row items-center gap-4">

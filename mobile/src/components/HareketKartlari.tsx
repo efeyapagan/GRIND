@@ -6,7 +6,7 @@ interface Props {
   ilerleme: HareketIlerlemesi[];
   setler: SetKaydi[];
   onSec: (exerciseId: number) => void;
-  onSetSil: (kayit: SetKaydi) => void;
+  onSetDuzenle: (kayit: SetKaydi, sira: number) => void;
 }
 
 /**
@@ -14,7 +14,7 @@ interface Props {
  * yerinde acilmaz -- dokununca hareketin ayrintilari (gecmis, siralama #229, kaldirma) set paneliyle
  * birlikte ekrani kaplayan odak kartinda (`OdakKarti`) gorunur; listede yalnizca baslik + setler kalir.
  */
-export default function HareketKartlari({ ilerleme, setler, onSec, onSetSil }: Props) {
+export default function HareketKartlari({ ilerleme, setler, onSec, onSetDuzenle }: Props) {
   return (
     <View className="flex-col gap-4">
       {ilerleme.map((hareket, sira) => (
@@ -27,7 +27,7 @@ export default function HareketKartlari({ ilerleme, setler, onSec, onSetSil }: P
             hareket={hareket}
             sira={sira}
             setler={setler.filter((kayit) => kayit.exerciseId === hareket.exerciseId)}
-            onSetSil={onSetSil}
+            onSetDuzenle={onSetDuzenle}
             onSec={() => onSec(hareket.exerciseId)}
           />
         </View>

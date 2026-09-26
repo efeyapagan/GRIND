@@ -12,7 +12,7 @@ interface Props {
   sira: number;
   /** Yalnizca bu hareketin bu antrenmandaki setleri. */
   setler: SetKaydi[];
-  onSetSil: (kayit: SetKaydi) => void;
+  onSetDuzenle: (kayit: SetKaydi, sira: number) => void;
   /** Listede baslik odak kartini acan dugmedir; odak kartinin kendisinde (#354) duz basliktir. */
   onSec?: () => void;
   /** #357: odak kartinda basligin en solundaki kapatma dugmesi -- karti ve set panelini birlikte kapatir. */
@@ -29,7 +29,7 @@ function setSayaci(hareket: HareketIlerlemesi): string {
  * Hareket kartinin baslik + set satirlari (#354): liste karti (`HareketKartlari`) ile set paneliyle
  * birlikte acilan odak karti (`OdakKarti`) ayni govdeyi cizer; yuzeyi ve ek ayrintilari cagiran verir.
  */
-export default function HareketKartiGovdesi({ hareket, sira, setler, onSetSil, onSec, onKapat }: Props) {
+export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenle, onSec, onKapat }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const tamamlandi = hedefTamamlandi(hareket);
@@ -74,7 +74,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetSil, o
       {setler.length > 0 && (
         <View className="flex-col gap-1">
           {setler.map((kayit, setSirasi) => (
-            <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onSil={onSetSil} />
+            <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onDuzenle={onSetDuzenle} />
           ))}
         </View>
       )}
