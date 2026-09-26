@@ -4280,7 +4280,7 @@ export interface components {
             birthDate?: string | null;
         };
         UpdateProfileRequest: {
-            currentPassword: string;
+            currentPassword?: string | null;
             newUsername?: string | null;
             newPassword?: string | null;
         };

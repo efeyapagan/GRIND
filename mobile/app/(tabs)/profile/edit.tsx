@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Cake, ImagePlus, KeyRound, Pencil, Trash2, UserRound, X } from 'lucide-react-native';
+import { Cake, ImagePlus, Pencil, Trash2, UserRound, X } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
   useFotografiKaldir,
@@ -25,7 +25,6 @@ import HataKutusu from '../../../src/ui/HataKutusu';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import ProfilFotografi from '../../../src/components/ProfilFotografi';
 import KullaniciAdiPenceresi from '../../../src/components/KullaniciAdiPenceresi';
-import SifreDegistirPenceresi from '../../../src/components/SifreDegistirPenceresi';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { useIkonRenk } from '../../../src/ui/renkler';
 
@@ -245,11 +244,14 @@ function BilgiFormu({ profil }: { profil: Profil }) {
       <KullaniciAdiKarti />
       <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
         <DogumTarihiAlani deger={dogumTarihi} degistir={setDogumTarihi} />
+      </View>
+      {/* Kullanici karari: Kaydet dogum tarihiyle AYNI kutuda degil -- alanlara degil, formun
+          tamamina ait oldugu daha acik olsun. */}
+      <View className="rounded-xl bg-surface-1 p-4">
         <BirincilDugme yukseklik="normal" disabled={guncelle.isPending} onPress={gonder}>
           {t('ortak.kaydet')}
         </BirincilDugme>
       </View>
-      <SifreKarti />
     </>
   );
 }
@@ -291,26 +293,3 @@ function KullaniciAdiKarti() {
   );
 }
 
-/** Sifre degistirme, ekranin EN ALTINDA tek bir dugme; form ortada acilan pencerede (#372). */
-function SifreKarti() {
-  const ikonRenk = useIkonRenk();
-  const { t } = useTranslation();
-  const { updateProfile } = useAuth();
-  const [acik, setAcik] = useState(false);
-
-  return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setAcik(true)}
-        className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-surface-1 p-4"
-      >
-        <KeyRound color={ikonRenk.fg} size={18} />
-        <Text className="text-label text-fg">{t('profil.sifreDegistir')}</Text>
-      </Pressable>
-      {acik && (
-        <SifreDegistirPenceresi acik={acik} onKapat={() => setAcik(false)} updateProfile={updateProfile} />
-      )}
-    </>
-  );
-}

@@ -139,9 +139,10 @@ test('Hesap ayarlari dugmesi sekmesiz hesap ekranini acar', async () => {
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Hesap ayarları' }));
 
-  // #372: kimlik bilgileri artik Profili duzenle'de; burada hesabin AYARLARI var.
+  // #372: gorunen isim/kullanici adi artik Profili duzenle'de; #378: sifre degistirme burada.
   expect(await screen.findByText('Antrenman hedefi')).toBeTruthy();
-  expect(screen.queryByText('Şifre değiştir')).toBeNull();
+  expect(screen.getByText('Şifre değiştir')).toBeTruthy();
+  expect(screen.queryByTestId('profil-yeni-kullanici-adi')).toBeNull();
   expect(screen.queryByTestId('profil-sekmeleri')).toBeNull();
 }, 20_000);
 
