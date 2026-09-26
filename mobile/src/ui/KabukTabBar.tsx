@@ -29,6 +29,8 @@ const IC_BOSLUK = 6;
 const BAR_H = HAP_H + IC_BOSLUK * 2;
 /** Cubugun guvenli alanin ustunde biraktigi bosluk. */
 const ALT_BOSLUK = 8;
+/** #382: gecmis detay paneli cubugun tam yerinden ve boyundan dogar -- olculer ikinci kez yazilmasin. */
+export const ALT_MENU_YUKSEKLIGI = BAR_H;
 /** Kaydirilan icerigin son satiri ile cubugun ust kenari arasinda kalan nefes payi. */
 const ICERIK_NEFES = 16;
 
@@ -59,7 +61,12 @@ const stiller = StyleSheet.create({
  * sonuna birakilacak bosluk (guvenli alan dahil). Onceki `TABBAR_HALKA_TASMASI`in yerini alir.
  */
 export function altMenuPayi(altInset: number): number {
-  return altInset + ALT_BOSLUK + BAR_H + ICERIK_NEFES;
+  return altMenuAltKenari(altInset) + BAR_H + ICERIK_NEFES;
+}
+
+/** Cubugun alt kenarinin ekranin altindan uzakligi (guvenli alan dahil). */
+export function altMenuAltKenari(altInset: number): number {
+  return altInset + ALT_BOSLUK;
 }
 
 export function useAltMenuPayi(): number {
@@ -79,7 +86,7 @@ interface SekmeProps extends SekmeTanimi {
 }
 
 /** Balonun acilisi: hafif tasmali yay -- "kucukten buyuge" ama sert degil. Kapanis kisa bir sonme. */
-const ACILIS_YAYI = { damping: 14, stiffness: 180, mass: 0.8 } as const;
+export const ACILIS_YAYI = { damping: 14, stiffness: 180, mass: 0.8 } as const;
 const KAPANIS_MS = 150;
 const BASLANGIC_OLCEGI = 0.5;
 /**
@@ -158,7 +165,7 @@ export default function KabukTabBar() {
     <View
       pointerEvents="box-none"
       className="absolute left-4 right-4"
-      style={{ bottom: insets.bottom + ALT_BOSLUK }}
+      style={{ bottom: altMenuAltKenari(insets.bottom) }}
     >
       {/* Olcek ayri bir sarmalayicida: kirpan (`overflow-hidden`) cam hap oldugu gibi kalir, butun
           halinde buyur -- cam, kenarlik ve sekmeler birlikte. */}

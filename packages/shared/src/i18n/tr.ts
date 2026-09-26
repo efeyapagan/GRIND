@@ -361,6 +361,7 @@ export const tr = {
     saatBirimi: 'sa',
     dakikaBirimi: 'dk',
     bosDurumMetni: 'Bu antrenmanda set yok.',
+    detayiKapat: 'Antrenman ayrıntısını kapat',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Tahmini 1RM',

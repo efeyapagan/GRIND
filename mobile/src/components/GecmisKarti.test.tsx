@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import GecmisKarti from './GecmisKarti';
 
@@ -15,27 +15,50 @@ function ornekOturum(gecersizler: Partial<GecmisOturum> = {}): GecmisOturum {
   };
 }
 
-test('kapaliyken sadece ozet gorunur, set listesi yok', async () => {
+test('kapaliyken sadece ozet gorunur, detay paneli yok', async () => {
   await render(<GecmisKarti oturum={ornekOturum()} onSil={jest.fn()} />);
 
   expect(screen.getByText('Push Day')).toBeTruthy();
+  expect(screen.queryByTestId('gecmis-detay-paneli')).toBeNull();
   expect(screen.queryByText('Antrenmanı sil')).toBeNull();
 });
 
-test('dokununca acilir ve "Antrenmanı sil" gorunur', async () => {
+// #382: kart yerinde asagi acilmaz; ayrintilar (setler + silme) ekrandaki cam panelde gorunur.
+test('dokununca detay paneli acilir; set listesi ve "Antrenmanı sil" paneldedir', async () => {
   await render(<GecmisKarti oturum={ornekOturum()} onSil={jest.fn()} />);
 
   await fireEvent.press(screen.getByText('Push Day'));
 
-  expect(screen.getByText('Antrenmanı sil')).toBeTruthy();
+  const panel = within(screen.getByTestId('gecmis-detay-paneli'));
+  expect(panel.getByText('Bu antrenmanda set yok.')).toBeTruthy();
+  expect(panel.getByText('Antrenmanı sil')).toBeTruthy();
 });
 
-test('Antrenmani sil onay ister, Vazgec ile onSil cagrilmaz', async () => {
+test('paneldeki Kapat dugmesi paneli kapatir', async () => {
+  await render(<GecmisKarti oturum={ornekOturum()} onSil={jest.fn()} />);
+
+  await fireEvent.press(screen.getByText('Push Day'));
+  await fireEvent.press(screen.getByLabelText('Kapat'));
+
+  expect(screen.queryByTestId('gecmis-detay-paneli')).toBeNull();
+});
+
+test('salt-okunur kartin panelinde silme yolu yoktur', async () => {
+  await render(<GecmisKarti oturum={ornekOturum()} />);
+
+  await fireEvent.press(screen.getByText('Push Day'));
+
+  expect(screen.getByTestId('gecmis-detay-paneli')).toBeTruthy();
+  expect(screen.queryByText('Antrenmanı sil')).toBeNull();
+});
+
+test('paneldeki Antrenmani sil paneli kapatip onay ister, Vazgec ile onSil cagrilmaz', async () => {
   const onSil = jest.fn();
   await render(<GecmisKarti oturum={ornekOturum()} onSil={onSil} />);
 
   await fireEvent.press(screen.getByText('Push Day'));
   await fireEvent.press(screen.getByText('Antrenmanı sil'));
+  expect(screen.queryByTestId('gecmis-detay-paneli')).toBeNull();
   expect(screen.getByText(/seti silinecek/)).toBeTruthy();
 
   await fireEvent.press(screen.getByText('Vazgeç'));
