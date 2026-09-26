@@ -198,6 +198,10 @@ public static class GlobalExercises
 
         // #335: mevcut "Machine Chest Press" (Id 74) pin-loaded; bu ayrı bir makine türü
         // (bkz. Id 109/110'daki Plate-Loaded/Pin-Loaded Shoulder Press Machine ayrımıyla aynı gerekçe).
-        new { Id = 173L, UserId = (long?)null, Name = "Plate Loaded Chest Press",                      Category = ExerciseCategory.Push, IsArchived = false }
+        new { Id = 173L, UserId = (long?)null, Name = "Plate Loaded Chest Press",                      Category = ExerciseCategory.Push, IsArchived = false },
+
+        // #397: dumbbell squeeze press -- "Neutral Grip Dumbbell Press"ten ayri: dumbbell'lar
+        // hareket boyunca birbirine BASTIRILIR (ic gogus gerilimi), yalnizca tutus farki degil.
+        new { Id = 174L, UserId = (long?)null, Name = "Dumbbell Squeeze Press",                        Category = ExerciseCategory.Push, IsArchived = false }
     ];
 }

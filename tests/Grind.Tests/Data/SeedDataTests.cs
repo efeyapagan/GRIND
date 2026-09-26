@@ -10,9 +10,9 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Yuzyetmisuc_global_egzersiz_seed_edilmistir()
+    public void Yuzyetmisdort_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(173, Seed().Count);
+        Assert.Equal(174, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +28,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_yuzyetmisuce_kadar_benzersizdir()
+    public void Seed_id_leri_birden_yuzyetmisdorde_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 173).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 174).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -236,7 +236,10 @@ public class SeedDataTests
             ("Chest-Supported Close-Grip Machine Row", ExerciseCategory.Pull),
 
             // #335: mevcut "Machine Chest Press" (Id 74) pin-loaded; bu ayrı bir makine türü.
-            ("Plate Loaded Chest Press", ExerciseCategory.Push)
+            ("Plate Loaded Chest Press", ExerciseCategory.Push),
+
+            // #397: squeeze press ayri bir hareket -- dumbbell'lar hareket boyunca birbirine bastirilir.
+            ("Dumbbell Squeeze Press", ExerciseCategory.Push)
         ];
 
         var actual = Seed()
