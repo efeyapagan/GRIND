@@ -19,6 +19,15 @@ public interface INotificationRepository
     Task<IReadOnlyList<RecordSessionEvent>> GetRecordSessionEventsAsync(
         long userId, DateTime since, int take, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// #419: <paramref name="userId"/>'nin ARKADAŞLARININ (karşılıklı takip) hedefe sayılabilecek
+    /// antrenmanları -- seti olan, arkadaşlıktan sonra başlamış oturumlar. Hedefi olmayan ve
+    /// gizlilik seviyesi <c>Gizli</c> olan kişiler sorguda elenir. Hangi oturumun hedefi
+    /// tamamladığı çağıranın kararıdır (bkz. WeeklyGoalCompletion); burada ham satırlar döner.
+    /// </summary>
+    Task<IReadOnlyList<FriendSessionDayRow>> GetFriendGoalSessionsAsync(
+        long userId, DateTime since, CancellationToken cancellationToken = default);
+
     /// <summary>Verilen antrenmanların rekor setleri (<c>RecordType != None</c>).</summary>
     Task<IReadOnlyList<RecordSetRow>> GetRecordSetsAsync(
         IReadOnlyCollection<long> sessionIds, CancellationToken cancellationToken = default);

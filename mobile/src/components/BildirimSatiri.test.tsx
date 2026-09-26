@@ -58,3 +58,21 @@ test('rekor bildirimi hareket sayisini ve her hareketi yazar; dokununca rekorlar
   await fireEvent.press(screen.getByTestId('bildirim-Records-ali'));
   expect(mockPush).toHaveBeenCalledWith('/profile/u/ali/records');
 });
+
+/** #419: arkadasin haftalik hedefini tamamlamasi -- rekor satiri yok, profile gider. */
+test('haftalik hedef bildirimi metni; dokununca profile gider', async () => {
+  const bildirim: Bildirim = {
+    kind: 'WeeklyGoal',
+    occurredAt: new Date().toISOString(),
+    isUnread: true,
+    actor: { ...ali, relation: 'Friends' },
+    records: [],
+  };
+
+  await render(<BildirimSatiri bildirim={bildirim} />);
+
+  expect(screen.getByText('Ali Kaya haftalık hedefini tamamladı')).toBeTruthy();
+
+  await fireEvent.press(screen.getByTestId('bildirim-WeeklyGoal-ali'));
+  expect(mockPush).toHaveBeenCalledWith('/profile/u/ali');
+});
