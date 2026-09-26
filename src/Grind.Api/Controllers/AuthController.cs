@@ -39,6 +39,20 @@ public class AuthController(IAuthService authService) : ControllerBase
         => Ok(await authService.LoginAsync(request, cancellationToken));
 
     /// <summary>
+    /// "Bu kullanıcı adı alınabilir mi?" (#372). Profili düzenle penceresi, kullanıcı yazmayı
+    /// bırakınca bunu sorar; Kaydet'te 409 yemesin diye. Kimlikli: anonim bir istemcinin kullanıcı
+    /// adı taraması için açık bir uç değildir.
+    /// </summary>
+    [HttpGet("username-available")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<UsernameAvailabilityResponse>> IsUsernameAvailable(
+        [FromQuery] UsernameAvailabilityRequest request, CancellationToken cancellationToken)
+        => Ok(await authService.IsUsernameAvailableAsync(request, cancellationToken));
+
+    /// <summary>
     /// Hesabı pasifleştirir: HİÇBİR veri silinmez, kullanıcı giriş yapamaz hâle gelir ve elindeki
     /// token anında geçersizleşir. Doğru şifreyle tekrar giriş yapmak hesabı geri açar; kullanıcı adı
     /// bu süre boyunca rezerve kalır (spec Karar 4). Şifre teyidi gövdededir.

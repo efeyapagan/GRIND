@@ -97,6 +97,18 @@ public class AuthService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<UsernameAvailabilityResponse> IsUsernameAvailableAsync(
+        UsernameAvailabilityRequest request, CancellationToken cancellationToken = default)
+    {
+        // `excludeId` cagiranin kendisi: pencere mevcut adla aciliyor, kullanicinin kendi adini
+        // kendisine "alinmis" diye gostermek anlamsiz olurdu. Pasif hesaplar ELENMEZ -- adlari
+        // rezervedir (Faz 13), aksi halde kullanici "uygun" gorup Kaydet'te 409 yerdi.
+        var alinmis = await userRepository.UsernameExistsAsync(
+            Normalize(request.Username), currentUser.UserId, cancellationToken);
+
+        return new UsernameAvailabilityResponse(!alinmis);
+    }
+
     public async Task<AuthResponse> UpdateProfileAsync(
         UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
