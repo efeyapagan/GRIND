@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useOpenSession } from '@grind/shared/api/queries';
 import { formatSaat } from '@grind/shared/lib/format';
@@ -14,6 +15,7 @@ import TurEtiketi from '../ui/TurEtiketi';
  * bir gunde Ana sayfa bugunku haliyle kalir.
  */
 export default function DevamEdenAntrenman() {
+  const { t } = useTranslation();
   const { data: oturum } = useOpenSession();
   const router = useRouter();
 
@@ -26,13 +28,13 @@ export default function DevamEdenAntrenman() {
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
           <View className="size-2 rounded-full bg-success" />
-          <Text className="text-label text-fg">Devam ediyor</Text>
+          <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
         </View>
-        <Text className="text-label text-muted">Başlangıç {formatSaat(oturum.startedAt)}</Text>
+        <Text className="text-label text-muted">{t('antrenman.baslangic', { saat: formatSaat(oturum.startedAt) })}</Text>
       </View>
       {oturum.templateName && <TurEtiketi>{oturum.templateName}</TurEtiketi>}
       <BirincilDugme yukseklik="normal" onPress={() => router.navigate('/antrenman')}>
-        Devam et
+        {t('ortak.devamEt')}
       </BirincilDugme>
     </View>
   );

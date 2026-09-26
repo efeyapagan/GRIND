@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import type { SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
 import SablonFormu from '../../../src/components/SablonFormu';
@@ -23,7 +24,8 @@ function hareketleriAyristir(ham: string | undefined): SablonTaslakHareketi[] | 
  * ust kabukta (issue #255, `altEkranMi`) -- burada ayrica bir tane yazilmaz.
  */
 export default function YeniSablonScreen() {
-  usePageTitle('Yeni şablon');
+  const { t } = useTranslation();
+  usePageTitle(t('sablonlar.yeniSablon'));
   const { donus, hareketler } = useLocalSearchParams<{ donus?: string; hareketler?: string }>();
 
   return (

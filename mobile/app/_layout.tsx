@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../src/apiConfig';
 import { odakDinleyicisiniKur } from '../src/queryOdak';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { TemaProvider, useTema } from '../src/ui/TemaContext';
+import { DilProvider, baslangicDili } from '../src/ui/DilContext';
 import { renkler } from '@grind/shared/designTokens';
 
 const sorguIstemcisi = new QueryClient();
@@ -25,9 +26,9 @@ function DurumCubugu() {
   return <StatusBar style={etkinTema === 'acik' ? 'dark' : 'light'} />;
 }
 
-// #177 dilim 1: paylasilan yardimcilar metni ortak i18n orneginden uretir; mobil arayuz dilim 3'e
-// kadar Turkce sabit.
-i18nBaslat('tr');
+// #263 dilim 1: arayuz Turkce + Ingilizce. Ilk dil CIHAZ dilinden gelir; kullanicinin kayitli
+// tercihi (varsa) DilProvider icinde asenkron okunup uygulanir.
+i18nBaslat(baslangicDili());
 
 export default function RootLayout() {
   const [hazir, setHazir] = useState(false);
@@ -53,9 +54,11 @@ export default function RootLayout() {
       <QueryClientProvider client={sorguIstemcisi}>
         <TemaProvider>
           <DurumCubugu />
-          <AuthProvider>
-            <Slot />
-          </AuthProvider>
+          <DilProvider>
+            <AuthProvider>
+              <Slot />
+            </AuthProvider>
+          </DilProvider>
         </TemaProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>

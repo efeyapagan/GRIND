@@ -1,4 +1,5 @@
 import { Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams } from 'expo-router';
 import { useTemplate } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
@@ -10,15 +11,16 @@ import EkranKaydirici from '../../../src/ui/EkranKaydirici';
  * ust kabukta (issue #255, `altEkranMi`) -- burada ayrica bir tane yazilmaz.
  */
 export default function SablonDuzenleScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sablonId = Number(id);
   const { data: sablon, isLoading, isError } = useTemplate(sablonId);
-  usePageTitle('Şablonu düzenle');
+  usePageTitle(t('sablonlar.duzenleBaslik'));
 
   if (isLoading) {
     return (
       <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
-        <Text className="text-body text-muted">Yükleniyor...</Text>
+        <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>
       </EkranKaydirici>
     );
   }
@@ -27,7 +29,7 @@ export default function SablonDuzenleScreen() {
     return (
       <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
         <Text accessibilityRole="alert" className="text-body text-danger">
-          Şablon alınamadı.
+          {t('sablonlar.tekilHata')}
         </Text>
       </EkranKaydirici>
     );

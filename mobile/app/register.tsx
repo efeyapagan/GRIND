@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { AtSign, LockKeyhole, UserPlus } from 'lucide-react-native';
 import { useAuth } from '../src/auth/AuthContext';
@@ -18,6 +19,7 @@ const MAKS_SIFRE_BAYT = 72;
 const BILINEN_ALANLAR = ['username', 'password'];
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const { register } = useAuth();
   const router = useRouter();
@@ -33,22 +35,21 @@ export default function RegisterScreen() {
     const hatalar: Record<string, string> = {};
 
     if (kullaniciAdi.length === 0) {
-      hatalar.username = 'Kullanıcı adı gerekli.';
+      hatalar.username = t('ortak.kullaniciAdiGerekli');
     } else if (!KULLANICI_ADI_DESENI.test(kullaniciAdi)) {
-      hatalar.username =
-        'Kullanıcı adı 3-50 karakter olmalı; yalnızca İngilizce harf, rakam, _ ve - içerebilir.';
+      hatalar.username = t('kayit.kullaniciAdiDeseni');
     }
 
     if (sifre.length === 0) {
-      hatalar.password = 'Şifre gerekli.';
+      hatalar.password = t('ortak.sifreGerekli');
     } else if (sifre.length < MIN_SIFRE_KARAKTER) {
-      hatalar.password = 'Şifre en az 8 karakter olmalı.';
+      hatalar.password = t('ortak.sifreEnAz8Karakter');
     } else if (new TextEncoder().encode(sifre).length > MAKS_SIFRE_BAYT) {
-      hatalar.password = 'Şifre en fazla 72 bayt olabilir.';
+      hatalar.password = t('ortak.sifreEnFazla72Bayt');
     }
 
     if (!hatalar.password && sifreTekrari !== sifre) {
-      hatalar.passwordConfirm = 'Şifreler eşleşmiyor.';
+      hatalar.passwordConfirm = t('ortak.sifrelerEslesmiyor');
     }
 
     setAlanHatalari(hatalar);
@@ -75,46 +76,46 @@ export default function RegisterScreen() {
 
   return (
     <AuthLayout
-      baslik="Kayıt ol"
-      aciklama="Ağırlıklarını ve gelişimini anlık takip etmeye başla."
+      baslik={t('ortak.kayitOl')}
+      aciklama={t('kayit.aciklama')}
       altBaglanti={
         <Text>
-          Zaten hesabın var mı?{' '}
+          {t('kayit.zatenHesabinVarMi')}{' '}
           <Link href="/login" className="font-semibold text-accent-soft">
-            Giriş yap
+            {t('ortak.girisYap')}
           </Link>
         </Text>
       }
     >
-      {genelHata && <HataKutusu baslik="Kayıt başarısız" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('kayit.kayitBasarisiz')} mesaj={genelHata} />}
       <View className="flex flex-col gap-4">
         <Alan
           id="username"
-          etiket="Kullanıcı adı"
+          etiket={t('ortak.kullaniciAdi')}
           ikon={AtSign}
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="ornek_kullanici"
-          ipucu="3–50 karakter (harf, rakam, _ ve -)"
+          placeholder={t('kayit.kullaniciAdiPlaceholder')}
+          ipucu={t('kayit.kullaniciAdiIpucu')}
           value={kullaniciAdi}
           onChangeText={setKullaniciAdi}
           hata={alanHatalari.username}
         />
         <SifreAlani
           id="password"
-          etiket="Şifre"
+          etiket={t('ortak.sifre')}
           autoComplete="new-password"
-          ipucu="En az 8 karakter"
+          ipucu={t('ortak.enAz8Karakter')}
           value={sifre}
           onChangeText={setSifre}
           hata={alanHatalari.password}
         />
         <SifreAlani
           id="password-confirm"
-          etiket="Şifre tekrarı"
+          etiket={t('kayit.sifreTekrari')}
           ikon={LockKeyhole}
-          gosterEtiketi="Şifre tekrarını göster"
+          gosterEtiketi={t('kayit.sifreTekrariniGoster')}
           autoComplete="new-password"
           value={sifreTekrari}
           onChangeText={setSifreTekrari}
@@ -122,7 +123,7 @@ export default function RegisterScreen() {
         />
         <BirincilDugme yukseklik="normal" disabled={gonderiliyor} onPress={gonder}>
           <UserPlus color={ikonRenk.onAccent} size={22} />
-          <Text className="text-body-lg font-bold text-on-accent">Kayıt ol</Text>
+          <Text className="text-body-lg font-bold text-on-accent">{t('ortak.kayitOl')}</Text>
         </BirincilDugme>
       </View>
     </AuthLayout>

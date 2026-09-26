@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
 import { useIkonRenk } from './renkler';
 
@@ -14,6 +15,7 @@ interface Props {
  * altta gecis baglantisi. Bu ekranlarda kabuk (baslik/sekme cubugu) yok.
  */
 export default function AuthLayout({ baslik, aciklama, children, altBaglanti }: Props) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   return (
     <KeyboardAvoidingView
@@ -24,7 +26,7 @@ export default function AuthLayout({ baslik, aciklama, children, altBaglanti }: 
         <View className="mb-5 items-center">
           <Dumbbell color={ikonRenk.accent} size={32} style={{ marginBottom: 8 }} />
           <Text className="text-title text-fg uppercase">GRIND</Text>
-          <Text className="mt-1 text-body text-muted">Güç antrenmanı günlüğü</Text>
+          <Text className="mt-1 text-body text-muted">{t('ortak.slogan')}</Text>
         </View>
         <View className="flex flex-col gap-4 rounded-xl bg-surface-1 p-4">
           <View className="flex flex-col gap-1">

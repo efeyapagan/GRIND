@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text } from 'react-native';
 import { Flame, Zap } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
@@ -27,8 +28,9 @@ interface EgzersizGrubu {
 
 /** web/src/components/SetList.tsx ile ayni: setler egzersize gore gruplanir. */
 export default function SetList(props: Props) {
+  const { t } = useTranslation();
   const dil = useDil();
-  const { sets, bosDurumMetni = 'Bugün henüz set eklenmedi.' } = props;
+  const { sets, bosDurumMetni = t('setler.bosDurum') } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
     for (const kayit of sets) {
@@ -61,7 +63,7 @@ export default function SetList(props: Props) {
                 {grup.exerciseName}
               </Text>
               <Text className="shrink-0 rounded bg-surface-1 px-2 py-0.5 text-label-xs text-muted uppercase">
-                {grup.sets.length} set
+                {t('setler.setSayisi', { count: grup.sets.length })}
               </Text>
             </View>
             <View className="flex-col gap-1">
@@ -120,7 +122,7 @@ export default function SetList(props: Props) {
                 {grup.exerciseName}
               </Text>
             </View>
-            <Text className="shrink-0 text-label-xs text-muted uppercase">{grup.sets.length} set</Text>
+            <Text className="shrink-0 text-label-xs text-muted uppercase">{t('setler.setSayisi', { count: grup.sets.length })}</Text>
           </View>
           <View className="flex-col gap-1">
             {grup.sets.map((kayit, setSirasi) => (

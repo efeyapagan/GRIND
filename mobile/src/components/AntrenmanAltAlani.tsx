@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CircleCheck, X } from 'lucide-react-native';
 import type { Egzersiz } from '@grind/shared/api/queries';
 import BirincilDugme from '../ui/BirincilDugme';
@@ -39,6 +40,7 @@ export default function AntrenmanAltAlani({
   bitirCagrisi,
   iptalCagrisi,
 }: Props) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   return (
     // `mt-auto` YOK (#274): kisa listede ekranin dibine itilmez, son kartin hemen ardinda durur (web #226).
@@ -56,7 +58,7 @@ export default function AntrenmanAltAlani({
         ) : bitirCagrisi ? (
           <BirincilDugme yukseklik="normal" onPress={bitirCagrisi.onBitir}>
             <CircleCheck color={ikonRenk.onAccent} size={20} />
-            <Text className="text-body-lg font-bold text-on-accent">Antrenmanı bitir</Text>
+            <Text className="text-body-lg font-bold text-on-accent">{t('antrenman.bitir')}</Text>
           </BirincilDugme>
         ) : iptalCagrisi ? (
           <Pressable
@@ -66,7 +68,7 @@ export default function AntrenmanAltAlani({
             className={`h-13 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-4 ${iptalCagrisi.beklemede ? 'opacity-60' : ''}`}
           >
             <X color={ikonRenk.danger} size={20} />
-            <Text className="text-body-lg font-bold text-danger">Antrenmanı iptal et</Text>
+            <Text className="text-body-lg font-bold text-danger">{t('antrenman.iptalEt')}</Text>
           </Pressable>
         ) : null}
       </View>

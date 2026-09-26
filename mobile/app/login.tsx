@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { AtSign } from 'lucide-react-native';
 import { useAuth } from '../src/auth/AuthContext';
@@ -10,11 +11,12 @@ import SifreAlani from '../src/ui/SifreAlani';
 import HataKutusu from '../src/ui/HataKutusu';
 import BirincilDugme from '../src/ui/BirincilDugme';
 
-/** web/src/pages/LoginPage.tsx ile ayni sozlesme -- login'in 401'i bilerek notr (spec Karar 4). */
-const NOTR_GIRIS_HATASI = 'Kullanıcı adı veya şifre hatalı.';
 const BILINEN_ALANLAR = ['username', 'password'];
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
+  /** web/src/pages/LoginPage.tsx ile ayni sozlesme -- login'in 401'i bilerek notr (spec Karar 4). */
+  const notrGirisHatasi = t('giris.hatasi');
   const { login } = useAuth();
   const router = useRouter();
 
@@ -26,8 +28,8 @@ export default function LoginScreen() {
 
   function alanlariDogrula(): boolean {
     const hatalar: Record<string, string> = {};
-    if (kullaniciAdi.length === 0) hatalar.username = 'Kullanıcı adı gerekli.';
-    if (sifre.length === 0) hatalar.password = 'Şifre gerekli.';
+    if (kullaniciAdi.length === 0) hatalar.username = t('ortak.kullaniciAdiGerekli');
+    if (sifre.length === 0) hatalar.password = t('ortak.sifreGerekli');
     setAlanHatalari(hatalar);
     return Object.keys(hatalar).length === 0;
   }
@@ -43,7 +45,7 @@ export default function LoginScreen() {
       router.replace('/');
     } catch (hata) {
       const sonuc = apiHatasiniAyir(hata, BILINEN_ALANLAR, (apiHatasi) =>
-        apiHatasi.status === 401 ? NOTR_GIRIS_HATASI : null,
+        apiHatasi.status === 401 ? notrGirisHatasi : null,
       );
       setGenelHata(sonuc.genelHata);
       setAlanHatalari(sonuc.alanHatalari);
@@ -54,21 +56,21 @@ export default function LoginScreen() {
 
   return (
     <AuthLayout
-      baslik="Giriş yap"
+      baslik={t('ortak.girisYap')}
       altBaglanti={
         <Text>
-          Hesabın yok mu?{' '}
+          {t('giris.hesabinYokMu')}{' '}
           <Link href="/register" className="font-semibold text-accent-soft">
-            Kayıt ol
+            {t('ortak.kayitOl')}
           </Link>
         </Text>
       }
     >
-      {genelHata && <HataKutusu baslik="Giriş başarısız" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('giris.girisBasarisiz')} mesaj={genelHata} />}
       <View className="flex flex-col gap-4">
         <Alan
           id="username"
-          etiket="Kullanıcı adı"
+          etiket={t('ortak.kullaniciAdi')}
           ikon={AtSign}
           autoComplete="username"
           autoCapitalize="none"
@@ -79,14 +81,14 @@ export default function LoginScreen() {
         />
         <SifreAlani
           id="password"
-          etiket="Şifre"
+          etiket={t('ortak.sifre')}
           autoComplete="current-password"
           value={sifre}
           onChangeText={setSifre}
           hata={alanHatalari.password}
         />
         <BirincilDugme testID="giris-yap-buton" yukseklik="normal" disabled={gonderiliyor} onPress={gonder}>
-          Giriş yap
+          {t('ortak.girisYap')}
         </BirincilDugme>
       </View>
     </AuthLayout>

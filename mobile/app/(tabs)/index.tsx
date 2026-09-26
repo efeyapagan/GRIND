@@ -1,4 +1,5 @@
 import { ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import DevamEdenAntrenman from '../../src/components/DevamEdenAntrenman';
 import Takvim from '../../src/components/Takvim';
@@ -6,8 +7,9 @@ import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 
 /** web/src/pages/AnaSayfaPage.tsx ile ayni (issue #119/#120). */
 export default function AnaSayfaScreen() {
+  const { t } = useTranslation();
   const altMenuPayi = useAltMenuPayi();
-  usePageTitle('Ana sayfa');
+  usePageTitle(t('kabuk.anaSayfa'));
 
   return (
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>

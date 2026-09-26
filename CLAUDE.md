@@ -111,10 +111,15 @@ yoktur (#202).
 - Tarih/sayı gösterimi `useDil()`'den gelen `dil` ile `format*` yardımcılarından geçer; `tr-TR`
   gibi sabit yerel ayar yazılmaz. Saat dilimi `Europe/Istanbul` kalır.
 - Bitti sayılmadan önce: `packages/shared/src/i18n/katalog.test.ts` yeşil (iki katalog aynı
-  anahtarları taşır). (`cevrilmemisMetin.test.ts` ve Profil → Dil → English kontrolü web'e aitti;
-  web donduruldu, bkz. aşağısı.)
-- **Mobil** (dilim 3'e kadar arayüzü Türkçe sabit): yeni ya da değişen mobil metin de katalogdan
-  gelir ve İngilizcesiyle eklenir — dilim 3'ü büyütmemek için.
+  anahtarları taşır) ve `mobile/src/cevrilmemisMetin.test.ts` yeşil (mobil kaynaklarda satır içi
+  Türkçe metin kalmadı). Yeni ekran iki dilde de gözle denenir: Hesap ayarları → Dil → English.
+- **Mobil iki dillidir (#263 dilim 1, 2026-09-26): Türkçe + İngilizce.** Kullanıcıya görünen HER
+  mobil metin katalogdan gelir; satır içi metin bırakmak `cevrilmemisMetin` testinde patlar. Dil
+  cihaz dilinden algılanır, tercih cihazda saklanır (`grind.dil`, `mobile/src/ui/DilContext.tsx`),
+  hesap ayarlarından seçilir. **Yeni bir ekran/metin yazmadan önce
+  [docs/ceviri-kilavuzu.md](docs/ceviri-kilavuzu.md)'na bak**: hangi dosyanın hangi katalog grubunu
+  kullandığı, anahtar kuralları, muafiyetler (`// i18n-muaf`), testlerin ne yakalayıp ne
+  yakalamadığı ve yeni bir DİL eklemenin adımları orada. Kalan diller (fr/es/it/pt) #263 dilim 2.
 - **Backend** (dilim 2'ye kadar): yeni hata mesajları bugünkü gibi Türkçe `detail` taşır; dilim 2
   gelince `code` + `params`'a çevrilir. Yeni bir istemci-tarafı metin backend `detail`'ine
   dayanmaz.
@@ -137,8 +142,6 @@ Bu karar #211'deki "Web + Mobil aynı işte" kuralının yerini alır.
   `takvim`/`zorlukKadrani` gibi yardımcılar) testleri `packages/shared/src/**/*.test.ts`'tedir
   (vitest, `npm run test --workspace @grind/shared`) ve Mobile CI'da ortak paketin tip kontrolüyle
   birlikte koşar. Ortak koda yeni test buraya yazılır, `web/`'e değil.
-- Mevcut mobil farkları kendi dilimlerinde kapanır: mobil arayüz dili dilim 3'e kadar Türkçe
-  sabit (Çok Dil).
 - **Mobil iki temalıdır (#271, 2026-09-26).** Renk paleti tek kaynaktan gelir:
   `packages/shared/src/designTokens.ts` (`renklerKoyu` + `renklerAcik`). Tailwind sınıfları
   `mobile/global.css`teki değişkenleri (`:root` açık, `.dark:root` koyu) okur, JS tarafı (lucide

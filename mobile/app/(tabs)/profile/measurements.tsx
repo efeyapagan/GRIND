@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { Plus, Scale, Trash2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useDil } from '@grind/shared/i18n';
 import {
   useAddMeasurement,
@@ -47,6 +49,7 @@ interface OlcumGovdesi {
  * 409 doner.
  */
 export default function MeasurementsScreen() {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle('');
@@ -203,30 +206,30 @@ export default function MeasurementsScreen() {
         <View className="mb-5 flex-col gap-5">
           <BirincilDugme onPress={penceresiniAc} yukseklik="normal">
             <Plus color={ikonRenk.onAccent} size={20} />
-            <Text className="text-body-lg font-bold text-on-accent">Yeni ölçüm ekle</Text>
+            <Text className="text-body-lg font-bold text-on-accent">{t('olcumler.yeniOlcumEkle')}</Text>
           </BirincilDugme>
 
           <Modal
             acik={modalAcik}
             onKapat={() => setModalAcik(false)}
-            baslik={cakisma ? 'Bugün için başka bir ölçüm girdiniz.' : 'Yeni ölçüm'}
+            baslik={t(cakisma ? 'olcumler.cakismaBaslik' : 'olcumler.yeniOlcum')}
           >
             {cakisma ? (
               // #260: ayni gun icin farkli degerli ikinci olcum -- form BILEREK arkada kalir
               // (deger kaybolmaz), "Vazgeç" yalnizca bu soruyu kapatir, pencereyi degil.
               <View className="flex-col gap-3">
-                {cakismaHata && <HataKutusu baslik="Ölçü kaydedilemedi" mesaj={cakismaHata} />}
+                {cakismaHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={cakismaHata} />}
                 <BirincilDugme
                   yukseklik="normal"
                   onPress={yerineKaydet}
                   disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}
                 >
-                  Ölçümü değiştir
+                  {t('olcumler.cakismaYerineKaydet')}
                 </BirincilDugme>
                 <IkincilDugme onPress={ekstraOlcumEkle} disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}>
-                  Ekstra ölçüm
+                  {t('olcumler.cakismaEkstraOlcum')}
                 </IkincilDugme>
-                <IkincilDugme onPress={() => setCakisma(null)}>Vazgeç</IkincilDugme>
+                <IkincilDugme onPress={() => setCakisma(null)}>{t('ortak.vazgec')}</IkincilDugme>
               </View>
             ) : (
               <View className="flex-col gap-4">
@@ -234,7 +237,7 @@ export default function MeasurementsScreen() {
                   <View style={{ width: '48%' }}>
                     <SayiAlani
                       id="olcu-boy"
-                      etiket="Boy"
+                      etiket={t('olcumler.boy')}
                       birim="cm"
                       inputMode="decimal"
                       placeholder="—"
@@ -246,7 +249,7 @@ export default function MeasurementsScreen() {
                   <View style={{ width: '48%' }}>
                     <SayiAlani
                       id="olcu-kilo"
-                      etiket="Kilo"
+                      etiket={t('olcumler.kilo')}
                       birim="kg"
                       inputMode="decimal"
                       placeholder="—"
@@ -258,7 +261,7 @@ export default function MeasurementsScreen() {
                   <View style={{ width: '48%' }}>
                     <SayiAlani
                       id="olcu-yag-orani"
-                      etiket="Yağ oranı"
+                      etiket={t('olcumler.yagOrani')}
                       birim="%"
                       inputMode="decimal"
                       placeholder="—"
@@ -270,7 +273,7 @@ export default function MeasurementsScreen() {
                   <View style={{ width: '48%' }}>
                     <SayiAlani
                       id="olcu-bel-cevresi"
-                      etiket="Bel çevresi"
+                      etiket={t('olcumler.belCevresi')}
                       birim="cm"
                       inputMode="decimal"
                       placeholder="—"
@@ -282,7 +285,7 @@ export default function MeasurementsScreen() {
                   <View style={{ width: '48%' }}>
                     <SayiAlani
                       id="olcu-kalca-cevresi"
-                      etiket="Kalça çevresi"
+                      etiket={t('olcumler.kalcaCevresi')}
                       birim="cm"
                       inputMode="decimal"
                       placeholder="—"
@@ -292,43 +295,44 @@ export default function MeasurementsScreen() {
                     />
                   </View>
                 </View>
-                <Text className="text-label text-muted">Boy ve kilo zorunlu; diğerleri opsiyonel.</Text>
-                {genelHata && <HataKutusu baslik="Ölçü kaydedilemedi" mesaj={genelHata} />}
+                <Text className="text-label text-muted">{t('olcumler.zorunluAciklama')}</Text>
+                {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
                 <BirincilDugme yukseklik="normal" disabled={ekleMutasyonu.isPending} onPress={gonder}>
-                  Kaydet
+                  {t('ortak.kaydet')}
                 </BirincilDugme>
               </View>
             )}
           </Modal>
 
-          {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
           {isError && (
             <Text accessibilityRole="alert" className="text-body text-danger">
-              Ölçüler alınamadı. Lütfen sayfayı yenileyin.
+              {t('olcumler.hata')}
             </Text>
           )}
         </View>
       }
       ListEmptyComponent={
         !isLoading && !isError && data ? (
-          <BosDurum ikon={Scale} baslik="Henüz ölçü yok" aciklama="Yukarıdan ilk ölçünü ekle." />
+          <BosDurum ikon={Scale} baslik={t('olcumler.bosBaslik')} aciklama={t('olcumler.bosAciklama')} />
         ) : null
       }
       ListFooterComponent={
-        isFetchingNextPage ? <Text className="text-body text-muted">Yükleniyor...</Text> : null
+        isFetchingNextPage ? <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text> : null
       }
     />
   );
 }
 
-function olcuMetni(olcu: Olcu): string {
+/** Sadece DOLU olan olculeri virgulle ayirarak yazar -- web/MeasurementsPage.tsx ile ayni. */
+function olcuMetni(olcu: Olcu, t: TFunction): string {
   const parcalar: string[] = [];
   if (olcu.weight !== null) parcalar.push(`${olcu.weight} kg`);
-  if (olcu.heightCm !== null) parcalar.push(`${olcu.heightCm} cm boy`);
-  if (olcu.bodyFatPercent !== null) parcalar.push(`%${olcu.bodyFatPercent} yağ`);
-  if (olcu.waistCm !== null) parcalar.push(`${olcu.waistCm} cm bel`);
-  if (olcu.hipCm !== null) parcalar.push(`${olcu.hipCm} cm kalça`);
+  if (olcu.heightCm !== null) parcalar.push(t('olcumler.boyDegeri', { cm: olcu.heightCm }));
+  if (olcu.bodyFatPercent !== null) parcalar.push(t('olcumler.yagDegeri', { yuzde: olcu.bodyFatPercent }));
+  if (olcu.waistCm !== null) parcalar.push(t('olcumler.belDegeri', { cm: olcu.waistCm }));
+  if (olcu.hipCm !== null) parcalar.push(t('olcumler.kalcaDegeri', { cm: olcu.hipCm }));
   return parcalar.join(', ');
 }
 
@@ -341,18 +345,19 @@ interface OlcuKartiProps {
 }
 
 function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const dil = useDil();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
-        <Text className="text-body text-fg">Bu ölçü kalıcı olarak silinecek.</Text>
+        <Text className="text-body text-fg">{t('olcumler.silmeOnayi')}</Text>
         <View className="flex-row gap-2">
           <Pressable onPress={onSil} className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg">
-            <Text className="text-label text-on-danger-bg">Evet, sil</Text>
+            <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
           </Pressable>
           <View className="flex-1">
-            <IkincilDugme onPress={onVazgec}>Vazgeç</IkincilDugme>
+            <IkincilDugme onPress={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </View>
         </View>
       </View>
@@ -365,9 +370,9 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
         <Text className="text-label text-muted">
           {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
         </Text>
-        <Text className="text-body text-fg">{olcuMetni(olcu)}</Text>
+        <Text className="text-body text-fg">{olcuMetni(olcu, t)}</Text>
       </View>
-      <IkonDugmesi etiket="Ölçüyü sil" onPress={onSilmeyeBasla}>
+      <IkonDugmesi etiket={t('olcumler.olcuyuSil')} onPress={onSilmeyeBasla}>
         <Trash2 color={ikonRenk.muted} size={18} />
       </IkonDugmesi>
     </View>
