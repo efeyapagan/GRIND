@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { View, Text } from 'react-native';
+import { Keyboard, View, Text } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react-native';
-import { useDil } from '@grind/shared/i18n';
 import { queryKeys, useAddSet, useOpenSession } from '@grind/shared/api/queries';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { ApiError } from '@grind/shared/api/problem';
-import { formatWeight } from '@grind/shared/lib/format';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
 import CamYuzey from '../ui/CamYuzey';
@@ -18,9 +16,11 @@ import { useIkonRenk } from '../ui/renkler';
 interface Props {
   egzersizId: number;
   egzersizAdi: string;
-  /** Set eklenince cagrilir: panel tek bir setten sonra kapanir (#357'den beri kapatma dugmesi odak kartinda). */
-  onKapat: () => void;
-  // Basarili set sonrasi dinlenme sayaci baslar -- sayac listenin sonunda, ekranda yasar.
+  /**
+   * Basarili set sonrasi cagrilir: dinlenme sayaci baslar ve panel ilk acildigi hale doner (#385 --
+   * cagiran `key`i degistirip paneli yeniden kurar; hedef dolunca kapatmak da cagiranin isi).
+   * Kapatma dugmesi #357'den beri odak kartinda.
+   */
   onSetEklendi: (exerciseId: number) => void;
 }
 
@@ -29,12 +29,12 @@ interface Props {
  * degil; boylece kart ve panel her zaman alt alta durur. Akis web/src/components/AddSetForm.tsx'in
  * formuyla ayni (spec Karar 6); sesi hazirlama (Web Audio) web'e ozgu oldugu icin yok.
  *
- * Form durumu bu bilesende: panel kapaninca ya da baska bir karta gecilince yazilanlar sifirlanir.
+ * Form durumu bu bilesende: panel kapaninca, baska bir karta gecilince ya da set eklenince (#385)
+ * yazilanlar sifirlanir.
  */
-export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklendi }: Props) {
+export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
-  const dil = useDil();
   const queryClient = useQueryClient();
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
@@ -44,12 +44,10 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
   const [rir, setRir] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
-  const [sonEklenen, setSonEklenen] = useState<string | null>(null);
 
   async function gonder() {
     setGenelHata(null);
     setAlanHatalari({});
-    setSonEklenen(null);
 
     const girdi = { agirlik, tekrar, rir };
     const dogrulamaHatalari = setGirdisiniDogrula(girdi);
@@ -71,13 +69,10 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
         reps: ayristirilmisTekrar,
         rir: ayristirilmisRir,
       });
-      setSonEklenen(
-        t('setler.eklendi', { agirlik: formatWeight(ayristirilmisAgirlik, dil), tekrar: ayristirilmisTekrar }),
-      );
+      // #385: panel acik kalir ama ilk acildigi hale doner -- klavye kapanir, eklenen set odak
+      // kartinda gorunur.
+      Keyboard.dismiss();
       onSetEklendi(egzersizId);
-      // Set eklenince panel KAPANIR (kullanici karari): eklenen set kartta gorunur ve dinlenme
-      // sayaci ust barda baslar -- ikisi de yuzer panelin arkasinda kalirdi.
-      onKapat();
     } catch (hata) {
       if (hata instanceof ApiError) {
         const sonuc = apiHatasiniAyir(hata, SET_ALANLARI);
@@ -140,7 +135,6 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklen
           hata={alanHatalari.rir}
         />
       </View>
-      <Text className="min-h-4 text-label text-muted">{sonEklenen}</Text>
       <BirincilDugme yukseklik="buyuk" disabled={eklemeMutasyonu.isPending} onPress={gonder}>
         <Plus color={ikonRenk.onAccent} size={24} />
         <Text className="text-body-lg font-bold text-on-accent">{t('setler.setEkle')}</Text>
