@@ -122,6 +122,42 @@ public class WorkoutSessionRepository(AppDbContext context)
         return query;
     }
 
+    /// <summary>
+    /// #418: BİRDEN FAZLA kullanıcının bir aralıktaki oturum toplamları, TEK sorguda -- arkadaş
+    /// başına sorgu atmak (N+1) listeyi arkadaş sayısıyla çarpardı. Seti olmayan oturum elenir
+    /// (tek kullanıcılı sürümle aynı kural). TR gününe gruplama çağıranın işidir.
+    /// </summary>
+    public async Task<IReadOnlyList<UserSessionAggregate>> GetSessionAggregatesForUsersAsync(
+        IReadOnlyCollection<long> userIds,
+        DateTime fromUtcInclusive,
+        DateTime toUtcExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Anonim tipe projekte edip sonra record'a çevirmek bilinçli: bkz. GetSessionAggregatesAsync.
+        var rows = await Set
+            .Where(s => userIds.Contains(s.UserId)
+                        && s.StartedAt >= fromUtcInclusive
+                        && s.StartedAt < toUtcExclusive
+                        && s.SetEntries.Any())
+            .Select(s => new
+            {
+                s.UserId,
+                s.StartedAt,
+                SetCount = s.SetEntries.Count(),
+                Volume = s.SetEntries.Sum(e => e.Weight * e.Reps),
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new UserSessionAggregate(r.UserId, r.StartedAt, r.SetCount, r.Volume))
+            .ToList();
+    }
+
     private IQueryable<WorkoutSession> FilterByRange(
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive)
     {

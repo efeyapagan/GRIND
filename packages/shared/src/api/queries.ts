@@ -26,6 +26,7 @@ type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 type ReorderTemplatesRequest = components['schemas']['ReorderTemplatesRequest'];
 type UsernameAvailabilityResponse = components['schemas']['UsernameAvailabilityResponse'];
+type ArkadasHaftasi = components['schemas']['FriendWeeklyResponse'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
@@ -107,6 +108,8 @@ export const queryKeys = {
   measurementsInfinite: ['measurements', 'infinite'] as const,
   // #283: kendi profilin (#280) ve bir kullanicinin herkese acik basligi (#281, sayaclar).
   profil: ['profil'] as const,
+  // #418: ana ekrandaki arkadas karsilastirmasi. Tek anahtar: liste TEK istekle gelir.
+  arkadasHaftasi: ['arkadasHaftasi'] as const,
   // #372: kullanici adi uygunlugu. Ad anahtarin PARCASIDIR -- her ad kendi sonucunu onbellekler,
   // ayni adi tekrar sormak ag istegi uretmez.
   kullaniciAdiUygun: (kullaniciAdi: string) => ['kullaniciAdiUygun', kullaniciAdi] as const,
@@ -1414,6 +1417,18 @@ export function useProfilim() {
   return useQuery({
     queryKey: queryKeys.profil,
     queryFn: async (): Promise<Profil> => dogrulanmisProfil(await request<ProfileResponse>('/profile')),
+  });
+}
+
+/**
+ * Arkadaslarin BU HAFTAKI ozeti (#418): gun sayisi, hedef, bugun antrenman, hacim, set.
+ * Sunucu siralamaz -- sira bir arayuz karari (`arkadaslariSirala`). Gizlilik seviyesi `Gizli`
+ * olan arkadas yanitta hic yer almaz.
+ */
+export function useArkadasHaftasi() {
+  return useQuery({
+    queryKey: queryKeys.arkadasHaftasi,
+    queryFn: async (): Promise<ArkadasHaftasi[]> => request<ArkadasHaftasi[]>('/social/friends/weekly'),
   });
 }
 

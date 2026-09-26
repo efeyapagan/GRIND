@@ -8,6 +8,9 @@ import AnaSayfaScreen from '../../../app/(tabs)/index';
 jest.mock('@grind/shared/api/queries', () => ({
   useCalendar: jest.fn(),
   useOpenSession: jest.fn(),
+  // #418: ana ekranda arkadas karsilastirmasi da var; bu testin konusu degil, bos liste yeter.
+  useArkadasHaftasi: () => ({ data: [], isLoading: false, isError: false }),
+  useProfilFotografi: () => ({ data: null }),
 }));
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), navigate: jest.fn() }) }));

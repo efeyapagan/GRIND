@@ -62,6 +62,19 @@ public class FollowRepository(AppDbContext context) : Repository<Follow>(context
     private IQueryable<Follow> Friends(long userId)
         => Following(userId).Where(f => Set.Any(g => g.FollowerId == f.FolloweeId && g.FolloweeId == userId));
 
+    /// <summary>
+    /// Arkadaş karşılaştırması (#418): TÜM arkadaşlar, sayfalama YOK. Liste kişisel ölçekte kısa
+    /// ve satırlar orana göre sıralanacağı için sayfalamak anlamsız olurdu. Gizlilik seviyesi ve
+    /// haftalık hedef satırla birlikte gelir -- kişi başına ikinci bir sorgu atılmaz.
+    /// </summary>
+    public async Task<IReadOnlyList<FriendRef>> GetFriendsForWeeklyAsync(
+        long userId, CancellationToken cancellationToken = default)
+        => await Friends(userId)
+            .Select(f => new FriendRef(
+                f.Followee.Id, f.Followee.Username, f.Followee.DisplayName,
+                f.Followee.PrivacyLevel, f.Followee.WeeklyTargetDays))
+            .ToListAsync(cancellationToken);
+
     /// <summary>En yeni takip önce; aynı anda oluşmuş satırlarda Id sırayı kararlı kılar.</summary>
     private static async Task<(IReadOnlyList<UserRef> Items, int TotalCount)> PageAsync(
         IQueryable<Follow> query, Expression<Func<Follow, UserRef>> projection,

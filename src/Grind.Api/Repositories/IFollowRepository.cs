@@ -26,6 +26,13 @@ public interface IFollowRepository : IRepository<Follow>
         long userId, int skip, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Arkadaş karşılaştırması (#418) için TÜM arkadaşlar: gizlilik seviyesi ve haftalık hedef dahil,
+    /// sayfalama yok. Kimin listeye gireceği kararı (gizlilik) SERVİSTEDİR, burada filtre yok.
+    /// </summary>
+    Task<IReadOnlyList<FriendRef>> GetFriendsForWeeklyAsync(
+        long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// <paramref name="viewerId"/>'nin <paramref name="otherIds"/> içinden takip ettikleri ve onu takip
     /// edenler — bir listenin tüm satırlarının ilişkisi TEK sorguda çıkar (satır başına sorgu yok).
     /// </summary>

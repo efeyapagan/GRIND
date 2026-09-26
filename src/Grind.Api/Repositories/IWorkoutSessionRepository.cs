@@ -55,6 +55,16 @@ public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Birden fazla kullanıcının bir aralıktaki oturum toplamları, TEK sorguda (#418): arkadaş
+    /// karşılaştırması listeyi arkadaş sayısı kadar istekle kurmaz. Seti olmayan oturum elenir.
+    /// </summary>
+    Task<IReadOnlyList<UserSessionAggregate>> GetSessionAggregatesForUsersAsync(
+        IReadOnlyCollection<long> userIds,
+        DateTime fromUtcInclusive,
+        DateTime toUtcExclusive,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// En az bir seti olan oturumların <c>StartedAt</c> değerleri, TÜM geçmişten — seri hesabı
     /// aralıktan bağımsızdır (spec Karar 5): "bu ay" filtresi 40 günlük seriyi kırmamalı.
     /// Yalnızca zaman damgası döner; hacim/set sayısı seri için gereksiz.
