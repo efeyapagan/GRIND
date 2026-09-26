@@ -55,21 +55,31 @@ export function indeksleTasi<T>(liste: readonly T[], eskiIndeks: number, yeniInd
 
 /**
  * Basili tutup surukleyerek sira degistirme (#344, mobil): parmagin dikey otelemesini hedef
- * indekse cevirir. Bir satirin YARISINI gecen her oteleme bir sira tasir (`Math.round`), sonuc
- * listenin uclarina sabitlenir. Hesap jestten ayri durur: gercek surukleme testte simule
- * edilemez, ama bu formul edilebilir.
+ * indekse cevirir. Suruklenen oge bir komsunun yerine, O KOMSUNUN yuksekliginin yarisini gectigi
+ * anda gecer; sonuc listenin uclarina sabitlenir. Hesap jestten ayri durur: gercek surukleme testte
+ * simule edilemez, ama bu formul edilebilir.
  *
- * `satirYuksekligi` 0 ise (satir henuz olculmediyse) bolme NaN uretirdi; oge yerinde birakilir.
+ * `yukseklikler` her satirin kendi sirasidir (satir + aradaki bosluk) -- #407: antrenman kartlari
+ * set sayisina gore uzar, esit boy varsayimi uzun bir kartin ustunden erken atlardi. Bir satir
+ * henuz olculmediyse (0) hesap yapilamaz; oge yerinde birakilir.
  */
 export function surukleHedefIndeksi(
   baslangicIndeksi: number,
   otelemeY: number,
-  satirYuksekligi: number,
-  adet: number,
+  yukseklikler: readonly number[],
 ): number {
-  if (satirYuksekligi <= 0) {
+  if (yukseklikler.some((yukseklik) => !(yukseklik > 0))) {
     return baslangicIndeksi;
   }
-  const hedef = baslangicIndeksi + Math.round(otelemeY / satirYuksekligi);
-  return Math.min(adet - 1, Math.max(0, hedef));
+  const yon = otelemeY < 0 ? -1 : 1;
+  let kalan = Math.abs(otelemeY);
+  let hedef = baslangicIndeksi;
+  for (let komsu = baslangicIndeksi + yon; komsu >= 0 && komsu < yukseklikler.length; komsu += yon) {
+    if (kalan < yukseklikler[komsu] / 2) {
+      break;
+    }
+    hedef = komsu;
+    kalan -= yukseklikler[komsu];
+  }
+  return hedef;
 }

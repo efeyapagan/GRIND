@@ -73,3 +73,21 @@ test('surukleme basili tutmadan aktiflesmez (liste kaydirmayi yutmasin)', async 
   expect(panSpy.mock.results[0].value.config.activateAfterLongPress).toBeGreaterThan(0);
   panSpy.mockRestore();
 });
+
+// #407: antrenman kartlari farkli boyda (set sayisi). Her satir KENDI yuksekligini bildirir; tek bir
+// ortak yukseklik son olculen satirin boyunu herkese uygulardi.
+test('farkli boydaki satirlarda hedef, komsunun kendi yuksekligine gore hesaplanir', async () => {
+  const panSpy = jest.spyOn(Gesture, 'Pan');
+  const onSirala = jest.fn();
+  await ciz(onSirala);
+  const [ilk, uzun, son] = screen.getAllByTestId('surukle-satir');
+  ilk.props.onLayout({ nativeEvent: { layout: { height: 60 } } });
+  uzun.props.onLayout({ nativeEvent: { layout: { height: 200 } } });
+  son.props.onLayout({ nativeEvent: { layout: { height: 60 } } });
+
+  // Uzun satirin yarisina (~104) varmadan birakildi: esit boy varsayimiyla (68'lik sira) yer degistirirdi.
+  await surukleBirak(satirJesti(panSpy, 0), 80);
+
+  expect(onSirala).not.toHaveBeenCalled();
+  panSpy.mockRestore();
+});

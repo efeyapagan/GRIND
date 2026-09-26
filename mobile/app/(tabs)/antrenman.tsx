@@ -390,6 +390,7 @@ export default function AntrenmanScreen() {
                 setler={gorunenSetler}
                 onSec={kartSec}
                 onSetDuzenle={setiDuzenle}
+                onSiraDegis={siraDegistir}
               />
             ) : (
               <>
@@ -493,7 +494,6 @@ export default function AntrenmanScreen() {
                 idler={gorunenIlerleme.map((hareket) => hareket.exerciseId)}
                 setler={gorunenSetler.filter((kayit) => kayit.exerciseId === odakHareketi.exerciseId)}
                 onSetDuzenle={setiDuzenle}
-                onSiraDegis={siraDegistir}
                 onKaldir={() => hareketiKaldirmayaBasla(odakHareketi.exerciseId)}
                 onKapat={() => setPanelAcik(false)}
               />
