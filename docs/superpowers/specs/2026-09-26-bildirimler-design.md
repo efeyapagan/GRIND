@@ -123,8 +123,9 @@ Okunmamış sayısı, listeyi üreten aynı hattan sayılır (`GET /api/notifica
 - Rozet zemini `accent` — görsel tasarım spec'ine (Karar 2, `accent` kullanım kuralı) kullanıcı kararıyla
   eklenen bir kullanım olarak yazılır; iki temada kontrast `paletKontrast` ile doğrulanır.
 - `accessibilityLabel` sayıyı taşır: "Bildirimler, 3 okunmamış" (`_one` / `_other`).
-- Sayı ana sayfa odağa gelince ve uygulama ön plana dönünce tazelenir (`useFocusEffect` + mevcut
-  `queryOdak.ts` `focusManager`'ı). Periyodik sorgu (polling) yok.
+- Sayı ana sayfa odağa gelince ve uygulama ön plana dönünce tazelenir: sorgu yalnızca `pathname === '/'`
+  iken etkindir (ana sayfaya dönünce bayat sorgu yeniden çekilir), ön plana dönüşte mevcut `queryOdak.ts`
+  `focusManager`'ı tazeler. Periyodik sorgu (polling) yok.
 
 ### Bildirimler ekranı (`mobile/app/(tabs)/bildirimler.tsx`)
 
