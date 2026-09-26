@@ -212,6 +212,8 @@ export const tr = {
     hedefsizGun_other: 'Bu hafta {{count}} gün',
     hedefliGun: '{{gun}}/{{hedef}} gün',
     bugunAntrenman: 'Bugün antrenman yaptı',
+    sen: 'Sen',
+    arkadasYokIpucu: 'Arkadaş ekleyince burada onlarla karşılaştırılırsın.',
     lider: 'Lider',
     haftalikHacim: '{{kg}} kg',
     satirEtiketi: '{{ad}} profilini aç',

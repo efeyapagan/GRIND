@@ -26,7 +26,7 @@ type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 type ReorderTemplatesRequest = components['schemas']['ReorderTemplatesRequest'];
 type UsernameAvailabilityResponse = components['schemas']['UsernameAvailabilityResponse'];
-type ArkadasHaftasi = components['schemas']['FriendWeeklyResponse'];
+type ArkadasHaftasi = components['schemas']['WeeklyStandingResponse'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
@@ -1421,14 +1421,14 @@ export function useProfilim() {
 }
 
 /**
- * Arkadaslarin BU HAFTAKI ozeti (#418): gun sayisi, hedef, bugun antrenman, hacim, set.
+ * Haftalik siralama (#418, #425): CAGIRAN ve arkadaslarinin bu haftaki ozeti: gun sayisi, hedef, bugun antrenman, hacim, set.
  * Sunucu siralamaz -- sira bir arayuz karari (`arkadaslariSirala`). Gizlilik seviyesi `Gizli`
  * olan arkadas yanitta hic yer almaz.
  */
 export function useArkadasHaftasi() {
   return useQuery({
     queryKey: queryKeys.arkadasHaftasi,
-    queryFn: async (): Promise<ArkadasHaftasi[]> => request<ArkadasHaftasi[]>('/social/friends/weekly'),
+    queryFn: async (): Promise<ArkadasHaftasi[]> => request<ArkadasHaftasi[]>('/social/weekly'),
   });
 }
 

@@ -1,6 +1,6 @@
 import type { components } from '../api/schema';
 
-export type ArkadasHaftasi = components['schemas']['FriendWeeklyResponse'];
+export type ArkadasHaftasi = components['schemas']['WeeklyStandingResponse'];
 
 /**
  * Arkadas karsilastirmasinin sirasi (#418). Sunucu SIRALAMAZ: "hedefe ulasma orani" ve hedefsiz

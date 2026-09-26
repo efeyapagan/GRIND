@@ -22,7 +22,7 @@ namespace Grind.Tests.Integration;
 public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApiFactory>
 {
     private const string Password = "yeterince-uzun-sifre";
-    private const string Yol = "/api/social/friends/weekly";
+    private const string Yol = "/api/social/weekly";
 
     private static string UniqueUsername() => $"fw_{Guid.NewGuid():N}"[..20];
 
@@ -86,8 +86,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
 
     private static DateOnly Bugun() => TurkeyDay.LocalDateOf(DateTime.UtcNow);
 
-    private static async Task<List<FriendWeeklyResponse>> ListeleAsync(HttpClient client)
-        => (await client.GetFromJsonAsync<List<FriendWeeklyResponse>>(Yol))!;
+    private static async Task<List<WeeklyStandingResponse>> ListeleAsync(HttpClient client)
+        => (await client.GetFromJsonAsync<List<WeeklyStandingResponse>>(Yol))!;
 
     [Fact]
     public async Task Tokensiz_401_verir()
@@ -112,17 +112,45 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
         Assert.DoesNotContain(liste, satir => satir.Username == beniTakipEdenAd);
     }
 
+    /// <summary>#425: kullanici siralamada KENDINI de gorur -- satiri `IsSelf` ile isaretlidir.</summary>
     [Fact]
-    public async Task Cagiran_kendi_listesinde_yok()
+    public async Task Cagiran_kendi_satirini_gorur()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
+        var (ben, benimAd, benimId) = await KayitliAsync();
         var (arkadas, arkadasAd, _) = await KayitliAsync();
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
+        await HedefYazAsync(benimId, 3);
+        await AntrenmanYazAsync(benimId, Bugun());
 
         var liste = await ListeleAsync(ben);
 
-        Assert.DoesNotContain(liste, satir => satir.Username == benimAd);
-        Assert.Contains(liste, satir => satir.Username == arkadasAd);
+        var kendi = Assert.Single(liste, satir => satir.Username == benimAd);
+        Assert.True(kendi.IsSelf);
+        Assert.Equal(1, kendi.TrainedDaysThisWeek);
+        Assert.Equal(3, kendi.WeeklyTargetDays);
+        Assert.True(kendi.TrainedToday);
+        Assert.False(Assert.Single(liste, satir => satir.Username == arkadasAd).IsSelf);
+    }
+
+    /// <summary>Kendi gizliligi kendini SAKLAMAZ: kisi kendi verisini her zaman gorur.</summary>
+    [Fact]
+    public async Task Kendi_gizlilik_seviyesi_Gizli_olsa_da_kendi_satiri_gorunur()
+    {
+        var (ben, benimAd, benimId) = await KayitliAsync();
+        await GizlilikYazAsync(benimId, PrivacyLevel.Gizli);
+
+        Assert.Contains(await ListeleAsync(ben), satir => satir.Username == benimAd && satir.IsSelf);
+    }
+
+    /// <summary>Arkadasi olmayan kullanici bos liste degil, yalnizca kendi satirini gorur.</summary>
+    [Fact]
+    public async Task Arkadasi_olmayan_yalnizca_kendini_gorur()
+    {
+        var (ben, benimAd, _) = await KayitliAsync();
+
+        var liste = await ListeleAsync(ben);
+
+        Assert.Equal(benimAd, Assert.Single(liste).Username);
     }
 
     /// <summary>Aynı gün iki antrenman BİR gün sayılır (CLAUDE.md, takvim/seri kuralıyla aynı).</summary>

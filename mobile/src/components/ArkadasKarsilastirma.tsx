@@ -37,6 +37,7 @@ export default function ArkadasKarsilastirma() {
   }
 
   const sirali = arkadaslariSirala(data ?? []);
+  const yalnizKendisi = sirali.length <= 1;
 
   return (
     <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
@@ -53,18 +54,13 @@ export default function ArkadasKarsilastirma() {
         )}
       </View>
 
-      {sirali.length === 0 ? (
-        <View className="flex-col gap-1">
-          <Text className="text-body text-fg">{t('arkadaslar.bosBaslik')}</Text>
-          <Text className="text-label text-muted">{t('arkadaslar.bosAciklama')}</Text>
-        </View>
-      ) : (
-        <View className="flex-col gap-2">
-          {sirali.slice(0, ANA_EKRAN_SATIRI).map((arkadas, sira) => (
-            <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={sira === 0} />
-          ))}
-        </View>
-      )}
+      <View className="flex-col gap-2">
+        {sirali.slice(0, ANA_EKRAN_SATIRI).map((arkadas, sira) => (
+          <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={sira === 0} />
+        ))}
+      </View>
+      {/* #425: kendi satiri hep geldigi icin liste bos olmaz; arkadas YOKSA ipucu satiri. */}
+      {yalnizKendisi && <Text className="text-label text-muted">{t('arkadaslar.arkadasYokIpucu')}</Text>}
     </View>
   );
 }
