@@ -46,6 +46,8 @@ type UserSummaryResponse = components['schemas']['UserSummaryResponse'];
 type UserSummaryResponsePagedResponse = components['schemas']['UserSummaryResponsePagedResponse'];
 type FriendHistorySessionResponsePagedResponse = components['schemas']['FriendHistorySessionResponsePagedResponse'];
 type UpdateProfileDetailsRequest = components['schemas']['UpdateProfileDetailsRequest'];
+type NotificationResponse = components['schemas']['NotificationResponse'];
+type UnreadNotificationCountResponse = components['schemas']['UnreadNotificationCountResponse'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -122,6 +124,11 @@ export const queryKeys = {
   arkadasAll: ['arkadas'] as const,
   arkadasGecmisi: (kullaniciAdi: string) => [...queryKeys.arkadasAll, kullaniciAdi, 'gecmis'] as const,
   arkadasRekorlari: (kullaniciAdi: string) => [...queryKeys.arkadasAll, kullaniciAdi, 'rekorlar'] as const,
+  // #325: `bildirimlerAll` oneki liste ve sayiyi birlikte kapsar (takip degisince ikisi de eskir);
+  // "goruldu" yalnizca sayiyi eskitir -- acik ekrandaki okunmamis vurgulari kalsin.
+  bildirimlerAll: ['bildirimler'] as const,
+  bildirimler: ['bildirimler', 'liste'] as const,
+  okunmamisBildirim: ['bildirimler', 'okunmamis'] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -1646,6 +1653,7 @@ export function useTakipEt() {
         queryKeys.takipListesiAll,
         queryKeys.kullaniciAramaAll,
         queryKeys.arkadasAll,
+        queryKeys.bildirimlerAll,
       ]) {
         void queryClient.invalidateQueries({ queryKey });
       }
@@ -1679,5 +1687,79 @@ export function useArkadasRekorlari(kullaniciAdi: string, etkin: boolean) {
     enabled: etkin,
     queryFn: async (): Promise<EgzersizRekoru[]> =>
       (await request<ExerciseRecordResponse[]>(kullaniciYolu(kullaniciAdi, 'records'))).map(dogrulanmisRekor),
+  });
+}
+
+// ---- Bildirimler (#325) ----
+
+export interface BildirimRekoru {
+  exerciseId: number;
+  exerciseName: string;
+  weight: number;
+  reps: number;
+  recordType: 'Weight' | 'Reps';
+}
+
+/** Sunucuda saklanmaz, takip ve rekor satirlarindan turetilir; `actor` BAKANIN gozunden. */
+export interface Bildirim {
+  kind: 'Follow' | 'Records';
+  occurredAt: string;
+  isUnread: boolean;
+  actor: KullaniciOzeti;
+  /** `Follow`'da bos. */
+  records: BildirimRekoru[];
+}
+
+function dogrulanmisBildirim(yanit: NotificationResponse): Bildirim {
+  if (!yanit.kind || !yanit.occurredAt || yanit.isUnread === undefined || !yanit.actor) {
+    throw new Error('Sunucudan eksik bildirim alindi.');
+  }
+  return {
+    kind: yanit.kind,
+    occurredAt: yanit.occurredAt,
+    isUnread: yanit.isUnread,
+    actor: dogrulanmisKullaniciOzeti(yanit.actor),
+    records: (yanit.records ?? []).map((r) => {
+      if (r.exerciseId === undefined || !r.exerciseName || r.weight === undefined || r.reps === undefined
+        || (r.recordType !== 'Weight' && r.recordType !== 'Reps')) {
+        throw new Error('Sunucudan eksik rekor satiri alindi.');
+      }
+      return { exerciseId: r.exerciseId, exerciseName: r.exerciseName, weight: r.weight, reps: r.reps, recordType: r.recordType };
+    }),
+  };
+}
+
+export function useBildirimler() {
+  return useQuery({
+    queryKey: queryKeys.bildirimler,
+    queryFn: async (): Promise<Bildirim[]> =>
+      (await request<NotificationResponse[]>('/notifications')).map(dogrulanmisBildirim),
+  });
+}
+
+/** Zil rozeti. `etkin` false iken (ana sayfa disinda) istek atilmaz; true'ya donunce bayatsa yeniden cekilir. */
+export function useOkunmamisBildirimSayisi(etkin: boolean) {
+  return useQuery({
+    queryKey: queryKeys.okunmamisBildirim,
+    enabled: etkin,
+    queryFn: async (): Promise<number> => {
+      const yanit = await request<UnreadNotificationCountResponse>('/notifications/unread-count');
+      if (yanit.count === undefined) {
+        throw new Error('Sunucudan eksik bildirim sayisi alindi.');
+      }
+      return yanit.count;
+    },
+  });
+}
+
+export function useBildirimleriGorulduYap() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      await request<void>('/notifications/seen', { method: 'POST' });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.okunmamisBildirim });
+    },
   });
 }

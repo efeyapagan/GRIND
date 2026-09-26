@@ -426,6 +426,15 @@ export const tr = {
   bildirimler: {
     bos: 'Henüz bildirim yok',
     bosAciklama: 'Yeni bir bildirim olduğunda burada görünecek.',
+    takipEtti: '{{ad}} seni takip etmeye başladı',
+    artikArkadassiniz: 'Artık arkadaşsınız',
+    rekorKirdi_one: '{{ad}} {{count}} harekette rekor kırdı',
+    rekorKirdi_other: '{{ad}} {{count}} harekette rekor kırdı',
+    rekorSatiri: '{{hareket}} · {{agirlik}} kg × {{tekrar}}',
+    alinamadi: 'Bildirimler alınamadı.',
+    tekrarDene: 'Tekrar dene',
+    zilEtiketi_one: 'Bildirimler, {{count}} okunmamış',
+    zilEtiketi_other: 'Bildirimler, {{count}} okunmamış',
   },
   yorumlar: {
     baslik: 'GRINDY ne diyor?',
