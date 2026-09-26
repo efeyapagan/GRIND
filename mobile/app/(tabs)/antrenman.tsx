@@ -458,6 +458,7 @@ export default function AntrenmanScreen() {
                 onSetSil={setiSilmeyeBasla}
                 onSiraDegis={siraDegistir}
                 onKaldir={() => hareketiKaldirmayaBasla(odakHareketi.exerciseId)}
+                onKapat={() => setPanelAcik(false)}
               />
             </Animated.View>
           </View>

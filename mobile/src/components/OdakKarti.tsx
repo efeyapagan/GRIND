@@ -19,6 +19,8 @@ interface Props {
   // #229: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur.
   onSiraDegis: (exerciseIds: number[]) => void;
   onKaldir: () => void;
+  /** #357: karti ve set panelini birlikte kapatir. */
+  onKapat: () => void;
 }
 
 /**
@@ -26,14 +28,14 @@ interface Props {
  * glass" yuzey (`CamYuzey`, #350). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
  * gecmisi, siralama, kaldirma) kendi icinde kayar.
  */
-export default function OdakKarti({ hareket, idler, setler, onSetSil, onSiraDegis, onKaldir }: Props) {
+export default function OdakKarti({ hareket, idler, setler, onSetSil, onSiraDegis, onKaldir, onKapat }: Props) {
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
   return (
     <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl border border-surface-4">
       <CamYuzey />
       <ScrollView contentContainerClassName="flex-col gap-3 p-4" keyboardShouldPersistTaps="handled">
-        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetSil={onSetSil} />
+        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetSil={onSetSil} onKapat={onKapat} />
         <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
         <View className="flex-row items-center gap-1">
           <IkonDugmesi
