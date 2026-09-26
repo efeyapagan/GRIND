@@ -7,7 +7,7 @@ import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
 import GrindyMaskot from './GrindyMaskot';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 /**
  * App.tsx'teki `<header>`in RN karsiligi: solda o an aktif ekranin basligi, sagda "GRIND".
@@ -26,6 +26,7 @@ import { ikonRenk } from './renkler';
  * diger ekranlarda bar degismez.
  */
 export default function KabukBaslik() {
+  const ikonRenk = useIkonRenk();
   const baslik = useHeaderTitle();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();

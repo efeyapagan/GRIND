@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ChevronsUpDown, Check } from 'lucide-react-native';
 import Modal from './Modal';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Secenek<T> {
   deger: T;
@@ -29,6 +29,7 @@ export default function SecimKutusu<T extends string | number>({
   onDegistir,
   disabled,
 }: Props<T>) {
+  const ikonRenk = useIkonRenk();
   const [acik, setAcik] = useState(false);
   const seciliEtiket = secenekler.find((s) => s.deger === deger)?.etiket ?? '';
 

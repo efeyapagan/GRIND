@@ -24,7 +24,7 @@ import BirincilDugme from '../../../src/ui/BirincilDugme';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import ProfilFotografi from '../../../src/components/ProfilFotografi';
-import { ikonRenk } from '../../../src/ui/renkler';
+import { useIkonRenk } from '../../../src/ui/renkler';
 
 const MAKS_ISIM_KARAKTER = 50;
 
@@ -68,6 +68,7 @@ async function fotografSecVeKucult(): Promise<string | null> {
 }
 
 function FotografAlani({ profil }: { profil: Profil }) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const yukle = useFotografiYukle();
   const kaldir = useFotografiKaldir();
@@ -147,6 +148,7 @@ function varsayilanTarih(): Date {
  * uygun etkilesim, #211). Bos = tarih yok; temizle dugmesi `null` gonderir.
  */
 function DogumTarihiAlani({ deger, degistir }: { deger: string; degistir: (gun: string) => void }) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   const [iosAcik, setIosAcik] = useState(false);

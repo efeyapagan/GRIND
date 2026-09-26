@@ -20,7 +20,7 @@ import IkonDugmesi from '../../src/ui/IkonDugmesi';
 import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
-import { ikonRenk } from '../../src/ui/renkler';
+import { useIkonRenk } from '../../src/ui/renkler';
 import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 
 /**
@@ -29,6 +29,7 @@ import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
  * `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi ceker.
  */
 export default function InsightsScreen() {
+  const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   usePageTitle(t('yorumlar.baslik'));
@@ -161,6 +162,7 @@ interface YorumKartiProps {
 }
 
 function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   if (onayAcik) {

@@ -9,7 +9,7 @@ import AntrenmanSuresi from './AntrenmanSuresi';
 import IkincilDugme from '../ui/IkincilDugme';
 import TurEtiketi from '../ui/TurEtiketi';
 import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   oturum: GecmisOturum;
@@ -23,6 +23,7 @@ interface Props {
  * gibi HALA durur -- kaydirma ikincil bir kisayoldur, birincil yol degil.
  */
 export default function GecmisKarti({ oturum, onSil }: Props) {
+  const ikonRenk = useIkonRenk();
   const dil = useDil();
   const [acik, setAcik] = useState(false);
   const [onayAcik, setOnayAcik] = useState(false);

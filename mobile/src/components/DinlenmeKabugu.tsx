@@ -12,7 +12,7 @@ import { useOpenSession } from '@grind/shared/api/queries';
 import { useRestTimerGorunumu } from '@grind/shared/restTimer';
 import { useKalanSure } from '@grind/shared/useKalanSure';
 import { EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 /**
  * Sure dolduktan sonra bitis isaretinin (ziplayan saat) ekranda kaldigi sure -- yalnizca kullanici
@@ -37,6 +37,7 @@ const ANTRENMAN_YOLU = '/antrenman';
  * zaman monte oldugu icin sayac kucultulmusken de suresi dolunca bip calar.
  */
 export default function DinlenmeKabugu() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { dinlenme, setDinlenme, genis, setGenis } = useRestTimerGorunumu();
@@ -156,6 +157,7 @@ export default function DinlenmeKabugu() {
  * (kullanici karari: "ustune basilsa da buyumeyecek").
  */
 export function DinlenmeGostergesi() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const { dinlenme, genis, setGenis } = useRestTimerGorunumu();
   const { metin, bitti } = useKalanSure(dinlenme);
@@ -197,6 +199,7 @@ export function DinlenmeGostergesi() {
 
 /** Bitis isareti: web'deki `animate-bounce`in RN karsiligi. */
 function ZiplayanSaat() {
+  const ikonRenk = useIkonRenk();
   const kayma = useSharedValue(0);
 
   useEffect(() => {

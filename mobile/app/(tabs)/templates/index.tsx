@@ -6,11 +6,12 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import SablonKarti from '../../../src/ui/SablonKarti';
-import { ikonRenk } from '../../../src/ui/renkler';
+import { useIkonRenk } from '../../../src/ui/renkler';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /** web/src/pages/SablonlarPage.tsx ile ayni (spec Karar 3). */
 export default function SablonlarScreen() {
+  const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle('Şablonlar');
   const { data: sablonlar, isLoading, isError } = useTemplates();

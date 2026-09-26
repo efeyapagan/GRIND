@@ -3,7 +3,7 @@ import { CircleCheck, X } from 'lucide-react-native';
 import type { Egzersiz } from '@grind/shared/api/queries';
 import BirincilDugme from '../ui/BirincilDugme';
 import HareketEklePaneli from './HareketEklePaneli';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   egzersizler: readonly Egzersiz[];
@@ -39,6 +39,7 @@ export default function AntrenmanAltAlani({
   bitirCagrisi,
   iptalCagrisi,
 }: Props) {
+  const ikonRenk = useIkonRenk();
   return (
     // `mt-auto` YOK (#274): kisa listede ekranin dibine itilmez, son kartin hemen ardinda durur (web #226).
     <View className="pb-2">

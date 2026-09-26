@@ -24,7 +24,7 @@ import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import HareketSecici from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 const DINLENME_SECENEKLERI = [
   { deger: 0, etiket: 'Yok' },
@@ -59,6 +59,7 @@ interface Props {
  * yukari/asagi dugmeleri (`tasi`) burada TEK reorder yoludur, ikinci sinif bir alternatif degil.
  */
 export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }: Props) {
+  const ikonRenk = useIkonRenk();
   const router = useRouter();
   const { data: egzersizler } = useExercises();
   const olusturMutasyonu = useCreateTemplate();
@@ -301,6 +302,7 @@ function HareketSatiri({
   onAsagi,
   onKaldir,
 }: HareketSatiriProps) {
+  const ikonRenk = useIkonRenk();
   const onEk = `${sira}. hareket`;
   const dinlenmeSecenekleri = DINLENME_SECENEKLERI.some((secenek) => secenek.deger === satir.restSeconds)
     ? DINLENME_SECENEKLERI

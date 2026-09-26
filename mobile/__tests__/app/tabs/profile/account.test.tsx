@@ -2,6 +2,7 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react-
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { ApiError } from '@grind/shared/api/problem';
 import { useAuth } from '../../../../src/auth/AuthContext';
+import { TemaProvider } from '../../../../src/ui/TemaContext';
 import AccountScreen from '../../../../app/(tabs)/profile/account';
 
 jest.mock('../../../../src/auth/AuthContext', () => ({ useAuth: jest.fn() }));
@@ -30,7 +31,9 @@ beforeEach(() => {
 async function ekraniOlustur() {
   return render(
     <PageTitleProvider>
-      <AccountScreen />
+      <TemaProvider>
+        <AccountScreen />
+      </TemaProvider>
     </PageTitleProvider>,
   );
 }

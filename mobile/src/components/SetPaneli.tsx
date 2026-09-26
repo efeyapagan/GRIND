@@ -13,7 +13,7 @@ import BirincilDugme from '../ui/BirincilDugme';
 import CamYuzey from '../ui/CamYuzey';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   egzersizId: number;
@@ -32,6 +32,7 @@ interface Props {
  * Form durumu bu bilesende: panel kapaninca ya da baska bir karta gecilince yazilanlar sifirlanir.
  */
 export default function SetPaneli({ egzersizId, egzersizAdi, onKapat, onSetEklendi }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   const queryClient = useQueryClient();

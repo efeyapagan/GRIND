@@ -5,7 +5,7 @@ import { History, Pencil, Ruler, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, useProfilim } from '@grind/shared/api/queries';
 import { useAuth } from '../../../src/auth/AuthContext';
 import HataKutusu from '../../../src/ui/HataKutusu';
-import { ikonRenk } from '../../../src/ui/renkler';
+import { useIkonRenk } from '../../../src/ui/renkler';
 import ProfilBasligi from '../../../src/components/ProfilBasligi';
 import ProfilSekmeleri, { type ProfilSekmesi } from '../../../src/components/ProfilSekmeleri';
 
@@ -22,6 +22,7 @@ const SEKMELER: readonly ProfilSekmesi[] = [
  * Arama ikonu da (#293 devami) `adYani`'dan kalkip ust kabuga tasindi -- burada artik verilmiyor.
  */
 function KendiProfilBasligi() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const router = useRouter();
   const { username } = useAuth();

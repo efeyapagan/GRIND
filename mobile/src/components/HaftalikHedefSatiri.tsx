@@ -3,7 +3,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useGuncelTakvimOzeti } from '@grind/shared/api/queries';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 /**
  * Hesap ayarlarindaki haftalik antrenman hedefi satiri (#97; #117). #324: secim artik bir modalda
@@ -11,6 +11,7 @@ import { ikonRenk } from '../ui/renkler';
  * hedef ekrani. Satir yalnizca guncel hedefi gosterir ve o ekrani acar.
  */
 export default function HaftalikHedefSatiri() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const router = useRouter();
   const { data: ozet, isError } = useGuncelTakvimOzeti();

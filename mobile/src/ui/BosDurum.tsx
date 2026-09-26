@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props {
   ikon: LucideIcon;
@@ -10,6 +10,7 @@ interface Props {
 
 /** Ortali bos durum: daire icinde ikon, baslik ve istege bagli aciklama. */
 export default function BosDurum({ ikon: Ikon, baslik, aciklama }: Props) {
+  const ikonRenk = useIkonRenk();
   return (
     <View className="items-center gap-4 px-4 py-16">
       <View className="size-16 items-center justify-center rounded-full bg-surface-2">
