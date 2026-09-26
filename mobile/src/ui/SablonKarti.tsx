@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Link, type Href } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { useIkonRenk } from './renkler';
@@ -14,6 +15,7 @@ type Props = { ad: string; hareketSayisi: number } & (
 );
 
 const Icerik = ({ ad, hareketSayisi }: { ad: string; hareketSayisi: number }) => {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   return (
     <>
@@ -21,7 +23,7 @@ const Icerik = ({ ad, hareketSayisi }: { ad: string; hareketSayisi: number }) =>
         <Text numberOfLines={1} className="text-body-lg font-semibold text-fg">
           {ad}
         </Text>
-        <Text className="text-label text-muted">{hareketSayisi} hareket</Text>
+        <Text className="text-label text-muted">{t('sablonlar.hareketSayisi', { count: hareketSayisi })}</Text>
       </View>
       <ChevronRight color={ikonRenk.muted} size={20} />
     </>

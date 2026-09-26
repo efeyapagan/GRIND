@@ -90,6 +90,11 @@ test('kullanıcı şablon formunda hareketi sürükleyerek taşır, şablon yeni
   requestMock.mockImplementation(sahteRequest);
 
   await renderRouterAsync('./app', { initialUrl: '/antrenman' });
+  // Once IKI hareketin de listelendigini bekle: dugme oturum sorgusu doner donmez goruntlenir ama
+  // "Şablon olarak kaydet" o ANDAKI ilerleme listesini parametreye yaziyor -- ikinci hareket
+  // henuz cizilmemisken basmak sablona tek hareket tasir (yavas kosuda gorulen yaris).
+  await screen.findByText('Bench Press');
+  await screen.findByText('Squat');
   await fireEvent.press(await screen.findByRole('button', { name: 'Şablon olarak kaydet' }));
   await screen.findByLabelText('2. hareket: kaldır');
   expect(screen.queryByRole('button', { name: /taşı$/ })).toBeNull();

@@ -81,7 +81,7 @@ export function TemaProvider({ children }: { children: ReactNode }) {
 export function useTema(): TemaContextTipi {
   const context = useContext(TemaContext);
   if (!context) {
-    throw new Error('useTema, TemaProvider içinde kullanılmalıdır.');
+    throw new Error('useTema, TemaProvider içinde kullanılmalıdır.'); // i18n-muaf: gelistirici hatasi, kullaniciya gorunmez
   }
   return context;
 }

@@ -73,27 +73,27 @@ export default function HistoryScreen() {
             </Pressable>
           </Link>
 
-          {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
           {isError && (
             <Text accessibilityRole="alert" className="text-body text-danger">
-              Geçmiş alınamadı. Lütfen sayfayı yenileyin.
+              {t('gecmis.hata')}
             </Text>
           )}
         </View>
       }
       ListEmptyComponent={
         !isLoading && !isError && data ? (
-          <BosDurum ikon={CalendarDays} baslik="Henüz antrenman geçmişi yok" />
+          <BosDurum ikon={CalendarDays} baslik={t('gecmis.bosBaslik')} />
         ) : null
       }
       ListFooterComponent={
         <View className="mt-5 flex-col gap-5">
-          {isFetchingNextPage && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {isFetchingNextPage && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
           {bekleyen && (
             <GeriAlSeridi
               key={bekleyen.sessionId}
-              mesaj="Antrenman silindi"
+              mesaj={t('gecmis.silindi')}
               sureMs={GERI_AL_MS}
               onGeriAl={geriAl}
               onSureDoldu={sureDoldu}

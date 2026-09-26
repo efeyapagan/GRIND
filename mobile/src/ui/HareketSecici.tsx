@@ -6,13 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
 import { useIkonRenk } from './renkler';
 
-const KATEGORI_HAPLARI: { deger: EgzersizKategorisi | null; etiket: string }[] = [
-  { deger: null, etiket: 'Tümü' },
-  { deger: 'Push', etiket: 'Push' },
-  { deger: 'Pull', etiket: 'Pull' },
-  { deger: 'Legs', etiket: 'Legs' },
-  { deger: 'Other', etiket: 'Diğer' },
-];
+/**
+ * Kategori haplari. Etiket katalogdan gelir (`antrenman.kategori.*`): Push/Pull/Legs Ingilizce
+ * kategori adlaridir ve iki dilde de ayni, "Diğer" ve "Tümü" cevrilir.
+ */
+const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
 
 interface Props {
   id: string;
@@ -130,14 +128,16 @@ export default function HareketSecici({
         >
           <ScrollView keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} className="max-h-64">
             <View className="flex-row flex-wrap gap-1 rounded-t-lg border-b border-surface-4 bg-surface-3 p-1">
-              {KATEGORI_HAPLARI.map(({ deger, etiket }) => (
+              {KATEGORILER.map((deger) => (
                 <Pressable
-                  key={etiket}
+                  key={deger ?? 'tumu'}
                   accessibilityState={{ selected: kategori === deger }}
                   onPress={() => setKategori(deger)}
                   className={`min-h-11 items-center justify-center rounded-full px-3 ${kategori === deger ? 'bg-surface-4' : ''}`}
                 >
-                  <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>{etiket}</Text>
+                  <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>
+                    {deger === null ? t('antrenman.kategoriTumu') : t(`antrenman.kategori.${deger}`)}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -160,7 +160,7 @@ export default function HareketSecici({
               );
             })}
             {sonuclar.length === 0 && (
-              <Text className="px-4 py-3 text-body text-muted">Eşleşen hareket yok.</Text>
+              <Text className="px-4 py-3 text-body text-muted">{t('antrenman.eslesenYok')}</Text>
             )}
           </ScrollView>
         </View>

@@ -29,12 +29,14 @@ export default function SetSatiri({ kayit, sira, rekorGecildi = false, onDuzenle
 
   const rozet = rekorRozetiMetni(kayit);
   const erisilebilirAd = [
-    `${sira}. set`,
+    t('setler.setSirasi', { sira }),
     `${formatWeight(kayit.weight, dil)} kg × ${kayit.reps}`,
     rozet && rekorGecildi ? `${rozet} ${t('rekor.gecildi')}` : rozet,
     kayit.rir !== null ? `RIR ${rirEtiketi(kayit.rir)}` : null,
-    kayit.restSeconds !== null ? `dinlenme ${kalanSureMetni(kayit.restSeconds * 1000)}` : null,
-    'düzenle',
+    kayit.restSeconds !== null
+      ? t('setler.dinlenmeSuresi', { sure: kalanSureMetni(kayit.restSeconds * 1000) })
+      : null,
+    t('setler.duzenle'),
   ]
     .filter(Boolean)
     .join(', ');

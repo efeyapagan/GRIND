@@ -11,4 +11,9 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
 // dosyalari bunu ezer.
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
+// Cihaz dili testlerde SABIT: uygulama acilirken dili cihazdan aliyor (#263), mock olmazsa
+// sonuclar makinenin yerel ayarina gore degisir ve Turkce metin arayan testler rastgele patlar.
+// Dili kendisi degistiren testler bu mock'u ezer (bkz. src/ui/DilContext.test.tsx).
+jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
+
 require('@grind/shared/i18n').i18nBaslat('tr');

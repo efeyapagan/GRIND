@@ -82,8 +82,6 @@ function odakAcilisi(_degerler: EntryAnimationsValues) {
 const ODAK_KAPANISI = FadeOut.duration(150);
 const kaydirmaYok = () => undefined;
 
-const SABLON_UYGULANMADI ='Bugün zaten açık bir antrenmanın var; şablon uygulanmadı.';
-
 interface BekleyenHareket {
   sessionId: number;
   exerciseId: number;
@@ -105,7 +103,7 @@ export default function AntrenmanScreen() {
   const { t } = useTranslation();
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
-  usePageTitle(gorunenOturum ? 'Antrenman' : 'Antrenman başlat');
+  usePageTitle(t(gorunenOturum ? 'kabuk.antrenman' : 'kabuk.antrenmanBaslat'));
   const {
     data: setler,
     isLoading: setlerYukleniyor,
@@ -287,7 +285,7 @@ export default function AntrenmanScreen() {
     baslatMutasyonu.mutate(templateId, {
       onSuccess: (acilan) => {
         if (acilan.templateId !== templateId) {
-          setBaslatmaBilgisi(SABLON_UYGULANMADI);
+          setBaslatmaBilgisi(t('antrenman.sablonUygulanmadi'));
         }
       },
     });
@@ -308,7 +306,7 @@ export default function AntrenmanScreen() {
             {gorunenOturum?.isOpen && (
               <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
                 <View className="size-2 rounded-full bg-success" />
-                <Text className="text-label text-fg">Devam ediyor</Text>
+                <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
               </View>
             )}
             {/* "Hareket ekle" artik oturum durumundan BAGIMSIZ HER ZAMAN burada durur (yeni tasarim):
@@ -322,14 +320,16 @@ export default function AntrenmanScreen() {
                 className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
               >
                 <Plus color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-muted">Hareket ekle</Text>
+                <Text className="text-label text-muted">{t('antrenman.hareketEkle')}</Text>
               </Pressable>
             )}
           </View>
         {gorunenOturum && (
           <View className="mt-2 flex-row items-center justify-between gap-2">
             <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
-            <Text className="text-label text-muted">Başlangıç {formatSaat(gorunenOturum.startedAt)}</Text>
+            <Text className="text-label text-muted">
+              {t('antrenman.baslangic', { saat: formatSaat(gorunenOturum.startedAt) })}
+            </Text>
           </View>
         )}
         {/* #209: bos listeden sablon olmaz -- eylem yalnizca hareket varken gorunur. */}
@@ -345,12 +345,12 @@ export default function AntrenmanScreen() {
         )}
         {baslatMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
-            Antrenman başlatılamadı. Lütfen tekrar deneyin.
+            {t('antrenman.baslatilamadi')}
           </Text>
         )}
         {iptalMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
-            Antrenman iptal edilemedi. Lütfen tekrar deneyin.
+            {t('antrenman.iptalEdilemedi')}
           </Text>
         )}
         {siraMutasyonu.isError && (
@@ -360,26 +360,26 @@ export default function AntrenmanScreen() {
         )}
         {hareketEkleMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
-            Hareket eklenemedi. Lütfen tekrar deneyin.
+            {t('antrenman.hareketEklenemedi')}
           </Text>
         )}
         {baslatmaBilgisi && <Text className="text-label text-muted">{baslatmaBilgisi}</Text>}
       </View>
 
-      {oturumYukleniyor && <Text className="text-body text-muted">Yükleniyor...</Text>}
+      {oturumYukleniyor && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
       {oturumHataliMi && (
         <Text accessibilityRole="alert" className="text-body text-danger">
-          Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.
+          {t('antrenman.oturumAlinamadi')}
         </Text>
       )}
 
       {gorunenOturum && (
         <>
-          {setlerYukleniyor && <Text className="text-body text-muted">Yükleniyor...</Text>}
+          {setlerYukleniyor && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
           {setlerHataliMi && (
             <Text accessibilityRole="alert" className="text-body text-danger">
-              Setler alınamadı. Lütfen sayfayı yenileyin.
+              {t('antrenman.setlerAlinamadi')}
             </Text>
           )}
           {!setlerYukleniyor &&
@@ -416,7 +416,7 @@ export default function AntrenmanScreen() {
       {setSilme.bekleyen && (
         <GeriAlSeridi
           key={`set-${setSilme.bekleyen.id}`}
-          mesaj="Set silindi"
+          mesaj={t('setler.setSilindi')}
           sureMs={GERI_AL_MS}
           onGeriAl={setSilme.geriAl}
           onSureDoldu={setSilme.sureDoldu}
@@ -425,7 +425,7 @@ export default function AntrenmanScreen() {
       {hareketKaldirma.bekleyen && (
         <GeriAlSeridi
           key={`hareket-${hareketKaldirma.bekleyen.exerciseId}`}
-          mesaj="Hareket kaldırıldı"
+          mesaj={t('antrenman.hareketKaldirildi')}
           sureMs={GERI_AL_MS}
           onGeriAl={hareketKaldirma.geriAl}
           onSureDoldu={hareketKaldirma.sureDoldu}
