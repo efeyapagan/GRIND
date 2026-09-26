@@ -15,7 +15,7 @@ interface Props {
   idler: number[];
   /** Yalnizca bu hareketin bu antrenmandaki setleri. */
   setler: SetKaydi[];
-  onSetSil: (kayit: SetKaydi) => void;
+  onSetDuzenle: (kayit: SetKaydi, sira: number) => void;
   // #229: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur.
   onSiraDegis: (exerciseIds: number[]) => void;
   onKaldir: () => void;
@@ -28,7 +28,7 @@ interface Props {
  * glass" yuzey (`CamYuzey`, #350). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
  * gecmisi, siralama, kaldirma) kendi icinde kayar.
  */
-export default function OdakKarti({ hareket, idler, setler, onSetSil, onSiraDegis, onKaldir, onKapat }: Props) {
+export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onSiraDegis, onKaldir, onKapat }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
@@ -36,7 +36,7 @@ export default function OdakKarti({ hareket, idler, setler, onSetSil, onSiraDegi
     <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl border border-surface-4">
       <CamYuzey />
       <ScrollView contentContainerClassName="flex-col gap-3 p-4" keyboardShouldPersistTaps="handled">
-        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetSil={onSetSil} onKapat={onKapat} />
+        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetDuzenle={onSetDuzenle} onKapat={onKapat} />
         <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
         <View className="flex-row items-center gap-1">
           <IkonDugmesi
