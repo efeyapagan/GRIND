@@ -1,5 +1,8 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import * as Haptics from 'expo-haptics';
 import KabukTabBar from './KabukTabBar';
+
+jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
 
 let mockPathname = '/';
 jest.mock('expo-router', () => ({
@@ -27,4 +30,14 @@ test.each([
     expect(screen.getByText(ad)).toBeTruthy();
     expect(screen.getByRole('tab', { name: ad, selected: ad === beklenen })).toBeTruthy();
   }
+});
+
+/** #379: bir sekmeye parmak degdigi anda (cubugun buyudugu an, #373) hafif bir dokunsal "tik" hissedilir. */
+test('sekmeye basmaya baslayinca bir kez dokunsal titresim verir', async () => {
+  mockPathname = '/';
+  await render(<KabukTabBar />);
+
+  fireEvent(screen.getByRole('tab', { name: 'Profil' }), 'pressIn');
+
+  expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 });
