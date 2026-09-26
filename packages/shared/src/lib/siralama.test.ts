@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { anahtaraGoreTasi, yonleTasi } from './siralama';
+import { anahtaraGoreTasi, indeksleTasi, surukleHedefIndeksi, yonleTasi } from './siralama';
 
 const LISTE = [{ anahtar: 1 }, { anahtar: 2 }, { anahtar: 3 }, { anahtar: 4 }];
 
@@ -39,4 +39,42 @@ test('yonleTasi ogeyi komsusuyla yer degistirir', () => {
 test('yonleTasi listenin disina tasimaz, liste aynen doner', () => {
   expect(yonleTasi([1, 2, 3], 0, -1)).toEqual([1, 2, 3]);
   expect(yonleTasi([1, 2, 3], 2, 1)).toEqual([1, 2, 3]);
+});
+
+// #344: mobilde basili tutup surukleyerek sablon siralama. Surukleme mesafesini hedef indekse
+// ceviren hesap burada, jestten bagimsiz test edilir (gercek surukleme RNTL'de simule edilemez).
+test('yarim satirdan az surukleme sirayi degistirmez', () => {
+  expect(surukleHedefIndeksi(1, 20, 64, 4)).toBe(1);
+  expect(surukleHedefIndeksi(1, -31, 64, 4)).toBe(1);
+});
+
+test('yarim satiri gecen surukleme bir sira tasir', () => {
+  expect(surukleHedefIndeksi(1, 33, 64, 4)).toBe(2);
+  expect(surukleHedefIndeksi(1, -33, 64, 4)).toBe(0);
+});
+
+test('bir bucuk satirlik surukleme iki sira tasir', () => {
+  expect(surukleHedefIndeksi(0, 96, 64, 4)).toBe(2);
+});
+
+test('listenin disina tasan surukleme uclara sabitlenir', () => {
+  expect(surukleHedefIndeksi(3, 500, 64, 4)).toBe(3);
+  expect(surukleHedefIndeksi(0, -500, 64, 4)).toBe(0);
+});
+
+// Satir yuksekligi olculmeden (0) birakilirsa bolme NaN uretir; oge yerinde kalmali.
+test('satir yuksekligi bilinmiyorsa oge yerinde kalir', () => {
+  expect(surukleHedefIndeksi(2, 120, 0, 4)).toBe(2);
+});
+
+test('indeksleTasi ogeyi hedef indekse tasir, aradakiler kayar', () => {
+  expect(indeksleTasi(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd']);
+  expect(indeksleTasi(['a', 'b', 'c', 'd'], 3, 1)).toEqual(['a', 'd', 'b', 'c']);
+});
+
+test('indeksleTasi ayni indekse birakmayi degisiklik saymaz ama yeni dizi doner', () => {
+  const liste = ['a', 'b'];
+  const sonuc = indeksleTasi(liste, 1, 1);
+  expect(sonuc).toEqual(liste);
+  expect(sonuc).not.toBe(liste);
 });

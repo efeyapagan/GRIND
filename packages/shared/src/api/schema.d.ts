@@ -2885,6 +2885,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/templates/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReorderTemplatesRequest"];
+                    "text/json": components["schemas"]["ReorderTemplatesRequest"];
+                    "application/*+json": components["schemas"]["ReorderTemplatesRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TemplateResponse"][];
+                        "application/json": components["schemas"]["TemplateResponse"][];
+                        "text/json": components["schemas"]["TemplateResponse"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/templates/{id}": {
         parameters: {
             query?: never;
@@ -4058,6 +4112,9 @@ export interface components {
         };
         ReorderSessionExercisesRequest: {
             exerciseIds: number[];
+        };
+        ReorderTemplatesRequest: {
+            templateIds: number[];
         };
         /** @enum {string} */
         SessionDifficulty: "VeryEasy" | "Easy" | "Medium" | "Hard" | "Maximal";

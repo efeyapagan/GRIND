@@ -24,6 +24,7 @@ type PlateauResponse = components['schemas']['PlateauResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
+type ReorderTemplatesRequest = components['schemas']['ReorderTemplatesRequest'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
@@ -1042,6 +1043,47 @@ export function useUpdateTemplate() {
       queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
       void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+/**
+ * Sablon sirasini toptan yazar (#344 — antrenman ekraninda basili tutup surukleme). Sunucu yeni
+ * sirayla listeyi dondurur, o yuzden ayrica GET atilmaz.
+ *
+ * Siralama IYIMSER: parmak birakildigi anda kartlar yeni yerinde durur, istek arkada gider. Sunucu
+ * reddederse (`onError`) onbellek eski sirasina geri alinir -- kullanici sirayi kendi eliyle kurdugu
+ * icin listenin bir anligina eski haline "zipplamasi", istegin donmesini beklerken kartlarin
+ * donmus gorunmesinden daha az yanilticidir.
+ */
+export function useSablonlariSirala() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (templateIds: number[]): Promise<Sablon[]> => {
+      const govde: ReorderTemplatesRequest = { templateIds };
+      const yanit = await request<TemplateResponse[]>('/templates/order', {
+        method: 'PUT',
+        body: JSON.stringify(govde),
+      });
+      return yanit.map(dogrulanmisSablon);
+    },
+    onMutate: async (templateIds) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.templates });
+      const oncekiler = queryClient.getQueryData<Sablon[]>(queryKeys.templates);
+      if (oncekiler) {
+        const idyeGore = new Map(oncekiler.map((sablon) => [sablon.id, sablon]));
+        const yeni = templateIds.map((id) => idyeGore.get(id)).filter((s): s is Sablon => s !== undefined);
+        queryClient.setQueryData(queryKeys.templates, yeni);
+      }
+      return { oncekiler };
+    },
+    onError: (_hata, _girdi, baglam) => {
+      if (baglam?.oncekiler) {
+        queryClient.setQueryData(queryKeys.templates, baglam.oncekiler);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
     },
   });
 }

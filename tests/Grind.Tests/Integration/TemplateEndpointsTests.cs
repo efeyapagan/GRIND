@@ -200,4 +200,99 @@ public class TemplateEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
         Assert.Equal(HttpStatusCode.NoContent, silme.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, sonra.StatusCode);
     }
+
+    /// <summary>Sıralama testleri için: adları verilen şablonları sırayla oluşturup id'lerini döner.</summary>
+    private async Task<List<long>> SablonlariOlusturAsync(HttpClient client, params string[] adlar)
+    {
+        var idler = new List<long>();
+        foreach (var ad in adlar)
+        {
+            var response = await client.PostAsJsonAsync("/api/templates", Create(ad), Json);
+            response.EnsureSuccessStatusCode();
+            var olusan = await response.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+            idler.Add(olusan!.Id);
+        }
+
+        return idler;
+    }
+
+    private Task<HttpResponseMessage> SiralaAsync(HttpClient client, IEnumerable<long> idler)
+        => client.PutAsJsonAsync("/api/templates/order",
+            new ReorderTemplatesRequest { TemplateIds = idler.ToList() }, Json);
+
+    /// <summary>
+    /// #344: şablonlar antrenman ekranında basılı tutup sürüklenerek sıralanabiliyor. Sıra CİHAZDA
+    /// değil sunucuda durur — yoksa telefon değişince kaybolur ve iki istemci farklı sıra gösterir.
+    /// </summary>
+    [Fact]
+    public async Task Siralama_ucu_listeyi_gonderilen_sirayla_dondurur()
+    {
+        var client = await AuthenticatedClientAsync();
+        // Adlar bilerek alfabetik: sıra gerçekten OrderIndex'ten geliyorsa liste ad sırasına DÜŞMEZ.
+        var idler = await SablonlariOlusturAsync(client, "AAA sablon", "BBB sablon", "CCC sablon");
+        var istenen = new List<long> { idler[2], idler[0], idler[1] };
+
+        var response = await SiralaAsync(client, istenen);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var donen = await response.Content.ReadFromJsonAsync<List<TemplateResponse>>(Json);
+        Assert.Equal(istenen, donen!.Select(s => s.Id).ToList());
+
+        var liste = await client.GetFromJsonAsync<List<TemplateResponse>>("/api/templates", Json);
+        Assert.Equal(istenen, liste!.Select(s => s.Id).ToList());
+    }
+
+    /// <summary>
+    /// Eksik id, sıranın yarısını yazıp bırakmaz: istek TOPTAN reddedilir. Aksi halde listede
+    /// kalan şablonlar 0'da kalır ve kullanıcının görmediği bir sıraya düşer.
+    /// </summary>
+    [Fact]
+    public async Task Eksik_id_iceren_siralama_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var idler = await SablonlariOlusturAsync(client, "AAA sablon", "BBB sablon", "CCC sablon");
+
+        var response = await SiralaAsync(client, [idler[2], idler[0]]);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var liste = await client.GetFromJsonAsync<List<TemplateResponse>>("/api/templates", Json);
+        Assert.Equal(idler, liste!.Select(s => s.Id).ToList());
+    }
+
+    /// <summary>
+    /// Başkasının id'si listeye sızarsa 400 — "şablon bulunamadı" DEMEZ: id tarayarak hangi
+    /// id'lerin dolu olduğunu haritalatmamak için (WorkoutTemplateService.ExerciseNotFound ile aynı gerekçe).
+    /// </summary>
+    [Fact]
+    public async Task Baska_kullanicinin_sablonunu_iceren_siralama_400_verir()
+    {
+        var yabanci = await AuthenticatedClientAsync();
+        var yabanciIdler = await SablonlariOlusturAsync(yabanci, "AAA sablon");
+
+        var client = await AuthenticatedClientAsync();
+        var idler = await SablonlariOlusturAsync(client, "AAA sablon", "BBB sablon");
+
+        var response = await SiralaAsync(client, [idler[1], yabanciIdler[0]]);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var liste = await client.GetFromJsonAsync<List<TemplateResponse>>("/api/templates", Json);
+        Assert.Equal(idler, liste!.Select(s => s.Id).ToList());
+    }
+
+    /// <summary>
+    /// Regresyon: hiç sürükleme yapmamış kullanıcı (tüm OrderIndex'ler 0) bugünkü ALFABETİK
+    /// sırayı görmeye devam eder — migration'ın veri taşımasına gerek bırakmayan şey bu.
+    /// </summary>
+    [Fact]
+    public async Task Siralanmamis_kullanicida_liste_alfabetik_kalir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var idler = await SablonlariOlusturAsync(client, "ZZZ sablon", "AAA sablon", "MMM sablon");
+
+        var liste = await client.GetFromJsonAsync<List<TemplateResponse>>("/api/templates", Json);
+
+        Assert.Equal([idler[1], idler[2], idler[0]], liste!.Select(s => s.Id).ToList());
+    }
 }
