@@ -3,6 +3,7 @@ import { ApiError } from '@grind/shared/api/problem';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { useAuth } from '../../../../src/auth/AuthContext';
 import { TemaProvider } from '../../../../src/ui/TemaContext';
+import { DilProvider } from '../../../../src/ui/DilContext';
 import AccountScreen from '../../../../app/(tabs)/profile/account';
 
 jest.mock('../../../../src/auth/AuthContext', () => ({ useAuth: jest.fn() }));
@@ -27,7 +28,9 @@ async function ekraniOlustur() {
   return render(
     <PageTitleProvider>
       <TemaProvider>
-        <AccountScreen />
+        <DilProvider>
+          <AccountScreen />
+        </DilProvider>
       </TemaProvider>
     </PageTitleProvider>,
   );

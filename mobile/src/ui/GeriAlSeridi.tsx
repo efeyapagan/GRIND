@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Undo2 } from 'lucide-react-native';
 import { useIkonRenk } from './renkler';
 
@@ -16,6 +17,7 @@ interface Props {
  * onunla birlikte hareket eder) -- islevsel olarak birebir ayni (sure dolunca kendini kaldirir).
  */
 export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: Props) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const [bitisMs] = useState(() => Date.now() + sureMs);
   const [simdi, setSimdi] = useState(() => Date.now());
@@ -43,7 +45,7 @@ export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: P
           className="min-h-11 shrink-0 flex-row items-center gap-1.5 rounded-lg px-3"
         >
           <Undo2 color={ikonRenk.accent} size={18} />
-          <Text className="text-label text-accent">Geri al</Text>
+          <Text className="text-label text-accent">{t('ortak.geriAl')}</Text>
         </Pressable>
       </View>
       <View className="h-1 w-full overflow-hidden rounded-full bg-surface-3">

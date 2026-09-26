@@ -25,7 +25,12 @@ declare module 'i18next' {
 export function i18nBaslat(dil: Dil): void {
   if (i18n.isInitialized) {
     kaynaklariTazele();
-    void i18n.changeLanguage(dil);
+    // Ayni dile gecmek NO-OP degildir: i18next yine de asenkron bir dil degisimi baslatir ve tum
+    // `useTranslation` tuketicilerini yeniden cizdirir. Mobilde `_layout` her acilista cihaz
+    // diliyle cagiriyor (#263); zaten o dildeysek dokunma.
+    if (i18n.language !== dil) {
+      void i18n.changeLanguage(dil);
+    }
     return;
   }
   void i18n.use(initReactI18next).init({

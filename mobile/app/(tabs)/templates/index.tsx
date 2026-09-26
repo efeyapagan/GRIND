@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'expo-router';
 import { ClipboardList, Plus } from 'lucide-react-native';
 import { useTemplates } from '@grind/shared/api/queries';
@@ -11,26 +12,27 @@ import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /** web/src/pages/SablonlarPage.tsx ile ayni (spec Karar 3). */
 export default function SablonlarScreen() {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
-  usePageTitle('Şablonlar');
+  usePageTitle(t('sablonlar.baslik'));
   const { data: sablonlar, isLoading, isError } = useTemplates();
 
   return (
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
-      {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+      {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
       {isError && (
         <Text accessibilityRole="alert" className="text-body text-danger">
-          Şablonlar alınamadı. Lütfen sayfayı yenileyin.
+          {t('sablonlar.hataYenile')}
         </Text>
       )}
 
       {sablonlar && sablonlar.length === 0 && (
         <BosDurum
           ikon={ClipboardList}
-          baslik="Henüz şablon yok"
-          aciklama="Bir gün tipinin hareketlerini bir kez kur, antrenmanı tek dokunuşla başlat."
+          baslik={t('sablonlar.hicSablonYokBaslik')}
+          aciklama={t('sablonlar.hicSablonYokAciklama')}
         />
       )}
 
@@ -50,7 +52,7 @@ export default function SablonlarScreen() {
       <Link href="/templates/new" asChild>
         <BirincilDugme yukseklik="normal">
           <Plus color={ikonRenk.onAccent} size={20} />
-          <Text className="text-body-lg font-bold text-on-accent">Yeni şablon</Text>
+          <Text className="text-body-lg font-bold text-on-accent">{t('sablonlar.yeniSablon')}</Text>
         </BirincilDugme>
       </Link>
     </ScrollView>

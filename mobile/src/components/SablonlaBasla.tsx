@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'expo-router';
 import { useTemplates, useSablonlariSirala } from '@grind/shared/api/queries';
 import SablonKarti from '../ui/SablonKarti';
@@ -18,21 +19,22 @@ interface Props {
  * ekrani ayni listeyi ayni ucdan okudugu icin sirayi kendiliginden yansitir.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
+  const { t } = useTranslation();
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const siralama = useSablonlariSirala();
 
   return (
     <View className="flex-col gap-3">
-      <Text className="text-heading text-fg">Şablonla başla</Text>
+      <Text className="text-heading text-fg">{t('sablonlar.baslaBasligi')}</Text>
 
-      {isLoading && <Text className="text-body text-muted">Yükleniyor...</Text>}
+      {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
       {isError && (
         <Text accessibilityRole="alert" className="text-body text-danger">
-          Şablonlar alınamadı.
+          {t('sablonlar.hata')}
         </Text>
       )}
 
-      {sablonlar && sablonlar.length === 0 && <Text className="text-body text-muted">Henüz şablon yok.</Text>}
+      {sablonlar && sablonlar.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicSablonYok')}</Text>}
 
       {sablonlar && sablonlar.length > 0 && (
         <>
@@ -54,7 +56,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
               digger `Link` kullanimlarindaki gibi metin AYRI bir `Text`te olmali) -- yoksa
               stilsiz metin RN varsayilani olan SIYAH renderlanir (kullanici bulgusu). */}
           <Link href="/templates" className="min-h-11 justify-center">
-            <Text className="text-label text-muted underline">Şablonları yönet</Text>
+            <Text className="text-label text-muted underline">{t('sablonlar.yonet')}</Text>
           </Link>
         </>
       )}

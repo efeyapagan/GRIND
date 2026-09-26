@@ -8,6 +8,7 @@ import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import HaftalikHedefSatiri from '../../../src/components/HaftalikHedefSatiri';
 import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
 import TemaSecici from '../../../src/components/TemaSecici';
+import DilSecici from '../../../src/components/DilSecici';
 import SifreDegistirPenceresi from '../../../src/components/SifreDegistirPenceresi';
 import { useIkonRenk } from '../../../src/ui/renkler';
 
@@ -29,12 +30,13 @@ export default function AccountScreen() {
   return (
     <EkranKaydirici contentContainerClassName="gap-6 px-4 pt-2 pb-4">
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
-        <Text className="text-heading text-fg">Antrenman hedefi</Text>
+        <Text className="text-heading text-fg">{t('profil.antrenmanHedefi')}</Text>
         <HaftalikHedefSatiri />
       </View>
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <GizlilikSeviyesiSecici />
         <TemaSecici />
+        <DilSecici />
       </View>
       <SifreDegistirDugmesi />
       <Pressable
@@ -42,7 +44,7 @@ export default function AccountScreen() {
         className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-surface-1 p-4"
       >
         <LogOut color={ikonRenk.danger} size={18} />
-        <Text className="text-label text-danger">Çıkış yap</Text>
+        <Text className="text-label text-danger">{t('profil.cikisYap')}</Text>
       </Pressable>
     </EkranKaydirici>
   );

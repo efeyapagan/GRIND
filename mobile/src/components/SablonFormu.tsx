@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { ClipboardList, Plus, Trash2, X } from 'lucide-react-native';
 import {
@@ -62,6 +63,7 @@ interface Props {
  * yukari/asagi dugmeleri kaldirildi.
  */
 export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }: Props) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const router = useRouter();
   const { data: egzersizler } = useExercises();
@@ -128,13 +130,13 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
   function dogrula(): boolean {
     const kirpilmisAd = ad.trim();
     const yeniAdHatasi =
-      kirpilmisAd.length < 2 || kirpilmisAd.length > 100 ? 'Şablon adı 2-100 karakter olmalı.' : null;
+      kirpilmisAd.length < 2 || kirpilmisAd.length > 100 ? t('sablonlar.adiGecersiz') : null;
     const yeniSetHatalari: Record<number, string> = {};
     for (const satir of satirlar) {
       const metin = satir.plannedSets.trim();
       const sayi = Number(metin);
       if (metin === '' || !Number.isInteger(sayi) || sayi < 1 || sayi > 50) {
-        yeniSetHatalari[satir.anahtar] = 'Hedef set 1-50 arasında olmalı.';
+        yeniSetHatalari[satir.anahtar] = t('sablonlar.hedefSetGecersiz');
       }
     }
     setAdHatasi(yeniAdHatasi);
@@ -189,21 +191,21 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
 
   return (
     <View className="flex-col gap-5">
-      {genelHata && <HataKutusu baslik="Şablon kaydedilemedi" mesaj={genelHata} />}
+      {genelHata && <HataKutusu baslik={t('sablonlar.kaydedilemedi')} mesaj={genelHata} />}
 
       <Alan
         id="sablon-adi"
-        etiket="Şablon adı"
+        etiket={t('sablonlar.adiEtiket')}
         ikon={ClipboardList}
-        placeholder="Push Day"
+        placeholder={t('sablonlar.adiPlaceholder')}
         value={ad}
         onChangeText={setAd}
         hata={adHatasi ?? undefined}
       />
 
       <View className="flex-col gap-3">
-        <Text className="text-heading text-fg">Hareketler</Text>
-        {satirlar.length === 0 && <Text className="text-body text-muted">Henüz hareket yok.</Text>}
+        <Text className="text-heading text-fg">{t('sablonlar.hareketlerBasligi')}</Text>
+        {satirlar.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicHareketYok')}</Text>}
         <SurukleSiraliListe
           ogeler={satirlar}
           anahtar={(satir) => satir.anahtar}
@@ -228,12 +230,12 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
         />
         <IkincilDugme onPress={hareketEkle} disabled={!eklenebilirEgzersiz}>
           <Plus color={ikonRenk.fg} size={18} />
-          <Text className="text-label text-fg">Hareket ekle</Text>
+          <Text className="text-label text-fg">{t('antrenman.hareketEkle')}</Text>
         </IkincilDugme>
       </View>
 
       <BirincilDugme yukseklik="normal" disabled={kaydediliyor} onPress={kaydet}>
-        Kaydet
+        {t('ortak.kaydet')}
       </BirincilDugme>
 
       {sablon && (
@@ -246,7 +248,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
           {silmeOnayi ? (
             <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
               <Text className="text-body text-fg">
-                Silmek istediğine emin misin? Bu şablonla yapılmış geçmiş antrenmanlar silinmez.
+                {t('sablonlar.silOnayMesaji')}
               </Text>
               <View className="flex-row gap-2">
                 <Pressable
@@ -254,17 +256,17 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
                   disabled={silMutasyonu.isPending}
                   className={`h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg ${silMutasyonu.isPending ? 'opacity-60' : ''}`}
                 >
-                  <Text className="text-label text-on-danger-bg">Evet, sil</Text>
+                  <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
                 </Pressable>
                 <View className="flex-1">
-                  <IkincilDugme onPress={() => setSilmeOnayi(false)}>Vazgeç</IkincilDugme>
+                  <IkincilDugme onPress={() => setSilmeOnayi(false)}>{t('ortak.vazgec')}</IkincilDugme>
                 </View>
               </View>
             </View>
           ) : (
             <Pressable onPress={() => setSilmeOnayi(true)} className="h-12 flex-row items-center justify-center gap-2 rounded-xl">
               <Trash2 color={ikonRenk.danger} size={18} />
-              <Text className="text-label text-danger">Şablonu sil</Text>
+              <Text className="text-label text-danger">{t('sablonlar.sil')}</Text>
             </Pressable>
           )}
         </View>
@@ -299,11 +301,12 @@ function HareketSatiri({
   onDinlenme,
   onKaldir,
 }: HareketSatiriProps) {
+  const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
-  const onEk = `${sira}. hareket`;
+  const onEk = t('sablonlar.hareketOnEki', { sira });
   const dinlenmeSecenekleri = DINLENME_SECENEKLERI.some((secenek) => secenek.deger === satir.restSeconds)
     ? DINLENME_SECENEKLERI
-    : [...DINLENME_SECENEKLERI, { deger: satir.restSeconds, etiket: `${satir.restSeconds} sn` }].sort(
+    : [...DINLENME_SECENEKLERI, { deger: satir.restSeconds, etiket: t('sablonlar.dinlenmeSn', { saniye: satir.restSeconds }) }].sort(
         (a, b) => a.deger - b.deger,
       );
 
@@ -316,17 +319,17 @@ function HareketSatiri({
           <View className="size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
             <Text className="text-label text-fg">{sira}</Text>
           </View>
-          {satir.isArchived && <Hap>Artık kullanılmıyor</Hap>}
+          {satir.isArchived && <Hap>{t('sablonlar.artikKullanilmiyor')}</Hap>}
         </View>
         <View className="shrink-0 flex-row items-center gap-1">
-          <IkonDugmesi etiket={`${onEk}: kaldır`} onPress={onKaldir}>
+          <IkonDugmesi etiket={`${onEk}: ${t('sablonlar.kaldir')}`} onPress={onKaldir}>
             <X color={ikonRenk.muted} size={20} />
           </IkonDugmesi>
         </View>
       </View>
 
       <View className="flex-col gap-1">
-        <Text className="text-label text-muted">Egzersiz</Text>
+        <Text className="text-label text-muted">{t('setler.egzersizEtiket')}</Text>
         <HareketSecici
           id={`hareket-${satir.anahtar}-egzersiz`}
           egzersizler={egzersizler}
@@ -339,7 +342,7 @@ function HareketSatiri({
 
       <View className="flex-row gap-3">
         <View className="flex-1 flex-col gap-1">
-          <Text className="text-label text-muted">Hedef set</Text>
+          <Text className="text-label text-muted">{t('sablonlar.hedefSetEtiket')}</Text>
           <TextInput
             inputMode="numeric"
             keyboardType="number-pad"
@@ -354,9 +357,9 @@ function HareketSatiri({
           )}
         </View>
         <View className="flex-1 flex-col gap-1">
-          <Text className="text-label text-muted">Dinlenme</Text>
+          <Text className="text-label text-muted">{t('antrenman.dinlenme')}</Text>
           <SecimKutusu
-            baslik="Dinlenme"
+            baslik={t('antrenman.dinlenme')}
             secenekler={dinlenmeSecenekleri}
             deger={satir.restSeconds}
             onDegistir={onDinlenme}
