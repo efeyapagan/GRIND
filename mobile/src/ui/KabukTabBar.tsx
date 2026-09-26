@@ -3,6 +3,7 @@ import { View, Pressable, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useRouter, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell, Home, User, type LucideIcon } from 'lucide-react-native';
 import CamYuzey from './CamYuzey';
@@ -83,7 +84,8 @@ const KAPANIS_MS = 150;
 const BASLANGIC_OLCEGI = 0.5;
 /**
  * Bir sekmeye parmak degdikce tum cam cubuk bu olcege buyur, kalkinca ayni yayla yerine oturur
- * (#373, iOS 26 "liquid glass" dokunma hissi). Basili tutuldukca buyuk kalir.
+ * (#373, iOS 26 "liquid glass" dokunma hissi). Basili tutuldukca buyuk kalir. Ayni anda hafif bir
+ * dokunsal "tik" verilir (#379) -- `selectionAsync`, iOS sekme cubugunun kendi kullandigi en hafif tur.
  */
 const BASILI_OLCEK = 1.04;
 
@@ -146,6 +148,7 @@ export default function KabukTabBar() {
   const cubukStili = useAnimatedStyle(() => ({ transform: [{ scale: olcek.value }] }));
   const basildi = () => {
     olcek.value = withSpring(BASILI_OLCEK, ACILIS_YAYI);
+    void Haptics.selectionAsync();
   };
   const birakildi = () => {
     olcek.value = withSpring(1, ACILIS_YAYI);
