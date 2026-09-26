@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Undo2 } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props {
   mesaj: string;
@@ -16,6 +16,7 @@ interface Props {
  * onunla birlikte hareket eder) -- islevsel olarak birebir ayni (sure dolunca kendini kaldirir).
  */
 export default function GeriAlSeridi({ mesaj, sureMs, onGeriAl, onSureDoldu }: Props) {
+  const ikonRenk = useIkonRenk();
   const [bitisMs] = useState(() => Date.now() + sureMs);
   const [simdi, setSimdi] = useState(() => Date.now());
   const kalanMs = Math.max(0, bitisMs - simdi);

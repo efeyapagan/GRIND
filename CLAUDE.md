@@ -129,8 +129,17 @@ Bu karar #211'deki "Web + Mobil aynı işte" kuralının yerini alır.
   `takvim`/`zorlukKadrani` gibi yardımcılar) testleri `packages/shared/src/**/*.test.ts`'tedir
   (vitest, `npm run test --workspace @grind/shared`) ve Mobile CI'da ortak paketin tip kontrolüyle
   birlikte koşar. Ortak koda yeni test buraya yazılır, `web/`'e değil.
-- Mevcut mobil farkları kendi dilimlerinde kapanır: mobil tema koyu kalır (açık tema), mobil
-  arayüz dili dilim 3'e kadar Türkçe sabit (Çok Dil).
+- Mevcut mobil farkları kendi dilimlerinde kapanır: mobil arayüz dili dilim 3'e kadar Türkçe
+  sabit (Çok Dil).
+- **Mobil iki temalıdır (#271, 2026-09-26).** Renk paleti tek kaynaktan gelir:
+  `packages/shared/src/designTokens.ts` (`renklerKoyu` + `renklerAcik`). Tailwind sınıfları
+  `mobile/global.css`teki değişkenleri (`:root` açık, `.dark:root` koyu) okur, JS tarafı (lucide
+  ikonları, `react-native-svg` çizimleri, `StyleSheet` renkleri) **`useRenkPaleti()` /
+  `useIkonRenk()` / `useEtkinTema()`** hook'larından okur — modül seviyesinde renk okumak tema
+  değişince güncellenmez, bu bir hatadır. Yeni bir token iki palete de eklenir; `paletKontrast`
+  (kontrast eşikleri) ve `mobile/src/ui/renkler.test.ts` (CSS ile TS'in aynı kalması) bunu zorlar.
+  Etkin tema NativeWind'in `colorScheme`idir; tercih `TemaProvider` üzerinden `setColorScheme` ile
+  yazılır ve cihazda (`grind.tema`) saklanır.
 - Bitti sayılmadan önce: `mobile` ve `@grind/shared` testleri ve tip kontrolü yeşil, özellik
   mobilde gözle denenmiş.
 

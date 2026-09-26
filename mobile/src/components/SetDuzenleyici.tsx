@@ -13,7 +13,7 @@ import BirincilDugme from '../ui/BirincilDugme';
 import IkincilDugme from '../ui/IkincilDugme';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   kayit: SetKaydi;
@@ -24,6 +24,7 @@ interface Props {
 
 /** web/src/components/SetDuzenleyici.tsx ile ayni (issue #57). */
 export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
+  const ikonRenk = useIkonRenk();
   const duzeltme = useUpdateSet();
   const [girdi, setGirdi] = useState(() => setGirdisiMetni(kayit));
   const [genelHata, setGenelHata] = useState<string | null>(null);

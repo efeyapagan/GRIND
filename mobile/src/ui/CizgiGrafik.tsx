@@ -4,7 +4,8 @@ import Svg, { Defs, LinearGradient, Stop, Line, Path, Circle, Rect, Text as SvgT
 import { useDil } from '@grind/shared/i18n';
 import { formatWeight } from '@grind/shared/lib/format';
 import { eksenDegerleri } from '@grind/shared/lib/grafik';
-import { renkler } from '@grind/shared/designTokens';
+import { useRenkPaleti } from './renkler';
+
 
 export interface CizgiNoktasi {
   etiket: string;
@@ -43,6 +44,7 @@ export default function CizgiGrafik({ noktalar, birim, baslik }: Props) {
 }
 
 function Cizim({ noktalar, baslik }: Props) {
+  const palet = useRenkPaleti();
   const dil = useDil();
   const [genislik, setGenislik] = useState(VARSAYILAN_GENISLIK);
 
@@ -80,8 +82,8 @@ function Cizim({ noktalar, baslik }: Props) {
       <Svg accessibilityLabel={baslik} width={genislik} height={YUKSEKLIK}>
         <Defs>
           <LinearGradient id="degrade" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={renkler.accent} stopOpacity={0.45} />
-            <Stop offset="100%" stopColor={renkler.accent} stopOpacity={0} />
+            <Stop offset="0%" stopColor={palet.accent} stopOpacity={0.45} />
+            <Stop offset="100%" stopColor={palet.accent} stopOpacity={0} />
           </LinearGradient>
         </Defs>
         <G>
@@ -93,14 +95,14 @@ function Cizim({ noktalar, baslik }: Props) {
                 y1={yKonumu(deger)}
                 y2={yKonumu(deger)}
                 strokeWidth={1}
-                stroke={renkler['surface-3']}
+                stroke={palet['surface-3']}
               />
               <SvgText
                 x={genislik - 4}
                 y={yKonumu(deger)}
                 textAnchor="end"
                 alignmentBaseline="middle"
-                fill={renkler.muted}
+                fill={palet.muted}
                 fontSize={12}
               >
                 {formatWeight(deger, dil)}
@@ -117,7 +119,7 @@ function Cizim({ noktalar, baslik }: Props) {
                 x={xKonumu(sira)}
                 y={YUKSEKLIK - 6}
                 textAnchor={hizalama}
-                fill={renkler.muted}
+                fill={palet.muted}
                 fontSize={12}
               >
                 {noktalar[sira].etiket}
@@ -126,10 +128,10 @@ function Cizim({ noktalar, baslik }: Props) {
           })}
           {noktalar.length > 1 && <Path d={alan} fill="url(#degrade)" />}
           {noktalar.length > 1 && (
-            <Path d={cizgi} fill="none" stroke={renkler.accent} strokeWidth={2.5} strokeLinejoin="round" />
+            <Path d={cizgi} fill="none" stroke={palet.accent} strokeWidth={2.5} strokeLinejoin="round" />
           )}
           {koordinatlar.map((k, sira) => (
-            <Circle key={`nokta-${sira}`} cx={k.x} cy={k.y} r={5} stroke={renkler.accent} strokeWidth={2.5} fill={renkler.bg} />
+            <Circle key={`nokta-${sira}`} cx={k.x} cy={k.y} r={5} stroke={palet.accent} strokeWidth={2.5} fill={palet.bg} />
           ))}
           {/* #230: "ince bir işaret" -- web/src/ui/CizgiGrafik.tsx ile ayni notr, kesikli halka. */}
           {koordinatlar.map(
@@ -141,7 +143,7 @@ function Cizim({ noktalar, baslik }: Props) {
                   cy={k.y}
                   r={9}
                   fill="none"
-                  stroke={renkler.muted}
+                  stroke={palet.muted}
                   strokeWidth={1.5}
                   strokeDasharray="2 2"
                 />
@@ -163,14 +165,14 @@ function Cizim({ noktalar, baslik }: Props) {
                   width={etiketGenisligi}
                   height={ETIKET_YUKSEKLIGI}
                   rx={6}
-                  fill={renkler.accent}
+                  fill={palet.accent}
                 />
                 <SvgText
                   x={merkezX}
                   y={ustY + ETIKET_YUKSEKLIGI / 2}
                   textAnchor="middle"
                   alignmentBaseline="middle"
-                  fill={renkler['on-accent']}
+                  fill={palet['on-accent']}
                   fontSize={12}
                 >
                   {metin}

@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 type Props = { ad: string; hareketSayisi: number } & (
   | { href: Href }
@@ -13,17 +13,20 @@ type Props = { ad: string; hareketSayisi: number } & (
     }
 );
 
-const Icerik = ({ ad, hareketSayisi }: { ad: string; hareketSayisi: number }) => (
-  <>
-    <View className="min-w-0 flex-1 flex-col gap-1">
-      <Text numberOfLines={1} className="text-body-lg font-semibold text-fg">
-        {ad}
-      </Text>
-      <Text className="text-label text-muted">{hareketSayisi} hareket</Text>
-    </View>
-    <ChevronRight color={ikonRenk.muted} size={20} />
-  </>
-);
+const Icerik = ({ ad, hareketSayisi }: { ad: string; hareketSayisi: number }) => {
+  const ikonRenk = useIkonRenk();
+  return (
+    <>
+      <View className="min-w-0 flex-1 flex-col gap-1">
+        <Text numberOfLines={1} className="text-body-lg font-semibold text-fg">
+          {ad}
+        </Text>
+        <Text className="text-label text-muted">{hareketSayisi} hareket</Text>
+      </View>
+      <ChevronRight color={ikonRenk.muted} size={20} />
+    </>
+  );
+};
 
 /** web/src/ui/SablonKarti.tsx ile ayni: sablon ozeti karti. */
 export default function SablonKarti(props: Props) {

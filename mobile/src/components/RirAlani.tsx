@@ -3,7 +3,6 @@ import { View, Text, Pressable, PanResponder, Keyboard, type GestureResponderEve
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Info } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { renkler } from '@grind/shared/designTokens';
 import {
   enYakinRirDegeri,
   rirAciklamasi,
@@ -11,7 +10,7 @@ import {
   rirEtiketi,
   RIR_DURAKLARI,
 } from '@grind/shared/lib/rir';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk, useRenkPaleti } from '../ui/renkler';
 
 interface Props {
   id: string;
@@ -46,6 +45,8 @@ const ETIKET_GENISLIK = 32;
  * uc alanin ALTINA tam genislikte duser.
  */
 export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, hata }: Props) {
+  const ikonRenk = useIkonRenk();
+  const palet = useRenkPaleti();
   const { t } = useTranslation();
   const [acik, setAcik] = useState(false);
   const [bilgiAcik, setBilgiAcik] = useState(false);
@@ -217,8 +218,8 @@ export default function RirAlani({ id, deger, onDegis, temizlenebilir = true, ha
                 <Svg width="100%" height={RAY_YUKSEKLIK}>
                   <Defs>
                     <LinearGradient id={degradeId} x1="0" y1="0" x2="1" y2="0">
-                      <Stop offset="0" stopColor={renkler.accent} />
-                      <Stop offset="1" stopColor={renkler['surface-4']} />
+                      <Stop offset="0" stopColor={palet.accent} />
+                      <Stop offset="1" stopColor={palet['surface-4']} />
                     </LinearGradient>
                   </Defs>
                   <Rect width="100%" height={RAY_YUKSEKLIK} rx={RAY_YUKSEKLIK / 2} fill={`url(#${degradeId})`} />

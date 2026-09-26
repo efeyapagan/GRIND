@@ -2,7 +2,7 @@ import { Modal as RNModal, View, Text, Pressable, KeyboardAvoidingView, Platform
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react-native';
 import IkonDugmesi from './IkonDugmesi';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props {
   acik: boolean;
@@ -17,6 +17,7 @@ interface Props {
  * feature-detect'ine burada gerek yok.
  */
 export default function Modal({ acik, onKapat, baslik, children }: Props) {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   return (
     <RNModal visible={acik} transparent animationType="fade" onRequestClose={onKapat}>

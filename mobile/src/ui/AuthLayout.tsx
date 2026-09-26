@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Dumbbell } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 interface Props {
   baslik: string;
@@ -14,6 +14,7 @@ interface Props {
  * altta gecis baglantisi. Bu ekranlarda kabuk (baslik/sekme cubugu) yok.
  */
 export default function AuthLayout({ baslik, aciklama, children, altBaglanti }: Props) {
+  const ikonRenk = useIkonRenk();
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}

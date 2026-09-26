@@ -4,7 +4,7 @@ import { ChevronsUpDown, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useProfilim, useSetPrivacyLevel, type GizlilikSeviyesi } from '@grind/shared/api/queries';
 import Modal from '../ui/Modal';
-import { ikonRenk } from '../ui/renkler';
+import { useIkonRenk } from '../ui/renkler';
 
 const SEVIYELER: readonly GizlilikSeviyesi[] = ['Acik', 'Kisitli', 'Gizli'];
 
@@ -19,6 +19,7 @@ const ETIKET_ANAHTARI = {
  * karşılığı yok -- "kapalı kutu + seçince kapanan liste" Modal seçici.
  */
 export default function GizlilikSeviyesiSecici() {
+  const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const { data: profil, isError } = useProfilim();
   const seviyeAyarla = useSetPrivacyLevel();
@@ -66,6 +67,7 @@ export default function GizlilikSeviyesiSecici() {
 }
 
 function SecenekSatiri({ etiket, secili, onPress }: { etiket: string; secili: boolean; onPress: () => void }) {
+  const ikonRenk = useIkonRenk();
   return (
     <Pressable
       onPress={onPress}

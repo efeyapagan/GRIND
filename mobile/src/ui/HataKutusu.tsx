@@ -1,9 +1,10 @@
 import { View, Text } from 'react-native';
 import { CircleAlert } from 'lucide-react-native';
-import { ikonRenk } from './renkler';
+import { useIkonRenk } from './renkler';
 
 /** Formun genel hatasi (spec): danger-bg kutu, baslik + mesaj. */
 export default function HataKutusu({ baslik, mesaj }: { baslik: string; mesaj: string }) {
+  const ikonRenk = useIkonRenk();
   return (
     <View
       accessibilityRole="alert"

@@ -48,7 +48,7 @@ import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
 import IkincilDugme from '../../src/ui/IkincilDugme';
 import TurEtiketi from '../../src/ui/TurEtiketi';
-import { ikonRenk } from '../../src/ui/renkler';
+import { useEtkinTema, useIkonRenk } from '../../src/ui/renkler';
 
 /** Klavye acikken yuzer set panelinin klavyenin ustunde biraktigi bosluk (#350). */
 const KLAVYE_BOSLUGU = 8;
@@ -99,6 +99,8 @@ interface BekleyenHareket {
  * hala "Iptal et", alt alan hala "Hareket ekle" gosterir.
  */
 export default function AntrenmanScreen() {
+  const ikonRenk = useIkonRenk();
+  const etkinTema = useEtkinTema();
   const { t } = useTranslation();
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
@@ -436,7 +438,9 @@ export default function AntrenmanScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('antrenman.kartiKapat')}
               onPress={() => setPanelAcik(false)}
-              className="flex-1 bg-black/40"
+              // #271: acik temada karartma daha hafif -- %40'lik siyah, acik yuzeyleri gri bir
+              // camura ceviriyordu; ayirici islevi icin acik temada %20 yetiyor.
+              className={`flex-1 ${etkinTema === 'acik' ? 'bg-black/20' : 'bg-black/40'}`}
             />
           </Animated.View>
           <View

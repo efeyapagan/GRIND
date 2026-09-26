@@ -3,7 +3,7 @@ import { View, Text, Pressable, PanResponder, type GestureResponderEvent } from 
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import type { Zorluk } from '@grind/shared/api/queries';
-import { renkler } from '@grind/shared/designTokens';
+
 import {
   altDurakDerinligi,
   durakKonumu,
@@ -11,6 +11,7 @@ import {
   yayYolu,
   ZORLUK_KADEMELERI,
 } from '@grind/shared/lib/zorlukKadrani';
+import { useRenkPaleti } from '../ui/renkler';
 
 interface Props {
   deger: Zorluk;
@@ -46,6 +47,7 @@ const ORTA_BLOK_YARI_YUKSEKLIK = 32;
  * gecilmemis duraklar `surface-4`te, yay zemini `surface-2`de durur.
  */
 export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
+  const palet = useRenkPaleti();
   const { t } = useTranslation();
   const seciliSira = Math.max(0, ZORLUK_KADEMELERI.indexOf(deger));
   const secili = ZORLUK_KADEMELERI[seciliSira];
@@ -132,7 +134,7 @@ export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
         <Path
           d={yayYolu(MERKEZ, YAY_YARICAP)}
           fill="none"
-          stroke={renkler['surface-2']}
+          stroke={palet['surface-2']}
           strokeWidth={YAY_KALINLIK}
           strokeLinecap="round"
         />
@@ -141,7 +143,7 @@ export default function ZorlukKadrani({ deger, onDegis, onSurukleme }: Props) {
           <Path
             d={yayYolu(MERKEZ, YAY_YARICAP, seciliSira)}
             fill="none"
-            stroke={renkler.accent}
+            stroke={palet.accent}
             strokeWidth={YAY_KALINLIK}
             strokeLinecap="round"
           />
