@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IAiInsightRepository, AiInsightRepository>();
         services.AddScoped<IFollowRepository, FollowRepository>();
         services.AddScoped<IUserAvatarRepository, UserAvatarRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

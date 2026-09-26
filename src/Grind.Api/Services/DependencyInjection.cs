@@ -22,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<IFollowService, FollowService>();
         services.AddScoped<IPublicActivityService, PublicActivityService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<INotificationSource, FollowNotificationSource>();
+        services.AddScoped<INotificationSource, RecordNotificationSource>();
+        services.AddScoped<INotificationService, NotificationService>();
         return services;
     }
 }
