@@ -7,11 +7,11 @@ import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import Modal from '../ui/Modal';
 import Alan from '../ui/Alan';
-import SifreAlani from '../ui/SifreAlani';
 import BirincilDugme from '../ui/BirincilDugme';
 import HataKutusu from '../ui/HataKutusu';
 import { useGecikmeliDeger } from '../ui/useGecikmeliDeger';
 import { KULLANICI_ADI_KURALI } from '../lib/kullaniciAdi';
+import type { ProfilGuncelleme } from '../auth/AuthContext';
 
 /** Kullanici karari (#372): yazmayi biraktiktan 3 saniye sonra uygunluk sorulur. */
 export const UYGUNLUK_GECIKMESI_MS = 3000;
@@ -20,7 +20,7 @@ interface Props {
   acik: boolean;
   onKapat: () => void;
   mevcutAd: string;
-  updateProfile: (mevcutSifre: string, yeniKullaniciAdi?: string, yeniSifre?: string) => Promise<void>;
+  updateProfile: (girdi: ProfilGuncelleme) => Promise<void>;
 }
 
 /**
@@ -33,13 +33,12 @@ interface Props {
  * istek atmak hem gereksiz hem de yaniltici (yarim yazilmis ad hep "uygun" cikar). Bicim kurali
  * ISTEMCIDE: bozuk ada uc 400 doner, onu "alinmis" diye gostermek yanlis olurdu.
  *
- * Mevcut sifre ISTENIR: ucun karari (UpdateProfileRequest, Karar 3) -- kullanici adi da hassas bir
- * hesap islemi.
+ * Mevcut sifre ISTENMEZ (#378, kullanici karari): kullanici adi degistirmek icin teyit gerekmiyor.
+ * Sifre degisimi teyidi korur.
  */
 export default function KullaniciAdiPenceresi({ acik, onKapat, mevcutAd, updateProfile }: Props) {
   const { t } = useTranslation();
   const [yeniAd, setYeniAd] = useState(mevcutAd);
-  const [mevcutSifre, setMevcutSifre] = useState('');
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
@@ -79,9 +78,6 @@ export default function KullaniciAdiPenceresi({ acik, onKapat, mevcutAd, updateP
     } else if (!degisti) {
       hatalar.newusername = t('profil.kullaniciAdiDegismedi');
     }
-    if (mevcutSifre.length === 0) {
-      hatalar.currentpassword = t('profil.mevcutSifreGerekli');
-    }
     setAlanHatalari(hatalar);
     if (Object.keys(hatalar).length > 0) {
       return;
@@ -89,8 +85,7 @@ export default function KullaniciAdiPenceresi({ acik, onKapat, mevcutAd, updateP
 
     setGonderiliyor(true);
     try {
-      await updateProfile(mevcutSifre, yeniAd);
-      setMevcutSifre('');
+      await updateProfile({ yeniKullaniciAdi: yeniAd });
       onKapat();
     } catch (hata) {
       // Cakisma kontrolu SUNUCUDA: uygunluk sorgusu bir on bilgidir, son soz Kaydet'indir
@@ -99,9 +94,7 @@ export default function KullaniciAdiPenceresi({ acik, onKapat, mevcutAd, updateP
         setAlanHatalari({ newusername: t('profil.kullaniciAdiAlinmis') });
         return;
       }
-      const sonuc = apiHatasiniAyir(hata, ['newusername', 'currentpassword'], (apiHatasi) =>
-        apiHatasi.status === 401 ? t('profil.mevcutSifreYanlis') : null,
-      );
+      const sonuc = apiHatasiniAyir(hata, ['newusername']);
       setGenelHata(sonuc.genelHata);
       setAlanHatalari(sonuc.alanHatalari);
     } finally {
@@ -134,14 +127,6 @@ export default function KullaniciAdiPenceresi({ acik, onKapat, mevcutAd, updateP
           {durum.metin}
         </Text>
       )}
-      <SifreAlani
-        id="profil-ad-mevcut-sifre"
-        etiket={t('profil.mevcutSifre')}
-        autoComplete="current-password"
-        value={mevcutSifre}
-        onChangeText={setMevcutSifre}
-        hata={alanHatalari.currentpassword}
-      />
       <BirincilDugme yukseklik="normal" disabled={gonderiliyor} onPress={gonder}>
         {t('ortak.kaydet')}
       </BirincilDugme>

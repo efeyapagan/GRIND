@@ -104,4 +104,76 @@ public class ProfileUpdateEndpointsTests(GrindApiFactory factory) : IClassFixtur
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    // ---- Kullanıcı adı artık şifre teyidi istemiyor (#378; #65 Karar 3 bu noktada geri alındı) ----
+
+    [Fact]
+    public async Task Yalnizca_kullanici_adi_degisirken_sifre_istenmez()
+    {
+        var (client, _) = await RegisteredClientAsync();
+        var yeniAd = UniqueUsername();
+
+        var response = await client.PatchAsJsonAsync("/api/auth/me",
+            new UpdateProfileRequest { NewUsername = yeniAd });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.Equal(yeniAd, auth!.Username);
+    }
+
+    /// <summary>Sifre degisimi teyitsiz OLMAZ: karar yalnizca kullanici adini kapsiyor.</summary>
+    [Fact]
+    public async Task Sifre_degisiminde_mevcut_sifre_hala_zorunlu()
+    {
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.PatchAsJsonAsync("/api/auth/me",
+            new UpdateProfileRequest { NewPassword = "yepyeni-bir-sifre-123" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sifre_degisiminde_yanlis_mevcut_sifre_401_verir()
+    {
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.PatchAsJsonAsync("/api/auth/me", new UpdateProfileRequest
+        {
+            CurrentPassword = "bambaska-bir-sifre",
+            NewPassword = "yepyeni-bir-sifre-123",
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Gerekmedigi halde gonderilen YANLIS sifre sessizce yok sayilmaz: istemcideki bir hata
+    /// (bayat/yanlis deger) sessizce gecerse sonraki akislarda fark edilmez.
+    /// </summary>
+    [Fact]
+    public async Task Gereksizken_gonderilen_yanlis_sifre_401_verir()
+    {
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.PatchAsJsonAsync("/api/auth/me", new UpdateProfileRequest
+        {
+            CurrentPassword = "bambaska-bir-sifre",
+            NewUsername = UniqueUsername(),
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sifresiz_ad_degisiminde_cakisma_hala_409_verir()
+    {
+        var (_, alinmisAd) = await RegisteredClientAsync();
+        var (client, _) = await RegisteredClientAsync();
+
+        var response = await client.PatchAsJsonAsync("/api/auth/me",
+            new UpdateProfileRequest { NewUsername = alinmisAd });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
 }

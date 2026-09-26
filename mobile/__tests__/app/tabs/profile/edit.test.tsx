@@ -54,7 +54,8 @@ test('kartlar sirasiyla gorunen isim, kullanici adi, dogum tarihi, sifre degisti
   expect(screen.getByTestId('profil-gorunen-isim')).toBeTruthy();
   expect(screen.getByText('@ada')).toBeTruthy();
   expect(screen.getByLabelText('Doğum tarihi')).toBeTruthy();
-  expect(screen.getByText('Şifre değiştir')).toBeTruthy();
+  // #378: sifre degistirme hesap ayarlarina tasindi.
+  expect(screen.queryByText('Şifre değiştir')).toBeNull();
 });
 
 test('kalem ikonu kullanici adi penceresini acar, mevcut ad duz metin', async () => {
@@ -67,13 +68,13 @@ test('kalem ikonu kullanici adi penceresini acar, mevcut ad duz metin', async ()
   expect(screen.getByTestId('profil-yeni-kullanici-adi')).toBeTruthy();
 });
 
-test('sifre degistir tusu pencereyi acar', async () => {
+/** #378: kullanici adi degisimi mevcut sifre ISTEMEZ. */
+test('kullanici adi penceresinde sifre alani yok', async () => {
   await ciz();
 
-  await act(async () => fireEvent.press(screen.getByText('Şifre değiştir')));
+  await act(async () => fireEvent.press(screen.getByLabelText('Kullanıcı adı değiştir')));
 
-  expect(screen.getByTestId('profil-yeni-sifre')).toBeTruthy();
-  expect(screen.getByTestId('profil-yeni-sifre-tekrar')).toBeTruthy();
+  expect(screen.queryByTestId('profil-ad-mevcut-sifre')).toBeNull();
 });
 
 /**
@@ -134,10 +135,9 @@ test('pencereden kullanici adi kaydedilir', async () => {
   await act(async () => fireEvent.press(screen.getByLabelText('Kullanıcı adı değiştir')));
 
   await act(async () => fireEvent.changeText(screen.getByTestId('profil-yeni-kullanici-adi'), 'yeni_ad'));
-  await act(async () => fireEvent.changeText(screen.getByTestId('profil-ad-mevcut-sifre'), 'dogru-sifre'));
   await act(async () => fireEvent.press(within(screen.getByTestId('modal-govde')).getByText('Kaydet')));
 
-  expect(updateProfile).toHaveBeenCalledWith('dogru-sifre', 'yeni_ad');
+  expect(updateProfile).toHaveBeenCalledWith({ yeniKullaniciAdi: 'yeni_ad' });
 });
 
 test('sunucu 409 donerse pencerede alinmis yazar', async () => {
@@ -146,21 +146,7 @@ test('sunucu 409 donerse pencerede alinmis yazar', async () => {
   await act(async () => fireEvent.press(screen.getByLabelText('Kullanıcı adı değiştir')));
 
   await act(async () => fireEvent.changeText(screen.getByTestId('profil-yeni-kullanici-adi'), 'efe'));
-  await act(async () => fireEvent.changeText(screen.getByTestId('profil-ad-mevcut-sifre'), 'dogru-sifre'));
   await act(async () => fireEvent.press(within(screen.getByTestId('modal-govde')).getByText('Kaydet')));
 
   expect(await screen.findByText('Bu kullanıcı adı zaten alınmış.')).toBeTruthy();
-});
-
-test('sifre penceresinde yanlis mevcut sifre bildirilir', async () => {
-  updateProfile.mockRejectedValue(new ApiError(401, 'Kullanıcı adı veya şifre hatalı.'));
-  await ciz();
-  await act(async () => fireEvent.press(screen.getByText('Şifre değiştir')));
-
-  await act(async () => fireEvent.changeText(screen.getByTestId('profil-mevcut-sifre'), 'yanlis'));
-  await act(async () => fireEvent.changeText(screen.getByTestId('profil-yeni-sifre'), 'yeni-sifre-123'));
-  await act(async () => fireEvent.changeText(screen.getByTestId('profil-yeni-sifre-tekrar'), 'yeni-sifre-123'));
-  await act(async () => fireEvent.press(within(screen.getByTestId('modal-govde')).getByText('Kaydet')));
-
-  expect(await screen.findByText('Mevcut şifre yanlış.')).toBeTruthy();
 });
