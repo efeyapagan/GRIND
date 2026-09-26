@@ -116,7 +116,8 @@ Renk kuralları:
   `surface-4` boş halka, bugün `surface-2` zemin — nötr.
   **#325 genişlemesi (yalnızca mobil):** ana sayfadaki zilin okunmamış sayısı rozeti — `accent` dolgu +
   `on-accent` rakam (4.54:1); 9'dan büyükse `9+`. Bildirim satırlarının okunmamış vurgusu accent DEĞİL:
-  `surface-3` zemin (okunmuş `surface-2`).
+  `surface-4` zemin (okunmuş `surface-2`) — `surface-3` fotoğrafsız profil dairesinin zemini olduğu için
+  o daire okunmamış satırda kaybolurdu.
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.

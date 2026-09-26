@@ -271,6 +271,23 @@ public class NotificationServiceTests
     }
 
     [Fact]
+    public async Task Otuz_gunden_once_biten_rekorlu_antrenman_gelmez()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (ben, ali) = (users[0], users[1]);
+            await TakipAsync(context, ben, ali, Simdi.AddDays(-40));
+            var bench = await HareketAsync(context, ali, "Bench");
+            await AntrenmanAsync(context, ali, Simdi.AddDays(-31), (bench, 100, 5, RecordType.Weight));
+            await AntrenmanAsync(context, ali, Simdi.AddDays(-29), (bench, 105, 5, RecordType.Weight));
+
+            var rekor = Assert.Single(await ServiceFor(context, ben).GetAsync());
+            Assert.Equal(105m, Assert.Single(rekor.Records!).Weight);
+        }
+    }
+
+    [Fact]
     public async Task En_fazla_elli_bildirim_doner_en_yeniler()
     {
         var (context, users, transaction) = await CreateAsync(56);

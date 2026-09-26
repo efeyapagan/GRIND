@@ -12,7 +12,7 @@ public static class BestRecordPicker
                 Best: g.OrderByDescending(s => s.Weight).ThenByDescending(s => s.Reps).First(),
                 Order: g.First().OrderIndex ?? int.MaxValue,
                 FirstAt: g.Min(s => s.CreatedAt)))
-            .OrderBy(x => x.Order).ThenBy(x => x.FirstAt)
+            .OrderBy(x => x.Order).ThenBy(x => x.FirstAt).ThenBy(x => x.Best.ExerciseId)
             .Select(x => new NotificationRecordResponse(
                 x.Best.ExerciseId, x.Best.ExerciseName, x.Best.Weight, x.Best.Reps, x.Best.RecordType))
             .ToList();

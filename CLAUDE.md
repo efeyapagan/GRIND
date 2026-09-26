@@ -70,13 +70,13 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   onbellekten gelene kadar bekleyip karar verir (aksi hâlde `Slot` geçici olarak yanlış sekmeyi monte
   edip gereksiz bir geçmiş isteği atıyordu).
 - **Bildirimler (2026-09-26, #325)** — yalnızca mobil: ana sayfadaki zilde okunmamış sayısı rozeti ve
- `bildirimler` ekranında iki tür — biri seni takip etti (karşılıklıysa "Artık arkadaşsınız"), takip ettiğin
- biri bir antrenmanda rekor kırdı (antrenman bitince tek bildirim, hareket başına en iyi set). Bildirim
- **saklanmaz**: `Follow` / `WorkoutSession` / `SetEntry`'den sorgu anında türetilir (`INotificationSource`
- başına bir tür); okundu durumu tek alan `User.NotificationsSeenAt`, ekran açılınca `POST
- /api/notifications/seen`. Son 30 gün, en fazla 50. Push, hedef/seri hatırlatması ve GRINDY bildirimi kapsam
- dışı; saklanması gereken bir tür gelirse o türe özel tablo + kaynak eklenir. Ayrıntı:
- [docs/superpowers/specs/2026-09-26-bildirimler-design.md](docs/superpowers/specs/2026-09-26-bildirimler-design.md).
+  `bildirimler` ekranında iki tür — biri seni takip etti (karşılıklıysa "Artık arkadaşsınız"), takip ettiğin
+  biri bir antrenmanda rekor kırdı (antrenman bitince tek bildirim, hareket başına en iyi set). Bildirim
+  **saklanmaz**: `Follow` / `WorkoutSession` / `SetEntry`'den sorgu anında türetilir (`INotificationSource`
+  başına bir tür); okundu durumu tek alan `User.NotificationsSeenAt`, ekran açılınca `POST
+  /api/notifications/seen`. Son 30 gün, en fazla 50. Push, hedef/seri hatırlatması ve GRINDY bildirimi kapsam
+  dışı; saklanması gereken bir tür gelirse o türe özel tablo + kaynak eklenir. Ayrıntı:
+  [docs/superpowers/specs/2026-09-26-bildirimler-design.md](docs/superpowers/specs/2026-09-26-bildirimler-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -174,9 +174,13 @@ Object Reference) açığıdır.
 > geçer ve buraya yazılır.
 >
 > Bildirimler (#325): `GET /api/notifications`, takip ettiğin kişinin takipten sonra bitirdiği rekorlu
-> antrenmanlarını (hareket adı, ağırlık, tekrar, rekor türü) gösterir. Rekorlar üç seviyede de açık
-> olduğu için yeni bir paylaşım değildir; `PrivacyLevel` bu bildirimi kısıtlamaz. Not, ölçü, AI yorumu
-> ve geçmişin geri kalanı bildirimde yer almaz. Uç yalnız `currentUserId`'nin bildirimlerini döner.
+> antrenmanlarını (bitiş anı; hareket başına en iyi rekor setinin adı, ağırlığı, tekrarı, rekor türü)
+> gösterir — `PrivacyLevel`'den bağımsız, `Gizli`'de de. Bu, tüm zamanların rekor özetinin ötesinde
+> bilinçli bir genişlemedir: `RecordType` o anın görüntüsü olduğu için bildirim artık en iyi olmayan
+> (geçilmiş) bir rekor setini ya da ara ağırlıktaki bir tekrar rekorunu gösterebilir, ve `Gizli`'nin
+> geçmişte sakladığı "şu an bir antrenman bitirdi" bilgisini takipçiye verir. Kabul gerekçesi: rekorlar
+> her seviyede açıktır (kullanıcı kararı, #325). Not, ölçü, AI yorumu ve rekorsuz setler bildirimde yer
+> almaz. Uç yalnız `currentUserId`'nin bildirimlerini döner.
 
 > Karar (JWT içeriği): JWT SADECE kimlik taşır (`UserId`, `Username`) — rol/plan gibi
 > zamanla değişebilecek öznitelikler token'a claim olarak gömülmez. Sebep: kullanıcı
@@ -223,7 +227,7 @@ Object Reference) açığıdır.
   haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`), `DisplayName` (nullable, en fazla
   50 karakter, kırpılır, benzersiz değil — #280), `BirthDate` (nullable `date`, #280 — yaş SAKLANMAZ, sorgu
   anında TR gününe göre `AgeCalculator` ile hesaplanır; 13–120 yaş dışı 400), `NotificationsSeenAt` (nullable, UTC — bildirim
- ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar). Uçlar: `GET/PUT /api/profile`
+  ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar). Uçlar: `GET/PUT /api/profile`
 - **UserAvatar** (#280): `Id`, `UserId` (FK, benzersiz, CASCADE), `Content` (`bytea`), `ContentType`,
   `UpdatedAt` — profil fotoğrafı veritabanında, `User`'dan ayrı tabloda (her kullanıcı sorgusunda resim
   baytları taşınmasın). En fazla 256 KB; tür istemcinin beyanından değil dosya imzasından belirlenir

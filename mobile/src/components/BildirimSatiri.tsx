@@ -24,7 +24,7 @@ export default function BildirimSatiri({ bildirim }: { bildirim: Bildirim }) {
       testID={`bildirim-${bildirim.kind}-${kisi.username}`}
       accessibilityRole="link"
       onPress={() => router.push(bildirim.kind === 'Follow' ? profil : `${profil}/records`)}
-      className={`flex-row gap-3 rounded-xl p-3 ${bildirim.isUnread ? 'bg-surface-3' : 'bg-surface-2'}`}
+      className={`flex-row gap-3 rounded-xl p-3 ${bildirim.isUnread ? 'bg-surface-4' : 'bg-surface-2'}`}
     >
       <ProfilFotografi profil={kisi} boyut="kucuk" />
       <View className="min-w-0 flex-1 flex-col gap-1">
