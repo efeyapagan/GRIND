@@ -24,4 +24,12 @@ public interface IWorkoutTemplateService
     /// WorkoutSession.TemplateId SET NULL olur — geçmiş oturum silinmez.
     /// </summary>
     Task DeleteAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kullanıcının şablon sırasını toptan yazar (#344) ve yeni sırayla listeyi döndürür.
+    /// Gelen id kümesi kullanıcının şablonlarıyla birebir aynı değilse (eksik, fazla, tekrar
+    /// eden ya da başkasına ait) ValidationException (400) — sıranın yarısı yazılıp bırakılmaz.
+    /// </summary>
+    Task<IReadOnlyList<TemplateResponse>> ReorderAsync(
+        ReorderTemplatesRequest request, CancellationToken cancellationToken = default);
 }

@@ -26,5 +26,9 @@ public class WorkoutTemplateConfiguration : IEntityTypeConfiguration<WorkoutTemp
         // gerektirir (EF Core Fluent API'de HasIndex ifadeler üzerinde doğrudan
         // desteklenmiyor) — bilinçli bir sınır, kazara bir eksiklik değil.
         builder.HasIndex(t => new { t.UserId, t.Name }).IsUnique();
+
+        // Liste sorgusunun sırası (#344): OrderIndex, Name. TemplateExercise'daki
+        // (WorkoutTemplateId, OrderIndex) index'iyle aynı gerekçe.
+        builder.HasIndex(t => new { t.UserId, t.OrderIndex });
     }
 }

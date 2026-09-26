@@ -117,6 +117,36 @@ public class WorkoutTemplateService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TemplateResponse>> ReorderAsync(
+        ReorderTemplatesRequest request, CancellationToken cancellationToken = default)
+    {
+        // request.TemplateIds! : [ApiController] model doğrulaması bu action'dan ÖNCE çalışır;
+        // [Required] alanı eksik veya null geldiğinde istek zaten 400 alır (bkz. DTO doc'u).
+        var istenen = request.TemplateIds!;
+        var templates = await templateRepository.GetAllAsync(currentUser.UserId, cancellationToken);
+
+        // Tek kontrol iki hatayı birden yakalar: tekrar eden id (küme küçülür) ve kullanıcının
+        // şablonlarıyla birebir örtüşmeyen liste (eksik, fazla ya da BAŞKASINA ait id). Eksik
+        // olanı tek tek söylemiyoruz: "42 sizin değil" demek, id tarayarak hangi id'lerin dolu
+        // olduğunu haritalatır (ExerciseNotFound ile aynı gerekçe).
+        var mevcutIdler = templates.Select(t => t.Id).ToHashSet();
+        if (istenen.Count != mevcutIdler.Count || !mevcutIdler.SetEquals(istenen))
+        {
+            throw new ValidationException("Sıralama, şablonlarınızın tamamını birebir içermeli.");
+        }
+
+        var sirayaGore = templates.ToDictionary(t => t.Id);
+        for (var sira = 0; sira < istenen.Count; sira++)
+        {
+            sirayaGore[istenen[sira]].OrderIndex = sira;
+        }
+
+        // Tek SaveChangesAsync: sıra ya tamamen yazılır ya hiç (CLAUDE.md, UoW/transaction notu).
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return istenen.Select(id => ToResponse(sirayaGore[id])).ToList();
+    }
+
     /// <summary>
     /// Listeyi TOPTAN değiştirir: eski satırlar silinir, yenileri dizideki sırayla eklenir.
     /// Sıra istemciden gelmez — <c>OrderIndex</c> konumdan türer, böylece çakışan indeks,
