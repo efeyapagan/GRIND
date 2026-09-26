@@ -210,6 +210,8 @@ export const en: Katalog = {
     hedefsizGun_other: '{{count}} days this week',
     hedefliGun: '{{gun}}/{{hedef}} days',
     bugunAntrenman: 'Trained today',
+    sen: 'You',
+    arkadasYokIpucu: 'Add friends and you\'ll be compared with them here.',
     lider: 'Leader',
     haftalikHacim: '{{kg}} kg',
     satirEtiketi: "Open {{ad}}'s profile",

@@ -30,6 +30,10 @@ export default function ArkadaslarScreen() {
       {sirali.map((arkadas, sira) => (
         <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={sira === 0} />
       ))}
+      {/* #425: kendi satiri hep geldigi icin tek satir = arkadas yok demek. */}
+      {sirali.length === 1 && (
+        <Text className="text-label text-muted">{t('arkadaslar.arkadasYokIpucu')}</Text>
+      )}
     </EkranKaydirici>
   );
 }
