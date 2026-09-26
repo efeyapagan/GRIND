@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { LucideIcon } from 'lucide-react-native';
 import { useIkonRenk } from './renkler';
@@ -29,7 +30,10 @@ interface Props {
  * korumak icin `textTransform: 'uppercase'` stiliyle web'deki davranis birebir eslenir. */
 export default function Rozet({ children, ton = 'dolu', ikon: Ikon, tamYuvarlak = false, gecildi = false }: Props) {
   const ikonRenk = useIkonRenk();
+  const { t } = useTranslation();
   const stil = TON[ton];
+  // Cizgi gorsel bir isaret; ekran okuyucu ayni bilgiyi etiketten duyar (#404).
+  const erisilebilirAd = gecildi && typeof children === 'string' ? `${children}, ${t('rekor.gecildi')}` : undefined;
   const ilerleme = useSharedValue(gecildi ? 1 : 0);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export default function Rozet({ children, ton = 'dolu', ikon: Ikon, tamYuvarlak 
   const cizgiStili = useAnimatedStyle(() => ({ width: `${ilerleme.value * 100}%` }));
 
   return (
-    <Animated.View style={kutuStili}>
+    <Animated.View style={kutuStili} accessible={!!erisilebilirAd} accessibilityLabel={erisilebilirAd}>
       <View
         className={`flex-row items-center gap-1 px-2 py-0.5 ${stil.kutu} ${tamYuvarlak ? 'rounded-full' : 'rounded'}`}
       >

@@ -4,7 +4,7 @@ import { Flame, Zap } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { formatWeight } from '@grind/shared/lib/format';
-import { rekorRozetiMetni } from '@grind/shared/lib/rekor';
+import { gecilmisRekorIdleri, rekorRozetiMetni } from '@grind/shared/lib/rekor';
 import { rirEtiketi } from '@grind/shared/lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
@@ -45,6 +45,7 @@ export default function SetList(props: Props) {
     }
     return Array.from(harita.values());
   }, [sets]);
+  const gecilmisRekorlar = useMemo(() => gecilmisRekorIdleri(sets), [sets]);
 
   if (gruplar.length === 0) {
     return <Text className="text-body text-muted">{bosDurumMetni}</Text>;
@@ -85,8 +86,13 @@ export default function SetList(props: Props) {
                       </View>
                     </View>
                     {rozet && (
-                      <View>
-                        <Rozet ikon={kayit.recordType === 'Weight' ? Zap : Flame} tamYuvarlak>
+                      // #404: `items-start` olmadan sutun duzeni rozeti satirin sonuna kadar uzatiyordu.
+                      <View className="items-start">
+                        <Rozet
+                          ikon={kayit.recordType === 'Weight' ? Zap : Flame}
+                          tamYuvarlak
+                          gecildi={gecilmisRekorlar.has(kayit.id)}
+                        >
                           {rozet}
                         </Rozet>
                       </View>
