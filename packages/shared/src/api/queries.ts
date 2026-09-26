@@ -802,6 +802,19 @@ export function useFinishSession() {
 }
 
 /**
+ * #363: bitirme basarili olunca acik oturum onbellegi HEMEN bosaltilir. Yalnizca invalidate etmek
+ * yetmez: bitirmenin ardindan acilan ekran yeniden sorgu donene kadar bayat (acik) oturumu okur ve
+ * biten antrenman bir an "devam ediyor" gorunur. Ardindan yine sunucudan tazelenir.
+ *
+ * `useFinishSession`in DISINA acilir: hook'u web de kullanir (dondu, #326); cagiran ekran bunu
+ * kendi yonlendirmesiyle birlikte cagirir.
+ */
+export function oturumBittiTazele(queryClient: QueryClient): void {
+  queryClient.setQueryData(queryKeys.openSession, null);
+  void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+}
+
+/**
  * `POST /api/sessions/{id}/exercises` (#62): hareketi antrenmanin sonuna hedefsiz ekler. Yanit guncel
  * oturumdur; yeni kart beklemeden gorunsun diye acik oturum onbellege dogrudan yazilir, sonra yine
  * sunucudan tazelenir.
