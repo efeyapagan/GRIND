@@ -1,5 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import * as Haptics from 'expo-haptics';
 import ZorlukKadrani from './ZorlukKadrani';
+
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: { Heavy: 'heavy' },
+}));
+beforeEach(() => jest.clearAllMocks());
 
 /**
  * #153: antrenman bitiminde zorluk, halka üzerinde beş duraklı bir kadranla seçilir. Kadranı
@@ -54,4 +62,15 @@ test('en ust kademede artirma kademeyi degistirmez', async () => {
   });
 
   expect(onDegis).not.toHaveBeenCalled();
+});
+
+/** #388: secim bir duraga oturunca tok bir vurus hissedilir (ince "tik"ler yalnizca cevirirken, duraklar arasinda). */
+test('duraga dokununca tek bir tok titresim verir', async () => {
+  await render(<ZorlukKadrani deger="Medium" onDegis={jest.fn()} />);
+
+  await fireEvent.press(screen.getByLabelText('Zor'));
+
+  expect(Haptics.impactAsync).toHaveBeenCalledTimes(1);
+  expect(Haptics.impactAsync).toHaveBeenCalledWith(Haptics.ImpactFeedbackStyle.Heavy);
+  expect(Haptics.selectionAsync).not.toHaveBeenCalled();
 });

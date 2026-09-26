@@ -1,5 +1,13 @@
 import { expect, test } from 'vitest';
-import { durakAcisi, durakKonumu, enYakinDurak, yayYolu, ZORLUK_KADEMELERI } from './zorlukKadrani';
+import {
+  durakAcisi,
+  durakKonumu,
+  enYakinDurak,
+  kadranTitresimi,
+  yayKonumu,
+  yayYolu,
+  ZORLUK_KADEMELERI,
+} from './zorlukKadrani';
 
 /**
  * #182: zorluk kadrani tam halka degil, alti acik bir "surat kadrani" -- 1 solda, 5 sagda, yay
@@ -50,4 +58,26 @@ test('dolgu yayi ilk duraktan verilen duraga kadar gider', () => {
   // 120° < 180°: kucuk yay; tam yay 240° oldugu icin buyuk yay bayragi tasir.
   expect(orta).toContain(' 0 0 1 ');
   expect(yayYolu(140, 112)).toContain(' 0 1 1 ');
+});
+
+/**
+ * #388: cevirirken titresim, parmagin yay uzerindeki SUREKLI konumundan (durak birimiyle 0–4) cikar --
+ * secili durak bu konumun yuvarlanmis halidir.
+ */
+test('yay konumu duraklarda tam sayi, iki durak arasinda ondalik, alt boslukta en yakin uc', () => {
+  for (let sira = 0; sira < ZORLUK_KADEMELERI.length; sira += 1) {
+    const durak = nokta(durakAcisi(sira));
+    expect(yayKonumu(durak.x, durak.y)).toBeCloseTo(sira);
+  }
+  const ara = nokta((durakAcisi(0) + durakAcisi(1)) / 2);
+  expect(yayKonumu(ara.x, ara.y)).toBeCloseTo(0.5);
+  expect(yayKonumu(nokta(80).x, nokta(80).y)).toBe(4);
+  expect(yayKonumu(nokta(100).x, nokta(100).y)).toBe(0);
+});
+
+/** #388: duraklar arasinda ince "tik"ler, secim yeni bir duraga oturunca tok vurus ("tiiiirt"). */
+test('konum degisince: yeni duraga gecis tok, durak arasi ince adim ince, kucuk kipirti titresimsiz', () => {
+  expect(kadranTitresimi(0.4, 0.6)).toBe('tok');
+  expect(kadranTitresimi(1.1, 1.3)).toBe('ince');
+  expect(kadranTitresimi(1.05, 1.1)).toBeNull();
 });

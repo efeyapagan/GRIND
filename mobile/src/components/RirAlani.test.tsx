@@ -1,5 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import * as Haptics from 'expo-haptics';
 import RirAlani from './RirAlani';
+
+jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
+beforeEach(() => jest.clearAllMocks());
 
 /**
  * #266: RIR artık yazılmaz, alana dokununca açılan on duraklık kaydırıcıdan seçilir. Parmakla
@@ -75,4 +79,16 @@ test('bilgi dugmesi RIRin ne oldugunu aciklar', async () => {
   await fireEvent.press(screen.getByLabelText('RIR nedir?'));
 
   expect(screen.getByText(/setin sonunda yedekte kaç tekrar/)).toBeTruthy();
+});
+
+/** #388: secili durak degisince alt menudeki (#379) hafif "tik" hissedilir; ayni duraga dokunmak titretmez. */
+test('baska duraga gecince bir kez hafif titresim verir, secili duraga dokununca vermez', async () => {
+  await render(<RirAlani id="rir" deger={2} onDegis={jest.fn()} />);
+  await fireEvent.press(screen.getByLabelText(/^RIR \(opsiyonel\)/));
+
+  await fireEvent.press(screen.getByLabelText('2'));
+  expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+
+  await fireEvent.press(screen.getByLabelText('4+'));
+  expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 });
