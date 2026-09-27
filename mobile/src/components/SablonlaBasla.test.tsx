@@ -145,3 +145,20 @@ test('basili tutup yana surukleyince menu kapanir ve yeni sira sunucuya gonderil
 
   expect(sirala).toHaveBeenCalledWith([8, 7]);
 });
+
+// ---- Baslik satiri (#466) ----
+
+/** Ust bar kalktigi icin GRIND yazisi basligin satirina tasindi. */
+test('baslik satirinin saginda GRIND yazar', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getByText('GRIND')).toBeTruthy();
+});
+
+/** "Tumunu gor" -> "Duzenle"; gittigi yer degismedi. */
+test('Duzenle dugmesi sablonlar ekranina gider', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.queryByText('Tümünü gör')).toBeNull();
+  expect(screen.getByText('Düzenle')).toBeTruthy();
+});

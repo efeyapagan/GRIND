@@ -105,3 +105,19 @@ test('diger ekranlarda bayrak yoktur', async () => {
   expect(screen.getByText('GRIND')).toBeTruthy();
   expect(screen.queryByLabelText('Yorum dili')).toBeNull();
 });
+
+/** #466 (kullanici karari): antrenman ekraninda ust bar KOMPLE kalkti. */
+test('antrenman ekraninda ust bar hic cizilmez', async () => {
+  mockPathname = '/antrenman';
+  const { toJSON } = await render(<KabukBaslik />);
+
+  expect(toJSON()).toBeNull();
+});
+
+/** AYIRT EDICI: ayni sekmenin diger ekranlarinda bar durur (geri tusu oradan geliyor). */
+test('sablonlar ekraninda ust bar durur', async () => {
+  mockPathname = '/templates';
+  await render(<KabukBaslik />);
+
+  expect(screen.getByText('GRIND')).toBeTruthy();
+});

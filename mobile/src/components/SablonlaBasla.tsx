@@ -52,7 +52,11 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
 
   return (
     <View className="flex-col gap-5">
-      <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
+      {/* #466: ust bar kalktigi icin "GRIND" bu satira tasindi. */}
+      <View className="flex-row items-start justify-between gap-3">
+        <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
+        <Text className="shrink-0 pt-1 text-label text-muted uppercase">GRIND</Text>
+      </View>
 
       <View className="flex-col gap-3">
         <View className="flex-row items-center justify-between gap-2">
@@ -60,7 +64,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
           {sablonlar && sablonlar.length > 0 && (
             // RN'de Text rengi miras ALINMAZ: `Link`e verilen renk metne gecmez, metin ayri bir Text.
             <Link href="/templates" className="min-h-11 justify-center">
-              <Text className="text-label text-accent-soft">{t('sablonlar.tumunuGor')}</Text>
+              <Text className="text-label text-accent-soft">{t('sablonlar.duzenleListe')}</Text>
             </Link>
           )}
         </View>

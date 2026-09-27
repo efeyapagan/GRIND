@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Plus } from 'lucide-react-native';
@@ -291,10 +292,15 @@ export default function AntrenmanScreen() {
     });
   }
 
+  const ustPay = useSafeAreaInsets().top;
+
   return (
     <View style={{ flex: 1 }}>
       <EkranKaydirici
-        contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
+        contentContainerClassName="flex-grow gap-5 px-4 pb-4"
+        // #466: bu ekranda ust bar yok, dolayisiyla guvenli alan boslugunu da o vermiyor --
+        // baslik centik/saat bandinin altinda kalsin diye pay burada verilir.
+        contentContainerStyle={{ paddingTop: ustPay + 8 }}
         // Klavye yalnizca set panelinden acilir; liste o an odak kartinin arkasinda. Varsayilan "en
         // alta kay" listeyi camin arkasinda oynatir ve kart kapaninca kullanici baska yerde kalirdi.
         onKlavyeAcildi={panelAcik || duzenlenen ? kaydirmaYok : undefined}

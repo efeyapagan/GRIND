@@ -49,6 +49,13 @@ export default function KabukBaslik() {
     }
   }
 
+  // #466 (kullanici karari): antrenman ekraninda ust bar KOMPLE kalkar; sayfa dogrudan alti
+  // cizili basligiyla baslar ve "GRIND" o basligin satirina tasinir (bkz. SablonlaBasla).
+  // Ayni sekmenin DIGER ekranlarinda (sablonlar, antrenman-bitir) bar durur: geri tusu orada.
+  if (pathname === '/antrenman') {
+    return null;
+  }
+
   if (profilAnaEkraniMi(pathname)) {
     return (
       <View style={{ paddingTop: insets.top }} className="bg-bg">
