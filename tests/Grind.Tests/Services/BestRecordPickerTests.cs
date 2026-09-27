@@ -11,7 +11,8 @@ public class BestRecordPickerTests
 
     private static RecordSetRow Set(long exerciseId, decimal weight, int reps, int? order = 0, int dakika = 0,
         RecordType type = RecordType.Weight) =>
-        new(1, exerciseId, $"Hareket {exerciseId}", weight, reps, type, T0.AddMinutes(dakika), order);
+        new(1, exerciseId, $"Hareket {exerciseId}", weight, reps, null, type, T0.AddMinutes(dakika), order,
+            ExerciseMeasurement.WeightReps);
 
     [Fact]
     public void Hareket_basina_en_agir_set_secilir_esitlikte_tekrari_fazla_olan()

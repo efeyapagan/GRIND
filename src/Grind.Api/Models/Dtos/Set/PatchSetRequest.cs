@@ -18,4 +18,7 @@ public class PatchSetRequest
 
     [Range(0, 5, ErrorMessage = "RIR 0 ile 5 arasında olmalı (5 = 4+).")]
     public decimal? Rir { get; set; }
+
+    [Range(1, 3600, ErrorMessage = "Süre 1 ile 3600 saniye arasında olmalı.")]
+    public int? DurationSeconds { get; set; }
 }

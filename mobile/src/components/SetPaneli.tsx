@@ -11,7 +11,9 @@ import BirincilDugme from '../ui/BirincilDugme';
 import CamYuzey from '../ui/CamYuzey';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
+import Kronometre from './Kronometre';
 import { useAgirlikIbaresi } from './useAgirlikIbaresi';
+import { useHareketOlcumu } from './useHareketOlcumu';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -32,6 +34,9 @@ interface Props {
  *
  * Form durumu bu bilesende: panel kapaninca, baska bir karta gecilince ya da set eklenince (#385)
  * yazilanlar sifirlanir.
+ *
+ * #346: alanlar hareketin olcum tipine gore -- kilo + tekrar + RIR, agirliksiz harekette tekrar + istege
+ * bagli "ek agirlik" (RIR yok), sureli harekette kronometre + saniye kutusu.
  */
 export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Props) {
   const ikonRenk = useIkonRenk();
@@ -40,10 +45,12 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
   const { data: acikOturum } = useOpenSession();
   const eklemeMutasyonu = useAddSet();
   const agirlikIbaresi = useAgirlikIbaresi(egzersizId);
+  const olcum = useHareketOlcumu(egzersizId);
 
   const [agirlik, setAgirlik] = useState('');
   const [tekrar, setTekrar] = useState('');
   const [rir, setRir] = useState('');
+  const [sure, setSure] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
 
@@ -51,26 +58,15 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
     setGenelHata(null);
     setAlanHatalari({});
 
-    const girdi = { agirlik, tekrar, rir };
-    const dogrulamaHatalari = setGirdisiniDogrula(girdi);
+    const girdi = { agirlik, tekrar, rir, sure };
+    const dogrulamaHatalari = setGirdisiniDogrula(girdi, olcum);
     if (Object.keys(dogrulamaHatalari).length > 0) {
       setAlanHatalari(dogrulamaHatalari);
       return;
     }
 
-    const {
-      weight: ayristirilmisAgirlik,
-      reps: ayristirilmisTekrar,
-      rir: ayristirilmisRir,
-    } = setGirdisiniAyristir(girdi);
-
     try {
-      await eklemeMutasyonu.mutateAsync({
-        exerciseId: egzersizId,
-        weight: ayristirilmisAgirlik,
-        reps: ayristirilmisTekrar,
-        rir: ayristirilmisRir,
-      });
+      await eklemeMutasyonu.mutateAsync({ exerciseId: egzersizId, ...setGirdisiniAyristir(girdi, olcum) });
       // #385: panel acik kalir ama ilk acildigi hale doner -- klavye kapanir, eklenen set odak
       // kartinda gorunur.
       Keyboard.dismiss();
@@ -104,40 +100,58 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
           {genelHata}
         </Text>
       )}
-      {/* flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser. */}
-      <View className="flex-row flex-wrap gap-2">
-        <View className="flex-1">
+      {olcum === 'Duration' ? (
+        <View className="flex-col gap-2">
+          <Kronometre onDurdur={(saniye) => setSure(String(saniye))} />
           <SayiAlani
-            id="set-agirlik"
-            etiket={t('setGirdisi.agirlikEtiket')}
-            birim="kg"
-            ipucu={agirlikIbaresi}
-            inputMode="decimal"
-            placeholder="0"
-            value={agirlik}
-            onChange={setAgirlik}
-            hata={alanHatalari.weight}
-          />
-        </View>
-        <View className="flex-1">
-          <SayiAlani
-            id="set-tekrar"
-            etiket={t('setGirdisi.tekrarEtiket')}
-            birim={t('setGirdisi.tekrarBirimi')}
+            id="set-sure"
+            etiket={t('setGirdisi.sureEtiket')}
+            birim={t('setGirdisi.saniyeBirimi')}
             inputMode="numeric"
             placeholder="0"
-            value={tekrar}
-            onChange={setTekrar}
-            hata={alanHatalari.reps}
+            value={sure}
+            onChange={setSure}
+            hata={alanHatalari.durationSeconds}
           />
         </View>
-        <RirAlani
-          id="set-rir"
-          deger={rir === '' ? null : Number(rir)}
-          onDegis={(yeni) => setRir(yeni === null ? '' : String(yeni))}
-          hata={alanHatalari.rir}
-        />
-      </View>
+      ) : (
+        // flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser.
+        <View className="flex-row flex-wrap gap-2">
+          <View className="flex-1">
+            <SayiAlani
+              id="set-agirlik"
+              etiket={t(olcum === 'Reps' ? 'setGirdisi.ekAgirlikEtiket' : 'setGirdisi.agirlikEtiket')}
+              birim="kg"
+              ipucu={agirlikIbaresi}
+              inputMode="decimal"
+              placeholder="0"
+              value={agirlik}
+              onChange={setAgirlik}
+              hata={alanHatalari.weight}
+            />
+          </View>
+          <View className="flex-1">
+            <SayiAlani
+              id="set-tekrar"
+              etiket={t('setGirdisi.tekrarEtiket')}
+              birim={t('setGirdisi.tekrarBirimi')}
+              inputMode="numeric"
+              placeholder="0"
+              value={tekrar}
+              onChange={setTekrar}
+              hata={alanHatalari.reps}
+            />
+          </View>
+          {olcum === 'WeightReps' && (
+            <RirAlani
+              id="set-rir"
+              deger={rir === '' ? null : Number(rir)}
+              onDegis={(yeni) => setRir(yeni === null ? '' : String(yeni))}
+              hata={alanHatalari.rir}
+            />
+          )}
+        </View>
+      )}
       <BirincilDugme yukseklik="buyuk" disabled={eklemeMutasyonu.isPending} onPress={gonder}>
         <Plus color={ikonRenk.onAccent} size={24} />
         <Text className="text-body-lg font-bold text-on-accent">{t('setler.setEkle')}</Text>

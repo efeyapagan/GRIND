@@ -25,11 +25,12 @@ public class ExportTextFormatterTests
     private static SetEntryResponse Set(
         long exerciseId, string name, decimal weight, int reps,
         RecordType recordType = RecordType.None, decimal? rir = null, int position = 1) =>
-        new(0, 1, exerciseId, name, position, weight, reps, recordType, rir, An, RestSeconds: null);
+        new(0, 1, exerciseId, name, position, weight, reps, null, recordType, rir, An, RestSeconds: null,
+            ExerciseMeasurement.WeightReps);
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
-        new(1, startedAt, endedAt, null, null, null, null, sets.Sum(s => s.Weight * s.Reps), sets.Length, null, sets);
+        new(1, startedAt, endedAt, null, null, null, null, sets.Sum(s => s.Weight * (s.Reps ?? 0)), sets.Length, null, sets);
 
     private static string Formatla(params HistorySessionResponse[] oturumlar) =>
         ExportTextFormatter.Format(Bos() with { Sessions = oturumlar });
@@ -79,7 +80,8 @@ public class ExportTextFormatterTests
             [
                 new ExerciseRecordResponse(1, "Bench Press", ExerciseCategory.Push,
                     100m, 3, new DateTime(2026, 2, 10, 15, 0, 0, DateTimeKind.Utc),
-                    25, 60m, new DateTime(2026, 1, 5, 15, 0, 0, DateTimeKind.Utc))
+                    25, 60m, new DateTime(2026, 1, 5, 15, 0, 0, DateTimeKind.Utc),
+                    ExerciseMeasurement.WeightReps, null)
             ]);
 
         // Kaynak dosyanın satır sonu (Windows'ta CRLF) beklenen metne sızmasın diye normalize edilir.
@@ -95,6 +97,7 @@ public class ExportTextFormatterTests
             - RIR = yedekte kalan tekrar.
             - [PR: ağırlık] = o egzersizde o ana kadarki en ağır set.
             - [PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.
+            - Süreyle ölçülen hareketlerin (plank gibi) setleri saniye olarak yazılır ("45 sn"); [PR: süre] = o ana kadarki en uzun süre.
             - Hareket adının başındaki sayı ("1.", "2."...) o oturumda kaçıncı sırada yapıldığıdır; sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma yaparken dikkate alınmalıdır.
 
             ## Özet
@@ -194,6 +197,18 @@ public class ExportTextFormatterTests
         Assert.True(
             metin.IndexOf("- 1. Squat:", StringComparison.Ordinal)
             < metin.IndexOf("- 2. Bench:", StringComparison.Ordinal));
+    }
+
+    /// <summary>#346: süreli set kilo × tekrar değil saniye olarak yazılır; süre rekorunun kendi eki var.</summary>
+    [Fact]
+    public void Sureli_set_saniye_olarak_ve_sure_rekoru_ekiyle_yazilir()
+    {
+        var plank = new SetEntryResponse(0, 1, 7, "Plank", 1, 0m, null, 75, RecordType.Duration, null, An, RestSeconds: null,
+            ExerciseMeasurement.Duration);
+
+        var metin = Formatla(Oturum(An, null, plank));
+
+        Assert.Contains("- 1. Plank: 75 sn [PR: süre]\n", metin);
     }
 
     /// <summary>RIR 0 geçerli bir değerdir ("tükenişe kadar"); null ile karıştırılıp atlanmamalı.</summary>
@@ -332,7 +347,7 @@ public class ExportTextFormatterTests
             AllTimeRecords =
             [
                 new ExerciseRecordResponse(1, zararli, ExerciseCategory.Push,
-                    80m, 8, An, 8, 80m, An)
+                    80m, 8, An, 8, 80m, An, ExerciseMeasurement.WeightReps, null)
             ]
         };
 

@@ -13,8 +13,9 @@ public class ColumnMappingTests
             .ToArray();
 
         // Sayı bilerek sabit: yeni bir enum kolonu eklemek bu testi kırar ve dönüşümün/uzunluğun
-        // atlanmadığını görmeye zorlar. #444'te User.TrainingGoal ile 7'den 8'e çıktı.
-        Assert.Equal(8, enumProperties.Length);
+        // atlanmadığını görmeye zorlar. #444'te User.TrainingGoal ile 7'den 8'e, #346'da
+        // Exercise.Measurement ile 9'a çıktı.
+        Assert.Equal(9, enumProperties.Length);
 
         foreach (var property in enumProperties)
         {

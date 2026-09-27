@@ -45,8 +45,8 @@ test('rekor bildirimi hareket sayisini ve her hareketi yazar; dokununca rekorlar
     kind: 'Records', occurredAt: new Date().toISOString(), isUnread: false,
     actor: { ...ali, relation: 'Following' },
     records: [
-      { exerciseId: 1, exerciseName: 'Bench Press', weight: 82.5, reps: 6, recordType: 'Weight' },
-      { exerciseId: 2, exerciseName: 'Squat', weight: 140, reps: 3, recordType: 'Reps' },
+      { exerciseId: 1, exerciseName: 'Bench Press', weight: 82.5, reps: 6, recordType: 'Weight', durationSeconds: null, measurement: 'WeightReps' },
+      { exerciseId: 2, exerciseName: 'Squat', weight: 140, reps: 3, recordType: 'Reps', durationSeconds: null, measurement: 'WeightReps' },
     ],
   };
   await render(<BildirimSatiri bildirim={bildirim} />);
@@ -57,6 +57,22 @@ test('rekor bildirimi hareket sayisini ve her hareketi yazar; dokununca rekorlar
 
   await fireEvent.press(screen.getByTestId('bildirim-Records-ali'));
   expect(mockPush).toHaveBeenCalledWith('/profile/u/ali/records');
+});
+
+/** #346: agirliksiz rekor "20 tekrar", sureli rekor "1:15" diye yazilir -- "0 kg × 20" degil. */
+test('agirliksiz ve sureli rekor satirlari olcum tipine gore yazilir', async () => {
+  const bildirim: Bildirim = {
+    kind: 'Records', occurredAt: new Date().toISOString(), isUnread: false,
+    actor: { ...ali, relation: 'Following' },
+    records: [
+      { exerciseId: 160, exerciseName: 'Crunch', weight: 0, reps: 20, recordType: 'Reps', durationSeconds: null, measurement: 'Reps' },
+      { exerciseId: 168, exerciseName: 'Plank', weight: 0, reps: null, recordType: 'Duration', durationSeconds: 75, measurement: 'Duration' },
+    ],
+  };
+  await render(<BildirimSatiri bildirim={bildirim} />);
+
+  expect(screen.getByText('Crunch · 20 tekrar')).toBeTruthy();
+  expect(screen.getByText('Plank · 1:15')).toBeTruthy();
 });
 
 /** #419: arkadasin haftalik hedefini tamamlamasi -- rekor satiri yok, profile gider. */

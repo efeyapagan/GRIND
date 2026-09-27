@@ -14,9 +14,11 @@ function set(exerciseId: number, weight: number, reps: number, recordType: SetKa
     weight,
     reps,
     recordType,
+    durationSeconds: null,
     rir: null,
     createdAt: new Date(Date.UTC(2026, 8, 26, 10, id)).toISOString(),
     restSeconds: null,
+    measurement: 'WeightReps',
   };
 }
 
@@ -62,4 +64,12 @@ test('sira dizideki konumdan degil setin zamanindan gelir', () => {
   const sonra = set(1, 85, 5, 'Weight');
 
   expect(gecilmisRekorIdleri([sonra, once])).toEqual(new Set([once.id]));
+});
+
+/** #346: sure rekorunu ayni hareketin sonraki sure rekoru gecer; kilo/tekrar anahtarlariyla karismaz. */
+test('sure rekorunu ayni hareketin sonraki sure rekoru gecer', () => {
+  const ilk = { ...set(3, 0, 0, 'Duration'), reps: null, durationSeconds: 60, measurement: 'Duration' as const };
+  const ikinci = { ...set(3, 0, 0, 'Duration'), reps: null, durationSeconds: 75, measurement: 'Duration' as const };
+
+  expect(gecilmisRekorIdleri([ilk, ikinci])).toEqual(new Set([ilk.id]));
 });

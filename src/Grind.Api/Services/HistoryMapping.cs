@@ -55,7 +55,8 @@ internal static class HistoryMapping
             session.Difficulty,
             // Toplamlar GÖSTERİLEN setlerden hesaplanıyor: geçmiş ucunda egzersiz filtresi varsa toplam da
             // filtreli olur ve listeyle tutarlı kalır (Faz 9 spec Karar 8).
-            shown.Sum(s => s.Weight * s.Reps),
+            // #346: süreli setin tekrarı yok, kg hacmine 0 katar.
+            shown.Sum(s => s.Weight * (s.Reps ?? 0)),
             shown.Count,
             RestIntervalCalculator.Median(shown.Select(s => s.RestSeconds)),
             shown);
@@ -81,9 +82,11 @@ internal static class HistoryMapping
             positions[s.ExerciseId],
             s.Weight,
             s.Reps,
+            s.DurationSeconds,
             s.RecordType,
             s.Rir,
             s.CreatedAt,
-            rests.GetValueOrDefault(s.Id)))
+            rests.GetValueOrDefault(s.Id),
+            s.Exercise.Measurement))
         .ToList();
 }

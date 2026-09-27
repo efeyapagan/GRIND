@@ -13,15 +13,20 @@ namespace Grind.Api.Models.Dtos.Stats;
 /// <paramref name="PositionChanged"/>: bu noktanın pozisyonu, KENDİSİNDEN ÖNCEKİ noktanın
 /// pozisyonundan farklıysa <c>true</c> — ilk nokta için her zaman <c>false</c> (kıyaslanacak önceki
 /// nokta yok).
+/// <paramref name="BestReps"/> / <paramref name="BestDurationSeconds"/> (#346): o oturumun en çok tekrarı ve
+/// en uzun süresi — ağırlıksız ve süreli hareketlerin grafiği bunları çizer; tekrar/süre yoksa <c>null</c>.
+/// Bu hareketlerde 1RM tahmini yapılmaz.
 /// </summary>
 public record ExerciseProgressPointResponse(
     long SessionId,
     DateTime StartedAt,
     DateOnly Date,
     decimal TopWeight,
-    int TopWeightReps,
+    int? TopWeightReps,
     decimal Volume,
     int SetCount,
     decimal? EstimatedOneRepMax,
     int Position,
-    bool PositionChanged);
+    bool PositionChanged,
+    int? BestReps,
+    int? BestDurationSeconds);

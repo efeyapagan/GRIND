@@ -80,7 +80,7 @@ public class PersonalRecordServiceTests
             var setler = await SeedAsync(context, session, exercise,
                 (100m, 8, RecordType.Weight), (100m, 6, RecordType.Reps));
 
-            var sonuc = await service.EvaluateNewAsync(exercise.Id, 100m, 9);
+            var sonuc = await service.EvaluateNewAsync(exercise.Id, ExerciseMeasurement.WeightReps, 100m, 9, null);
 
             Assert.Equal(RecordType.Reps, sonuc);
             // Geçmişteki yanlış değer OLDUĞU GİBİ durmalı: EvaluateNewAsync düzeltmez.
@@ -94,7 +94,7 @@ public class PersonalRecordServiceTests
         var (_, _, _, exercise, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            Assert.Equal(RecordType.Weight, await service.EvaluateNewAsync(exercise.Id, 60m, 12));
+            Assert.Equal(RecordType.Weight, await service.EvaluateNewAsync(exercise.Id, ExerciseMeasurement.WeightReps, 60m, 12, null));
         }
     }
 
@@ -228,6 +228,32 @@ public class PersonalRecordServiceTests
             Assert.Equal(9, satir.BestWeightReps);      // 100 kg'daki en iyi tekrar
             Assert.Equal(20, satir.BestReps);
             Assert.Equal(60m, satir.BestRepsWeight);    // 20 tekrar 60 kg'da yapıldı
+        }
+    }
+
+    /// <summary>
+    /// #346: süreli harekette özet en uzun süreli setten kurulur; hareket süreliye dönmeden önce "0 kg × n"
+    /// girilmiş eski set süre rekoru sayılmaz.
+    /// </summary>
+    [Fact]
+    public async Task Sureli_hareketin_ozeti_en_uzun_sureyi_tasir()
+    {
+        var (context, _, session, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            exercise.Measurement = ExerciseMeasurement.Duration;
+            context.AddRange(
+                new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 0m, Reps = 120, CreatedAt = DateTime.UtcNow },
+                new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 0m, DurationSeconds = 90, CreatedAt = DateTime.UtcNow },
+                new SetEntry { WorkoutSession = session, Exercise = exercise, Weight = 0m, DurationSeconds = 60, CreatedAt = DateTime.UtcNow });
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetAllTimeAsync();
+            var satir = Assert.Single(ozet, r => r.ExerciseId == exercise.Id);
+
+            Assert.Equal(ExerciseMeasurement.Duration, satir.Measurement);
+            Assert.Equal(90, satir.BestDurationSeconds);
+            Assert.Null(satir.BestReps);
         }
     }
 

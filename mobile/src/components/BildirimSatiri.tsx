@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Bildirim } from '@grind/shared/api/queries';
 import { useDil } from '@grind/shared/i18n';
-import { formatGoreliTarih, formatWeight } from '@grind/shared/lib/format';
+import { formatGoreliTarih } from '@grind/shared/lib/format';
+import { setDegeriMetni } from '@grind/shared/lib/setDegeri';
 import ProfilFotografi from './ProfilFotografi';
 
 /**
@@ -38,11 +39,7 @@ export default function BildirimSatiri({ bildirim }: { bildirim: Bildirim }) {
         )}
         {bildirim.records.map((rekor) => (
           <Text key={rekor.exerciseId} numberOfLines={1} className="text-body text-muted">
-            {t('bildirimler.rekorSatiri', {
-              hareket: rekor.exerciseName,
-              agirlik: formatWeight(rekor.weight, dil),
-              tekrar: rekor.reps,
-            })}
+            {t('bildirimler.rekorSatiri', { hareket: rekor.exerciseName, deger: setDegeriMetni(rekor, dil) })}
           </Text>
         ))}
         <Text className="text-label text-muted">{formatGoreliTarih(bildirim.occurredAt, dil)}</Text>

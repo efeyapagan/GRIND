@@ -36,10 +36,12 @@ async function setliAntrenmanlaAc() {
       exercisePosition: 1,
       weight: 60,
       reps: 8,
+      durationSeconds: null,
       recordType: 'None',
       rir: 2,
       createdAt: new Date().toISOString(),
       restSeconds: null,
+      measurement: 'WeightReps',
     },
   ];
   requestMock.mockImplementation(sahteRequest);

@@ -10,9 +10,9 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Yuzyetmisdort_global_egzersiz_seed_edilmistir()
+    public void Yuzdoksaniki_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(174, Seed().Count);
+        Assert.Equal(192, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +28,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_yuzyetmisdorde_kadar_benzersizdir()
+    public void Seed_id_leri_birden_yuzdoksanikiye_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 174).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 192).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -246,7 +246,27 @@ public class SeedDataTests
             ("Plate Loaded Chest Press", ExerciseCategory.Push, ExerciseEquipment.Machine),
 
             // #397: squeeze press ayri bir hareket -- dumbbell'lar hareket boyunca birbirine bastirilir.
-            ("Dumbbell Squeeze Press", ExerciseCategory.Push, ExerciseEquipment.Dumbbell)
+            ("Dumbbell Squeeze Press", ExerciseCategory.Push, ExerciseEquipment.Dumbbell),
+
+            // #346: ağırlıksız karın/çekirdek hareketleri (tekrar) ve tutuşlar (süre).
+            ("Bicycle Crunch", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Side Crunch", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Sit-up", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("V-up", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Heel Touch", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Toe Touch", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Flutter Kicks", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Scissor Kicks", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Mountain Climber", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Dead Bug", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Bird Dog", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Jackknife Sit-up", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Windshield Wiper", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Dragon Flag", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Hollow Body Hold", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("L-Sit", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Dead Hang", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
+            ("Wall Sit", ExerciseCategory.Legs, ExerciseEquipment.Bodyweight)
         ];
 
         var actual = Seed()
@@ -277,6 +297,39 @@ public class SeedDataTests
             .Where(row => row.TryGetValue("AlternateName", out var deger) && deger is not null)
             .OrderBy(row => (long)row["Id"]!)
             .Select(row => ((long)row["Id"]!, (string)row["AlternateName"]!))
+            .ToArray();
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Tekrar_ve_sure_olculen_egzersizler_beklenenle_birebir_eslesir()
+    {
+        // #346: ölçüm tipi set girişinin hangi alanları çizeceğini ve rekor kuralını belirler. Listede
+        // olmayan her global egzersiz kilo + tekrar (WeightReps) ile ölçülür. Pull-up/Dips/Push-up
+        // bilerek burada DEĞİL: onların kilolu (weighted) varyasyonu yaygın.
+        (long Id, ExerciseMeasurement Measurement)[] expected =
+        [
+            (20L, ExerciseMeasurement.Reps),      // Ab Rollout
+            (61L, ExerciseMeasurement.Duration),  // Side Plank
+            (62L, ExerciseMeasurement.Reps),      // Side Plank Rotation
+            (160L, ExerciseMeasurement.Reps),     // Crunch
+            (161L, ExerciseMeasurement.Reps),     // Decline Bench Crunch
+            (163L, ExerciseMeasurement.Reps),     // Hanging Leg Raise
+            (164L, ExerciseMeasurement.Reps),     // Hanging Knee Raise
+            (165L, ExerciseMeasurement.Reps),     // Captain's Chair Leg Raise
+            (166L, ExerciseMeasurement.Reps),     // Lying Leg Raise
+            (167L, ExerciseMeasurement.Reps),     // Reverse Crunch
+            (168L, ExerciseMeasurement.Duration), // Plank
+            (170L, ExerciseMeasurement.Reps),     // Russian Twist
+            .. Enumerable.Range(175, 14).Select(id => ((long)id, ExerciseMeasurement.Reps)),
+            .. Enumerable.Range(189, 4).Select(id => ((long)id, ExerciseMeasurement.Duration)),
+        ];
+
+        var actual = Seed()
+            .Select(row => ((long)row["Id"]!, (ExerciseMeasurement)row["Measurement"]!))
+            .Where(x => x.Item2 != ExerciseMeasurement.WeightReps)
+            .OrderBy(x => x.Item1)
             .ToArray();
 
         Assert.Equal(expected, actual);

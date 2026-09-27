@@ -1,16 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, Text } from 'react-native';
-import { Flame, Zap } from 'lucide-react-native';
-import { useDil } from '@grind/shared/i18n';
+import { Flame, Timer, Zap } from 'lucide-react-native';
 import type { SetKaydi } from '@grind/shared/api/queries';
-import { formatWeight } from '@grind/shared/lib/format';
 import { gecilmisRekorIdleri, rekorRozetiMetni } from '@grind/shared/lib/rekor';
 import { rirEtiketi } from '@grind/shared/lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
+import SetDegeriYazisi from './SetDegeriYazisi';
 
 interface OrtakProps {
   sets: SetKaydi[];
@@ -29,7 +28,6 @@ interface EgzersizGrubu {
 /** web/src/components/SetList.tsx ile ayni: setler egzersize gore gruplanir. */
 export default function SetList(props: Props) {
   const { t } = useTranslation();
-  const dil = useDil();
   const { sets, bosDurumMetni = t('setler.bosDurum') } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
@@ -77,10 +75,7 @@ export default function SetList(props: Props) {
                     <View className="flex-row items-center justify-between gap-2">
                       <View className="flex-row items-center gap-4">
                         <Text className="w-5 text-label text-muted">{setSirasi + 1}</Text>
-                        <Text className="text-body-lg text-fg">
-                          {formatWeight(kayit.weight, dil)} kg{' '}
-                          <Text className="font-light text-muted">×</Text> {kayit.reps}
-                        </Text>
+                        <SetDegeriYazisi kayit={kayit} className="text-body-lg text-fg" birimSinifi="text-fg" />
                       </View>
                       <View className="flex-row items-center gap-2">
                         <DinlenmeHapi saniye={kayit.restSeconds} />
@@ -91,7 +86,7 @@ export default function SetList(props: Props) {
                       // #404: `items-start` olmadan sutun duzeni rozeti satirin sonuna kadar uzatiyordu.
                       <View className="items-start">
                         <Rozet
-                          ikon={kayit.recordType === 'Weight' ? Zap : Flame}
+                          ikon={kayit.recordType === 'Weight' ? Zap : kayit.recordType === 'Duration' ? Timer : Flame}
                           tamYuvarlak
                           gecildi={gecilmisRekorlar.has(kayit.id)}
                         >
