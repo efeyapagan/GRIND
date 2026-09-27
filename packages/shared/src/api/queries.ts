@@ -1158,10 +1158,27 @@ export function useDeleteTemplate() {
   });
 }
 
+export interface YorumCevirisi {
+  language: string;
+  content: string;
+}
+
 export interface Yorum {
   id: number;
-  content: string;
+  /**
+   * Her uretim desteklenen TUM dilleri icerir (#199), bu yuzden dil degistirmek yeni bir istek
+   * DOGURMAZ. Tek dilli donemde uretilmis kayitlarda yalnizca "tr" vardir.
+   */
+  translations: YorumCevirisi[];
   createdAt: string;
+}
+
+/**
+ * Secili dilin metni; yoksa ELDEKI ilk ceviri. #199 oncesi kayitlar yalnizca Turkce; Ingilizce
+ * secen bir kullaniciya bos kart gostermek yorumu kaybetmek olurdu.
+ */
+export function yorumMetni(yorum: Yorum, dil: string): string {
+  return (yorum.translations.find((c) => c.language === dil) ?? yorum.translations[0])?.content ?? '';
 }
 
 /**
@@ -1171,10 +1188,13 @@ export interface Yorum {
  * Ihtiyac dogunca genisletilir.
  */
 function dogrulanmisYorum(yanit: AiInsightResponse): Yorum {
-  if (yanit.id === undefined || !yanit.content || !yanit.createdAt) {
+  const ceviriler = (yanit.translations ?? []).filter(
+    (c): c is { language: string; content: string } => Boolean(c.language && c.content),
+  );
+  if (yanit.id === undefined || ceviriler.length === 0 || !yanit.createdAt) {
     throw new Error('Sunucudan eksik yorum yaniti alindi.');
   }
-  return { id: yanit.id, content: yanit.content, createdAt: yanit.createdAt };
+  return { id: yanit.id, translations: ceviriler, createdAt: yanit.createdAt };
 }
 
 export interface YorumSayfasi {

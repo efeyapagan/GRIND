@@ -3962,7 +3962,7 @@ export interface components {
             rangeFrom?: string | null;
             /** Format: date */
             rangeTo?: string | null;
-            content?: string | null;
+            translations?: components["schemas"]["AiInsightTranslationResponse"][] | null;
             model?: string | null;
             /** Format: int32 */
             tokensUsed?: number | null;
@@ -3981,6 +3981,10 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        AiInsightTranslationResponse: {
+            language?: string | null;
+            content?: string | null;
         };
         AuthResponse: {
             token?: string | null;

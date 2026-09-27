@@ -18,7 +18,7 @@ public class AiInsightRepositoryTests
         Kind = kind,
         WorkoutSession = session,
         SetEntry = setEntry,
-        Content = "yorum",
+        Translations = [new AiInsightTranslation { Language = "tr", Content = "yorum" }],
         Model = "test-model",
         CreatedAt = createdAt
     };

@@ -282,8 +282,11 @@ Object Reference) açığıdır.
 - **AiInsight**: `Id`, `UserId` (FK), `Kind` (Insight / Suggestion), `WorkoutSessionId` (FK,
   nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `RangeFrom` / `RangeTo`
   (nullable `date`, TR yerel günü, iki ucu dahil — yorumun kapsadığı aralık; `Insight`'ta dolu,
-  oturum kapsamlı `Suggestion`'da null), `Content`, `Model`, `TokensUsed` (nullable),
-  `EstimatedCostUsd` (nullable), `CreatedAt`
+  oturum kapsamlı `Suggestion`'da null), `Model`, `TokensUsed` (nullable),
+  `EstimatedCostUsd` (nullable), `CreatedAt`. **`Content` YOK (#199)** — metin dil başına
+  `AiInsightTranslation`'da
+- **AiInsightTranslation** (#199): `Id`, `AiInsightId` (FK, CASCADE), `Language` (dil kodu,
+  `varchar(8)`), `Content`; `(AiInsightId, Language)` benzersiz — bir üretimin bir dildeki metni
 - **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
   `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak
 
@@ -372,6 +375,18 @@ Object Reference) açığıdır.
 > tablosunda saklar (tekrar tekrar API'ye sorup ücret ödenmesin, geçmiş yorumlar görüntülenebilsin)
 > ve `TokensUsed`/`EstimatedCostUsd` ile kullanım/maliyet takip edilebilsin. Hangi yolun ne zaman
 > aktif edileceğine maliyet netleşince karar verilecek — ikisi de aynı anda var olabilir.
+
+> Karar (AI yorumunun dili — #199, 2026-09-27): her üretim desteklenen **TÜM** dilleri
+> (`InsightLanguages.All` = istemcideki `DILLER`) **TEK LLM çağrısında** hazırlar; model her dili
+> bir bölüm işaretiyle (`AiInsightSections.Marker`) ayırır, yanıt bölünüp dil başına bir
+> `AiInsightTranslation` satırı olarak saklanır. İki ayrı çağrı YAPILMAZ: uzun export metni girdi
+> tokenlarının çoğunu oluşturur ve iki kez ödenirdi. Model işareti izlemezse tüm metin ilk dilin
+> çevirisi sayılır — ücret çağrı anında doğduğu için yorum hiçbir durumda kaybedilmez. Bayrak
+> (GRINDY ekranı, sağ üst) bir **görüntüleme** tercihidir: dil değiştirmek yeni istek ATMAZ.
+> Modele giden bağlam (export metni) şimdilik **Türkçe kalır**, yalnızca çıktı dili söylenir; çıktı
+> Türkçeye kayarsa export şablonunun çevirisi ayrı bir iş olur. Sunucu ve istemci dil listeleri
+> `packages/shared/src/i18n/aiDilleri.test.ts` ile birbirine bağlıdır — bir dili yalnızca birine
+> eklemek CI'da patlar.
 
 > Karar (AI sağlayıcısı ve aktivasyon — Faz 12): Yorum üretimi `IAiInsightProvider` arkasında durur
 > ve **varsayılan olarak KAPALIDIR** (`Ai:Provider = None` → `NullAiInsightProvider` → 503). Gerçek

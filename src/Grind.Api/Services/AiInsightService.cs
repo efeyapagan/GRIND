@@ -68,8 +68,10 @@ public class AiInsightService(
         // Buradan sonrası ÜCRETLİ: isteğin belirteci değil None (spec Karar 7). İstemci koparsa parası
         // ödenmiş yanıt yine saklanır; iş, (MaxRetries + 1) × TimeoutSeconds ile sınırlıdır — dağıtılan
         // varsayılanlarla yaklaşık 6 dakika (bkz. Services/Ai/DependencyInjection.cs).
+        var diller = InsightLanguages.All;
+
         var completion = await provider.CompleteAsync(
-            AiInsightPrompt.Build(hedef),
+            AiInsightPrompt.Build(hedef, diller),
             ExportTextFormatter.Format(export, ExportTextOptions.ForAi),
             CancellationToken.None);
 
@@ -79,11 +81,13 @@ public class AiInsightService(
             Kind = AiInsightKind.Insight,
             RangeFrom = from,
             RangeTo = to,
-            Content = completion.Content,
             Model = completion.Model,
             TokensUsed = completion.TokensUsed,
             EstimatedCostUsd = completion.EstimatedCostUsd,
-            CreatedAt = Now()
+            CreatedAt = Now(),
+            Translations = AiInsightSections.Split(completion.Content, diller)
+                .Select(bolum => new AiInsightTranslation { Language = bolum.Key, Content = bolum.Value })
+                .ToList()
         };
 
         repository.Add(insight);
@@ -150,7 +154,10 @@ public class AiInsightService(
         insight.SetEntryId,
         insight.RangeFrom,
         insight.RangeTo,
-        insight.Content,
+        insight.Translations
+            .OrderBy(t => t.Language, StringComparer.Ordinal)
+            .Select(t => new AiInsightTranslationResponse(t.Language, t.Content))
+            .ToList(),
         insight.Model,
         insight.TokensUsed,
         insight.EstimatedCostUsd,

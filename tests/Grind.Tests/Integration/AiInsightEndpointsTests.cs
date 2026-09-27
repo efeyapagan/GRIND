@@ -122,7 +122,7 @@ public class AiInsightEndpointsTests(GrindApiFactory kapali, SahteAiApiFactory s
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.EndsWith($"/api/insights/{yorum!.Id}", response.Headers.Location!.ToString());
         Assert.Equal(AiInsightKind.Insight, yorum.Kind);
-        Assert.Equal(SahteAiApiFactory.SahteIcerik, yorum.Content);
+        Assert.Equal(SahteAiApiFactory.SahteIcerik, Assert.Single(yorum.Translations).Content);
         Assert.Equal(SahteAiApiFactory.SahteModel, yorum.Model);
         Assert.Equal(1500, yorum.TokensUsed);
         Assert.Equal(0.0123m, yorum.EstimatedCostUsd);
@@ -163,7 +163,7 @@ public class AiInsightEndpointsTests(GrindApiFactory kapali, SahteAiApiFactory s
         var sonra = await client.GetAsync($"/api/insights/{yorum.Id}");
 
         Assert.Equal(yorum.Id, Assert.Single(liste!.Items).Id);
-        Assert.Equal(yorum.Content, getirilen!.Content);
+        Assert.Equal(yorum.Translations, getirilen!.Translations);
         Assert.Equal(HttpStatusCode.NoContent, silme.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, sonra.StatusCode);
     }

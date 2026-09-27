@@ -8,6 +8,7 @@ import {
   useGenerateInsight,
   useInfiniteInsights,
   useInsightGenerationState,
+  yorumMetni,
   type Yorum,
 } from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
@@ -22,6 +23,7 @@ import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
 import { useIkonRenk } from '../../src/ui/renkler';
 import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
+import { useYorumDili } from '../../src/ui/YorumDiliContext';
 
 /**
  * web/src/pages/InsightsPage.tsx ile ayni (issue #76; GRINDY adi ve maskotu #239). Sayfalama Onceki/Sonraki dugmeleri
@@ -32,7 +34,7 @@ export default function InsightsScreen() {
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
-  usePageTitle(t('yorumlar.baslik'));
+  usePageTitle(t('yorumlar.basligiKisa'));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteInsights();
   const uretMutasyonu = useGenerateInsight();
   // Issue #148: web ile ayni -- "uretiliyor mu" bilgisi ekranin mutation'indan DEGIL, sekme
@@ -165,6 +167,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
+  const { yorumDili } = useYorumDili();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -191,7 +194,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
           <Trash2 color={ikonRenk.muted} size={18} />
         </IkonDugmesi>
       </View>
-      <Text className="text-body text-fg">{yorum.content}</Text>
+      <Text className="text-body text-fg">{yorumMetni(yorum, yorumDili)}</Text>
     </View>
   );
 }
