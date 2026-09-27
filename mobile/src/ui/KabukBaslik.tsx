@@ -8,6 +8,7 @@ import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
 import YorumDiliSecici from '../components/YorumDiliSecici';
+import CizgiliBaslik from './CizgiliBaslik';
 import GrindyMaskot from './GrindyMaskot';
 import { useIkonRenk } from './renkler';
 
@@ -49,11 +50,20 @@ export default function KabukBaslik() {
     }
   }
 
-  // #466 (kullanici karari): antrenman ekraninda ust bar KOMPLE kalkar; sayfa dogrudan alti
-  // cizili basligiyla baslar ve "GRIND" o basligin satirina tasinir (bkz. SablonlaBasla).
-  // Ayni sekmenin DIGER ekranlarinda (sablonlar, antrenman-bitir) bar durur: geri tusu orada.
+  // #466 (kullanici karari): antrenman ekraninin KENDI ust bari var -- sayfa basligi yerine alti
+  // cizili "Antrenmana basla", saginda "GRIND". Icerikle birlikte kaymaz, tepede sabit durur.
+  // Geri tusu yok: bu bir sekme koku. Ayni sekmenin alt ekranlarinda (sablonlar, antrenman-bitir)
+  // normal bar ve geri tusu durur.
   if (pathname === '/antrenman') {
-    return null;
+    return (
+      <View style={{ paddingTop: insets.top }} className="bg-bg">
+        <View className="relative flex-row items-center justify-between gap-3 px-4 pb-1 pt-2">
+          <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
+          <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+          <DinlenmeGostergesi />
+        </View>
+      </View>
+    );
   }
 
   if (profilAnaEkraniMi(pathname)) {

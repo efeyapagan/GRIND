@@ -148,11 +148,12 @@ test('basili tutup yana surukleyince menu kapanir ve yeni sira sunucuya gonderil
 
 // ---- Baslik satiri (#466) ----
 
-/** Ust bar kalktigi icin GRIND yazisi basligin satirina tasindi. */
-test('baslik satirinin saginda GRIND yazar', async () => {
+/** #466: baslik ve GRIND artik ust BARDA (KabukBaslik), icerikte degil. */
+test('baslik ve GRIND icerikte degil, barda', async () => {
   await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
 
-  expect(screen.getByText('GRIND')).toBeTruthy();
+  expect(screen.queryByText('GRIND')).toBeNull();
+  expect(screen.queryByText('Antrenmana başla')).toBeNull();
 });
 
 /** "Tumunu gor" -> "Duzenle"; gittigi yer degismedi. */

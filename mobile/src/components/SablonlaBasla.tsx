@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
-import CizgiliBaslik from '../ui/CizgiliBaslik';
 import SablonVitrinKarti from '../ui/SablonVitrinKarti';
 import SablonMenusu, { type Kutu } from './SablonMenusu';
 import SablonKaruseli from './SablonKaruseli';
@@ -52,12 +51,6 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
 
   return (
     <View className="flex-col gap-5">
-      {/* #466: ust bar kalktigi icin "GRIND" bu satira tasindi. */}
-      <View className="flex-row items-start justify-between gap-3">
-        <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
-        <Text className="shrink-0 pt-1 text-label text-muted uppercase">GRIND</Text>
-      </View>
-
       <View className="flex-col gap-3">
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-heading text-fg">{t('sablonlar.sablonlarim')}</Text>
