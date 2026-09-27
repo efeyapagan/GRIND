@@ -2600,6 +2600,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/training-goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTrainingGoalRequest"];
+                    "text/json": components["schemas"]["UpdateTrainingGoalRequest"];
+                    "application/*+json": components["schemas"]["UpdateTrainingGoalRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/social/weekly": {
         parameters: {
             query?: never;
@@ -3901,7 +3962,7 @@ export interface components {
             rangeFrom?: string | null;
             /** Format: date */
             rangeTo?: string | null;
-            content?: string | null;
+            translations?: components["schemas"]["AiInsightTranslationResponse"][] | null;
             model?: string | null;
             /** Format: int32 */
             tokensUsed?: number | null;
@@ -3920,6 +3981,10 @@ export interface components {
             totalCount?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        AiInsightTranslationResponse: {
+            language?: string | null;
+            content?: string | null;
         };
         AuthResponse: {
             token?: string | null;
@@ -4360,6 +4425,7 @@ export interface components {
             /** Format: int64 */
             avatarVersion?: number | null;
             privacyLevel?: components["schemas"]["PrivacyLevel"];
+            trainingGoal?: components["schemas"]["TrainingGoal"];
         };
         /** @enum {string} */
         RecordType: "None" | "Weight" | "Reps" | "Duration";
@@ -4466,6 +4532,8 @@ export interface components {
             createdAt?: string;
             exercises?: components["schemas"]["TemplateExerciseResponse"][] | null;
         };
+        /** @enum {string} */
+        TrainingGoal: "Hipertrofi" | "Guc" | "KiloVerme" | "GenelForm";
         UnreadNotificationCountResponse: {
             /** Format: int32 */
             count?: number;
@@ -4493,6 +4561,9 @@ export interface components {
         UpdateTemplateRequest: {
             name: string;
             exercises: components["schemas"]["TemplateExerciseRequest"][];
+        };
+        UpdateTrainingGoalRequest: {
+            trainingGoal?: components["schemas"]["TrainingGoal"];
         };
         UpdateWeeklyTargetRequest: {
             /** Format: int32 */

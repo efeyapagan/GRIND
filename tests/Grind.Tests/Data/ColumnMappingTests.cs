@@ -12,7 +12,10 @@ public class ColumnMappingTests
             .Where(p => (Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType).IsEnum)
             .ToArray();
 
-        Assert.Equal(8, enumProperties.Length);
+        // Sayı bilerek sabit: yeni bir enum kolonu eklemek bu testi kırar ve dönüşümün/uzunluğun
+        // atlanmadığını görmeye zorlar. #444'te User.TrainingGoal ile 7'den 8'e, #346'da
+        // Exercise.Measurement ile 9'a çıktı.
+        Assert.Equal(9, enumProperties.Length);
 
         foreach (var property in enumProperties)
         {
@@ -66,7 +69,7 @@ public class ColumnMappingTests
 
     [Theory]
     [InlineData(typeof(WorkoutSession), "Notes")]
-    [InlineData(typeof(AiInsight), "Content")]
+    [InlineData(typeof(AiInsightTranslation), "Content")]
     public void Serbest_metin_sutunlari_sinirsizdir(Type entityClrType, string propertyName)
     {
         var property = TestModel.Entity(entityClrType).FindProperty(propertyName)!;

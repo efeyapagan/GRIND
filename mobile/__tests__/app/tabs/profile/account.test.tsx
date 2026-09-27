@@ -13,6 +13,7 @@ jest.mock('@grind/shared/api/queries', () => ({
   useGuncelTakvimOzeti: () => ({ data: undefined, isError: false }),
   useProfilim: () => ({ data: undefined, isError: false }),
   useSetPrivacyLevel: () => ({ mutate: jest.fn(), isPending: false }),
+  useSetTrainingGoal: () => ({ mutate: jest.fn(), isPending: false, isError: false }),
 }));
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));

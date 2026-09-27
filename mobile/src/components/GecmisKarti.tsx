@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Share2 } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import { formatTarih } from '@grind/shared/lib/format';
 import GecmisOzeti from './GecmisOzeti';
 import GecmisDetayPaneli from './GecmisDetayPaneli';
+import PaylasimPenceresi from './PaylasimPenceresi';
 import IkincilDugme from '../ui/IkincilDugme';
 import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
 import { useIkonRenk } from '../ui/renkler';
@@ -28,9 +29,11 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
   const { t } = useTranslation();
   const dil = useDil();
   const [acik, setAcik] = useState(false);
+  const [paylasimAcik, setPaylasimAcik] = useState(false);
   const [onayAcik, setOnayAcik] = useState(false);
   const kaydirmaRef = useRef<KaydirilabilirSatirRef>(null);
   const silinebilir = onSil !== undefined;
+  const paylasilabilir = oturum.durationSeconds !== null && oturum.durationSeconds !== undefined;
 
   function onayiAc() {
     kaydirmaRef.current?.kapat();
@@ -60,12 +63,31 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
 
   const kart = (
     <View className="bg-surface-2">
-      <Pressable onPress={() => setAcik(true)} className="flex-row items-center justify-between gap-4 p-4">
+      <Pressable onPress={() => setAcik(true)} className="flex-row items-center justify-between gap-2 p-4">
         <GecmisOzeti oturum={oturum} />
-        <View className="size-11 shrink-0 items-center justify-center rounded-lg bg-surface-3">
-          <ChevronRight color={ikonRenk.muted} size={20} />
-        </View>
+        {/* #433 (kullanici karari): ikonlar KUTUSUZ -- paylas ikonu ve ok yalnizca ikon olarak durur.
+            Paylas kendi Pressable'i: ic icedeki cocuk dokunusu yakalar, satirin paneli ACILMAZ.
+            Acik antrenmanda sure yoktur, paylasilacak kart da yoktur. */}
+        {paylasilabilir && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('paylasim.paylas')}
+            onPress={() => setPaylasimAcik(true)}
+            className="size-11 shrink-0 items-center justify-center"
+          >
+            <Share2 color={ikonRenk.muted} size={20} />
+          </Pressable>
+        )}
+        <ChevronRight color={ikonRenk.muted} size={20} />
       </Pressable>
+      {paylasimAcik && (
+        <PaylasimPenceresi
+          setCount={oturum.setCount}
+          durationSeconds={oturum.durationSeconds ?? 0}
+          acik
+          onKapat={() => setPaylasimAcik(false)}
+        />
+      )}
       {acik && (
         <GecmisDetayPaneli
           oturum={oturum}
@@ -80,7 +102,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
     return <View className="overflow-hidden rounded-xl">{kart}</View>;
   }
   return (
-    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} silEtiketi={t('gecmis.antrenmaniSil')}>
+    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} kaydirmaEtiketi={t('gecmis.antrenmaniSil')}>
       {kart}
     </KaydirilabilirSatir>
   );

@@ -243,7 +243,10 @@ Object Reference) açığıdır.
   haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`), `DisplayName` (nullable, en fazla
   50 karakter, kırpılır, benzersiz değil — #280), `BirthDate` (nullable `date`, #280 — yaş SAKLANMAZ, sorgu
   anında TR gününe göre `AgeCalculator` ile hesaplanır; 13–120 yaş dışı 400), `NotificationsSeenAt` (nullable, UTC — bildirim
-  ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar). Uçlar: `GET/PUT /api/profile`
+  ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar), `TrainingGoal` (nullable enum
+  `Hipertrofi`/`Guc`/`KiloVerme`/`GenelForm`, adıyla saklanır — #444; `null` = seçilmemiş, varsayılan bir
+  hedef UYDURULMAZ. Bugünkü tek tüketicisi AI yorumunun prompt'u; `PUT /api/settings/training-goal`).
+  Uçlar: `GET/PUT /api/profile`
 - **UserAvatar** (#280): `Id`, `UserId` (FK, benzersiz, CASCADE), `Content` (`bytea`), `ContentType`,
   `UpdatedAt` — profil fotoğrafı veritabanında, `User`'dan ayrı tabloda (her kullanıcı sorgusunda resim
   baytları taşınmasın). En fazla 256 KB; tür istemcinin beyanından değil dosya imzasından belirlenir
@@ -289,8 +292,11 @@ Object Reference) açığıdır.
 - **AiInsight**: `Id`, `UserId` (FK), `Kind` (Insight / Suggestion), `WorkoutSessionId` (FK,
   nullable), `SetEntryId` (FK, nullable — bir sete özel öneri için), `RangeFrom` / `RangeTo`
   (nullable `date`, TR yerel günü, iki ucu dahil — yorumun kapsadığı aralık; `Insight`'ta dolu,
-  oturum kapsamlı `Suggestion`'da null), `Content`, `Model`, `TokensUsed` (nullable),
-  `EstimatedCostUsd` (nullable), `CreatedAt`
+  oturum kapsamlı `Suggestion`'da null), `Model`, `TokensUsed` (nullable),
+  `EstimatedCostUsd` (nullable), `CreatedAt`. **`Content` YOK (#199)** — metin dil başına
+  `AiInsightTranslation`'da
+- **AiInsightTranslation** (#199): `Id`, `AiInsightId` (FK, CASCADE), `Language` (dil kodu,
+  `varchar(8)`), `Content`; `(AiInsightId, Language)` benzersiz — bir üretimin bir dildeki metni
 - **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
   `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak
 
@@ -380,6 +386,18 @@ Object Reference) açığıdır.
 > ve `TokensUsed`/`EstimatedCostUsd` ile kullanım/maliyet takip edilebilsin. Hangi yolun ne zaman
 > aktif edileceğine maliyet netleşince karar verilecek — ikisi de aynı anda var olabilir.
 
+> Karar (AI yorumunun dili — #199, 2026-09-27): her üretim desteklenen **TÜM** dilleri
+> (`InsightLanguages.All` = istemcideki `DILLER`) **TEK LLM çağrısında** hazırlar; model her dili
+> bir bölüm işaretiyle (`AiInsightSections.Marker`) ayırır, yanıt bölünüp dil başına bir
+> `AiInsightTranslation` satırı olarak saklanır. İki ayrı çağrı YAPILMAZ: uzun export metni girdi
+> tokenlarının çoğunu oluşturur ve iki kez ödenirdi. Model işareti izlemezse tüm metin ilk dilin
+> çevirisi sayılır — ücret çağrı anında doğduğu için yorum hiçbir durumda kaybedilmez. Bayrak
+> (GRINDY ekranı, sağ üst) bir **görüntüleme** tercihidir: dil değiştirmek yeni istek ATMAZ.
+> Modele giden bağlam (export metni) şimdilik **Türkçe kalır**, yalnızca çıktı dili söylenir; çıktı
+> Türkçeye kayarsa export şablonunun çevirisi ayrı bir iş olur. Sunucu ve istemci dil listeleri
+> `packages/shared/src/i18n/aiDilleri.test.ts` ile birbirine bağlıdır — bir dili yalnızca birine
+> eklemek CI'da patlar.
+
 > Karar (AI sağlayıcısı ve aktivasyon — Faz 12): Yorum üretimi `IAiInsightProvider` arkasında durur
 > ve **varsayılan olarak KAPALIDIR** (`Ai:Provider = None` → `NullAiInsightProvider` → 503). Gerçek
 > sağlayıcı (Anthropic, resmi C# SDK) yazılıdır ama yalnızca yapılandırmayla açılır:
@@ -388,7 +406,12 @@ Object Reference) açığıdır.
 > ile aynı desen). Üretim bugün yalnızca `Kind = Insight` yazar — set arası öneri motoru hâlâ
 > kapsam dışı. Aralık verilmezse son 30 gün, en fazla 366 gün; aralıkta hiç oturum ve tartı yoksa
 > LLM'e hiç gidilmez (400), çünkü bir modele "veri yok" dedirtmek için para ödenmez. LLM'e giden
-> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. Ücretli adım (LLM
+> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. #444'ten beri aynı
+> formatlayıcı bir SEÇENEK nesnesi alır (`ExportTextOptions`): AI yolu ısınma setlerini "(ısınma)"
+> diye işaretler ve setsiz+notsuz oturumları atlar; kullanıcıya dönen `/api/export/text` varsayılan
+> seçeneklerle bugünkü çıktısını korur. Isınma bir SEZGİdir (`WarmupDetector`, veride böyle bir alan
+> yok) — bu yüzden set silinmez, işaretlenir. Kullanıcının `TrainingGoal`'i seçiliyse prompt'a bir
+> satır olarak girer (`AiInsightPrompt.Build`). Ücretli adım (LLM
 > çağrısı ve onu izleyen tek `SaveChangesAsync`) isteğin iptal belirtecini DEĞİL
 > `CancellationToken.None` kullanır: istek LLM'e ulaştığı anda ücret doğduğu için, istemci koparsa
 > bile yanıt saklanır. Fiyatlar yapılandırmada (`Ai:InputUsdPerMillionTokens` /

@@ -30,10 +30,6 @@ namespace Grind.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -78,6 +74,34 @@ namespace Grind.Api.Data.Migrations
                     b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("AiInsights");
+                });
+
+            modelBuilder.Entity("Grind.Api.Models.Entities.AiInsightTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AiInsightId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AiInsightId", "Language")
+                        .IsUnique();
+
+                    b.ToTable("AiInsightTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Grind.Api.Models.Entities.BodyWeightLog", b =>
@@ -2144,6 +2168,10 @@ namespace Grind.Api.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Kisitli");
 
+                    b.Property<string>("TrainingGoal")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2288,6 +2316,17 @@ namespace Grind.Api.Data.Migrations
                     b.Navigation("User");
 
                     b.Navigation("WorkoutSession");
+                });
+
+            modelBuilder.Entity("Grind.Api.Models.Entities.AiInsightTranslation", b =>
+                {
+                    b.HasOne("Grind.Api.Models.Entities.AiInsight", "AiInsight")
+                        .WithMany("Translations")
+                        .HasForeignKey("AiInsightId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AiInsight");
                 });
 
             modelBuilder.Entity("Grind.Api.Models.Entities.BodyWeightLog", b =>
@@ -2436,6 +2475,11 @@ namespace Grind.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Grind.Api.Models.Entities.AiInsight", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Grind.Api.Models.Entities.Exercise", b =>

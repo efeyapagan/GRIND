@@ -147,6 +147,8 @@ export interface AcikOturum {
   id: number;
   startedAt: string;
   isOpen: boolean;
+  /** Acikken null; bitirme yanitinda dolu (#73 -- sunucunun hesabi, istemci yeniden hesaplamaz). */
+  durationSeconds: number | null;
   templateId: number | null;
   templateName: string | null;
   // Sablonsuz oturumda bos. Sira, hedef ve gerceklesen sayilar SUNUCUDAN gelir (spec Karar 8).
@@ -231,6 +233,7 @@ function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
     id: yanit.id,
     startedAt: yanit.startedAt,
     isOpen: yanit.isOpen,
+    durationSeconds: yanit.durationSeconds ?? null,
     templateId: yanit.templateId ?? null,
     templateName: yanit.templateName ?? null,
     progress: (yanit.progress ?? []).map(dogrulanmisIlerleme),
@@ -696,6 +699,27 @@ export function useSetPrivacyLevel() {
 }
 
 /**
+ * Antrenman hedefi (#444). `null` hedefi kaldirir -- "secilmemis" gercek bir durum, varsayilan bir
+ * hedef uydurulmaz.
+ */
+export function useSetTrainingGoal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (trainingGoal: AntrenmanHedefi | null): Promise<void> => {
+      // Swagger nullable bir ENUM'u `| null` diye yazamiyor (weeklyTargetDays'in aksine), bu
+      // yuzden govde tipi uretilen semadan degil buradan geliyor: `null` hedefi kaldiran gecerli
+      // bir degerdir, eksik alan degil.
+      const govde: { trainingGoal: AntrenmanHedefi | null } = { trainingGoal };
+      await request<void>('/settings/training-goal', { method: 'PUT', body: JSON.stringify(govde) });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
+    },
+  });
+}
+
+/**
  * Polling YOK (spec) -- yalnizca `useAddSet`in basarili olunca invalidate ettigi `records`
  * anahtari araciligiyla tazelenir.
  */
@@ -842,11 +866,14 @@ export function useFinishSession() {
     }: {
       sessionId: number;
       zorluk: Zorluk | null;
-    }): Promise<void> => {
-      await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
+    }): Promise<AcikOturum> => {
+      // Yanit ATILMAZ (#433): bitirme ekrani paylasim karti icin suresini ve set sayisini buradan
+      // alir -- sure sunucunun hesabi, istemcide yeniden hesaplanmaz.
+      const yanit = await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
         method: 'POST',
         body: JSON.stringify({ difficulty: zorluk }),
       });
+      return dogrulanmisOturum(yanit);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
@@ -1007,6 +1034,7 @@ export function useStartSession() {
 export interface SablonHareketi {
   exerciseId: number;
   exerciseName: string;
+  category: EgzersizKategorisi;
   isArchived: boolean;
   plannedSets: number;
   restSeconds: number;
@@ -1022,6 +1050,7 @@ function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHarek
   if (
     yanit.exerciseId === undefined ||
     !yanit.exerciseName ||
+    !yanit.category ||
     yanit.isArchived === undefined ||
     yanit.plannedSets === undefined ||
     yanit.restSeconds === undefined
@@ -1031,6 +1060,7 @@ function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHarek
   return {
     exerciseId: yanit.exerciseId,
     exerciseName: yanit.exerciseName,
+    category: yanit.category,
     isArchived: yanit.isArchived,
     plannedSets: yanit.plannedSets,
     restSeconds: yanit.restSeconds,
@@ -1166,10 +1196,27 @@ export function useDeleteTemplate() {
   });
 }
 
+export interface YorumCevirisi {
+  language: string;
+  content: string;
+}
+
 export interface Yorum {
   id: number;
-  content: string;
+  /**
+   * Her uretim desteklenen TUM dilleri icerir (#199), bu yuzden dil degistirmek yeni bir istek
+   * DOGURMAZ. Tek dilli donemde uretilmis kayitlarda yalnizca "tr" vardir.
+   */
+  translations: YorumCevirisi[];
   createdAt: string;
+}
+
+/**
+ * Secili dilin metni; yoksa ELDEKI ilk ceviri. #199 oncesi kayitlar yalnizca Turkce; Ingilizce
+ * secen bir kullaniciya bos kart gostermek yorumu kaybetmek olurdu.
+ */
+export function yorumMetni(yorum: Yorum, dil: string): string {
+  return (yorum.translations.find((c) => c.language === dil) ?? yorum.translations[0])?.content ?? '';
 }
 
 /**
@@ -1179,10 +1226,13 @@ export interface Yorum {
  * Ihtiyac dogunca genisletilir.
  */
 function dogrulanmisYorum(yanit: AiInsightResponse): Yorum {
-  if (yanit.id === undefined || !yanit.content || !yanit.createdAt) {
+  const ceviriler = (yanit.translations ?? []).filter(
+    (c): c is { language: string; content: string } => Boolean(c.language && c.content),
+  );
+  if (yanit.id === undefined || ceviriler.length === 0 || !yanit.createdAt) {
     throw new Error('Sunucudan eksik yorum yaniti alindi.');
   }
-  return { id: yanit.id, content: yanit.content, createdAt: yanit.createdAt };
+  return { id: yanit.id, translations: ceviriler, createdAt: yanit.createdAt };
 }
 
 export interface YorumSayfasi {
@@ -1424,6 +1474,9 @@ export function useDeleteMeasurement() {
 /** Gizlilik seviyesi (#294): geçmiş ve rekorların başkalarına görünürlüğü. */
 export type GizlilikSeviyesi = components['schemas']['PrivacyLevel'];
 
+/** Antrenman hedefi (#444): AI yorumunun baglamina girer. `null` = secilmemis. */
+export type AntrenmanHedefi = components['schemas']['TrainingGoal'];
+
 /** Kullanicinin kendi profili (#280): yas sunucunun hesabidir, istemci dogum tarihinden hesaplamaz. */
 export interface Profil {
   username: string;
@@ -1433,6 +1486,7 @@ export interface Profil {
   hasAvatar: boolean;
   avatarVersion: number | null;
   privacyLevel: GizlilikSeviyesi;
+  trainingGoal: AntrenmanHedefi | null;
 }
 
 function dogrulanmisProfil(yanit: ProfileResponse): Profil {
@@ -1447,6 +1501,7 @@ function dogrulanmisProfil(yanit: ProfileResponse): Profil {
     hasAvatar: yanit.hasAvatar,
     avatarVersion: yanit.avatarVersion ?? null,
     privacyLevel: yanit.privacyLevel,
+    trainingGoal: yanit.trainingGoal ?? null,
   };
 }
 

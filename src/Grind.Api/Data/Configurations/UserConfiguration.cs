@@ -21,6 +21,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasDefaultValue(PrivacyLevel.Kisitli)
             .IsRequired();
 
+        // Nullable: "hedef seçilmemiş" gerçek bir durum, varsayılan bir hedef uydurmuyoruz (#444).
+        builder.Property(u => u.TrainingGoal)
+            .HasConversion(new EnumToStringConverter<TrainingGoal>())
+            .HasMaxLength(20);
+
         builder.HasIndex(u => u.Username).IsUnique();
 
         builder.ToTable(t => t.HasCheckConstraint(

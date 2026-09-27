@@ -10,7 +10,8 @@ public class AiInsightRepository(AppDbContext context)
 {
     public Task<AiInsight?> GetOwnedByIdAsync(
         long id, long userId, CancellationToken cancellationToken = default)
-        => Set.FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId, cancellationToken);
+        => Set.Include(a => a.Translations)
+            .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId, cancellationToken);
 
     public async Task<(IReadOnlyList<AiInsight> Items, int TotalCount)> GetPageAsync(
         long userId,
@@ -42,6 +43,7 @@ public class AiInsightRepository(AppDbContext context)
 
         var items = await query
             .AsNoTracking()
+            .Include(a => a.Translations)
             .OrderByDescending(a => a.CreatedAt)
             .ThenByDescending(a => a.Id)
             .Skip(skip)

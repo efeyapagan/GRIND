@@ -45,6 +45,12 @@ public class User
     /// </summary>
     public DateTime? NotificationsSeenAt { get; set; }
 
+    /// <summary>
+    /// Antrenman hedefi (#444); <c>null</c> = seçilmemiş. Bugünkü tek kullanıcısı AI yorumudur:
+    /// seçiliyse prompt'a girer. <c>PUT /api/settings/training-goal</c> ile değiştirilir.
+    /// </summary>
+    public TrainingGoal? TrainingGoal { get; set; }
+
     public ICollection<Exercise> Exercises { get; set; } = [];
     public ICollection<WorkoutTemplate> WorkoutTemplates { get; set; } = [];
     public ICollection<WorkoutSession> WorkoutSessions { get; set; } = [];

@@ -21,6 +21,7 @@
     "./lib/profilFotografi": "./src/lib/profilFotografi.ts",
     "./lib/rir": "./src/lib/rir.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",
+    "./lib/sablonOzeti": "./src/lib/sablonOzeti.ts",
     "./lib/agirlikIbaresi": "./src/lib/agirlikIbaresi.ts",
     "./lib/apiErrors": "./src/lib/apiErrors.ts",
     "./lib/arkadasSiralamasi": "./src/lib/arkadasSiralamasi.ts",
@@ -32,8 +33,10 @@
     "./lib/siralama": "./src/lib/siralama.ts",
     "./lib/takip": "./src/lib/takip.ts",
     "./lib/takvim": "./src/lib/takvim.ts",
+    "./lib/yorumIcerigi": "./src/lib/yorumIcerigi.ts",
     "./lib/zorlukKadrani": "./src/lib/zorlukKadrani.ts",
     "./i18n": "./src/i18n/i18n.ts",
+    "./i18n/dil": "./src/i18n/dil.ts",
     "./i18n/tr": "./src/i18n/tr.ts",
     "./i18n/en": "./src/i18n/en.ts"
   },

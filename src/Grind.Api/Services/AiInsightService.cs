@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Common;
+using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.Insight;
 using Grind.Api.Models.Dtos.Stats;
 using Grind.Api.Models.Entities;
@@ -23,6 +24,7 @@ public class AiInsightService(
     IAiInsightProvider provider,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
+    IUserRepository userRepository,
     TimeProvider timeProvider) : IAiInsightService
 {
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
@@ -59,11 +61,19 @@ public class AiInsightService(
             throw new ValidationException(NothingToInterpret);
         }
 
+        // Hedef, JWT'den DEĞİL veritabanından okunur (CLAUDE.md JWT kararı): kullanıcı hedefini
+        // değiştirdiğinde bir sonraki yorum yeni hedefe göre yazılmalı.
+        var hedef = (await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken))?.TrainingGoal;
+
         // Buradan sonrası ÜCRETLİ: isteğin belirteci değil None (spec Karar 7). İstemci koparsa parası
         // ödenmiş yanıt yine saklanır; iş, (MaxRetries + 1) × TimeoutSeconds ile sınırlıdır — dağıtılan
         // varsayılanlarla yaklaşık 6 dakika (bkz. Services/Ai/DependencyInjection.cs).
+        var diller = InsightLanguages.All;
+
         var completion = await provider.CompleteAsync(
-            AiInsightPrompt.Instructions, ExportTextFormatter.Format(export), CancellationToken.None);
+            AiInsightPrompt.Build(hedef, diller),
+            ExportTextFormatter.Format(export, ExportTextOptions.ForAi),
+            CancellationToken.None);
 
         var insight = new AiInsight
         {
@@ -71,11 +81,13 @@ public class AiInsightService(
             Kind = AiInsightKind.Insight,
             RangeFrom = from,
             RangeTo = to,
-            Content = completion.Content,
             Model = completion.Model,
             TokensUsed = completion.TokensUsed,
             EstimatedCostUsd = completion.EstimatedCostUsd,
-            CreatedAt = Now()
+            CreatedAt = Now(),
+            Translations = AiInsightSections.Split(completion.Content, diller)
+                .Select(bolum => new AiInsightTranslation { Language = bolum.Key, Content = bolum.Value })
+                .ToList()
         };
 
         repository.Add(insight);
@@ -142,7 +154,10 @@ public class AiInsightService(
         insight.SetEntryId,
         insight.RangeFrom,
         insight.RangeTo,
-        insight.Content,
+        insight.Translations
+            .OrderBy(t => t.Language, StringComparer.Ordinal)
+            .Select(t => new AiInsightTranslationResponse(t.Language, t.Content))
+            .ToList(),
         insight.Model,
         insight.TokensUsed,
         insight.EstimatedCostUsd,

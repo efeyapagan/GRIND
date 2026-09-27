@@ -8,6 +8,17 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn(), canGoBack: () => false }),
 }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
+jest.mock('../components/YorumDiliSecici', () => {
+  const { Pressable, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => (
+      <Pressable accessibilityRole="button" accessibilityLabel="Yorum dili">
+        <Text>🇹🇷</Text>
+      </Pressable>
+    ),
+  };
+});
 jest.mock('@grind/shared/pageTitle', () => ({ useHeaderTitle: () => 'Başlık' }));
 // Dinlenme gostergesi RestTimerProvider ister; bu testlerin konusu degil.
 jest.mock('../components/DinlenmeKabugu', () => ({ DinlenmeGostergesi: () => null }));
@@ -72,4 +83,25 @@ test('okunmamis yoksa ya da sayi gelmediyse rozet cizilmez', async () => {
 
   expect(screen.queryByTestId('zil-rozeti')).toBeNull();
   expect(screen.getByLabelText('Bildirimler')).toBeTruthy();
+});
+
+/**
+ * #199: GRINDY ekraninda sag ustteki "GRIND" yazisinin yerini yorum dilinin bayragi alir --
+ * kullanici yorumun dilini oradan degistirir.
+ */
+test('GRINDY ekraninda GRIND yazisi yerine bayrak vardir', async () => {
+  mockPathname = '/insights';
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByText('GRIND')).toBeNull();
+  expect(screen.getByLabelText('Yorum dili')).toBeTruthy();
+});
+
+/** AYIRT EDICI: bayrak yalnizca o ekranda; diger ekranlarda "GRIND" durur. */
+test('diger ekranlarda bayrak yoktur', async () => {
+  mockPathname = '/templates';
+  await render(<KabukBaslik />);
+
+  expect(screen.getByText('GRIND')).toBeTruthy();
+  expect(screen.queryByLabelText('Yorum dili')).toBeNull();
 });

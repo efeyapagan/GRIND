@@ -10,7 +10,22 @@ import {
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import InsightsScreen from '../../../app/(tabs)/insights';
 
+let mockYorumDili = 'tr';
+jest.mock('../../../src/ui/YorumDiliContext', () => ({
+  useYorumDili: () => ({ yorumDili: mockYorumDili, yorumDiliniSec: jest.fn() }),
+}));
+
+const mockBasliklar: string[] = [];
+jest.mock('@grind/shared/pageTitle', () => ({
+  ...jest.requireActual('@grind/shared/pageTitle'),
+  usePageTitle: (baslik: string) => {
+    mockBasliklar.push(baslik);
+  },
+}));
+
 jest.mock('@grind/shared/api/queries', () => ({
+  // Saf bir yardimci: sahtesi gercegini taklit etmek yerine gercegi kullanilir.
+  yorumMetni: jest.requireActual('@grind/shared/api/queries').yorumMetni,
   useGenerateInsight: jest.fn(),
   useDeleteInsight: jest.fn(),
   useInfiniteInsights: jest.fn(),
@@ -22,10 +37,15 @@ const useDeleteInsightMock = useDeleteInsight as jest.Mock;
 const useInfiniteInsightsMock = useInfiniteInsights as jest.Mock;
 const useInsightGenerationStateMock = useInsightGenerationState as jest.Mock;
 
-function ornekYorum(gecersizler: Partial<YorumSayfasi['items'][number]> = {}) {
+function ornekYorum(
+  gecersizler: Partial<YorumSayfasi['items'][number]> = {},
+): YorumSayfasi['items'][number] {
   return {
     id: 1,
-    content: 'Bench Press hacminde son iki haftada artış var.',
+    translations: [
+      { language: 'tr', content: 'Bench Press hacminde son iki haftada artış var.' },
+      { language: 'en', content: 'Bench Press volume rose over the last two weeks.' },
+    ],
     createdAt: '2026-09-14T10:00:00Z',
     ...gecersizler,
   };
@@ -65,6 +85,67 @@ beforeEach(() => {
   useDeleteInsightMock.mockReturnValue({ mutate: jest.fn() });
   useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([], { totalPages: 0 })]));
   useInsightGenerationStateMock.mockReturnValue({ uretiliyor: false, iptalEt: jest.fn() });
+  mockYorumDili = 'tr';
+  mockBasliklar.length = 0;
+});
+
+// ---- Cok dilli yorum (#199) ----
+
+/**
+ * #199 kullanici karari: ekranin basligi artik yalnizca "GRINDY". Baslik basligi KABUK cizer,
+ * bu ekran degil -- bu yuzden saglayiciya ne verildigi sinanir.
+ */
+test('ekran basligi GRINDY', async () => {
+  await ekraniOlustur();
+
+  expect(mockBasliklar).toContain('GRINDY');
+});
+
+test('secili yorum dilinin cevirisi gosterilir', async () => {
+  mockYorumDili = 'en';
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Bench Press volume rose over the last two weeks.')).toBeTruthy();
+  expect(screen.queryByText('Bench Press hacminde son iki haftada artış var.')).toBeNull();
+});
+
+/**
+ * KRITIK: her uretim zaten butun dilleri icerir, bu yuzden dil degistirmek YENI BIR ISTEK
+ * ATMAZ -- yeni istek yeni bir LLM ucreti demek olurdu.
+ */
+test('dil degistirmek yeni istek atmaz', async () => {
+  const sonuc = sonsuzSorguSonucu([sayfa([ornekYorum()])]);
+  useInfiniteInsightsMock.mockReturnValue(sonuc);
+  mockYorumDili = 'en';
+
+  await ekraniOlustur();
+
+  // Dil, SORGUNUN bir parcasi olmamali: olsaydi her dil degisimi yeni bir istek (ve yeni bir
+  // onbellek anahtari) uretirdi. Yorumlar zaten butun dilleri tasiyor.
+  expect(useInfiniteInsightsMock.mock.calls.length).toBeGreaterThan(0);
+  for (const cagri of useInfiniteInsightsMock.mock.calls) {
+    expect(JSON.stringify(cagri)).not.toContain('language');
+  }
+  expect(sonuc.fetchNextPage).not.toHaveBeenCalled();
+});
+
+/**
+ * AYIRT EDICI: #199 oncesi uretilmis kayitlarda yalnizca Turkce ceviri var. Kullanici Ingilizce
+ * secmis olsa da eldeki metin gosterilir -- bos bir kart gostermek yorumu kaybetmek olurdu.
+ */
+test('secili dilin cevirisi yoksa eldeki ceviri gosterilir', async () => {
+  mockYorumDili = 'en';
+  useInfiniteInsightsMock.mockReturnValue(
+    sonsuzSorguSonucu([
+      sayfa([ornekYorum({ translations: [{ language: 'tr', content: 'Eski Türkçe yorum.' }] })]),
+    ]),
+  );
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Eski Türkçe yorum.')).toBeTruthy();
 });
 
 test('GRINDY maskotu erisilebilir adiyla gorunur (issue #239)', async () => {
@@ -105,8 +186,8 @@ test('Vazgec devam eden uretimin beklemesini durdurur', async () => {
 test('iki sayfanin yorumlari birlikte, ust uste yazmadan listelenir', async () => {
   useInfiniteInsightsMock.mockReturnValue(
     sonsuzSorguSonucu([
-      sayfa([ornekYorum({ id: 1, content: 'Sayfa1Yorum' })], { page: 1, totalPages: 2 }),
-      sayfa([ornekYorum({ id: 2, content: 'Sayfa2Yorum' })], { page: 2, totalPages: 2 }),
+      sayfa([ornekYorum({ id: 1, translations: [{ language: 'tr', content: 'Sayfa1Yorum' }] })], { page: 1, totalPages: 2 }),
+      sayfa([ornekYorum({ id: 2, translations: [{ language: 'tr', content: 'Sayfa2Yorum' }] })], { page: 2, totalPages: 2 }),
     ]),
   );
   await ekraniOlustur();
@@ -119,7 +200,7 @@ test('listenin sonuna gelinince (onEndReached) hasNextPage true iken fetchNextPa
   const sonuc = sonsuzSorguSonucu([sayfa([ornekYorum()], { page: 1, totalPages: 2 })]);
   useInfiniteInsightsMock.mockReturnValue(sonuc);
   await ekraniOlustur();
-  await screen.findByText(ornekYorum().content);
+  await screen.findByText(ornekYorum().translations[0].content);
 
   fireEvent(screen.getByTestId('yorum-liste'), 'endReached');
 
@@ -130,9 +211,74 @@ test('son sayfadaysa (hasNextPage false) onEndReached tetiklense de fetchNextPag
   const sonuc = sonsuzSorguSonucu([sayfa([ornekYorum()], { page: 1, totalPages: 1 })]);
   useInfiniteInsightsMock.mockReturnValue(sonuc);
   await ekraniOlustur();
-  await screen.findByText(ornekYorum().content);
+  await screen.findByText(ornekYorum().translations[0].content);
 
   fireEvent(screen.getByTestId('yorum-liste'), 'endReached');
 
   expect(sonuc.fetchNextPage).not.toHaveBeenCalled();
+});
+
+// ---- Yapisal gosterim (#454) ----
+
+const YAPISAL = JSON.stringify({
+  ozet: 'Düzenli gidiyorsun.',
+  basarilar: ['Bench Press rekoru'],
+  uyarilar: ['Çekiş hacmi düşük'],
+  tavsiyeler: ['Haftaya bir kürek günü ekle'],
+});
+
+function yapisalYorum() {
+  return ornekYorum({ translations: [{ language: 'tr', content: YAPISAL }] });
+}
+
+test('yapisal yorumun ozeti ve maddeleri ayri ayri cizilir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([yapisalYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Düzenli gidiyorsun.')).toBeTruthy();
+  expect(screen.getByText('Bench Press rekoru')).toBeTruthy();
+  expect(screen.getByText('Çekiş hacmi düşük')).toBeTruthy();
+  expect(screen.getByText('Haftaya bir kürek günü ekle')).toBeTruthy();
+});
+
+/** Basliklar katalogdan gelir; ham JSON anahtarlari ("basarilar") ekranda gorunmez. */
+test('ham json ekranda gorunmez', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([yapisalYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.queryByText(YAPISAL)).toBeNull();
+  expect(screen.queryByText(/basarilar/)).toBeNull();
+});
+
+/** KRITIK: #454 oncesi kayitlar markdown; yeniden uretilmeyecekler, oldugu gibi okunmali. */
+test('eski markdown yorum duz metin olarak cizilir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(
+    sonsuzSorguSonucu([
+      sayfa([ornekYorum({ translations: [{ language: 'tr', content: '**Genel** gidişat iyi.' }] })]),
+    ]),
+  );
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('**Genel** gidişat iyi.')).toBeTruthy();
+});
+
+/** KRITIK: bozuk JSON'da yorum kaybolmaz -- ucreti odenmis metin gosterilir. */
+test('bozuk json yorumu kaybetmez', async () => {
+  useInfiniteInsightsMock.mockReturnValue(
+    sonsuzSorguSonucu([sayfa([ornekYorum({ translations: [{ language: 'tr', content: '{"ozet": "yarim' }] })])]),
+  );
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('{"ozet": "yarim')).toBeTruthy();
+});
+
+/** Kullanici istegi: aciklamanin altinda yorumun Ingilizcede daha iyi calistigi notu. */
+test('aciklamanin altinda ingilizce notu vardir', async () => {
+  await ekraniOlustur();
+
+  expect(screen.getByTestId('yorumlar-ingilizce-notu')).toBeTruthy();
 });

@@ -10,4 +10,7 @@ public interface ISettingsService
 
     /// <summary>Antrenman geçmişi ve rekorların başkalarına görünürlüğünü ayarlar (#294).</summary>
     Task SetPrivacyLevelAsync(UpdatePrivacyLevelRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Antrenman hedefini ayarlar; <c>null</c> hedefi kaldırır (#444).</summary>
+    Task SetTrainingGoalAsync(UpdateTrainingGoalRequest request, CancellationToken cancellationToken = default);
 }

@@ -29,7 +29,8 @@ public class AiInsightServiceTests
     /// Çağrıları kaydeden sahte sağlayıcı. Çağrı anında bekleyen izlenmiş değişiklik olup olmadığını da
     /// kaydeder: LLM beklenirken yazma bekliyorsa transaction/kilit sınırı yanlış yerdedir (spec Karar 6).
     /// </summary>
-    private sealed class SahteSaglayici(AppDbContext context, Exception? hata = null) : IAiInsightProvider
+    private sealed class SahteSaglayici(
+        AppDbContext context, Exception? hata = null, string? icerik = null) : IAiInsightProvider
     {
         public int CagriSayisi { get; private set; }
         public string? Talimat { get; private set; }
@@ -45,10 +46,16 @@ public class AiInsightServiceTests
             CagriAnindaBekleyenDegisiklikVardi = context.ChangeTracker.HasChanges();
 
             return hata is null
-                ? Task.FromResult(new AiCompletion("Güzel gidiyorsun.", "claude-opus-5", 1500, 0.0123m))
+                ? Task.FromResult(new AiCompletion(
+                    icerik ?? VarsayilanIcerik, "claude-opus-5", 1500, 0.0123m))
                 : Task.FromException<AiCompletion>(hata);
         }
     }
+
+    /// <summary>Sağlayıcının varsayılan yanıtı: #199'dan beri her dil ayrı bir bölüm.</summary>
+    private static readonly string VarsayilanIcerik =
+        $"{AiInsightSections.Marker("tr")}\nGüzel gidiyorsun.\n" +
+        $"{AiInsightSections.Marker("en")}\nYou are doing well.";
 
     /// <summary>TR 12 Mart 20:00 (UTC 17:00): "bugün" 12 Mart, varsayılan aralık 11 Şubat – 12 Mart.</summary>
     private static readonly DateTime Simdi = new(2026, 3, 12, 17, 0, 0, DateTimeKind.Utc);
@@ -87,7 +94,8 @@ public class AiInsightServiceTests
             saat);
 
         return new AiInsightService(
-            new AiInsightRepository(context), export, provider, new UnitOfWork(context), currentUser, saat);
+            new AiInsightRepository(context), export, provider, new UnitOfWork(context), currentUser,
+            new UserRepository(context), saat);
     }
 
     private static void SeedSession(AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc)
@@ -103,7 +111,11 @@ public class AiInsightServiceTests
     }
 
     private static AiInsight NewInsight(User user, DateTime createdAt, AiInsightKind kind = AiInsightKind.Insight)
-        => new() { User = user, Kind = kind, Content = "yorum", Model = "test-model", CreatedAt = createdAt };
+        => new()
+        {
+            User = user, Kind = kind, Model = "test-model", CreatedAt = createdAt,
+            Translations = [new AiInsightTranslation { Language = "tr", Content = "yorum" }]
+        };
 
     private static Task<int> SatirSayisiAsync(AppDbContext context, long userId)
         => context.Set<AiInsight>().CountAsync(a => a.UserId == userId);
@@ -133,7 +145,9 @@ public class AiInsightServiceTests
             Assert.Null(satir.SetEntryId);
             Assert.Equal(new DateOnly(2026, 2, 11), satir.RangeFrom);
             Assert.Equal(new DateOnly(2026, 3, 12), satir.RangeTo);
-            Assert.Equal("Güzel gidiyorsun.", satir.Content);
+            Assert.Equal(
+                "Güzel gidiyorsun.",
+                (await context.Set<AiInsightTranslation>().SingleAsync(c => c.AiInsightId == satir.Id && c.Language == "tr")).Content);
             Assert.Equal("claude-opus-5", satir.Model);
             Assert.Equal(1500, satir.TokensUsed);
             Assert.Equal(0.0123m, satir.EstimatedCostUsd);
@@ -156,7 +170,9 @@ public class AiInsightServiceTests
 
             await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
 
-            Assert.Equal(AiInsightPrompt.Instructions, saglayici.Talimat);
+            // #199'dan beri talimatın SONUNDA dil bölümü var; sabitlenen şey temel talimatın
+            // değişmeden başta durması (bölümün kendisi AiInsightPromptTests'te).
+            Assert.StartsWith(AiInsightPrompt.Instructions, saglayici.Talimat);
             Assert.Contains("Aralık: 2026-02-11 – 2026-03-12", saglayici.Veri);
             Assert.Contains(exercise.Name, saglayici.Veri);
         }
@@ -311,7 +327,7 @@ public class AiInsightServiceTests
             context.ChangeTracker.Clear();
             var service = CreateService(context, user.Id, new SahteSaglayici(context));
 
-            Assert.Equal("yorum", (await service.GetByIdAsync(insight.Id)).Content);
+            Assert.Equal("yorum", Assert.Single((await service.GetByIdAsync(insight.Id)).Translations).Content);
 
             await service.DeleteAsync(insight.Id);
 
@@ -450,6 +466,108 @@ public class AiInsightServiceTests
             await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
 
             Assert.Equal(1, saglayici.CagriSayisi);
+        }
+    }
+
+    // ---- Çok dilli üretim (#199) ----
+
+    /// <summary>
+    /// Bir üretim TEK LLM çağrısıdır ama her dil için bir çeviri satırı bırakır. İki ayrı çağrı
+    /// maliyeti ikiye katlardı; çağrı sayısı bu yüzden burada da sabitleniyor.
+    /// </summary>
+    [Fact]
+    public async Task Uretim_tek_cagriyla_her_dil_icin_bir_ceviri_saklar()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var saglayici = new SahteSaglayici(context);
+            var yanit = await CreateService(context, user.Id, saglayici).GenerateAsync(new GenerateInsightRequest());
+
+            Assert.Equal(1, saglayici.CagriSayisi);
+
+            context.ChangeTracker.Clear();
+            var ceviriler = await context.Set<AiInsightTranslation>()
+                .Where(c => c.AiInsightId == yanit.Id)
+                .ToDictionaryAsync(c => c.Language, c => c.Content);
+
+            Assert.Equal("Güzel gidiyorsun.", ceviriler["tr"]);
+            Assert.Equal("You are doing well.", ceviriler["en"]);
+        }
+    }
+
+    /// <summary>
+    /// KRİTİK: model bölüm işaretini yazmazsa yanıt ÇÖPE ATILMAZ. Çağrının parası ödenmiştir;
+    /// kullanıcı bir yorum görmeli, sıfır satır değil.
+    /// </summary>
+    [Fact]
+    public async Task Isaretsiz_yanit_kaybolmaz_tek_ceviri_olarak_saklanir()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var yanit = await CreateService(context, user.Id, new SahteSaglayici(context, icerik: "Düz metin."))
+                .GenerateAsync(new GenerateInsightRequest());
+
+            context.ChangeTracker.Clear();
+            var ceviri = await context.Set<AiInsightTranslation>().SingleAsync(c => c.AiInsightId == yanit.Id);
+
+            Assert.Equal("Düz metin.", ceviri.Content);
+        }
+    }
+
+    /// <summary>Çeviriler yorumun parçasıdır: yorum silinince arkada öksüz satır kalmaz (CASCADE).</summary>
+    [Fact]
+    public async Task Yorum_silinince_cevirileri_de_silinir()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var servis = CreateService(context, user.Id, new SahteSaglayici(context));
+            var yanit = await servis.GenerateAsync(new GenerateInsightRequest());
+            await servis.DeleteAsync(yanit.Id);
+
+            context.ChangeTracker.Clear();
+            Assert.Empty(await context.Set<AiInsightTranslation>().Where(c => c.AiInsightId == yanit.Id).ToListAsync());
+        }
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ: haftalık sınır ÜRETİM sayar, çeviri değil. İki dilli iki üretim dört çeviri
+    /// satırı bırakır -- sınır satır sayısaydı kullanıcı haftada bir üretimde kalırdı.
+    /// </summary>
+    [Fact]
+    public async Task Haftalik_sinir_ceviri_degil_uretim_sayar()
+    {
+        var (context, user, exercise, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            SeedSession(context, user, exercise, Simdi.AddDays(-1));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var servis = CreateService(context, user.Id, new SahteSaglayici(context));
+            await servis.GenerateAsync(new GenerateInsightRequest());
+            await servis.GenerateAsync(new GenerateInsightRequest());
+
+            context.ChangeTracker.Clear();
+            // Yalnızca BU kullanıcının satırları: veritabanında başka kayıtlar da olabilir.
+            Assert.Equal(4, await context.Set<AiInsightTranslation>()
+                .CountAsync(c => c.AiInsight.UserId == user.Id));
+            await Assert.ThrowsAsync<RateLimitExceededException>(
+                () => servis.GenerateAsync(new GenerateInsightRequest()));
         }
     }
 }
