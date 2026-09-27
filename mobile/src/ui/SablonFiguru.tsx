@@ -1,9 +1,12 @@
+import { useId } from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, FeGaussianBlur, Filter, G, Line, Path, Rect } from 'react-native-svg';
 import type { EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useRenkPaleti } from './renkler';
 
 const CIZGI = 8;
+/** Figurun cok hafif bulanikligi (viewBox birimi; 112 px'lik figurde ~1,5 px). */
+const BULANIKLIK = 1.3;
 
 /** Govde parcalari ayni kalin, yuvarlak uclu cizgi -- piktogram gorunumu. */
 function Uzuv({ d }: { d: string }) {
@@ -79,12 +82,15 @@ const FIGURLER: Record<EgzersizKategorisi, () => React.JSX.Element> = {
 
 /**
  * #439: sablon kartinin arkasindaki silik sporcu figuru; sablonun baskin kategorisine gore secilir.
+ * Referanstaki gibi cok hafif bulanik cizilir: arka planda kalsin, metinle yarismasin.
  * Saf dekorasyon: dokunmayi yutmaz, erisilebilirlik agacina girmez. Renk `fg`, dusuk opaklikla --
  * iki temada da zeminden hafifce ayrilir, metnin okunurlugunu bozmaz.
  */
 export default function SablonFiguru({ kategori, boyut }: { kategori: EgzersizKategorisi; boyut: number }) {
   const palet = useRenkPaleti();
   const Figur = FIGURLER[kategori];
+  // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir (Parilti ile ayni).
+  const filtreId = `figur${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <View
       testID={`sablon-figuru-${kategori}`}
@@ -93,7 +99,12 @@ export default function SablonFiguru({ kategori, boyut }: { kategori: EgzersizKa
       importantForAccessibility="no-hide-descendants"
     >
       <Svg width={boyut} height={boyut} viewBox="0 0 100 100">
-        <G stroke={palet.fg} fill={palet.fg} opacity={0.22}>
+        <Defs>
+          <Filter id={filtreId}>
+            <FeGaussianBlur stdDeviation={BULANIKLIK} />
+          </Filter>
+        </Defs>
+        <G stroke={palet.fg} fill={palet.fg} opacity={0.22} filter={`url(#${filtreId})`}>
           <Figur />
         </G>
       </Svg>
