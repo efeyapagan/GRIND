@@ -25,18 +25,19 @@ jobs:
 
     # Duman testleri gercek bir PostgreSQL istiyor. docker-compose.yml ile ayni
     # imaj, ayni kimlik bilgileri, ayni host portu (5433) — testlerdeki baglanti
-    # dizesi birebir calissin diye.
+    # dizesi birebir calissin diye. Veritabani adi `grind_test` (#459): testler
+    # gelistirme verisinin icine yazmaz, yerelde de CI'da da ayni ad kullanilir.
     services:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: grind
+          POSTGRES_DB: grind_test
           POSTGRES_USER: grind
           POSTGRES_PASSWORD: grind_dev_password
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U grind -d grind"
+          --health-cmd "pg_isready -U grind -d grind_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -44,7 +45,7 @@ jobs:
     env:
       # user-secrets CI'da yok; ASP.NET Core yapilandirmasi ortam degiskenlerinde
       # ':' yerine '__' kullanir.
-      ConnectionStrings__Postgres: "Host=localhost;Port=5433;Database=grind;Username=grind;Password=grind_dev_password"
+      ConnectionStrings__Postgres: "Host=localhost;Port=5433;Database=grind_test;Username=grind;Password=grind_dev_password"
 
     steps:
       - name: Depoyu al
