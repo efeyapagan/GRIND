@@ -1,49 +1,80 @@
+using System.Text.Json;
 using Grind.Api.Services.Ai;
 
 namespace Grind.Tests.Services.Ai;
 
 /// <summary>
-/// #199: tek LLM çağrısı her dili ayrı bir bölüm olarak yazar; bu sınıf yanıtı dillere böler. Saf:
-/// veritabanı, saat, ağ yok.
+/// #463: tek LLM çağrısı artık TEK bir JSON döner -- dış anahtarlar dil kodları, değerler o dilin
+/// yorum nesnesi. Eski "bölüm işareti" düzeninin yerini bu aldı: metin içinde işaret aramak
+/// kırılgandı ve bozulduğunda kullanıcıya ham JSON gösteriyordu (#463 madde 3).
 ///
-/// Yanıt bir MODEL ÇIKTISIDIR, sözleşme değil — model işareti bozabilir, atlayabilir, fazladan
-/// metin ekleyebilir. Bu yüzden testlerin çoğu "model yanlış yaptığında ne oluyor" sorusunu sorar:
-/// ücret çağrı anında doğduğu için hiçbir durumda yorum KAYBEDİLMEMELİ.
+/// Saf: veritabanı, saat, ağ yok. Testlerin çoğu "model yanlış yaptığında ne oluyor" sorusunu
+/// sorar: ücret çağrı anında doğduğu için hiçbir bozulma yorumu KAYBETTİRMEMELİ.
 /// </summary>
 public class AiInsightSectionsTests
 {
     private static readonly string[] Diller = ["tr", "en"];
 
-    private static string Bolumlu(params (string Dil, string Metin)[] bolumler) =>
-        string.Join("\n", bolumler.Select(b => $"{AiInsightSections.Marker(b.Dil)}\n{b.Metin}"));
+    private static string Yorum(string ozet) =>
+        $$"""{"ozet":"{{ozet}}","basarilar":[],"uyarilar":[],"tavsiyeler":["x"]}""";
+
+    private static string TekJson(params (string Dil, string Ozet)[] bolumler) =>
+        "{" + string.Join(",", bolumler.Select(b => $"\"{b.Dil}\":{Yorum(b.Ozet)}")) + "}";
+
+    private static string Ozetini(string icerik) =>
+        JsonDocument.Parse(icerik).RootElement.GetProperty("ozet").GetString()!;
 
     [Fact]
-    public void Isaretli_bolumler_dile_gore_ayrilir()
+    public void Her_dil_kendi_json_nesnesi_olarak_ayrilir()
     {
-        var sonuc = AiInsightSections.Split(
-            Bolumlu(("tr", "Güzel gidiyorsun."), ("en", "You are doing well.")), Diller);
+        var sonuc = AiInsightSections.Split(TekJson(("tr", "İyi"), ("en", "Good")), Diller);
 
-        Assert.Equal("Güzel gidiyorsun.", sonuc["tr"]);
-        Assert.Equal("You are doing well.", sonuc["en"]);
+        Assert.Equal("İyi", Ozetini(sonuc["tr"]));
+        Assert.Equal("Good", Ozetini(sonuc["en"]));
     }
 
-    /// <summary>Model bölümleri istediğimiz sırada yazmayabilir; eşleşme sıraya değil işarete bakar.</summary>
+    /// <summary>Saklanan icerik ALT nesnedir: istemci ayristiricisi (yorumuCozumle) onu bekler.</summary>
     [Fact]
-    public void Bolum_sirasi_farkli_olsa_da_dogru_eslesir()
+    public void Saklanan_icerik_dil_sarmalayicisini_TASIMAZ()
     {
-        var sonuc = AiInsightSections.Split(
-            Bolumlu(("en", "You are doing well."), ("tr", "Güzel gidiyorsun.")), Diller);
+        var sonuc = AiInsightSections.Split(TekJson(("tr", "İyi")), Diller);
 
-        Assert.Equal("Güzel gidiyorsun.", sonuc["tr"]);
-        Assert.Equal("You are doing well.", sonuc["en"]);
+        Assert.DoesNotContain("\"tr\"", sonuc["tr"], StringComparison.Ordinal);
+    }
+
+    /// <summary>Model JSON'u ``` bloguna sarabilir; bu bozuk bir yanit degil.</summary>
+    [Fact]
+    public void Kod_blogu_icindeki_json_da_cozumlenir()
+    {
+        var sonuc = AiInsightSections.Split("```json\n" + TekJson(("tr", "İyi")) + "\n```", Diller);
+
+        Assert.Equal("İyi", Ozetini(sonuc["tr"]));
+    }
+
+    /// <summary>Istenmeyen bir dil yok sayilir: modelin fazlaligi veritabanina girmez.</summary>
+    [Fact]
+    public void Istenmeyen_dil_yok_sayilir()
+    {
+        var sonuc = AiInsightSections.Split(TekJson(("tr", "İyi"), ("de", "Gut"), ("en", "Good")), Diller);
+
+        Assert.Equal(["tr", "en"], sonuc.Keys.Order().Reverse());
+    }
+
+    /// <summary>Eksik bir dil UYDURULMAZ: o dil sonucta hic yer almaz.</summary>
+    [Fact]
+    public void Eksik_dil_uydurulmaz()
+    {
+        var sonuc = AiInsightSections.Split(TekJson(("tr", "İyi")), Diller);
+
+        Assert.Equal(["tr"], sonuc.Keys);
     }
 
     /// <summary>
-    /// KRİTİK: model işareti hiç yazmazsa yanıt çöpe atılmaz — tüm metin İLK dile yazılır. Çağrının
+    /// KRİTİK: JSON hiç ayrışmazsa yanıt çöpe atılmaz -- tüm metin İLK dile yazılır. Çağrının
     /// parası ödenmiştir; kullanıcıya boş bir yorum göstermek en kötü sonuçtur.
     /// </summary>
     [Fact]
-    public void Isaret_yoksa_tum_metin_ilk_dile_yazilir()
+    public void Bozuk_json_ilk_dile_duz_metin_olarak_yazilir()
     {
         var sonuc = AiInsightSections.Split("Güzel gidiyorsun.", Diller);
 
@@ -51,42 +82,22 @@ public class AiInsightSectionsTests
         Assert.Single(sonuc);
     }
 
-    /// <summary>Eksik bir dil UYDURULMAZ: o dil sonuçta hiç yer almaz, boş metinle doldurulmaz.</summary>
+    /// <summary>Gecerli JSON ama dil anahtari yoksa yine kaybedilmez: duz metin gibi saklanir.</summary>
     [Fact]
-    public void Eksik_dil_uydurulmaz()
+    public void Dil_anahtari_olmayan_json_kaybolmaz()
     {
-        var sonuc = AiInsightSections.Split(Bolumlu(("tr", "Güzel gidiyorsun.")), Diller);
+        const string yanit = """{"ozet":"tek dilli dondu"}""";
 
-        Assert.Equal(["tr"], sonuc.Keys);
+        var sonuc = AiInsightSections.Split(yanit, Diller);
+
+        Assert.Equal(yanit, sonuc["tr"]);
     }
 
-    /// <summary>İstenmeyen bir dil işareti yok sayılır: modelin ürettiği fazlalık veritabanına girmez.</summary>
+    /// <summary>Bir dilin degeri nesne degilse (ornegin duz metin) o dil atlanir, digerleri kalir.</summary>
     [Fact]
-    public void Istenmeyen_dil_yok_sayilir()
+    public void Nesne_olmayan_dil_degeri_atlanir()
     {
-        var sonuc = AiInsightSections.Split(
-            Bolumlu(("tr", "Güzel."), ("de", "Gut."), ("en", "Good.")), Diller);
-
-        Assert.Equal(["tr", "en"], sonuc.Keys.Order().Reverse());
-        Assert.DoesNotContain("Gut.", string.Join("", sonuc.Values));
-    }
-
-    /// <summary>Bölümün kendi iç satır sonları (başlıklar, maddeler) korunur; yalnızca uçlar kırpılır.</summary>
-    [Fact]
-    public void Ic_satir_sonlari_korunur_uclar_kirpilir()
-    {
-        var sonuc = AiInsightSections.Split(
-            $"{AiInsightSections.Marker("tr")}\n\n## Özet\n- Madde\n\n", Diller);
-
-        Assert.Equal("## Özet\n- Madde", sonuc["tr"]);
-    }
-
-    /// <summary>Boş bir bölüm kaydedilmez: "başlık var, içerik yok" bir yorum değildir.</summary>
-    [Fact]
-    public void Bos_bolum_kaydedilmez()
-    {
-        var sonuc = AiInsightSections.Split(
-            Bolumlu(("tr", "   "), ("en", "Good.")), Diller);
+        var sonuc = AiInsightSections.Split($$"""{"tr":"duz metin","en":{{Yorum("Good")}}}""", Diller);
 
         Assert.Equal(["en"], sonuc.Keys);
     }

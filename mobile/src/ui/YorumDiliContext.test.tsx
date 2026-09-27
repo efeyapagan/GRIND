@@ -21,10 +21,11 @@ beforeEach(() => {
 });
 
 function Deneme() {
-  const { yorumDili, yorumDiliniSec } = useYorumDili();
+  const { yorumDili, yorumDiliniSec, hazir } = useYorumDili();
   return (
     <>
       <Text>{`dil:${yorumDili}`}</Text>
+      <Text>{`hazir:${hazir ? 'evet' : 'hayir'}`}</Text>
       <Pressable accessibilityRole="button" onPress={() => yorumDiliniSec('tr')}>
         <Text>tr yap</Text>
       </Pressable>
@@ -81,4 +82,30 @@ test('cihaz okunamazsa arayuz diline dusulur', async () => {
   await kur();
 
   expect(await screen.findByText('dil:en')).toBeTruthy();
+});
+
+/**
+ * #463: kart, birazdan degisecek bir dille cizilmemeli. Tercih SecureStore'dan asenkron geliyor;
+ * cozulene kadar tuketiciler "hazir degil" demeli, yoksa ilk kare arayuz diliyle cizilip sonra
+ * degisiyor -- kullanicinin "once JSON gordum, sonra duzeldi" dedigi titreme buydu.
+ */
+test('tercih cozulene kadar hazir degildir', async () => {
+  let cozumle: (deger: string | null) => void = () => {};
+  getItem.mockReturnValue(new Promise<string | null>((resolve) => { cozumle = resolve; }));
+
+  await kur();
+  expect(screen.getByText('hazir:hayir')).toBeTruthy();
+
+  await act(async () => cozumle('tr'));
+
+  expect(screen.getByText('hazir:evet')).toBeTruthy();
+  expect(screen.getByText('dil:tr')).toBeTruthy();
+});
+
+test('cihaz okunamazsa da hazir olunur', async () => {
+  getItem.mockRejectedValue(new Error('kilitli'));
+
+  await kur();
+
+  expect(await screen.findByText('hazir:evet')).toBeTruthy();
 });

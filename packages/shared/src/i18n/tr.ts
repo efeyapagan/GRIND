@@ -500,6 +500,7 @@ export const tr = {
     baslik: 'GRINDY ne diyor?',
     basligiKisa: 'GRINDY', // i18n-muaf: ürün adı her dilde aynı
     yorumDili: 'Yorum dili',
+    okunamadi: 'Bu yorum okunamadı. Yeni bir yorum istemeyi deneyebilirsin.',
     ingilizceNotu: 'GRINDY İngilizcede daha iyi çalışıyor; sağ üstteki bayraktan dili değiştirebilirsin.',
     basarilar: 'İyi gidenler',
     uyarilar: 'Dikkat',

@@ -31,14 +31,10 @@ public static class AiInsightPrompt
         Yalnızca verideki bilgilere dayan; sayı uydurma. Veri bir sonuç çıkarmaya yetmiyorsa bunu açıkça
         söyle. Tıbbi teşhis koyma; ağrı veya sakatlık notlarında bir uzmana danışmayı öner.
 
-        Yanıtı SADECE şu JSON nesnesi olarak ver; öncesine ya da sonrasına hiçbir şey yazma:
-        {"ozet": "...", "basarilar": ["..."], "uyarilar": ["..."], "tavsiyeler": ["..."]}
-        - "ozet": bir-iki cümlelik genel değerlendirme.
-        - "basarilar": iyi gidenler (rekorlar, düzenlilik, artan hacim).
-        - "uyarilar": dikkat edilmesi gerekenler (dengesizlik, düşüş, veri yetersizliği).
-        - "tavsiyeler": 2-4 somut, uygulanabilir öneri.
-        Her madde kendi başına okunabilen tek bir cümle olsun; madde içinde markdown kullanma.
-        Bir liste için söyleyecek bir şey yoksa onu boş dizi bırak.
+        HACİM KARŞILAŞTIRMASI: hacim = ağırlık × tekrar. Farklı kas grupları ve hareket kalıpları
+        (ör. Push ve Pull) doğaları gereği farklı mutlak yük taşır; aralarındaki ham kg farkına
+        bakıp "dengesizlik" ÇIKARMA. Dengeyi konuşacaksan set sayısı ya da sıklık üzerinden konuş.
+        Ham hacmi yalnızca AYNI hareketin zaman içindeki değişimi için kullan.
         """;
 
     /// <summary>
@@ -69,21 +65,36 @@ public static class AiInsightPrompt
     /// </summary>
     private static string LanguageSection(IReadOnlyList<string> languages)
     {
-        if (languages.Count <= 1)
-        {
-            var tek = languages.Count == 1 ? languages[0] : "tr";
-            return $"Yorumu {InsightLanguages.NameFor(tek)} yaz.";
-        }
+        var diller = languages.Count > 0 ? languages : ["tr"];
 
         var bolum = new StringBuilder(
-            "Aynı yorumu aşağıdaki dillerin HER BİRİ için ayrı ayrı yaz (çeviri değil, o dilde " +
-            "doğal bir metin). Her bölümün başına TAM OLARAK verilen işaret satırını koy; " +
-            "işaretlerin dışına hiçbir şey yazma:");
+            "Yanıtı SADECE tek bir JSON nesnesi olarak ver; öncesine ya da sonrasına hiçbir şey " +
+            "yazma. Dış anahtarlar dil kodlarıdır ve her değer o dildeki yorumdur:");
 
-        foreach (var dil in languages)
-        {
-            bolum.Append('\n').Append($"{AiInsightSections.Marker(dil)} -> sonrasını {InsightLanguages.NameFor(dil)} yaz.");
-        }
+        bolum.Append("\n{");
+        bolum.AppendJoin(
+            ", ",
+            diller.Select(d => $"\"{d}\": {{\"ozet\": \"...\", \"basarilar\": [\"...\"], " +
+                               $"\"uyarilar\": [\"...\"], \"tavsiyeler\": [\"...\"]}}"));
+        bolum.Append('}');
+
+        bolum.Append("\n- \"ozet\": bir-iki cümlelik genel değerlendirme.");
+        bolum.Append("\n- \"basarilar\": iyi gidenler (rekorlar, düzenlilik, ilerleme).");
+        bolum.Append("\n- \"uyarilar\": dikkat edilmesi gerekenler (düşüş, veri yetersizliği).");
+        bolum.Append("\n- \"tavsiyeler\": 2-4 somut, uygulanabilir öneri.");
+        bolum.Append(
+            "\nHer madde kendi başına okunabilen tek bir cümle olsun; madde içinde markdown " +
+            "kullanma. Bir liste için söyleyecek bir şey yoksa onu boş dizi bırak.");
+
+        bolum.Append("\n\nHer dil için metni O DİLDE doğal yaz; bir dilden diğerine kelime kelime çevirme.");
+        bolum.Append("\nDiller: ").AppendJoin(", ", diller.Select(d => $"\"{d}\" = {InsightLanguages.NameFor(d)}")).Append('.');
+
+        // #463 (kullanıcı kararı): bu terimlerin Türkçe karşılığı ya yok ya da salonda kimse
+        // kullanmıyor; model çevirmeye kalkınca metin okunmaz hâle geliyor.
+        bolum.Append(
+            "\nTürkçe metinde hareket adlarını (\"Bench Press\", \"Lat Pulldown\") ve antrenman " +
+            "terimlerini (Push, Pull, Legs, set, rep, RIR, PR) İNGİLİZCE bırak, ÇEVİRME. Cümleler " +
+            "Türkçe ve doğal olsun.");
 
         return bolum.ToString();
     }

@@ -12,7 +12,7 @@ import InsightsScreen from '../../../app/(tabs)/insights';
 
 let mockYorumDili = 'tr';
 jest.mock('../../../src/ui/YorumDiliContext', () => ({
-  useYorumDili: () => ({ yorumDili: mockYorumDili, yorumDiliniSec: jest.fn() }),
+  useYorumDili: () => ({ yorumDili: mockYorumDili, yorumDiliniSec: jest.fn(), hazir: true }),
 }));
 
 const mockBasliklar: string[] = [];
@@ -265,15 +265,19 @@ test('eski markdown yorum duz metin olarak cizilir', async () => {
   expect(screen.getByText('**Genel** gidişat iyi.')).toBeTruthy();
 });
 
-/** KRITIK: bozuk JSON'da yorum kaybolmaz -- ucreti odenmis metin gosterilir. */
-test('bozuk json yorumu kaybetmez', async () => {
+/**
+ * KRITIK (#463): kullaniciya PARANTEZ YIGINI gosterilmez. Bozuk JSON'da anlasilir bir mesaj
+ * cikar; ham metin cozumleyicinin sonucunda durmaya devam eder.
+ */
+test('bozuk json ekrana dokulmez, anlasilir mesaj cikar', async () => {
   useInfiniteInsightsMock.mockReturnValue(
     sonsuzSorguSonucu([sayfa([ornekYorum({ translations: [{ language: 'tr', content: '{"ozet": "yarim' }] })])]),
   );
 
   await ekraniOlustur();
 
-  expect(screen.getByText('{"ozet": "yarim')).toBeTruthy();
+  expect(screen.queryByText('{"ozet": "yarim')).toBeNull();
+  expect(screen.getByRole('alert')).toBeTruthy();
 });
 
 /** Kullanici istegi: aciklamanin altinda yorumun Ingilizcede daha iyi calistigi notu. */

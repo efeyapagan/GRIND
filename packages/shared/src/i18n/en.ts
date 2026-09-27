@@ -492,6 +492,7 @@ export const en: Katalog = {
     baslik: "What's GRINDY saying?",
     basligiKisa: 'GRINDY',
     yorumDili: 'Review language',
+    okunamadi: 'This review could not be read. You can try asking for a new one.',
     ingilizceNotu: 'GRINDY works better in English; you can switch the language from the flag in the top right.',
     basarilar: 'Going well',
     uyarilar: 'Watch out',

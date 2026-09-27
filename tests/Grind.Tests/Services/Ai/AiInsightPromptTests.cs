@@ -44,29 +44,58 @@ public class AiInsightPromptTests
         Assert.Contains("English", prompt, StringComparison.Ordinal);
     }
 
-    /// <summary>Bölme yalnızca işaret yazılırsa çalışır: prompt her dilin işaretini BİREBİR göstermeli.</summary>
+    /// <summary>
+    /// #463: yanıt TEK bir JSON; dış anahtarlar dil KODLARI. Prompt bu anahtarları birebir
+    /// göstermeli, yoksa model "Turkish" gibi bir anahtar uydurur ve bölme tutmaz.
+    /// </summary>
     [Fact]
-    public void Her_dilin_bolum_isareti_promptta_gosterilir()
+    public void Her_dilin_kodu_promptta_anahtar_olarak_gosterilir()
     {
         var prompt = Olustur();
 
         foreach (var dil in Diller)
         {
-            Assert.Contains(AiInsightSections.Marker(dil), prompt, StringComparison.Ordinal);
+            Assert.Contains($"\"{dil}\"", prompt, StringComparison.Ordinal);
         }
     }
 
+    /// <summary>Semanin alan adlari promptta birebir gecmeli; aksi halde istemci ayristiramaz.</summary>
+    [Theory]
+    [InlineData("ozet")]
+    [InlineData("basarilar")]
+    [InlineData("uyarilar")]
+    [InlineData("tavsiyeler")]
+    public void Sema_alanlari_promptta_gecer(string alan)
+    {
+        Assert.Contains($"\"{alan}\"", Olustur(), StringComparison.Ordinal);
+    }
+
+    // ---- Türkçe çıktı kalitesi (#463) ----
+
     /// <summary>
-    /// Tek dil istendiğinde bölüm isteme talimatı da gereksizdir: modele yapmayacağı bir iş
-    /// anlatmak çıktıyı bozar.
+    /// Kullanıcı kararı: hareket adları ve Push/Pull gibi terimler Türkçe metinde İNGİLİZCE
+    /// kalır -- çevrilince okunmaz hâle geliyor.
     /// </summary>
     [Fact]
-    public void Tek_dilde_bolum_istenmez()
+    public void Terimlerin_ingilizce_kalacagi_soylenir()
     {
-        var prompt = AiInsightPrompt.Build(goal: null, ["tr"]);
+        var prompt = Olustur();
 
-        Assert.DoesNotContain(AiInsightSections.Marker("en"), prompt, StringComparison.Ordinal);
-        Assert.Contains("Türkçe", prompt, StringComparison.Ordinal);
+        Assert.Contains("Push", prompt, StringComparison.Ordinal);
+        Assert.Contains("çevirme", prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Kullanıcı itirazı: farklı kas grupları farklı mutlak yük taşır; ham kg toplamını
+    /// kalıplar arasında karşılaştırıp "dengesiz" demek yanlış bir çıkarımdır.
+    /// </summary>
+    [Fact]
+    public void Kaliplar_arasi_ham_hacim_karsilastirmasi_yasaklanir()
+    {
+        var prompt = Olustur();
+
+        Assert.Contains("set sayısı", prompt, StringComparison.Ordinal);
+        Assert.Contains("dengesizlik", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>Her hedefin TR bir karşılığı olmalı: enum adı ("KiloVerme") LLM'e sızmamalı.</summary>

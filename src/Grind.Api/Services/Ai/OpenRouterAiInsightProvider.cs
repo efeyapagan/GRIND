@@ -39,7 +39,8 @@ public sealed class OpenRouterAiInsightProvider : IAiInsightProvider
             response = await client.PostAsJsonAsync("chat/completions", new ChatRequest(
                 settings.Model,
                 settings.MaxTokens,
-                [new ChatMessage("system", instructions), new ChatMessage("user", trainingData)]),
+                [new ChatMessage("system", instructions), new ChatMessage("user", trainingData)],
+                JsonBicimi),
                 cancellationToken);
         }
         catch (Exception e) when (e is HttpRequestException
@@ -89,8 +90,23 @@ public sealed class OpenRouterAiInsightProvider : IAiInsightProvider
         }
     }
 
+    /// <summary>
+    /// #463: biçimi modelin iyi niyetine değil SAĞLAYICIYA zorlatır. Ham JSON'un kullanıcıya
+    /// sızmasının kök nedeni, modelin bazen JSON dışında bir şey dönmesiydi.
+    ///
+    /// DİKKAT: her model bunu desteklemez. Desteklemeyen bir modelde alan yok sayılabilir --
+    /// bu yüzden ayrıştırma tarafındaki geri düşmeler (AiInsightSections) KALDIRILMADI; bu bir
+    /// ek güvencedir, tek savunma değil.
+    /// </summary>
+    private static readonly ResponseFormat JsonBicimi = new("json_object");
+
     private sealed record ChatRequest(
-        string Model, [property: JsonPropertyName("max_tokens")] int MaxTokens, ChatMessage[] Messages);
+        string Model,
+        [property: JsonPropertyName("max_tokens")] int MaxTokens,
+        ChatMessage[] Messages,
+        [property: JsonPropertyName("response_format")] ResponseFormat ResponseFormat);
+
+    private sealed record ResponseFormat(string Type);
 
     private sealed record ChatMessage(string Role, string Content);
 

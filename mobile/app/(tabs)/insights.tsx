@@ -173,7 +173,7 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
-  const { yorumDili } = useYorumDili();
+  const { yorumDili, hazir } = useYorumDili();
   if (onayAcik) {
     return (
       <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
@@ -200,7 +200,8 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
           <Trash2 color={ikonRenk.muted} size={18} />
         </IkonDugmesi>
       </View>
-      <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />
+      {/* #463: tercih cozulmeden cizmeyiz -- yoksa ilk kare arayuz diliyle cizilip degisiyor. */}
+      {hazir && <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />}
     </View>
   );
 }
@@ -215,6 +216,15 @@ function YorumGovdesi({ icerik }: { icerik: YorumIcerigi }) {
 
   if (icerik.bicim === 'duz') {
     return <Text className="text-body text-fg">{icerik.metin}</Text>;
+  }
+
+  // Parantez yigini gostermeyiz (#463): ham metin sonucta duruyor ama ekrana dokulmez.
+  if (icerik.bicim === 'okunamadi') {
+    return (
+      <Text accessibilityRole="alert" className="text-body text-muted">
+        {t('yorumlar.okunamadi')}
+      </Text>
+    );
   }
 
   return (
