@@ -12,13 +12,17 @@ export function rekorRozetiMetni(kayit: SetKaydi): string | null {
   if (kayit.recordType === 'Reps') {
     return i18n.t('rekor.tekrar');
   }
+  if (kayit.recordType === 'Duration') {
+    return i18n.t('rekor.sure');
+  }
   return null;
 }
 
 /**
  * #401: ayni antrenmanda sonradan gecilen rekor setlerinin id'leri. Yine sunucunun `recordType`'indan
  * turetilir (rekor yeniden hesaplanmaz): bir kilo rekorunu ayni hareketin SONRAKI kilo rekoru, bir
- * tekrar rekorunu ayni hareketin AYNI agirliktaki sonraki tekrar rekoru gecer. Sira setin zamanidir.
+ * tekrar rekorunu ayni hareketin AYNI agirliktaki sonraki tekrar rekoru, bir sure rekorunu (#346) ayni
+ * hareketin sonraki sure rekoru gecer. Sira setin zamanidir.
  */
 export function gecilmisRekorIdleri(sets: SetKaydi[]): Set<number> {
   const zamanSirali = [...sets].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id - b.id);
@@ -27,7 +31,11 @@ export function gecilmisRekorIdleri(sets: SetKaydi[]): Set<number> {
   for (const kayit of zamanSirali) {
     if (kayit.recordType === 'None') continue;
     const anahtar =
-      kayit.recordType === 'Weight' ? `${kayit.exerciseId}|W` : `${kayit.exerciseId}|R|${kayit.weight}`;
+      kayit.recordType === 'Weight'
+        ? `${kayit.exerciseId}|W`
+        : kayit.recordType === 'Duration'
+          ? `${kayit.exerciseId}|D`
+          : `${kayit.exerciseId}|R|${kayit.weight}`;
     const onceki = sonRekor.get(anahtar);
     if (onceki !== undefined) gecilmis.add(onceki);
     sonRekor.set(anahtar, kayit.id);

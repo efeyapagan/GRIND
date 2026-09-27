@@ -21,6 +21,8 @@ interface Props {
   noktalar: CizgiNoktasi[];
   birim: string;
   baslik: string;
+  /** #346: eksen ve nokta etiketlerinin bicimi -- varsayilan kilo gibi sayi; sureli harekette "1:15". */
+  bicimle?: (deger: number) => string;
 }
 
 const YUKSEKLIK = 220;
@@ -36,16 +38,17 @@ const ETIKET_YUKSEKLIGI = 22;
  * DOM'un SVG'siyle neredeyse birebir ayni (Path/Line/Circle/Rect/Text). Genislik olcumu
  * ResizeObserver yerine `onLayout` ile yapilir (web'deki `useGenislik` hook'unun RN karsiligi).
  */
-export default function CizgiGrafik({ noktalar, birim, baslik }: Props) {
+export default function CizgiGrafik({ noktalar, birim, baslik, bicimle }: Props) {
   if (noktalar.length === 0) {
     return null;
   }
-  return <Cizim noktalar={noktalar} birim={birim} baslik={baslik} />;
+  return <Cizim noktalar={noktalar} birim={birim} baslik={baslik} bicimle={bicimle} />;
 }
 
-function Cizim({ noktalar, baslik }: Props) {
+function Cizim({ noktalar, baslik, bicimle }: Props) {
   const palet = useRenkPaleti();
   const dil = useDil();
+  const bicim = bicimle ?? ((deger: number) => formatWeight(deger, dil));
   const [genislik, setGenislik] = useState(VARSAYILAN_GENISLIK);
 
   function olcumAl(olay: LayoutChangeEvent) {
@@ -105,7 +108,7 @@ function Cizim({ noktalar, baslik }: Props) {
                 fill={palet.muted}
                 fontSize={12}
               >
-                {formatWeight(deger, dil)}
+                {bicim(deger)}
               </SvgText>
             </G>
           ))}
@@ -150,7 +153,7 @@ function Cizim({ noktalar, baslik }: Props) {
               ),
           )}
           {etiketliSiralar.map((sira) => {
-            const metin = formatWeight(noktalar[sira].deger, dil);
+            const metin = bicim(noktalar[sira].deger);
             const etiketGenisligi = metin.length * 8 + 16;
             const merkezX = Math.min(
               Math.max(koordinatlar[sira].x, etiketGenisligi / 2),

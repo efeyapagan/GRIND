@@ -32,10 +32,11 @@ public class SetEntryService(
         // DataAnnotations [Required]'ı MVC katmanında zaten çalıştı; burada değerleri
         // güvenle açıyoruz. Servis doğrudan (test) çağrıldığında da aynı sözleşme geçerli.
         var exerciseId = request.ExerciseId!.Value;
-        var weight = request.Weight!.Value;
-        var reps = request.Reps!.Value;
 
-        WeightScale.EnsureAtMostTwoDecimals(weight);
+        if (request.Weight is { } requestedWeight)
+        {
+            WeightScale.EnsureAtMostTwoDecimals(requestedWeight);
+        }
 
         if (request.Rir is { } rir)
         {
@@ -53,9 +54,17 @@ public class SetEntryService(
                 "Arşivlenmiş bir egzersize yeni set girilemez. Önce egzersizi arşivden çıkarın.");
         }
 
+        // #346: hangi alanın zorunlu, hangisinin yasak olduğu hareketin ölçüm tipine bağlı. Ağırlıksız ve
+        // süreli harekette ağırlık gönderilmezse 0'dır (ağırlıksız harekette "ek ağırlık").
+        SetMeasurementRules.EnsureAllowed(
+            exercise.Measurement, request.Weight, request.Reps, request.Rir, request.DurationSeconds);
+        SetMeasurementRules.EnsureRequired(
+            exercise.Measurement, request.Weight, request.Reps, request.DurationSeconds);
+        var weight = request.Weight ?? 0m;
+
         // Rekor kararı setin EKLENMESİNDEN ÖNCE verilir: geçmiş, kendisini içermemeli.
         var recordType = await recordService.EvaluateNewAsync(
-            exerciseId, weight, reps, cancellationToken);
+            exerciseId, exercise.Measurement, weight, request.Reps, request.DurationSeconds, cancellationToken);
 
         // Seam: kaydetmez. Oturum (gerekirse) ve set aşağıda TEK commit'te birlikte gider.
         // #262: client zaman damgası burada VERİLMEZ -- bu yol setin kendi CreatedAt'i ile açılır.
@@ -71,7 +80,8 @@ public class SetEntryService(
             WorkoutSession = session,
             ExerciseId = exercise.Id,
             Weight = weight,
-            Reps = reps,
+            Reps = request.Reps,
+            DurationSeconds = request.DurationSeconds,
             Rir = request.Rir,
             RecordType = recordType,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
@@ -102,7 +112,7 @@ public class SetEntryService(
     public async Task<SetEntryResponse> PatchAsync(
         long id, PatchSetRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.Weight is null && request.Reps is null && request.Rir is null)
+        if (request.Weight is null && request.Reps is null && request.Rir is null && request.DurationSeconds is null)
         {
             // Boş gövde DTO doğrulamasını geçer (tüm alanlar nullable). Sessizce 200 dönmek
             // çağıranın isteğinin uygulandığını sanmasına yol açardı.
@@ -110,6 +120,10 @@ public class SetEntryService(
         }
 
         var set = await OwnedOrThrowAsync(id, cancellationToken);
+
+        // #346: düzeltme de hareketin ölçüm tipine uymalı (süreli sete tekrar, ağırlıksız sete RIR yazılmaz).
+        SetMeasurementRules.EnsureAllowed(
+            set.Exercise.Measurement, request.Weight, request.Reps, request.Rir, request.DurationSeconds);
 
         if (request.Weight is { } weight)
         {
@@ -126,6 +140,15 @@ public class SetEntryService(
         {
             RirScale.EnsureHalfStep(rir);
             set.Rir = rir;
+        }
+
+        if (request.DurationSeconds is { } durationSeconds)
+        {
+            set.DurationSeconds = durationSeconds;
+            // #346: hareket süreliye dönmeden önce "0 kg × n" girilmiş eski bir sete süre yazmak onu süreli
+            // sete çevirir — bir set ya tekrar ya süre taşır (check constraint).
+            set.Reps = null;
+            set.Rir = null;
         }
 
         // HER ZAMAN yeniden hesapla: rekor TAŞIMAYAN bir setin ağırlığını yükseltmek onu

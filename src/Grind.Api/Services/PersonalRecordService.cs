@@ -12,20 +12,25 @@ public class PersonalRecordService(
     ICurrentUserService currentUser) : IPersonalRecordService
 {
     public async Task<RecordType> EvaluateNewAsync(
-        long exerciseId, decimal weight, int reps, CancellationToken cancellationToken = default)
+        long exerciseId,
+        ExerciseMeasurement measurement,
+        decimal weight,
+        int? reps,
+        int? durationSeconds,
+        CancellationToken cancellationToken = default)
     {
         var history = await setEntryRepository.GetForUserAndExerciseAsync(
             currentUser.UserId, exerciseId, cancellationToken);
 
-        var tracker = new RecordTracker();
+        var tracker = new RecordTracker(measurement);
 
         foreach (var set in history)
         {
             // Sonuç BİLEREK atılıyor: amaç yürüyen en iyileri kurmak, geçmişi düzeltmek değil.
-            tracker.Apply(set.Weight, set.Reps);
+            tracker.Apply(set.Weight, set.Reps, set.DurationSeconds);
         }
 
-        return tracker.Apply(weight, reps);
+        return tracker.Apply(weight, reps, durationSeconds);
     }
 
     public async Task RecalculateAsync(
@@ -37,7 +42,13 @@ public class PersonalRecordService(
         var sets = await setEntryRepository.GetForUserAndExerciseAsync(
             currentUser.UserId, exerciseId, cancellationToken);
 
-        var tracker = new RecordTracker();
+        if (sets.Count == 0)
+        {
+            return;
+        }
+
+        // #346: ölçüm tipi hareketin kendisinden — setler hareketiyle birlikte okunur.
+        var tracker = new RecordTracker(sets[0].Exercise.Measurement);
 
         foreach (var set in sets)
         {
@@ -47,7 +58,7 @@ public class PersonalRecordService(
             }
 
             // Entity'ler tracked geliyor; atama onları Modified yapar. SaveChanges YOK.
-            set.RecordType = tracker.Apply(set.Weight, set.Reps);
+            set.RecordType = tracker.Apply(set.Weight, set.Reps, set.DurationSeconds);
         }
     }
 
@@ -67,12 +78,36 @@ public class PersonalRecordService(
         return records
             .GroupBy(s => s.ExerciseId)
             .Select(BuildSummary)
+            .OfType<ExerciseRecordResponse>()
             .OrderBy(r => r.ExerciseName)
             .ToList();
     }
 
-    private static ExerciseRecordResponse BuildSummary(IGrouping<long, SetEntry> group)
+    /// <summary>
+    /// #346: süreli harekette yalnızca süreli setler sayılır; hareket süreliye dönmeden önce "0 kg × n" girilmiş
+    /// eski setler bir süre rekoru değildir. Hiç süreli seti yoksa özet yoktur (<c>null</c>).
+    /// </summary>
+    private static ExerciseRecordResponse? BuildSummary(IGrouping<long, SetEntry> group)
     {
+        var exercise = group.First().Exercise;
+
+        if (exercise.Measurement == ExerciseMeasurement.Duration)
+        {
+            var longest = group
+                .Where(s => s.DurationSeconds is not null)
+                .OrderByDescending(s => s.DurationSeconds)
+                .ThenBy(s => s.CreatedAt).ThenBy(s => s.Id)
+                .FirstOrDefault();
+
+            return longest is null
+                ? null
+                : new ExerciseRecordResponse(
+                    group.Key, exercise.Name, exercise.Category,
+                    0m, null, longest.CreatedAt,
+                    null, 0m, longest.CreatedAt,
+                    exercise.Measurement, longest.DurationSeconds);
+        }
+
         var bestWeight = group
             .OrderByDescending(s => s.Weight).ThenByDescending(s => s.Reps)
             .ThenBy(s => s.CreatedAt).ThenBy(s => s.Id)
@@ -92,6 +127,8 @@ public class PersonalRecordService(
             bestWeight.CreatedAt,
             bestReps.Reps,
             bestReps.Weight,
-            bestReps.CreatedAt);
+            bestReps.CreatedAt,
+            exercise.Measurement,
+            BestDurationSeconds: null);
     }
 }

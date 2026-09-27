@@ -31,7 +31,10 @@ public class SetEntryConfiguration : IEntityTypeConfiguration<SetEntry>
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("CK_SetEntry_Weight_NonNegative", "\"Weight\" >= 0");
-            t.HasCheckConstraint("CK_SetEntry_Reps_Positive", "\"Reps\" > 0");
+            // #346: bir set ya tekrarla ya süreyle ölçülür — ikisi birden ya da hiçbiri olamaz.
+            t.HasCheckConstraint(
+                "CK_SetEntry_RepsOrDuration",
+                "(\"Reps\" > 0 AND \"DurationSeconds\" IS NULL) OR (\"Reps\" IS NULL AND \"DurationSeconds\" > 0)");
             t.HasCheckConstraint("CK_SetEntry_Rir_NonNegative", "\"Rir\" IS NULL OR \"Rir\" >= 0");
         });
     }

@@ -11,6 +11,8 @@ public class SetEntryRepository(AppDbContext context)
     public async Task<IReadOnlyList<SetEntry>> GetForUserAndExerciseAsync(
         long userId, long exerciseId, CancellationToken cancellationToken = default)
         => await Set
+            // #346: rekor takibi hareketin ölçüm tipine göre yapılır.
+            .Include(s => s.Exercise)
             .Where(s => s.ExerciseId == exerciseId && s.WorkoutSession.UserId == userId)
             .OrderBy(s => s.CreatedAt)
             // Tie-break ZORUNLU: sahte saatle girilen setlerin CreatedAt'i aynıdır ve
@@ -80,7 +82,7 @@ public class SetEntryRepository(AppDbContext context)
             {
                 g.Key.ExerciseId,
                 g.Key.Name,
-                Volume = g.Sum(s => s.Weight * s.Reps),
+                Volume = g.Sum(s => s.Weight * (s.Reps ?? 0)),
                 SetCount = g.Count()
             })
             .ToListAsync(cancellationToken);

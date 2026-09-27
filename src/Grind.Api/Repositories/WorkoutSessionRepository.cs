@@ -80,7 +80,7 @@ public class WorkoutSessionRepository(AppDbContext context)
                 s.Id,
                 s.StartedAt,
                 SetCount = s.SetEntries.Count(),
-                Volume = s.SetEntries.Sum(e => e.Weight * e.Reps)
+                Volume = s.SetEntries.Sum(e => e.Weight * (e.Reps ?? 0))
             })
             .ToListAsync(cancellationToken);
 
@@ -149,7 +149,7 @@ public class WorkoutSessionRepository(AppDbContext context)
                 s.UserId,
                 s.StartedAt,
                 SetCount = s.SetEntries.Count(),
-                Volume = s.SetEntries.Sum(e => e.Weight * e.Reps),
+                Volume = s.SetEntries.Sum(e => e.Weight * (e.Reps ?? 0)),
             })
             .ToListAsync(cancellationToken);
 

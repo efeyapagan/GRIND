@@ -11,7 +11,17 @@ public class SetEntry
     /// <summary>Kilogram. 0 geçerlidir — barfiks/dips gibi vücut ağırlığı hareketleri.</summary>
     public decimal Weight { get; set; }
 
-    public int Reps { get; set; }
+    /// <summary>
+    /// <c>null</c> yalnızca süreli sette (#346, <see cref="ExerciseMeasurement.Duration"/>): bir set ya
+    /// tekrarla ya süreyle ölçülür, ikisi birden değil (check constraint).
+    /// </summary>
+    public int? Reps { get; set; }
+
+    /// <summary>
+    /// Süreli setin süresi, saniye (#346). Yalnızca <see cref="ExerciseMeasurement.Duration"/>
+    /// hareketlerinde dolu; o setlerde <see cref="Reps"/> ve <see cref="Rir"/> boş, <see cref="Weight"/> 0'dır.
+    /// </summary>
+    public int? DurationSeconds { get; set; }
 
     /// <summary>Bu set kaydedildiği anda bir rekor kırdı mı — tarihsel anlık görüntü.</summary>
     public RecordType RecordType { get; set; }

@@ -7,8 +7,18 @@ import { ApiError } from '@grind/shared/api/problem';
  * karsiligi -- burada elle, kucuk bir switch olarak (MSW'nin RN'de kurulumu ek risk tasirdi,
  * bu kucuk yuzeyde gerek yoktu).
  */
-export function sahteBackendOlustur() {
-  const EGZERSIZ = { id: 1, name: 'Bench Press', category: 'Push', isArchived: false };
+/**
+ * #346: `olcum` tek hareketin olcum tipi -- agirliksiz (`Reps`) ve sureli (`Duration`) set akislarini ayni
+ * senaryolarla denemek icin. Verilmezse bugunku gibi kilo + tekrar olculen Bench Press.
+ */
+export function sahteBackendOlustur({ olcum = 'WeightReps' }: { olcum?: 'WeightReps' | 'Reps' | 'Duration' } = {}) {
+  const EGZERSIZ = {
+    id: 1,
+    name: olcum === 'Duration' ? 'Plank' : olcum === 'Reps' ? 'Crunch' : 'Bench Press',
+    category: olcum === 'WeightReps' ? 'Push' : 'Other',
+    isArchived: false,
+    measurement: olcum,
+  };
 
   const state = {
     sablonlar: [] as any[],
@@ -132,12 +142,15 @@ export function sahteBackendOlustur() {
         exerciseName: EGZERSIZ.name,
         // #230: bu sahte backend TEK egzersizli senaryolari test eder -- pozisyon her zaman 1.
         exercisePosition: 1,
-        weight: govde.weight,
-        reps: govde.reps,
-        recordType: 'Weight',
+        // #346: agirliksiz ve sureli harekette gonderilmeyen kilo sunucuda 0 saklanir.
+        weight: govde.weight ?? 0,
+        reps: govde.reps ?? null,
+        durationSeconds: govde.durationSeconds ?? null,
+        recordType: olcum === 'Duration' ? 'Duration' : olcum === 'Reps' ? 'Reps' : 'Weight',
         rir: govde.rir ?? null,
         createdAt: new Date().toISOString(),
         restSeconds: null,
+        measurement: olcum,
       };
       state.setler.push(yeniSet);
       const hareket = state.acikOturum.progress.find((h: any) => h.exerciseId === govde.exerciseId);

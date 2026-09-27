@@ -414,4 +414,117 @@ public class SetEntryServiceTests
                 () => service.GetForSessionAsync(digerOturum.Id));
         }
     }
+
+    // ---- #346: ağırlıksız ve süreli hareketler ----
+
+    private static async Task<Exercise> OlcumluHareketAsync(AppDbContext context, User user, ExerciseMeasurement olcum)
+    {
+        var hareket = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        hareket.Measurement = olcum;
+        context.Add(hareket);
+        await context.SaveChangesAsync();
+        return hareket;
+    }
+
+    /// <summary>Tekrar hareketinde ağırlık gönderilmezse 0 saklanır, ilk set tekrar rekorudur.</summary>
+    [Fact]
+    public async Task Tekrar_hareketine_agirliksiz_set_girilir()
+    {
+        var (context, user, _, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var crunch = await OlcumluHareketAsync(context, user, ExerciseMeasurement.Reps);
+
+            var eklenen = await service.CreateAsync(new CreateSetRequest { ExerciseId = crunch.Id, Reps = 20 });
+
+            Assert.Equal(0m, eklenen.Weight);
+            Assert.Equal(20, eklenen.Reps);
+            Assert.Null(eklenen.DurationSeconds);
+            Assert.Equal(RecordType.Reps, eklenen.RecordType);
+        }
+    }
+
+    [Fact]
+    public async Task Tekrar_hareketinde_rir_ve_sure_reddedilir()
+    {
+        var (context, user, _, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var crunch = await OlcumluHareketAsync(context, user, ExerciseMeasurement.Reps);
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = crunch.Id, Reps = 20, Rir = 2 }));
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = crunch.Id, Reps = 20, DurationSeconds = 30 }));
+        }
+    }
+
+    [Fact]
+    public async Task Sure_hareketine_yalnizca_sure_girilir()
+    {
+        var (context, user, _, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var plank = await OlcumluHareketAsync(context, user, ExerciseMeasurement.Duration);
+
+            var eklenen = await service.CreateAsync(new CreateSetRequest { ExerciseId = plank.Id, DurationSeconds = 60 });
+
+            Assert.Equal(0m, eklenen.Weight);
+            Assert.Null(eklenen.Reps);
+            Assert.Equal(60, eklenen.DurationSeconds);
+            Assert.Equal(RecordType.Duration, eklenen.RecordType);
+        }
+    }
+
+    [Fact]
+    public async Task Sure_hareketinde_suresiz_tekrarli_ya_da_kilolu_set_reddedilir()
+    {
+        var (context, user, _, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var plank = await OlcumluHareketAsync(context, user, ExerciseMeasurement.Duration);
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = plank.Id }));
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = plank.Id, DurationSeconds = 60, Reps = 1 }));
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = plank.Id, DurationSeconds = 60, Weight = 10m }));
+        }
+    }
+
+    /// <summary>Kilolu harekette ağırlık artık DTO'da değil serviste zorunlu; süre kabul edilmez.</summary>
+    [Fact]
+    public async Task Kilolu_harekette_agirliksiz_ya_da_sureli_set_reddedilir()
+    {
+        var (_, _, bench, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = bench.Id, Reps = 8 }));
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+                new CreateSetRequest { ExerciseId = bench.Id, Weight = 100m, Reps = 8, DurationSeconds = 30 }));
+        }
+    }
+
+    /// <summary>Süreyi düzeltmek rekoru yeniden hesaplar: 60 sn'lik ikinci set 90'a çıkınca rekor olur.</summary>
+    [Fact]
+    public async Task Sure_duzeltmesi_rekoru_yeniden_hesaplar()
+    {
+        var (context, user, _, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var plank = await OlcumluHareketAsync(context, user, ExerciseMeasurement.Duration);
+            await service.CreateAsync(new CreateSetRequest { ExerciseId = plank.Id, DurationSeconds = 75 });
+            var ikinci = await service.CreateAsync(new CreateSetRequest { ExerciseId = plank.Id, DurationSeconds = 60 });
+            Assert.Equal(RecordType.None, ikinci.RecordType);
+
+            var duzeltilen = await service.PatchAsync(ikinci.Id, new PatchSetRequest { DurationSeconds = 90 });
+
+            Assert.Equal(90, duzeltilen.DurationSeconds);
+            Assert.Equal(RecordType.Duration, duzeltilen.RecordType);
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.PatchAsync(ikinci.Id, new PatchSetRequest { Reps = 10 }));
+        }
+    }
 }

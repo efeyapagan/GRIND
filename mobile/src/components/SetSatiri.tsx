@@ -2,13 +2,14 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
-import { formatWeight } from '@grind/shared/lib/format';
+import { setDegeriMetni } from '@grind/shared/lib/setDegeri';
 import { rekorRozetiMetni } from '@grind/shared/lib/rekor';
 import { rirEtiketi } from '@grind/shared/lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
+import SetDegeriYazisi from './SetDegeriYazisi';
 
 interface Props {
   kayit: SetKaydi;
@@ -30,7 +31,7 @@ export default function SetSatiri({ kayit, sira, rekorGecildi = false, onDuzenle
   const rozet = rekorRozetiMetni(kayit);
   const erisilebilirAd = [
     t('setler.setSirasi', { sira }),
-    `${formatWeight(kayit.weight, dil)} kg × ${kayit.reps}`,
+    setDegeriMetni(kayit, dil),
     rozet && rekorGecildi ? `${rozet} ${t('rekor.gecildi')}` : rozet,
     kayit.rir !== null ? `RIR ${rirEtiketi(kayit.rir)}` : null,
     kayit.restSeconds !== null
@@ -55,10 +56,7 @@ export default function SetSatiri({ kayit, sira, rekorGecildi = false, onDuzenle
             ayni duzeni kullanir. `flex-1` ayrica sart: RN'de varsayilan `flexShrink: 0`dir (web'in
             tersine), bu kutu daralmazsa uzun rozet sagdaki dinlenme/RIR haplarinin USTUNE tasar. */}
         <View className="min-w-0 flex-1 flex-col items-start gap-1">
-          <Text className="text-metric text-fg">
-            {formatWeight(kayit.weight, dil)} <Text className="text-body text-muted">kg</Text>{' '}
-            <Text className="font-light text-muted">×</Text> {kayit.reps}
-          </Text>
+          <SetDegeriYazisi kayit={kayit} className="text-metric text-fg" birimSinifi="text-body text-muted" />
           {rozet && <Rozet gecildi={rekorGecildi}>{rozet}</Rozet>}
         </View>
       </View>

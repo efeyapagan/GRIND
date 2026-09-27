@@ -11,10 +11,12 @@ function set(id: number, weight: number): SetKaydi {
     exercisePosition: 1,
     weight,
     reps: 5,
+    durationSeconds: null,
     recordType: 'Weight',
     rir: null,
     createdAt: new Date(Date.UTC(2026, 8, 26, 10, id)).toISOString(),
     restSeconds: null,
+    measurement: 'WeightReps',
   };
 }
 
