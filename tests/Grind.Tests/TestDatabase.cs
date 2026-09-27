@@ -12,7 +12,7 @@ namespace Grind.Tests;
 internal static class TestDatabase
 {
     public const string ConnectionString =
-        "Host=localhost;Port=5433;Database=grind;Username=grind;Password=grind_dev_password";
+        "Host=localhost;Port=5433;Database=grind_test;Username=grind;Password=grind_dev_password";
 
     public static AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options);

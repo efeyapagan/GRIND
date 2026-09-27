@@ -121,3 +121,22 @@ dotnet test tests/Grind.Tests
 
 Connection string ve JWT anahtarı `dotnet user-secrets` içinde durur, `appsettings.json`
 yalnızca boş placeholder taşır — bunlar repoya commit edilmez.
+
+### İki veritabanı: `grind` ve `grind_test` (#459)
+
+Aynı konteynerde iki veritabanı var: uygulama `grind`'i, **testler `grind_test`'i** kullanır
+(`TestDatabase.ConnectionString`). Sebep: entegrasyon testleri gerçek HTTP üzerinden çalışıyor ve
+yazdıkları geri alınmıyor — tek veritabanında `dotnet test` her koşuşta geliştirme verisinin içine
+kullanıcı, oturum ve yorum bırakıyordu (bir noktada 5358 kullanıcının 5354'ü test artığıydı).
+
+`grind_test`, konteyner **ilk kez** oluşturulurken `docker/initdb/` betiğiyle açılır. Volume'ü
+zaten olan bir kurulumda bir kez elle:
+
+```bash
+docker exec grind-db psql -U grind -d grind -c 'CREATE DATABASE grind_test OWNER grind'
+ConnectionStrings__Postgres="Host=localhost;Port=5433;Database=grind_test;Username=grind;Password=grind_dev_password" \
+  dotnet ef database update --project src/Grind.Api
+```
+
+Yeni bir migration eklendiğinde `grind_test`'i de güncellemek gerekir (aynı komut). CI'da sorun
+yoktu ve yoktur: oradaki Postgres tek kullanımlıktır, yine de aynı adı kullanır.
