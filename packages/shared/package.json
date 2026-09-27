@@ -32,6 +32,7 @@
     "./lib/siralama": "./src/lib/siralama.ts",
     "./lib/takip": "./src/lib/takip.ts",
     "./lib/takvim": "./src/lib/takvim.ts",
+    "./lib/yorumIcerigi": "./src/lib/yorumIcerigi.ts",
     "./lib/zorlukKadrani": "./src/lib/zorlukKadrani.ts",
     "./i18n": "./src/i18n/i18n.ts",
     "./i18n/dil": "./src/i18n/dil.ts",
