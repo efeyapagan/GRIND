@@ -1,9 +1,15 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Services.Ai;
 
 /// <summary>
 /// LLM'e NE sorulacağı (Faz 12 spec Karar 11). Sağlayıcıdan bağımsızdır. İçinde zaman damgası ya da
 /// istek başına değişen bir şey YOKTUR. Bilerek kısa: güncel modeller aşırı ayrıntılı talimatla daha
 /// kötü yazar.
+///
+/// #444: kullanıcının antrenman hedefi seçiliyse talimatın SONUNA tek bir satır eklenir. Hedef
+/// seçili değilse metin <see cref="Instructions"/>'ın aynısıdır — nötr kalır, model olmayan bir
+/// hedefe göre yorum yapmaz.
 /// </summary>
 public static class AiInsightPrompt
 {
@@ -25,4 +31,30 @@ public static class AiInsightPrompt
         söyle. Tıbbi teşhis koyma; ağrı veya sakatlık notlarında bir uzmana danışmayı öner. Kısa
         başlıklar ve maddeler kullan.
         """;
+
+    /// <summary>
+    /// Talimatın bu istek için geçerli hâli. <paramref name="goal"/> <c>null</c> ise
+    /// <see cref="Instructions"/> aynen döner.
+    /// </summary>
+    public static string Build(TrainingGoal? goal)
+    {
+        if (goal is not { } hedef)
+        {
+            return Instructions;
+        }
+
+        return Instructions + "\n\n" +
+               $"Kullanıcının belirttiği hedef: {GoalText(hedef)}. Hacim dağılımını ve önerilerini " +
+               "bu hedefe göre değerlendir; veri hedefle çelişiyorsa bunu açıkça söyle.";
+    }
+
+    /// <summary>Sabit TR etiketi — enum adı (ör. "KiloVerme") LLM'e sızmasın (DifficultyText ile aynı sebep).</summary>
+    private static string GoalText(TrainingGoal goal) => goal switch
+    {
+        TrainingGoal.Hipertrofi => "kas hacmi (hipertrofi)",
+        TrainingGoal.Guc => "maksimal kuvvet",
+        TrainingGoal.KiloVerme => "kilo verme",
+        TrainingGoal.GenelForm => "genel form ve düzenlilik",
+        _ => goal.ToString()
+    };
 }

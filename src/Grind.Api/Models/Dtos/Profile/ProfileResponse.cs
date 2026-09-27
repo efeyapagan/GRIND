@@ -6,7 +6,8 @@ namespace Grind.Api.Models.Dtos.Profile;
 /// Kullanıcının kendi profili (#280). <see cref="Age"/> saklanmaz, doğum tarihinden TR gününe göre
 /// hesaplanır. <see cref="AvatarVersion"/> fotoğrafın son yükleme anı (Unix ms); istemci fotoğraf
 /// adresine önbellek kırıcı olarak ekler (<c>?v=</c>). <see cref="PrivacyLevel"/> (#294)
-/// <c>PUT /api/settings/privacy-level</c> ile değiştirilir, bu uçtan yalnızca okunur.
+/// <c>PUT /api/settings/privacy-level</c> ile değiştirilir, bu uçtan yalnızca okunur;
+/// <see cref="TrainingGoal"/> (#444) aynı şekilde <c>PUT /api/settings/training-goal</c> ile.
 /// </summary>
 public record ProfileResponse(
     string Username,
@@ -15,4 +16,5 @@ public record ProfileResponse(
     int? Age,
     bool HasAvatar,
     long? AvatarVersion,
-    PrivacyLevel PrivacyLevel);
+    PrivacyLevel PrivacyLevel,
+    TrainingGoal? TrainingGoal);

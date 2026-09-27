@@ -235,7 +235,10 @@ Object Reference) açığıdır.
   haftalık antrenman günü hedefi, #97; `PUT /api/settings/weekly-target`), `DisplayName` (nullable, en fazla
   50 karakter, kırpılır, benzersiz değil — #280), `BirthDate` (nullable `date`, #280 — yaş SAKLANMAZ, sorgu
   anında TR gününe göre `AgeCalculator` ile hesaplanır; 13–120 yaş dışı 400), `NotificationsSeenAt` (nullable, UTC — bildirim
-  ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar). Uçlar: `GET/PUT /api/profile`
+  ekranının en son açıldığı an, #325; okunmamış = bu andan sonraki olaylar), `TrainingGoal` (nullable enum
+  `Hipertrofi`/`Guc`/`KiloVerme`/`GenelForm`, adıyla saklanır — #444; `null` = seçilmemiş, varsayılan bir
+  hedef UYDURULMAZ. Bugünkü tek tüketicisi AI yorumunun prompt'u; `PUT /api/settings/training-goal`).
+  Uçlar: `GET/PUT /api/profile`
 - **UserAvatar** (#280): `Id`, `UserId` (FK, benzersiz, CASCADE), `Content` (`bytea`), `ContentType`,
   `UpdatedAt` — profil fotoğrafı veritabanında, `User`'dan ayrı tabloda (her kullanıcı sorgusunda resim
   baytları taşınmasın). En fazla 256 KB; tür istemcinin beyanından değil dosya imzasından belirlenir
@@ -378,7 +381,12 @@ Object Reference) açığıdır.
 > ile aynı desen). Üretim bugün yalnızca `Kind = Insight` yazar — set arası öneri motoru hâlâ
 > kapsam dışı. Aralık verilmezse son 30 gün, en fazla 366 gün; aralıkta hiç oturum ve tartı yoksa
 > LLM'e hiç gidilmez (400), çünkü bir modele "veri yok" dedirtmek için para ödenmez. LLM'e giden
-> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. Ücretli adım (LLM
+> bağlam Faz 11'in export metnidir; ikinci bir "LLM'e özet" biçimi yazılmaz. #444'ten beri aynı
+> formatlayıcı bir SEÇENEK nesnesi alır (`ExportTextOptions`): AI yolu ısınma setlerini "(ısınma)"
+> diye işaretler ve setsiz+notsuz oturumları atlar; kullanıcıya dönen `/api/export/text` varsayılan
+> seçeneklerle bugünkü çıktısını korur. Isınma bir SEZGİdir (`WarmupDetector`, veride böyle bir alan
+> yok) — bu yüzden set silinmez, işaretlenir. Kullanıcının `TrainingGoal`'i seçiliyse prompt'a bir
+> satır olarak girer (`AiInsightPrompt.Build`). Ücretli adım (LLM
 > çağrısı ve onu izleyen tek `SaveChangesAsync`) isteğin iptal belirtecini DEĞİL
 > `CancellationToken.None` kullanır: istek LLM'e ulaştığı anda ücret doğduğu için, istemci koparsa
 > bile yanıt saklanır. Fiyatlar yapılandırmada (`Ai:InputUsdPerMillionTokens` /

@@ -12,7 +12,9 @@ public class ColumnMappingTests
             .Where(p => (Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType).IsEnum)
             .ToArray();
 
-        Assert.Equal(7, enumProperties.Length);
+        // Sayı bilerek sabit: yeni bir enum kolonu eklemek bu testi kırar ve dönüşümün/uzunluğun
+        // atlanmadığını görmeye zorlar. #444'te User.TrainingGoal ile 7'den 8'e çıktı.
+        Assert.Equal(8, enumProperties.Length);
 
         foreach (var property in enumProperties)
         {

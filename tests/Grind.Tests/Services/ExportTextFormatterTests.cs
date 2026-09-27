@@ -341,4 +341,94 @@ public class ExportTextFormatterTests
         Assert.DoesNotContain("\n## Sahte", metin);
         Assert.Contains("- 1. Bench ## Sahte: 80×8\n", metin);
     }
+
+    // ---- AI bağlamı seçenekleri (#444) ----
+
+    /// <summary>
+    /// KORUMA: kullanıcıya dönen `/api/export/text` değişmedi. Isınma işaretlemesi ve oturum
+    /// atlama YALNIZCA AI yoluna aittir; varsayılan çıktı bu işten önceki hâlidir.
+    /// </summary>
+    [Fact]
+    public void Varsayilan_secenekler_isinma_isaretlemez()
+    {
+        var metin = Formatla(Oturum(An, null, Set(1, "Bench Press", 60m, 10), Set(1, "Bench Press", 80m, 8)));
+
+        Assert.DoesNotContain("ısınma", metin);
+        Assert.Contains("- 1. Bench Press: 60×10, 80×8\n", metin);
+    }
+
+    [Fact]
+    public void Ai_secenekleri_bastaki_hafif_seti_isinma_isaretler()
+    {
+        var export = Bos() with
+        {
+            Sessions = [Oturum(An, null, Set(1, "Bench Press", 60m, 10), Set(1, "Bench Press", 80m, 8))]
+        };
+
+        var metin = ExportTextFormatter.Format(export, ExportTextOptions.ForAi);
+
+        Assert.Contains("- 1. Bench Press: 60×10 (ısınma), 80×8\n", metin);
+    }
+
+    /// <summary>
+    /// Kural hareket bazlıdır: bir hareketin ısınması diğerinin ilk setini ısınma yapmaz — ve düz
+    /// giden ağırlıkta hiç ısınma yoktur (WarmupDetector'ın kuralı, burada uçtan uca doğrulanıyor).
+    /// </summary>
+    [Fact]
+    public void Ai_secenekleri_her_hareketi_ayri_degerlendirir()
+    {
+        var export = Bos() with
+        {
+            Sessions =
+            [
+                Oturum(An, null,
+                    Set(1, "Bench Press", 60m, 10), Set(1, "Bench Press", 80m, 8),
+                    Set(2, "Row", 70m, 10, position: 2), Set(2, "Row", 70m, 10, position: 2))
+            ]
+        };
+
+        var metin = ExportTextFormatter.Format(export, ExportTextOptions.ForAi);
+
+        Assert.Contains("- 1. Bench Press: 60×10 (ısınma), 80×8\n", metin);
+        Assert.Contains("- 2. Row: 70×10, 70×10\n", metin);
+    }
+
+    /// <summary>Modele "burada hiçbir şey olmadı" satırı göndermek token yakar, odağı dağıtır.</summary>
+    [Fact]
+    public void Ai_secenekleri_setsiz_ve_notsuz_oturumu_atlar()
+    {
+        var export = Bos() with { Sessions = [Oturum(An, null)] };
+
+        var metin = ExportTextFormatter.Format(export, ExportTextOptions.ForAi);
+
+        Assert.DoesNotContain("(Bu oturumda set girilmedi.)", metin);
+        Assert.Contains("Bu aralıkta kayıt yok.", metin);
+    }
+
+    /// <summary>
+    /// AYIRT EDİCİ: setsiz ama NOTLU bir oturum veridir (Faz 11 Karar 8) — "sırtım ağrıdı, çalışamadım"
+    /// bir koç için gerçek bilgidir. Filtre bunu elememeli.
+    /// </summary>
+    [Fact]
+    public void Ai_secenekleri_setsiz_ama_notlu_oturumu_korur()
+    {
+        var export = Bos() with { Sessions = [Oturum(An, null) with { Notes = "sırtım ağrıdı" }] };
+
+        var metin = ExportTextFormatter.Format(export, ExportTextOptions.ForAi);
+
+        Assert.Contains("Not: sırtım ağrıdı", metin);
+    }
+
+    /// <summary>
+    /// İşaret tek başına yetmez: modelin "(ısınma)"nın ne anlama geldiğini ve ilerleme
+    /// karşılaştırmasına katmaması gerektiğini açıklamalardan okuması gerekir.
+    /// </summary>
+    [Fact]
+    public void Ai_secenekleri_aciklamalara_isinma_satiri_ekler()
+    {
+        var metin = ExportTextFormatter.Format(Bos(), ExportTextOptions.ForAi);
+
+        Assert.Contains("(ısınma)", metin);
+        Assert.DoesNotContain("(ısınma)", ExportTextFormatter.Format(Bos()));
+    }
 }
