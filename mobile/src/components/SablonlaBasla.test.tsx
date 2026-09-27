@@ -145,3 +145,21 @@ test('basili tutup yana surukleyince menu kapanir ve yeni sira sunucuya gonderil
 
   expect(sirala).toHaveBeenCalledWith([8, 7]);
 });
+
+// ---- Baslik satiri (#466) ----
+
+/** #466: baslik ve GRIND artik ust BARDA (KabukBaslik), icerikte degil. */
+test('baslik ve GRIND icerikte degil, barda', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.queryByText('GRIND')).toBeNull();
+  expect(screen.queryByText('Antrenmana başla')).toBeNull();
+});
+
+/** "Tumunu gor" -> "Duzenle"; gittigi yer degismedi. */
+test('Duzenle dugmesi sablonlar ekranina gider', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.queryByText('Tümünü gör')).toBeNull();
+  expect(screen.getByText('Düzenle')).toBeTruthy();
+});

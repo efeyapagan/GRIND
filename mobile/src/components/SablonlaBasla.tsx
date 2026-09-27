@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
-import CizgiliBaslik from '../ui/CizgiliBaslik';
 import SablonVitrinKarti from '../ui/SablonVitrinKarti';
 import SablonMenusu, { type Kutu } from './SablonMenusu';
 import SablonKaruseli from './SablonKaruseli';
@@ -52,15 +51,13 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
 
   return (
     <View className="flex-col gap-5">
-      <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
-
       <View className="flex-col gap-3">
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-heading text-fg">{t('sablonlar.sablonlarim')}</Text>
           {sablonlar && sablonlar.length > 0 && (
             // RN'de Text rengi miras ALINMAZ: `Link`e verilen renk metne gecmez, metin ayri bir Text.
             <Link href="/templates" className="min-h-11 justify-center">
-              <Text className="text-label text-accent-soft">{t('sablonlar.tumunuGor')}</Text>
+              <Text className="text-label text-accent-soft">{t('sablonlar.duzenleListe')}</Text>
             </Link>
           )}
         </View>

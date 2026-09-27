@@ -4,6 +4,8 @@ import KabukBaslik from './KabukBaslik';
 const mockPush = jest.fn();
 let mockPathname = '/';
 jest.mock('expo-router', () => ({
+  // CizgiliBaslik (#466'dan beri antrenman barinda) odaklanmada cizgiyi animasyonla ciziyor.
+  useFocusEffect: (geriCagri: () => void) => geriCagri(),
   usePathname: () => mockPathname,
   useRouter: () => ({ push: mockPush, back: jest.fn(), replace: jest.fn(), canGoBack: () => false }),
 }));
@@ -104,4 +106,32 @@ test('diger ekranlarda bayrak yoktur', async () => {
 
   expect(screen.getByText('GRIND')).toBeTruthy();
   expect(screen.queryByLabelText('Yorum dili')).toBeNull();
+});
+
+/**
+ * #466 (kullanici karari): antrenman ekraninin KENDI ust bari var -- sayfa basligi yerine alti
+ * cizili "Antrenmana basla" ve saginda GRIND. Icerikle kaymaz, tepede sabit durur.
+ */
+test('antrenman ekraninda bar alti cizili basligi ve GRIND i gosterir', async () => {
+  mockPathname = '/antrenman';
+  await render(<KabukBaslik />);
+
+  expect(screen.getByText('Antrenmana başla')).toBeTruthy();
+  expect(screen.getByText('GRIND')).toBeTruthy();
+});
+
+/** Sekme koku: geri tusu yok. */
+test('antrenman ekraninda geri tusu yoktur', async () => {
+  mockPathname = '/antrenman';
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByLabelText('Geri')).toBeNull();
+});
+
+/** AYIRT EDICI: ayni sekmenin diger ekranlarinda bar durur (geri tusu oradan geliyor). */
+test('sablonlar ekraninda ust bar durur', async () => {
+  mockPathname = '/templates';
+  await render(<KabukBaslik />);
+
+  expect(screen.getByText('GRIND')).toBeTruthy();
 });
