@@ -3,16 +3,23 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
-import { useExerciseProgress, type IlerlemeAraligi, type IlerlemeNoktasi } from '@grind/shared/api/queries';
+import {
+  useExerciseProgress,
+  type EgzersizOlcumu,
+  type IlerlemeAraligi,
+  type IlerlemeNoktasi,
+} from '@grind/shared/api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
+import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import CizgiGrafik, { type CizgiNoktasi } from '../ui/CizgiGrafik';
 import SekmeDugmesi from '../ui/SekmeDugmesi';
 import { useIkonRenk } from '../ui/renkler';
+import { useHareketOlcumu } from './useHareketOlcumu';
 
-type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar';
+type SekmeAnahtari = 'agirlik' | 'antrenman' | 'birTekrar' | 'tekrar' | 'sure';
 
 // Etiketler KATALOG ANAHTARIDIR, metin degil -- web/src/components/HareketGecmisi.tsx ile ayni.
-const SEKMELER = [
+const KILOLU_SEKMELER = [
   { anahtar: 'agirlik' as SekmeAnahtari, etiket: 'setGirdisi.agirlikEtiket', ozetAdi: 'hareketGecmisi.ozetAgirlik', deger: (nokta: IlerlemeNoktasi) => nokta.topWeight },
   { anahtar: 'antrenman' as SekmeAnahtari, etiket: 'antrenman.baslik', ozetAdi: 'hareketGecmisi.ozetAntrenman', deger: (nokta: IlerlemeNoktasi) => nokta.volume },
   {
@@ -22,6 +29,39 @@ const SEKMELER = [
     deger: (nokta: IlerlemeNoktasi) => nokta.estimatedOneRepMax,
   },
 ] as const;
+
+const TEKRAR_SEKMELERI = [
+  {
+    anahtar: 'tekrar' as SekmeAnahtari,
+    etiket: 'setGirdisi.tekrarEtiket',
+    ozetAdi: 'hareketGecmisi.ozetTekrar',
+    deger: (nokta: IlerlemeNoktasi) => nokta.bestReps,
+  },
+] as const;
+
+const SURE_SEKMELERI = [
+  {
+    anahtar: 'sure' as SekmeAnahtari,
+    etiket: 'setGirdisi.sureEtiket',
+    ozetAdi: 'hareketGecmisi.ozetSure',
+    deger: (nokta: IlerlemeNoktasi) => nokta.bestDurationSeconds,
+  },
+] as const;
+
+type Sekme =
+  | (typeof KILOLU_SEKMELER)[number]
+  | (typeof TEKRAR_SEKMELERI)[number]
+  | (typeof SURE_SEKMELERI)[number];
+
+/**
+ * #346: agirliksiz harekette kilo, hacim ve 1RM anlamsiz -- tek sekme en cok tekrar; sureli harekette en
+ * uzun sure.
+ */
+const OLCUM_SEKMELERI: Record<EgzersizOlcumu, readonly Sekme[]> = {
+  WeightReps: KILOLU_SEKMELER,
+  Reps: TEKRAR_SEKMELERI,
+  Duration: SURE_SEKMELERI,
+};
 
 const ARALIKLAR = [
   { anahtar: '1a' as IlerlemeAraligi, etiket: 'hareketGecmisi.aralikBirAy' },
@@ -61,10 +101,19 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
 function HareketGrafigi({ exerciseId, exerciseName }: Props) {
   const { t } = useTranslation();
   const dil = useDil();
+  const olcum = useHareketOlcumu(exerciseId);
+  const sekmeler = OLCUM_SEKMELERI[olcum];
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
   const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
-  const sekme = SEKMELER.find((aday) => aday.anahtar === sekmeAnahtari) ?? SEKMELER[0];
+  const sekme = sekmeler.find((aday) => aday.anahtar === sekmeAnahtari) ?? sekmeler[0];
+  // #346: sureli harekette degerler saniyedir, "1:15" diye yazilir.
+  const bicim = (deger: number) =>
+    olcum === 'Duration' ? kalanSureMetni(deger * 1000) : formatWeight(deger, dil);
+  const farkBicimi = (fark: number) =>
+    olcum === 'Duration' && fark !== 0
+      ? `${fark > 0 ? '+' : '−'}${kalanSureMetni(Math.abs(fark) * 1000)}`
+      : formatFark(fark, dil);
 
   let icerik: React.ReactNode;
   if (isLoading) {
@@ -90,7 +139,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
     if (cizilecekler.length === 0) {
       icerik = (
         <Text className="text-body text-muted">
-          {t('hareketGecmisi.birTekrarAciklama')}
+          {t(sekme.anahtar === 'birTekrar' ? 'hareketGecmisi.birTekrarAciklama' : 'hareketGecmisi.aralikBos')}
         </Text>
       );
     } else {
@@ -101,12 +150,12 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
           <View className="flex-row gap-8">
             <View className="flex-col gap-1">
               <Text className="text-label text-muted">{t('hareketGecmisi.suAnki')}</Text>
-              <Text className="text-metric text-fg">{formatWeight(son.deger, dil)}</Text>
+              <Text className="text-metric text-fg">{bicim(son.deger)}</Text>
             </View>
             {cizilecekler.length > 1 && (
               <View className="flex-col gap-1">
                 <Text className="text-label text-muted">{t('hareketGecmisi.fark')}</Text>
-                <Text className="text-metric text-fg">{formatFark(son.deger - ilk.deger, dil)}</Text>
+                <Text className="text-metric text-fg">{farkBicimi(son.deger - ilk.deger)}</Text>
               </View>
             )}
           </View>
@@ -121,6 +170,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
               }),
             )}
             birim="kg"
+            bicimle={bicim}
             baslik={t('hareketGecmisi.grafikBasligi', { ad: exerciseName, ozet: t(sekme.ozetAdi), count: cizilecekler.length })}
           />
           {cizilecekler.some(({ nokta }) => nokta.positionChanged) && (
@@ -136,7 +186,7 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
   return (
     <View className="flex-col gap-3 pt-1">
       <View className="flex-row border-b border-surface-3">
-        {SEKMELER.map((aday) => (
+        {sekmeler.map((aday) => (
           <SekmeDugmesi
             key={aday.anahtar}
             secili={aday.anahtar === sekmeAnahtari}

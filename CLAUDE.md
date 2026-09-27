@@ -77,6 +77,14 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   /api/notifications/seen`. Son 30 gün, en fazla 50. Push, hedef/seri hatırlatması ve GRINDY bildirimi kapsam
   dışı; saklanması gereken bir tür gelirse o türe özel tablo + kaynak eklenir. Ayrıntı:
   [docs/superpowers/specs/2026-09-26-bildirimler-design.md](docs/superpowers/specs/2026-09-26-bildirimler-design.md).
+- **Ağırlıksız hareketler (2026-09-27, #346)** — `Exercise.Measurement` setin neyle ölçüldüğünü söyler:
+  `WeightReps` (bugünkü), `Reps` (crunch, leg raise — kilo isteğe bağlı "ek ağırlık", RIR yok) ve `Duration`
+  (plank, dead hang — yalnızca saniye; mobilde kronometreyle). Set girişi, doğrulama
+  (`SetMeasurementRules`), rekor (`RecordTracker` tipe göre; süre rekoru `RecordType.Duration`), grafik,
+  rekor kartı, bildirim ve export tipe göre davranır; 1RM ve plato yalnızca `WeightReps`. Gösterim setin
+  kendi değerlerine öncelik verir: tipi sonradan süreliye dönen hareketin süresiz eski setleri "kg × tekrar"
+  kalır. Ayrıntı:
+  [docs/superpowers/specs/2026-09-27-agirliksiz-hareketler-design.md](docs/superpowers/specs/2026-09-27-agirliksiz-hareketler-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -243,7 +251,8 @@ Object Reference) açığıdır.
   açık (profil başlığı), pasif/fotoğrafsızda 404, `ETag` + `Cache-Control: private, no-cache`; profil
   yanıtındaki `avatarVersion` (Unix ms) istemcide önbellek kırıcıdır. Pasif hesabın fotoğrafı silinmez
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
-  `Category` (Push / Pull / Legs / Other), `IsArchived` (soft delete — geçmiş kayıtlar
+  `Category` (Push / Pull / Legs / Other), `Measurement` (`WeightReps` / `Reps` / `Duration` — setlerin
+  neyle ölçüldüğü, #346; kullanıcı yalnızca oluştururken seçer), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
 - **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`
 - **TemplateExercise**: `Id`, `WorkoutTemplateId` (FK), `ExerciseId` (FK), `OrderIndex`,
@@ -264,8 +273,9 @@ Object Reference) açığıdır.
   `OrderIndex`, `PlannedSets` (nullable — `null` = hedefsiz, antrenmana sonradan eklenen hareket),
   `RestSeconds` (0–900, varsayılan 90) — antrenmanın kendi hareket listesi; `(WorkoutSessionId, ExerciseId)`
   benzersiz
-- **SetEntry**: `Id`, `WorkoutSessionId` (FK), `ExerciseId` (FK), `Weight`, `Reps`,
-  `RecordType` (None / Weight / Reps), `Rir` (nullable — Reps in Reserve, ileride koçluk
+- **SetEntry**: `Id`, `WorkoutSessionId` (FK), `ExerciseId` (FK), `Weight`, `Reps` (nullable — süreli
+  sette boş), `DurationSeconds` (nullable, #346 — yalnızca süreli sette; set ya tekrar ya süre taşır, CHECK),
+  `RecordType` (None / Weight / Reps / Duration), `Rir` (nullable — Reps in Reserve, ileride koçluk
   önerileri için veri toplamaya şimdiden başlıyoruz; #266'dan beri yarım adımlı `numeric(4,1)`:
   0–5, 2.5 = "2–3 arası", 5 = "4+"; iki platformda kaydırıcıdan seçilir, etiketi
   `packages/shared/src/lib/rir.ts`. Eski kayıtlarda 5'ten büyük değer kalabilir, "4+" gösterilir),

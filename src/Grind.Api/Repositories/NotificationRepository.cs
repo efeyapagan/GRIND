@@ -41,7 +41,8 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                 e.WorkoutSession.SessionExercises
                     .Where(x => x.ExerciseId == e.ExerciseId)
                     .Select(x => (int?)x.OrderIndex)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                e.Exercise.Measurement))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<FriendSessionDayRow>> GetFriendGoalSessionsAsync(

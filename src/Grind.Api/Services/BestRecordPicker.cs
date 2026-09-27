@@ -17,6 +17,6 @@ public static class BestRecordPicker
             .OrderBy(x => x.Order).ThenBy(x => x.FirstAt).ThenBy(x => x.Best.ExerciseId)
             .Select(x => new NotificationRecordResponse(
                 x.Best.ExerciseId, x.Best.ExerciseName, x.Best.Weight, x.Best.Reps, x.Best.DurationSeconds,
-                x.Best.RecordType))
+                x.Best.RecordType, x.Best.Measurement))
             .ToList();
 }

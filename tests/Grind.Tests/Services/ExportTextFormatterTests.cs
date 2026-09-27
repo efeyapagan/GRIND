@@ -25,7 +25,8 @@ public class ExportTextFormatterTests
     private static SetEntryResponse Set(
         long exerciseId, string name, decimal weight, int reps,
         RecordType recordType = RecordType.None, decimal? rir = null, int position = 1) =>
-        new(0, 1, exerciseId, name, position, weight, reps, null, recordType, rir, An, RestSeconds: null);
+        new(0, 1, exerciseId, name, position, weight, reps, null, recordType, rir, An, RestSeconds: null,
+            ExerciseMeasurement.WeightReps);
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
@@ -202,7 +203,8 @@ public class ExportTextFormatterTests
     [Fact]
     public void Sureli_set_saniye_olarak_ve_sure_rekoru_ekiyle_yazilir()
     {
-        var plank = new SetEntryResponse(0, 1, 7, "Plank", 1, 0m, null, 75, RecordType.Duration, null, An, RestSeconds: null);
+        var plank = new SetEntryResponse(0, 1, 7, "Plank", 1, 0m, null, 75, RecordType.Duration, null, An, RestSeconds: null,
+            ExerciseMeasurement.Duration);
 
         var metin = Formatla(Oturum(An, null, plank));
 

@@ -4008,16 +4008,19 @@ export interface components {
         CreateExerciseRequest: {
             name: string;
             category: components["schemas"]["ExerciseCategory"];
+            measurement?: components["schemas"]["ExerciseMeasurement"];
         };
         CreateSetRequest: {
             /** Format: int64 */
             exerciseId: number;
             /** Format: double */
-            weight: number;
+            weight?: number | null;
             /** Format: int32 */
-            reps: number;
+            reps?: number | null;
             /** Format: double */
             rir?: number | null;
+            /** Format: int32 */
+            durationSeconds?: number | null;
         };
         CreateTemplateRequest: {
             name: string;
@@ -4071,6 +4074,8 @@ export interface components {
         ExerciseCategory: "Push" | "Pull" | "Legs" | "Other";
         /** @enum {string} */
         ExerciseEquipment: "Barbell" | "Dumbbell" | "Machine" | "Cable" | "Bodyweight" | "Other";
+        /** @enum {string} */
+        ExerciseMeasurement: "WeightReps" | "Reps" | "Duration";
         ExerciseMediaResponse: {
             /** Format: int64 */
             id?: number;
@@ -4089,7 +4094,7 @@ export interface components {
             /** Format: double */
             topWeight?: number;
             /** Format: int32 */
-            topWeightReps?: number;
+            topWeightReps?: number | null;
             /** Format: double */
             volume?: number;
             /** Format: int32 */
@@ -4099,6 +4104,10 @@ export interface components {
             /** Format: int32 */
             position?: number;
             positionChanged?: boolean;
+            /** Format: int32 */
+            bestReps?: number | null;
+            /** Format: int32 */
+            bestDurationSeconds?: number | null;
         };
         ExerciseProgressResponse: {
             /** Format: int64 */
@@ -4114,15 +4123,18 @@ export interface components {
             /** Format: double */
             bestWeight?: number;
             /** Format: int32 */
-            bestWeightReps?: number;
+            bestWeightReps?: number | null;
             /** Format: date-time */
             bestWeightAt?: string;
             /** Format: int32 */
-            bestReps?: number;
+            bestReps?: number | null;
             /** Format: double */
             bestRepsWeight?: number;
             /** Format: date-time */
             bestRepsAt?: string;
+            measurement?: components["schemas"]["ExerciseMeasurement"];
+            /** Format: int32 */
+            bestDurationSeconds?: number | null;
         };
         ExerciseResponse: {
             /** Format: int64 */
@@ -4131,6 +4143,7 @@ export interface components {
             alternateName?: string | null;
             category?: components["schemas"]["ExerciseCategory"];
             equipment?: components["schemas"]["ExerciseEquipment"];
+            measurement?: components["schemas"]["ExerciseMeasurement"];
             isArchived?: boolean;
             isGlobal?: boolean;
             media?: components["schemas"]["ExerciseMediaResponse"][] | null;
@@ -4267,8 +4280,11 @@ export interface components {
             /** Format: double */
             weight?: number;
             /** Format: int32 */
-            reps?: number;
+            reps?: number | null;
+            /** Format: int32 */
+            durationSeconds?: number | null;
             recordType?: components["schemas"]["RecordType"];
+            measurement?: components["schemas"]["ExerciseMeasurement"];
         };
         NotificationResponse: {
             kind?: components["schemas"]["NotificationKind"];
@@ -4303,6 +4319,8 @@ export interface components {
             reps?: number | null;
             /** Format: double */
             rir?: number | null;
+            /** Format: int32 */
+            durationSeconds?: number | null;
         };
         PatchTemplateRequest: {
             name?: string | null;
@@ -4344,7 +4362,7 @@ export interface components {
             privacyLevel?: components["schemas"]["PrivacyLevel"];
         };
         /** @enum {string} */
-        RecordType: "None" | "Weight" | "Reps";
+        RecordType: "None" | "Weight" | "Reps" | "Duration";
         RegisterRequest: {
             username: string;
             password: string;
@@ -4398,7 +4416,9 @@ export interface components {
             /** Format: double */
             weight?: number;
             /** Format: int32 */
-            reps?: number;
+            reps?: number | null;
+            /** Format: int32 */
+            durationSeconds?: number | null;
             recordType?: components["schemas"]["RecordType"];
             /** Format: double */
             rir?: number | null;
@@ -4406,6 +4426,7 @@ export interface components {
             createdAt?: string;
             /** Format: int32 */
             restSeconds?: number | null;
+            measurement?: components["schemas"]["ExerciseMeasurement"];
         };
         StartSessionRequest: {
             /** Format: int64 */

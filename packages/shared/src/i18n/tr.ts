@@ -52,6 +52,8 @@ export const tr = {
   rekor: {
     agirlik: 'Ağırlık rekoru',
     tekrar: 'Tekrar rekoru',
+    // #346: süreyle ölçülen harekette (plank) en uzun süre.
+    sure: 'Süre rekoru',
     gecildi: 'geçildi',
   },
   setGirdisi: {
@@ -70,6 +72,16 @@ export const tr = {
     rirEtiket: 'RIR',
     opsiyonelEki: ' (opsiyonel)',
     kalanBirimi: 'kalan',
+    // #346: ağırlıksız harekette (crunch) kilo kutusu isteğe bağlıdır -- elde plaka gibi ek yük.
+    ekAgirlikEtiket: 'Ek ağırlık',
+    // #346: süreyle ölçülen harekette (plank) saniye kutusu ve kronometre.
+    sureEtiket: 'Süre',
+    saniyeBirimi: 'sn',
+    sureGerekli: 'Süre girilmeli.',
+    sureAraligi: 'Süre 1 ile {{enFazla}} saniye arasında tam sayı olmalı.',
+    kronometreBaslat: 'Başlat',
+    kronometreDurdur: 'Durdur',
+    kronometreEtiketi: 'Kronometre {{sure}}',
   },
   rir: {
     alanDegeri: 'RIR (opsiyonel): {{deger}}',
@@ -390,6 +402,8 @@ export const tr = {
     ozetAgirlik: 'ağırlık',
     ozetAntrenman: 'antrenman hacmi',
     ozetBirTekrar: 'tahmini 1RM',
+    ozetTekrar: 'en çok tekrar',
+    ozetSure: 'en uzun süre',
     aralikBirAy: '1 Ay',
     aralikUcAy: '3 Ay',
     aralikTum: 'Tüm',
@@ -413,6 +427,7 @@ export const tr = {
     bosBaslik: 'Henüz rekor yok',
     enAgirSet: 'En ağır set',
     enCokTekrar: 'En çok tekrar',
+    enUzunSure: 'En uzun süre',
     tekrarSayisi_one: '{{count}} tekrar',
     tekrarSayisi_other: '{{count}} tekrar',
     plato: 'Plato',
@@ -453,7 +468,8 @@ export const tr = {
     artikArkadassiniz: 'Artık arkadaşsınız',
     rekorKirdi_one: '{{ad}} {{count}} harekette rekor kırdı',
     rekorKirdi_other: '{{ad}} {{count}} harekette rekor kırdı',
-    rekorSatiri: '{{hareket}} · {{agirlik}} kg × {{tekrar}}',
+    // #346: değer set türüne göre biçimlenir ("60 kg × 8", "20 tekrar", "1:15"), bkz. lib/setDegeri.
+    rekorSatiri: '{{hareket}} · {{deger}}',
     alinamadi: 'Bildirimler alınamadı.',
     tekrarDene: 'Tekrar dene',
     zilEtiketi_one: 'Bildirimler, {{count}} okunmamış',

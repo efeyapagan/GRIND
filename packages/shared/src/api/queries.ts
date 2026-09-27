@@ -162,16 +162,22 @@ export interface SetKaydi {
   // kendisi HESAPLAMAZ (ikinci dogruluk kaynagi olmasin diye).
   exercisePosition: number;
   weight: number;
-  reps: number;
+  // #346: set ya tekrar ya sure tasir, digeri null (sureli harekette tekrar yok).
+  reps: number | null;
+  durationSeconds: number | null;
   recordType: components['schemas']['RecordType'];
   rir: number | null;
   createdAt: string;
   // #71: oturumdaki bir onceki setten bu yana gecen GERCEK sure (sn), sunucudan; ilk sette null.
   restSeconds: number | null;
+  // #346: hareketin olcum tipi -- agirliksiz set "0 kg × 20" degil "20 tekrar" diye yazilir.
+  measurement: EgzersizOlcumu;
 }
 
 export type EgzersizKategorisi = components['schemas']['ExerciseCategory'];
 export type EgzersizEkipmani = components['schemas']['ExerciseEquipment'];
+/** #346: setlerin neyle olculdugu -- kilo + tekrar, yalnizca tekrar ya da sure. */
+export type EgzersizOlcumu = components['schemas']['ExerciseMeasurement'];
 
 export interface Egzersiz {
   id: number;
@@ -186,6 +192,9 @@ export interface Egzersiz {
   // bilinmiyor, ibare cizilmez -- yalnizca global hareketlerde seed'den gelir. `alternateName` ile
   // ayni gerekceyle optional: ibareyle ilgisi olmayan test fixture'lari bu alani bilmez.
   equipment?: EgzersizEkipmani | null;
+  // #346: set girisinin hangi alanlari cizecegi. `equipment` ile ayni gerekceyle optional; yoksa
+  // kilo + tekrar sayilir (bkz. `lib/setOlcumu`).
+  measurement?: EgzersizOlcumu;
 }
 
 /**
@@ -237,8 +246,10 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     yanit.exercisePosition === undefined ||
     yanit.weight === undefined ||
     yanit.reps === undefined ||
+    yanit.durationSeconds === undefined ||
     !yanit.recordType ||
-    !yanit.createdAt
+    !yanit.createdAt ||
+    !yanit.measurement
   ) {
     throw new Error('Sunucudan eksik set yaniti alindi.');
   }
@@ -250,10 +261,12 @@ function dogrulanmisSet(yanit: SetEntryResponse): SetKaydi {
     exercisePosition: yanit.exercisePosition,
     weight: yanit.weight,
     reps: yanit.reps,
+    durationSeconds: yanit.durationSeconds,
     recordType: yanit.recordType,
     rir: yanit.rir ?? null,
     createdAt: yanit.createdAt,
     restSeconds: yanit.restSeconds ?? null,
+    measurement: yanit.measurement,
   };
 }
 
@@ -267,6 +280,7 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
     alternateName: yanit.alternateName ?? null,
     category: yanit.category,
     equipment: yanit.equipment ?? null,
+    measurement: yanit.measurement ?? 'WeightReps',
   };
 }
 
@@ -336,11 +350,14 @@ export interface EgzersizRekoru {
   exerciseId: number;
   exerciseName: string;
   bestWeight: number;
-  bestWeightReps: number;
+  bestWeightReps: number | null;
   bestWeightAt: string;
-  bestReps: number;
+  bestReps: number | null;
   bestRepsWeight: number;
   bestRepsAt: string;
+  // #346: sureli harekette anlamli alan `bestDurationSeconds`tir (kilo 0, tekrar null).
+  measurement: EgzersizOlcumu;
+  bestDurationSeconds: number | null;
 }
 
 /**
@@ -356,7 +373,9 @@ function dogrulanmisRekor(yanit: ExerciseRecordResponse): EgzersizRekoru {
     !yanit.bestWeightAt ||
     yanit.bestReps === undefined ||
     yanit.bestRepsWeight === undefined ||
-    !yanit.bestRepsAt
+    !yanit.bestRepsAt ||
+    !yanit.measurement ||
+    yanit.bestDurationSeconds === undefined
   ) {
     throw new Error('Sunucudan eksik rekor yaniti alindi.');
   }
@@ -369,6 +388,8 @@ function dogrulanmisRekor(yanit: ExerciseRecordResponse): EgzersizRekoru {
     bestReps: yanit.bestReps,
     bestRepsWeight: yanit.bestRepsWeight,
     bestRepsAt: yanit.bestRepsAt,
+    measurement: yanit.measurement,
+    bestDurationSeconds: yanit.bestDurationSeconds,
   };
 }
 
@@ -485,7 +506,7 @@ export interface IlerlemeNoktasi {
   sessionId: number;
   startedAt: string;
   topWeight: number;
-  topWeightReps: number;
+  topWeightReps: number | null;
   volume: number;
   setCount: number;
   // Tahmin edilemeyen oturumda null (0 kg ya da 12'den fazla tekrar).
@@ -495,6 +516,9 @@ export interface IlerlemeNoktasi {
   // #230: bu noktanin pozisyonu KENDISINDEN ONCEKI (kronolojik) noktadan farkliysa true; ilk
   // nokta icin her zaman false.
   positionChanged: boolean;
+  // #346: o oturumun en cok tekrari ve en uzun suresi -- agirliksiz ve sureli hareketlerin grafigi.
+  bestReps: number | null;
+  bestDurationSeconds: number | null;
 }
 
 /** `0` gecerli bir deger: kontroller `=== undefined` ile, `!` ile degil. */
@@ -508,7 +532,9 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     yanit.setCount === undefined ||
     yanit.estimatedOneRepMax === undefined ||
     yanit.position === undefined ||
-    yanit.positionChanged === undefined
+    yanit.positionChanged === undefined ||
+    yanit.bestReps === undefined ||
+    yanit.bestDurationSeconds === undefined
   ) {
     throw new Error('Sunucudan eksik ilerleme noktasi alindi.');
   }
@@ -522,6 +548,8 @@ function dogrulanmisIlerlemeNoktasi(yanit: ExerciseProgressPointResponse): Ilerl
     estimatedOneRepMax: yanit.estimatedOneRepMax,
     position: yanit.position,
     positionChanged: yanit.positionChanged,
+    bestReps: yanit.bestReps,
+    bestDurationSeconds: yanit.bestDurationSeconds,
   };
 }
 
@@ -706,11 +734,13 @@ export function usePlatolar() {
   });
 }
 
+/** #346: hangi alanlarin dolu oldugu hareketin olcum tipine bagli (`lib/setGirdisi`); `null` = gonderilmedi. */
 export interface YeniSetGirdisi {
   exerciseId: number;
-  weight: number;
-  reps: number;
+  weight: number | null;
+  reps: number | null;
   rir: number | null;
+  durationSeconds: number | null;
 }
 
 /**
@@ -728,6 +758,7 @@ export function useAddSet() {
         weight: girdi.weight,
         reps: girdi.reps,
         rir: girdi.rir,
+        durationSeconds: girdi.durationSeconds,
       };
       const yanit = await request<SetEntryResponse>('/sets', {
         method: 'POST',
@@ -763,13 +794,14 @@ export function setDegistiTazele(
 
 export interface SetDuzeltmesi {
   id: number;
-  weight: number;
-  reps: number;
+  weight: number | null;
+  reps: number | null;
   rir: number | null;
+  durationSeconds: number | null;
 }
 
 /**
- * `PATCH /api/sets/{id}` (#57). Uc alan da gonderilir. DIKKAT: sunucuda `null` "degistirme" demektir,
+ * `PATCH /api/sets/{id}` (#57). Olcum tipinin alanlari gonderilir, digerleri `null` (#346). DIKKAT: sunucuda `null` "degistirme" demektir,
  * yani RIR bu uc ile BOSALTILAMAZ.
  */
 export function useUpdateSet() {
@@ -1717,8 +1749,11 @@ export interface BildirimRekoru {
   exerciseId: number;
   exerciseName: string;
   weight: number;
-  reps: number;
-  recordType: 'Weight' | 'Reps';
+  // #346: set ya tekrar ya sure tasir.
+  reps: number | null;
+  durationSeconds: number | null;
+  recordType: 'Weight' | 'Reps' | 'Duration';
+  measurement: EgzersizOlcumu;
 }
 
 /** Sunucuda saklanmaz, takip ve rekor satirlarindan turetilir; `actor` BAKANIN gozunden. */
@@ -1742,10 +1777,19 @@ function dogrulanmisBildirim(yanit: NotificationResponse): Bildirim {
     actor: dogrulanmisKullaniciOzeti(yanit.actor),
     records: (yanit.records ?? []).map((r) => {
       if (r.exerciseId === undefined || !r.exerciseName || r.weight === undefined || r.reps === undefined
-        || (r.recordType !== 'Weight' && r.recordType !== 'Reps')) {
+        || r.durationSeconds === undefined || !r.measurement
+        || (r.recordType !== 'Weight' && r.recordType !== 'Reps' && r.recordType !== 'Duration')) {
         throw new Error('Sunucudan eksik rekor satiri alindi.');
       }
-      return { exerciseId: r.exerciseId, exerciseName: r.exerciseName, weight: r.weight, reps: r.reps, recordType: r.recordType };
+      return {
+        exerciseId: r.exerciseId,
+        exerciseName: r.exerciseName,
+        weight: r.weight,
+        reps: r.reps,
+        durationSeconds: r.durationSeconds,
+        recordType: r.recordType,
+        measurement: r.measurement,
+      };
     }),
   };
 }

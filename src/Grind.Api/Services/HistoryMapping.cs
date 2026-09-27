@@ -86,6 +86,7 @@ internal static class HistoryMapping
             s.RecordType,
             s.Rir,
             s.CreatedAt,
-            rests.GetValueOrDefault(s.Id)))
+            rests.GetValueOrDefault(s.Id),
+            s.Exercise.Measurement))
         .ToList();
 }

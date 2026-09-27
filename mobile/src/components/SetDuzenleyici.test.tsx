@@ -24,10 +24,12 @@ const KAYIT: SetKaydi = {
   exercisePosition: 1,
   weight: 22.5,
   reps: 10,
+  durationSeconds: null,
   recordType: 'None',
   rir: null,
   createdAt: new Date(Date.UTC(2026, 8, 26, 10, 0)).toISOString(),
   restSeconds: null,
+  measurement: 'WeightReps',
 };
 
 // #413: ibare iki set giris kutusunda da gorunur -- duzeltirken de ayni soru soruluyor.

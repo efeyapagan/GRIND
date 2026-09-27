@@ -29,25 +29,30 @@ interface Props {
  * web/src/components/SetDuzenleyici.tsx ile ayni akis (issue #57). #396: satirin yerinde degil
  * ekranin ortasinda acilir; set paneliyle ayni "liquid glass" yuzey (`CamYuzey`, #350). Konumu ve
  * perdesi cagiranin (antrenman.tsx).
+ *
+ * #346: alanlar setin hareketinin olcum tipine gore (set paneliyle ayni); sureli sette kronometre yok,
+ * sure elle duzeltilir. Tip #346'yla sureliye donen hareketin suresiz eski setine sure yazmak onu sureli
+ * sete cevirir (sunucu tekrari siler).
  */
 export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const duzeltme = useUpdateSet();
   const agirlikIbaresi = useAgirlikIbaresi(kayit.exerciseId);
+  const olcum = kayit.measurement;
   const [girdi, setGirdi] = useState(() => setGirdisiMetni(kayit));
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
 
   async function kaydet() {
     setGenelHata(null);
-    const dogrulamaHatalari = setGirdisiniDogrula(girdi);
+    const dogrulamaHatalari = setGirdisiniDogrula(girdi, olcum);
     setAlanHatalari(dogrulamaHatalari);
     if (Object.keys(dogrulamaHatalari).length > 0) {
       return;
     }
     try {
-      await duzeltme.mutateAsync({ id: kayit.id, ...setGirdisiniAyristir(girdi) });
+      await duzeltme.mutateAsync({ id: kayit.id, ...setGirdisiniAyristir(girdi, olcum) });
       onKapat();
     } catch (hata) {
       const sonuc = apiHatasiniAyir(hata, SET_ALANLARI);
@@ -71,41 +76,56 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
           {genelHata}
         </Text>
       )}
-      {/* flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser. */}
-      <View className="flex-row flex-wrap gap-2">
-        <View className="flex-1">
-          <SayiAlani
-            id={`set-${kayit.id}-agirlik`}
-            etiket={t('setGirdisi.agirlikEtiket')}
-            birim="kg"
-            ipucu={agirlikIbaresi}
-            inputMode="decimal"
-            placeholder="0"
-            value={girdi.agirlik}
-            onChange={(agirlik) => setGirdi((onceki) => ({ ...onceki, agirlik }))}
-            hata={alanHatalari.weight}
-          />
-        </View>
-        <View className="flex-1">
-          <SayiAlani
-            id={`set-${kayit.id}-tekrar`}
-            etiket={t('setGirdisi.tekrarEtiket')}
-            birim={t('setGirdisi.tekrarBirimi')}
-            inputMode="numeric"
-            placeholder="0"
-            value={girdi.tekrar}
-            onChange={(tekrar) => setGirdi((onceki) => ({ ...onceki, tekrar }))}
-            hata={alanHatalari.reps}
-          />
-        </View>
-        <RirAlani
-          id={`set-${kayit.id}-rir`}
-          deger={girdi.rir === '' ? null : Number(girdi.rir)}
-          onDegis={(rir) => setGirdi((onceki) => ({ ...onceki, rir: rir === null ? '' : String(rir) }))}
-          temizlenebilir={false}
-          hata={alanHatalari.rir}
+      {olcum === 'Duration' ? (
+        <SayiAlani
+          id={`set-${kayit.id}-sure`}
+          etiket={t('setGirdisi.sureEtiket')}
+          birim={t('setGirdisi.saniyeBirimi')}
+          inputMode="numeric"
+          placeholder="0"
+          value={girdi.sure}
+          onChange={(sure) => setGirdi((onceki) => ({ ...onceki, sure }))}
+          hata={alanHatalari.durationSeconds}
         />
-      </View>
+      ) : (
+        // flex-wrap: RIR paneli (#266) acilinca uc alanin altina tam genislikte duser.
+        <View className="flex-row flex-wrap gap-2">
+          <View className="flex-1">
+            <SayiAlani
+              id={`set-${kayit.id}-agirlik`}
+              etiket={t(olcum === 'Reps' ? 'setGirdisi.ekAgirlikEtiket' : 'setGirdisi.agirlikEtiket')}
+              birim="kg"
+              ipucu={agirlikIbaresi}
+              inputMode="decimal"
+              placeholder="0"
+              value={girdi.agirlik}
+              onChange={(agirlik) => setGirdi((onceki) => ({ ...onceki, agirlik }))}
+              hata={alanHatalari.weight}
+            />
+          </View>
+          <View className="flex-1">
+            <SayiAlani
+              id={`set-${kayit.id}-tekrar`}
+              etiket={t('setGirdisi.tekrarEtiket')}
+              birim={t('setGirdisi.tekrarBirimi')}
+              inputMode="numeric"
+              placeholder="0"
+              value={girdi.tekrar}
+              onChange={(tekrar) => setGirdi((onceki) => ({ ...onceki, tekrar }))}
+              hata={alanHatalari.reps}
+            />
+          </View>
+          {olcum === 'WeightReps' && (
+            <RirAlani
+              id={`set-${kayit.id}-rir`}
+              deger={girdi.rir === '' ? null : Number(girdi.rir)}
+              onDegis={(rir) => setGirdi((onceki) => ({ ...onceki, rir: rir === null ? '' : String(rir) }))}
+              temizlenebilir={false}
+              hata={alanHatalari.rir}
+            />
+          )}
+        </View>
+      )}
       <View className="flex-row gap-2">
         <View className="flex-1">
           <IkincilDugme onPress={onKapat}>{t('ortak.vazgec')}</IkincilDugme>
