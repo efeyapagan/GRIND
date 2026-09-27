@@ -41,4 +41,20 @@ public class SettingsController(ISettingsService settingsService) : ControllerBa
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Antrenman hedefini ayarlar (#444); <c>null</c> hedefi kaldırır. Güncel değer
+    /// <c>GET /api/profile</c> yanıtında döner. Hedef, AI yorumunun prompt'una girer.
+    /// </summary>
+    [HttpPut("training-goal")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> PutTrainingGoal(
+        UpdateTrainingGoalRequest request, CancellationToken cancellationToken)
+    {
+        await settingsService.SetTrainingGoalAsync(request, cancellationToken);
+
+        return NoContent();
+    }
 }

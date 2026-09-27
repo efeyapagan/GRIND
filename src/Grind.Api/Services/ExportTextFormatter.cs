@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Grind.Api.Common.Records;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.BodyWeight;
 using Grind.Api.Models.Dtos.Export;
@@ -44,10 +45,21 @@ public static class ExportTextFormatter
         "yaparken dikkate alınmalıdır."
     ];
 
+    /// <summary>
+    /// Yalnızca <see cref="ExportTextOptions.MarkWarmups"/> açıkken eklenir (#444): kullanıcıya
+    /// dönen export'ta bir "(ısınma)" işareti olmadığı için açıklaması da olmamalı.
+    /// </summary>
+    private const string WarmupLegend =
+        "\"(ısınma)\" işaretli setler, hareketin başındaki daha hafif setlerdir (uygulamanın " +
+        "tahmini, kullanıcının işareti değil) -- ilerleme ve hacim karşılaştırmasında çalışma " +
+        "setleriyle bir tutulmamalıdır.";
+
     private const string EmptyRange = "Bu aralıkta kayıt yok.";
 
-    public static string Format(ExportResponse export)
+    public static string Format(ExportResponse export, ExportTextOptions? options = null)
     {
+        options ??= ExportTextOptions.Default;
+
         var text = new StringBuilder();
 
         Line(text, "# GRIND antrenman verisi");
@@ -60,10 +72,15 @@ public static class ExportTextFormatter
             Line(text, $"- {legend}");
         }
 
+        if (options.MarkWarmups)
+        {
+            Line(text, $"- {WarmupLegend}");
+        }
+
         AppendSummary(text, export.Summary);
         AppendVolumeByExercise(text, export.Summary.VolumeByExercise);
         AppendRecords(text, export.AllTimeRecords);
-        AppendSessions(text, export.Sessions);
+        AppendSessions(text, export.Sessions, options);
         AppendBodyWeights(text, export.BodyWeights);
 
         return text.ToString();
@@ -118,28 +135,34 @@ public static class ExportTextFormatter
         }
     }
 
-    private static void AppendSessions(StringBuilder text, IReadOnlyList<HistorySessionResponse> sessions)
+    private static void AppendSessions(
+        StringBuilder text, IReadOnlyList<HistorySessionResponse> sessions, ExportTextOptions options)
     {
         Section(text, "Oturumlar");
 
-        if (sessions.Count == 0)
+        var gosterilecek = options.SkipEmptySessions
+            ? sessions.Where(s => s.Sets.Count > 0 || !string.IsNullOrWhiteSpace(s.Notes)).ToList()
+            : sessions;
+
+        if (gosterilecek.Count == 0)
         {
             Line(text, EmptyRange);
             return;
         }
 
-        for (var i = 0; i < sessions.Count; i++)
+        for (var i = 0; i < gosterilecek.Count; i++)
         {
             if (i > 0)
             {
                 Line(text);   // oturumlar arasında boş satır
             }
 
-            AppendSession(text, sessions[i]);
+            AppendSession(text, gosterilecek[i], options);
         }
     }
 
-    private static void AppendSession(StringBuilder text, HistorySessionResponse session)
+    private static void AppendSession(
+        StringBuilder text, HistorySessionResponse session, ExportTextOptions options)
     {
         var header = $"### {SessionTimeText(session.StartedAt, session.EndedAt)}";
         Line(text, session.TemplateName is { } template ? $"{header} · {SingleLine(template)}" : header);
@@ -165,10 +188,17 @@ public static class ExportTextFormatter
         // bu yüzden burada AYRICA hesaplanmaz -- `ExercisePosition` zaten aynı sırayı taşır.
         foreach (var exercise in session.Sets.GroupBy(s => s.ExerciseId))
         {
-            var ilk = exercise.First();
+            var sets = exercise.ToList();
+            var ilk = sets[0];
+
+            // Isınma kuralı HAREKET bazlıdır: bir hareketin ısınması diğerini etkilemez (#444).
+            var isinmaSayisi = options.MarkWarmups
+                ? WarmupDetector.WarmupCount(sets.ConvertAll(s => s.Weight))
+                : 0;
+
             Line(text,
                 Inv($"- {ilk.ExercisePosition}. {SingleLine(ilk.ExerciseName)}: ") +
-                $"{string.Join(", ", exercise.Select(SetWithMarks))}");
+                $"{string.Join(", ", sets.Select((s, i) => SetWithMarks(s, isinma: i < isinmaSayisi)))}");
         }
 
         Line(text, Inv($"Toplam: {session.SetCount} set, {session.TotalVolume:0.##} kg"));
@@ -232,9 +262,14 @@ public static class ExportTextFormatter
         return rir == whole ? Inv($"{whole:0}") : Inv($"{whole:0}–{whole + 1:0}");
     }
 
-    private static string SetWithMarks(SetEntryResponse set)
+    private static string SetWithMarks(SetEntryResponse set, bool isinma = false)
     {
         var text = SetText(set.Weight, set.Reps);
+
+        if (isinma)
+        {
+            text += " (ısınma)";
+        }
 
         if (set.Rir is { } rir)
         {

@@ -87,7 +87,8 @@ public class AiInsightServiceTests
             saat);
 
         return new AiInsightService(
-            new AiInsightRepository(context), export, provider, new UnitOfWork(context), currentUser, saat);
+            new AiInsightRepository(context), export, provider, new UnitOfWork(context), currentUser,
+            new UserRepository(context), saat);
     }
 
     private static void SeedSession(AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc)

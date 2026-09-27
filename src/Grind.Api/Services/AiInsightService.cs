@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Common;
+using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.Insight;
 using Grind.Api.Models.Dtos.Stats;
 using Grind.Api.Models.Entities;
@@ -23,6 +24,7 @@ public class AiInsightService(
     IAiInsightProvider provider,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
+    IUserRepository userRepository,
     TimeProvider timeProvider) : IAiInsightService
 {
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
@@ -59,11 +61,17 @@ public class AiInsightService(
             throw new ValidationException(NothingToInterpret);
         }
 
+        // Hedef, JWT'den DEĞİL veritabanından okunur (CLAUDE.md JWT kararı): kullanıcı hedefini
+        // değiştirdiğinde bir sonraki yorum yeni hedefe göre yazılmalı.
+        var hedef = (await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken))?.TrainingGoal;
+
         // Buradan sonrası ÜCRETLİ: isteğin belirteci değil None (spec Karar 7). İstemci koparsa parası
         // ödenmiş yanıt yine saklanır; iş, (MaxRetries + 1) × TimeoutSeconds ile sınırlıdır — dağıtılan
         // varsayılanlarla yaklaşık 6 dakika (bkz. Services/Ai/DependencyInjection.cs).
         var completion = await provider.CompleteAsync(
-            AiInsightPrompt.Instructions, ExportTextFormatter.Format(export), CancellationToken.None);
+            AiInsightPrompt.Build(hedef),
+            ExportTextFormatter.Format(export, ExportTextOptions.ForAi),
+            CancellationToken.None);
 
         var insight = new AiInsight
         {

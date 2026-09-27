@@ -102,7 +102,8 @@ public class ProfileService(
             user.BirthDate is { } birthDate ? AgeCalculator.AgeOn(birthDate, Today()) : null,
             avatarUpdatedAt is not null,
             avatarUpdatedAt is { } updatedAt ? AvatarVersion.Of(updatedAt) : null,
-            user.PrivacyLevel);
+            user.PrivacyLevel,
+            user.TrainingGoal);
     }
 
     private async Task<User> GetCurrentUserAsync(CancellationToken cancellationToken)

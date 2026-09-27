@@ -94,6 +94,7 @@ ve o dosyanın hangi katalog grubunu kullandığını gösterir; yeni bir ekran 
 | `src/components/SetList.tsx`, `SetSatiri.tsx` | `setler.*` |
 | `src/components/AntrenmanAltAlani.tsx` | `antrenman.*` |
 | `src/components/KullaniciAdiPenceresi.tsx`, `SifreDegistirPenceresi.tsx` | `profil.*` |
+| `src/components/GizlilikSeviyesiSecici.tsx`, `AntrenmanHedefiSecici.tsx` | `profil.*` |
 | `src/ui/HareketSecici.tsx` | `antrenman.kategori.*` |
 | `src/ui/SifreAlani.tsx`, `AuthLayout.tsx` | `ortak.*` |
 
