@@ -5,7 +5,7 @@ import Svg, { Line } from 'react-native-svg';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import CamYuzey from './CamYuzey';
 import SablonFiguru from './SablonFiguru';
-import { useIkonRenk, useRenkPaleti } from './renkler';
+import { useAccentParlama, useIkonRenk, useRenkPaleti } from './renkler';
 
 export const KART_YUKSEKLIGI = 272;
 const FIGUR_BOYUTU = 112;
@@ -20,6 +20,10 @@ interface Props {
   onBasla: () => void;
   onMenu: () => void;
   disabled: boolean;
+  /** #439: basili tutma menusu kartin ekrandaki yerini olcer. */
+  ref?: React.Ref<View>;
+  /** Menu acikken karuseldeki kart saklanir: onizleme onun yerinden kalkar. */
+  gizli?: boolean;
 }
 
 /** Kartin ortasinda figurun arkasinda duran silik kare izgara. */
@@ -44,26 +48,37 @@ function Izgara({ genislik }: { genislik: number }) {
  * 1 px `surface-4`), sag ustte acik rozet (`accent/20` zemin + `accent-soft` ikon), ortada izgara
  * ustunde baskin kategorinin figuru, altta birincil "Basla".
  *
- * Kartin tamami da antrenmani baslatir (buyuk dokunma alani); basili tutmak duzenle/sil menusunu
- * acar. Ekran okuyucuda ayni menu `longpress` eylemiyle acilir.
+ * Kartin tamami da antrenmani baslatir (buyuk dokunma alani). Basili tutma (menu + surukleme)
+ * karttan degil `SablonKaruseli`nin jestinden gelir; ekran okuyucuda menu `longpress` eylemiyle acilir.
  */
-export default function SablonVitrinKarti({ ad, ozet, hareketSayisi, genislik, onBasla, onMenu, disabled }: Props) {
+export default function SablonVitrinKarti({
+  ad,
+  ozet,
+  hareketSayisi,
+  genislik,
+  onBasla,
+  onMenu,
+  disabled,
+  ref,
+  gizli = false,
+}: Props) {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
-  const palet = useRenkPaleti();
+  const parlama = useAccentParlama();
 
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={ad}
       accessibilityHint={t('sablonlar.kartIpucu')}
       accessibilityActions={[{ name: 'longpress' }]}
       onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onMenu()}
       onPress={onBasla}
-      onLongPress={onMenu}
       disabled={disabled}
-      className={`overflow-hidden rounded-2xl border border-surface-4 ${disabled ? 'opacity-60' : ''}`}
-      style={{ width: genislik, height: KART_YUKSEKLIGI }}
+      className="overflow-hidden rounded-2xl border border-surface-4"
+      // Opaklik sinifla degil stille: stil sinifi ezerdi, ve ilk cizimden sonra sinif eklemek NativeWind tuzagi (#261).
+      style={{ width: genislik, height: KART_YUKSEKLIGI, opacity: gizli ? 0 : disabled ? 0.6 : 1 }}
     >
       <CamYuzey />
 
@@ -104,8 +119,7 @@ export default function SablonVitrinKarti({ ad, ozet, hareketSayisi, genislik, o
           onPress={onBasla}
           disabled={disabled}
           className="h-11 items-center justify-center rounded-xl bg-accent"
-          // iOS'ta accent parlamasi; Android'in `elevation`u renkli golge cizmedigi icin orada yok.
-          style={{ shadowColor: palet.accent, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}
+          style={parlama}
         >
           <Text className="text-body-lg font-bold text-on-accent">{t('sablonlar.kartBasla')}</Text>
         </Pressable>
