@@ -23,6 +23,23 @@ test('kapaliyken sadece ozet gorunur, detay paneli yok', async () => {
   expect(screen.queryByText('Antrenmanı sil')).toBeNull();
 });
 
+/** #471: ozetteki her sayinin altinda ne oldugu yazar -- "12", "3.400", "1 sa 10 dk" tek basina anlasilmiyordu. */
+test('ozetteki set sayisi, hacim ve surenin altinda ne olduklari yazar', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: 4200 })} onSil={jest.fn()} />);
+
+  expect(screen.getByText('Set sayısı')).toBeTruthy();
+  expect(screen.getByText('Hacim')).toBeTruthy();
+  expect(screen.getByText('Süre')).toBeTruthy();
+});
+
+/** #471: suresi olmayan (acik) antrenmanda sure cizilmez, etiketi de cizilmez. */
+test('suresi olmayan antrenmanda sure etiketi yoktur', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: null })} onSil={jest.fn()} />);
+
+  expect(screen.getByText('Set sayısı')).toBeTruthy();
+  expect(screen.queryByText('Süre')).toBeNull();
+});
+
 // #382: kart yerinde asagi acilmaz; ayrintilar (setler + silme) ekrandaki cam panelde gorunur.
 test('dokununca detay paneli acilir; set listesi ve "Antrenmanı sil" paneldedir', async () => {
   await render(<GecmisKarti oturum={ornekOturum()} onSil={jest.fn()} />);

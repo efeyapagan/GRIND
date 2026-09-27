@@ -409,6 +409,10 @@ export const tr = {
     setBirimi: 'set',
     saatBirimi: 'sa',
     dakikaBirimi: 'dk',
+    // #471: özetteki her sayının altında, neyin ne olduğunu söyleyen soluk etiket.
+    etiketSetSayisi: 'Set sayısı',
+    etiketHacim: 'Hacim',
+    etiketSure: 'Süre',
     bosDurumMetni: 'Bu antrenmanda set yok.',
     detayiKapat: 'Antrenman ayrıntısını kapat',
   },
