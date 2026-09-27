@@ -975,6 +975,7 @@ export function useStartSession() {
 export interface SablonHareketi {
   exerciseId: number;
   exerciseName: string;
+  category: EgzersizKategorisi;
   isArchived: boolean;
   plannedSets: number;
   restSeconds: number;
@@ -990,6 +991,7 @@ function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHarek
   if (
     yanit.exerciseId === undefined ||
     !yanit.exerciseName ||
+    !yanit.category ||
     yanit.isArchived === undefined ||
     yanit.plannedSets === undefined ||
     yanit.restSeconds === undefined
@@ -999,6 +1001,7 @@ function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHarek
   return {
     exerciseId: yanit.exerciseId,
     exerciseName: yanit.exerciseName,
+    category: yanit.category,
     isArchived: yanit.isArchived,
     plannedSets: yanit.plannedSets,
     restSeconds: yanit.restSeconds,
