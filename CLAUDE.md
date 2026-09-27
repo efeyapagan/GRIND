@@ -376,12 +376,19 @@ Object Reference) açığıdır.
 > ve `TokensUsed`/`EstimatedCostUsd` ile kullanım/maliyet takip edilebilsin. Hangi yolun ne zaman
 > aktif edileceğine maliyet netleşince karar verilecek — ikisi de aynı anda var olabilir.
 
-> Karar (AI yorumunun dili — #199, 2026-09-27): her üretim desteklenen **TÜM** dilleri
-> (`InsightLanguages.All` = istemcideki `DILLER`) **TEK LLM çağrısında** hazırlar; model her dili
-> bir bölüm işaretiyle (`AiInsightSections.Marker`) ayırır, yanıt bölünüp dil başına bir
-> `AiInsightTranslation` satırı olarak saklanır. İki ayrı çağrı YAPILMAZ: uzun export metni girdi
-> tokenlarının çoğunu oluşturur ve iki kez ödenirdi. Model işareti izlemezse tüm metin ilk dilin
-> çevirisi sayılır — ücret çağrı anında doğduğu için yorum hiçbir durumda kaybedilmez. Bayrak
+> Karar (AI yorumunun dili — #199, #463, 2026-09-27): her üretim desteklenen **TÜM** dilleri
+> (`InsightLanguages.All` = istemcideki `DILLER`) **TEK LLM çağrısında** hazırlar. Model **tek bir
+> JSON** döner — dış anahtarlar dil kodları, değerler o dilin yorum nesnesi
+> (`{"tr": {"ozet", "basarilar", "uyarilar", "tavsiyeler"}, "en": {...}}`); `AiInsightSections`
+> bunu tek `JsonDocument.Parse` ile ayırır ve dil başına bir `AiInsightTranslation` satırı olarak
+> saklar (dil sarmalayıcısı SAKLANMAZ — istemci doğrudan yorum nesnesini bekler). Sağlayıcıya
+> ayrıca `response_format: json_object` gider; her model desteklemediği için ayrıştırmadaki geri
+> düşmeler yine de durur. **#463 öncesi bölüm işareti (`===GRIND:tr===`) düzeni KALDIRILDI:**
+> metin içinde işaret aramak kırılgandı, bozulduğunda kullanıcı ekranda ham JSON görüyordu.
+> İki ayrı çağrı YAPILMAZ: uzun export metni girdi tokenlarının çoğunu oluşturur ve iki kez
+> ödenirdi. Hiçbir dil ayıklanamazsa tüm metin ilk dilin çevirisi sayılır — ücret çağrı anında
+> doğduğu için yorum hiçbir durumda kaybedilmez; istemci JSON görünümlü ama çözümlenemeyen
+> içeriği ekrana DÖKMEZ, "okunamadı" der (#463). Bayrak
 > (GRINDY ekranı, sağ üst) bir **görüntüleme** tercihidir: dil değiştirmek yeni istek ATMAZ.
 > Modele giden bağlam (export metni) şimdilik **Türkçe kalır**, yalnızca çıktı dili söylenir; çıktı
 > Türkçeye kayarsa export şablonunun çevirisi ayrı bir iş olur. Sunucu ve istemci dil listeleri

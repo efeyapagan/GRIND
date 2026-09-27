@@ -86,6 +86,10 @@ public class OpenRouterAiInsightProviderTests
         Assert.Equal("talimat", mesajlar[0].GetProperty("content").GetString());
         Assert.Equal("user", mesajlar[1].GetProperty("role").GetString());
         Assert.Equal("veri", mesajlar[1].GetProperty("content").GetString());
+
+        // #463: biçim modelin iyi niyetine değil SAĞLAYICIYA bırakılır -- ham JSON'un kullanıcıya
+        // sızmasının kök nedeni, modelin bazen JSON dışında bir şey dönmesiydi.
+        Assert.Equal("json_object", govde.GetProperty("response_format").GetProperty("type").GetString());
     }
 
     [Fact]

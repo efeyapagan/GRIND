@@ -37,20 +37,6 @@ test('markdown metin duz bicim olarak doner', () => {
   expect(sonuc).toEqual({ bicim: 'duz', metin: '**Genel gidişat**\n- İyi gidiyorsun.' });
 });
 
-/** KRITIK: bozuk JSON'da yorum KAYBOLMAZ; ucreti odenmis metin oldugu gibi gosterilir. */
-test('bozuk json duz metin olarak gosterilir', () => {
-  const sonuc = yorumuCozumle('{"ozet": "yarim kal');
-
-  expect(sonuc).toEqual({ bicim: 'duz', metin: '{"ozet": "yarim kal' });
-});
-
-/** Gecerli JSON ama bizim semamiz degilse uydurma yapilmaz: duz metne dusulur. */
-test('baska sekilde bir json duz metne duser', () => {
-  const sonuc = yorumuCozumle('{"foo": 1}');
-
-  expect(sonuc.bicim).toBe('duz');
-});
-
 test('eksik alanlar bos dizi olur, uydurulmaz', () => {
   const sonuc = yorumuCozumle(JSON.stringify({ ozet: 'Kısa.' }));
 
@@ -71,13 +57,39 @@ test('metin olmayan madde atilir', () => {
   expect(sonuc).toEqual({ bicim: 'yapisal', ozet: '', basarilar: [], uyarilar: [], tavsiyeler: ['Dinlen'] });
 });
 
-/** Tamamen bos bir yapisal yanit gostermeye degmez: duz metne duser, kullanici en azindan bir sey gorur. */
-test('hicbir alani dolu olmayan json duz metne duser', () => {
-  const sonuc = yorumuCozumle(JSON.stringify({ ozet: '', basarilar: [] }));
-
-  expect(sonuc.bicim).toBe('duz');
+/** Tamamen bos bir yapisal yanit gostermeye degmez ve JSON gorunumludur: okunamadi sayilir. */
+test('hicbir alani dolu olmayan json okunamadi sayilir', () => {
+  expect(yorumuCozumle(JSON.stringify({ ozet: '', basarilar: [] })).bicim).toBe('okunamadi');
 });
 
 test('bos metin duz bicimdir', () => {
   expect(yorumuCozumle('')).toEqual({ bicim: 'duz', metin: '' });
+});
+
+// ---- Ham JSON kullaniciya dokulmez (#463) ----
+
+/**
+ * KRITIK (kullanici sikayeti): "analizi ilk aldigimda direkt JSON gordum". Cozumlenemeyen ama
+ * JSON GORUNUMLU bir icerigi oldugu gibi basmak, kullaniciya parantez yigini gosterir.
+ */
+test('json gorunumlu ama cozumlenemeyen icerik okunamadi olarak isaretlenir', () => {
+  const sonuc = yorumuCozumle('{"ozet": "yarim kal');
+
+  expect(sonuc).toEqual({ bicim: 'okunamadi', metin: '{"ozet": "yarim kal' });
+});
+
+test('sema disi gecerli json da okunamadi sayilir', () => {
+  expect(yorumuCozumle('{"foo": 1}').bicim).toBe('okunamadi');
+});
+
+/** AYIRT EDICI: eski markdown kayitlar JSON gorunumlu DEGIL -- duz metin olarak cizilmeye devam eder. */
+test('markdown metin duz kalir, okunamadi degil', () => {
+  expect(yorumuCozumle('**Genel gidişat**\n- İyi gidiyorsun.').bicim).toBe('duz');
+});
+
+/** Ham metin ATILMAZ: kullanici isterse gorebilsin diye sonucta tasinir. */
+test('okunamadi durumunda ham metin korunur', () => {
+  const sonuc = yorumuCozumle('{bozuk');
+
+  expect(sonuc.bicim === 'okunamadi' && sonuc.metin).toBe('{bozuk');
 });
