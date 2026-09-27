@@ -487,6 +487,9 @@ $RECYCLE.BIN/
 # Superpowers SDD calisma alani (ledger, brief, review paketleri)
 .superpowers/
 
+# Superpowers git worktree'leri (izole implementasyon calisma alanlari)
+.worktrees/
+
 # Obsidian vault (docs/notes) - makineye ozgu arayuz durumu (acik paneller, son
 # acilan dosyalar) her acilista degisir ve surekli gurultulu diff uretir. Vault'un
 # paylasilabilir ayarlari (app/appearance/core-plugins/graph) commit edilir.
