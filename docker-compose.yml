@@ -11,6 +11,8 @@ services:
       - "5433:5432"
     volumes:
       - grind-db-data:/var/lib/postgresql/data
+      # Ilk acilista `grind_test`i de olusturur (#459).
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U grind -d grind"]
       interval: 5s
