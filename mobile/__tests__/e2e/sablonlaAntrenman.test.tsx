@@ -129,7 +129,7 @@ test('set paneli acikken antrenman iptal edilince panel ekranda kalmaz', async (
   await waitFor(() => expect(state.acikOturum).toBeNull());
   // Istemci acik oturum sorgusunu tazeleyince panel de kalkmali.
   await waitFor(() => expect(screen.queryByLabelText('Ağırlık')).toBeNull());
-  expect(await screen.findByText('Şablonla başla')).toBeTruthy();
+  expect(await screen.findByText('Şablonlarım')).toBeTruthy();
 }, 20_000);
 
 /**

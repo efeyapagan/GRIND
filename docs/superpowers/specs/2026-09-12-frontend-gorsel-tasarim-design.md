@@ -118,6 +118,14 @@ Renk kuralları:
   `on-accent` rakam (4.54:1); 9'dan büyükse `9+`. Bildirim satırlarının okunmamış vurgusu accent DEĞİL:
   `surface-4` zemin (okunmuş `surface-2`) — `surface-3` fotoğrafsız profil dairesinin zemini olduğu için
   o daire okunmamış satırda kaybolurdu.
+  **#439 genişlemesi (kullanıcının "Start Workout" şablon karuseli referansı; yalnızca mobil):**
+  antrenman ekranında (antrenman yokken) "Antrenmana başla" başlığının altındaki kavisli çizgi —
+  3 px `accent` vuruş, ekrana her girişte 1,2 sn'de soldan sağa açılır ("hareketi azalt"ta
+  animasyonsuz); metin taşımaz. Yana kayan şablon kartları #350'nin cam yüzeyini taşır (cam + 1 px
+  `surface-4`, köşe `2xl`); sağ üstteki dambıl rozeti açık rozet kuralıyla (`accent/20` zemin +
+  `accent-soft` ikon), karttaki "Başla" birincil düğme (`accent` dolgu + `on-accent`, iOS'ta `accent`
+  parlama gölgesi). Izgara ve kategori figürü `fg` düşük opaklıkla nötr; "Tümünü gör" bağlantısı
+  `accent-soft`.
   Başka hiçbir yer — hesap düğmesi
   dahil — accent almaz. Stitch'teki somon dolgulu hesap ikonu bir hataydı.
 - `accent-soft` yalnızca metin ve ikon rengidir, asla dolgu değildir. Açık rozet zemini `bg-accent/20`.

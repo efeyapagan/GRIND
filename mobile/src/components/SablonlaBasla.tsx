@@ -1,126 +1,144 @@
-import { useRef, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
-import { useTemplates, useSablonlariSirala, useDeleteTemplate } from '@grind/shared/api/queries';
-import SablonKarti from '../ui/SablonKarti';
-import SurukleSiraliListe from '../ui/SurukleSiraliListe';
-import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
+import { Pencil, Trash2 } from 'lucide-react-native';
+import { useTemplates, useDeleteTemplate, type Sablon } from '@grind/shared/api/queries';
+import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
+import CizgiliBaslik from '../ui/CizgiliBaslik';
+import SablonVitrinKarti from '../ui/SablonVitrinKarti';
+import Modal from '../ui/Modal';
 import IkincilDugme from '../ui/IkincilDugme';
+import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
   onBasla: (templateId: number) => void;
   bekliyor: boolean;
 }
 
+const KART_ARALIGI = 12;
+const EN_GENIS_KART = 300;
+/** Kart ekranin bu kadarini kaplar; saginda bir sonrakinin ucu gorunur ki kaydirilabildigi belli olsun. */
+const KART_ORANI = 0.72;
+
 /**
  * Web donduruldugu icin (#326) artik yalnizca mobil: web/src/components/SablonlaBasla.tsx eski
  * halinde kaldi.
  *
- * #344: kartlar basili tutulup surukleyerek siralanabilir. Sira SUNUCUDA durur
- * (`useSablonlariSirala`) -- cihazda tutulsa telefon degisince kaybolurdu. "Şablonları yönet"
- * ekrani ayni listeyi ayni ucdan okudugu icin sirayi kendiliginden yansitir.
- *
- * #435: kart sagdan sola itilince altindan "sil" ve "duzenle" kisayollari cikar. Silme geri
- * alinamaz oldugu icin kisayol dogrudan silmez -- kart, GecmisKarti'ndaki gibi YERINDE onay sorar.
+ * #439: sablonlar yana kayan, bir karta oturan cam kartlardir. Yatay kaydirma liste gezintisine
+ * gittigi icin #435'in sola itme kisayolu ve #344'un surukleyerek siralamasi buradan kalkti:
+ * duzenle/sil karta basili tutunca acilan menude, siralama "Tümünü gör" (`/templates`) ekraninda.
+ * Kartlar sunucunun sirasiyla gelir, orada degisen sira burada kendiliginden gorunur.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
+  const ikonRenk = useIkonRenk();
+  const { width: ekranGenisligi } = useWindowDimensions();
   const { data: sablonlar, isLoading, isError } = useTemplates();
-  const siralama = useSablonlariSirala();
   const silme = useDeleteTemplate();
-  const kaydirmalar = useRef(new Map<number, KaydirilabilirSatirRef | null>());
-  const [acikId, setAcikId] = useState<number | null>(null);
-  const [onayId, setOnayId] = useState<number | null>(null);
+  const [menudeki, setMenudeki] = useState<Sablon | null>(null);
+  const [silOnayi, setSilOnayi] = useState(false);
 
-  // Kisayollar acikken dokunus antrenmani baslatmaz: kullanici karta degil, acik kisayolu
-  // kapatmaya dokunuyor. Kartin kendi `Pressable`i icteki oldugu icin bu karari BURADA vermek
-  // gerekiyor -- KaydirilabilirSatir'in disttaki dokunusu bu durumda hic tetiklenmez.
-  function kartaDokunuldu(id: number) {
-    if (acikId === id) {
-      kaydirmalar.current.get(id)?.kapat();
-      return;
-    }
-    onBasla(id);
+  const kartGenisligi = Math.min(Math.round(ekranGenisligi * KART_ORANI), EN_GENIS_KART);
+
+  function menuyuKapat() {
+    setMenudeki(null);
+    setSilOnayi(false);
   }
 
-  function onayiAc(id: number) {
-    kaydirmalar.current.get(id)?.kapat();
-    setAcikId(null);
-    setOnayId(id);
+  function duzenle(id: number) {
+    menuyuKapat();
+    router.push(`/templates/${id}`);
   }
 
   function sil(id: number) {
     silme.mutate(id);
-    setOnayId(null);
+    menuyuKapat();
   }
 
   return (
-    <View className="flex-col gap-3">
-      <Text className="text-heading text-fg">{t('sablonlar.baslaBasligi')}</Text>
+    <View className="flex-col gap-5">
+      <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
 
-      {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-      {isError && (
-        <Text accessibilityRole="alert" className="text-body text-danger">
-          {t('sablonlar.hata')}
-        </Text>
-      )}
+      <View className="flex-col gap-3">
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="text-heading text-fg">{t('sablonlar.sablonlarim')}</Text>
+          {sablonlar && sablonlar.length > 0 && (
+            // RN'de Text rengi miras ALINMAZ: `Link`e verilen renk metne gecmez, metin ayri bir Text.
+            <Link href="/templates" className="min-h-11 justify-center">
+              <Text className="text-label text-accent-soft">{t('sablonlar.tumunuGor')}</Text>
+            </Link>
+          )}
+        </View>
 
-      {sablonlar && sablonlar.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicSablonYok')}</Text>}
+        {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
+        {isError && (
+          <Text accessibilityRole="alert" className="text-body text-danger">
+            {t('sablonlar.hata')}
+          </Text>
+        )}
+        {sablonlar && sablonlar.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicSablonYok')}</Text>}
 
-      {sablonlar && sablonlar.length > 0 && (
-        <>
-          <SurukleSiraliListe
-            ogeler={sablonlar}
-            anahtar={(sablon) => sablon.id}
-            onSirala={(yeniSira) => siralama.mutate(yeniSira.map((sablon) => sablon.id))}
-            satirCiz={(sablon, suruklenen) =>
-              onayId === sablon.id ? (
-                <View className="flex-col gap-3 overflow-hidden rounded-xl bg-surface-2 p-4">
-                  <Text className="text-body-lg font-semibold text-fg">{sablon.name}</Text>
-                  <Text className="text-body text-fg">{t('sablonlar.silOnayMesaji')}</Text>
-                  <View className="flex-row gap-2">
-                    <Pressable
-                      onPress={() => sil(sablon.id)}
-                      className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg"
-                    >
-                      <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
-                    </Pressable>
-                    <View className="flex-1">
-                      <IkincilDugme onPress={() => setOnayId(null)}>{t('ortak.vazgec')}</IkincilDugme>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <KaydirilabilirSatir
-                  ref={(kaydirma) => {
-                    kaydirmalar.current.set(sablon.id, kaydirma);
-                  }}
-                  onSil={() => onayiAc(sablon.id)}
-                  onDuzenle={() => router.push(`/templates/${sablon.id}`)}
-                  kaydirmaEtiketi={t('sablonlar.kaydirmaKisayolu', { ad: sablon.name })}
-                  onAcikDegisti={(acik) => setAcikId(acik ? sablon.id : null)}
+        {sablonlar && sablonlar.length > 0 && (
+          // Kartlar ekran kenarina kadar kayar: ebeveynin 16'lik yan boslugu burada geri alinip
+          // icerige verilir.
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={kartGenisligi + KART_ARALIGI}
+            decelerationRate="fast"
+            className="-mx-4"
+            contentContainerClassName="px-4"
+            contentContainerStyle={{ gap: KART_ARALIGI }}
+          >
+            {sablonlar.map((sablon) => (
+              <SablonVitrinKarti
+                key={sablon.id}
+                ad={sablon.name}
+                ozet={sablonOzeti(sablon)}
+                hareketSayisi={sablon.exercises.length}
+                genislik={kartGenisligi}
+                onBasla={() => onBasla(sablon.id)}
+                onMenu={() => setMenudeki(sablon)}
+                disabled={bekliyor}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <Modal acik={menudeki !== null} onKapat={menuyuKapat} baslik={menudeki?.name ?? ''}>
+        {menudeki &&
+          (silOnayi ? (
+            <>
+              <Text className="text-body text-fg">{t('sablonlar.silOnayMesaji')}</Text>
+              <View className="flex-row gap-2">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => sil(menudeki.id)}
+                  className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg"
                 >
-                  <SablonKarti
-                    ad={sablon.name}
-                    hareketSayisi={sablon.exercises.length}
-                    onPress={() => kartaDokunuldu(sablon.id)}
-                    disabled={bekliyor}
-                    kaldirilmis={suruklenen}
-                  />
-                </KaydirilabilirSatir>
-              )
-            }
-          />
-          {/* `Link`in kendisine renk class'i vermek metne gecmez (RN'de Text renk MIRAS ALMAZ,
-              digger `Link` kullanimlarindaki gibi metin AYRI bir `Text`te olmali) -- yoksa
-              stilsiz metin RN varsayilani olan SIYAH renderlanir (kullanici bulgusu). */}
-          <Link href="/templates" className="min-h-11 justify-center">
-            <Text className="text-label text-muted underline">{t('sablonlar.yonet')}</Text>
-          </Link>
-        </>
-      )}
+                  <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
+                </Pressable>
+                <View className="flex-1">
+                  <IkincilDugme onPress={() => setSilOnayi(false)}>{t('ortak.vazgec')}</IkincilDugme>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <IkincilDugme onPress={() => duzenle(menudeki.id)}>
+                <Pencil color={ikonRenk.fg} size={18} />
+                <Text className="text-label text-fg">{t('sablonlar.duzenleBaslik')}</Text>
+              </IkincilDugme>
+              <IkincilDugme onPress={() => setSilOnayi(true)}>
+                <Trash2 color={ikonRenk.danger} size={18} />
+                <Text className="text-label text-danger">{t('sablonlar.sil')}</Text>
+              </IkincilDugme>
+            </>
+          ))}
+      </Modal>
     </View>
   );
 }
