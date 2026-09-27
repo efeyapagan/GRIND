@@ -7,11 +7,11 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { Trash2 } from 'lucide-react-native';
+import { Pencil, Trash2 } from 'lucide-react-native';
 import { useIkonRenk } from './renkler';
 
-const ACILMA_GENISLIGI = 96;
-const ACILMA_ESIGI = ACILMA_GENISLIGI / 2;
+/** Bir kisayol dugmesinin genisligi; acilma genisligi = dugme sayisi x bu. */
+const DUGME_GENISLIGI = 96;
 
 export interface KaydirilabilirSatirRef {
   kapat: () => void;
@@ -19,7 +19,12 @@ export interface KaydirilabilirSatirRef {
 
 interface Props {
   onSil: () => void;
-  silEtiketi: string;
+  /** Verilirse Sil'in SAGINDA bir "duzenle" kisayolu da acilir (#435); verilmezse satir tek dugmeli kalir. */
+  onDuzenle?: () => void;
+  /** Satirin erisilebilirlik etiketi: kisayollar ekran okuyucudan gizli, yol bu etiketten anlatilir. */
+  kaydirmaEtiketi: string;
+  /** Kisayollar acilip kapandikca cagrilir -- ust bilesen acik satirda dokunusu baska yorumlayabilsin. */
+  onAcikDegisti?: (acik: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -28,6 +33,9 @@ interface Props {
  * Faz 3 cilalama). Web'de bu ZATEN ikincil bir kisayoldu (birincil yol icerik acilinca gorunen
  * "Antrenmanı sil" dugmesiydi, o GecmisKarti'nda aynen kalir) -- burada da ayni ikincil rolde:
  * kaydirma acar, dokunmak kapatir, "Sil" butonuna basmak siler.
+ *
+ * #435: satir artik ikinci bir kisayol (duzenle) tasiyabiliyor -- antrenman ekranindaki sablon
+ * kartlari icin. Ikinci dugme opsiyoneldir, cunku `GecmisKarti`'nin silmekten baska bir kisayolu yok.
  *
  * Satir kapaliyken hareket YALNIZCA sola aktiflesir (#232): saga kaydirma kabugun sol kenardan geri
  * donme hareketine kalir -- satir ekranin kenarina kadar uzandigi icin aksi halde onu yutardi. Acik
@@ -38,17 +46,24 @@ interface Props {
  * thread'inde calisirlar.
  */
 const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function KaydirilabilirSatir(
-  { onSil, silEtiketi, children },
+  { onSil, onDuzenle, kaydirmaEtiketi, onAcikDegisti, children },
   ref,
 ) {
   const ikonRenk = useIkonRenk();
   const translateX = useSharedValue(0);
   const baslangicX = useSharedValue(0);
   const [acik, setAcik] = useState(false);
+  const acilmaGenisligi = onDuzenle ? DUGME_GENISLIGI * 2 : DUGME_GENISLIGI;
+  const acilmaEsigi = acilmaGenisligi / 2;
+
+  function aciklikDegisti(yeni: boolean) {
+    setAcik(yeni);
+    onAcikDegisti?.(yeni);
+  }
 
   function kapat() {
     translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
-    setAcik(false);
+    aciklikDegisti(false);
   }
 
   useImperativeHandle(ref, () => ({ kapat }));
@@ -68,13 +83,13 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
     .onUpdate((olay) => {
       'worklet';
       const yeni = baslangicX.value + olay.translationX;
-      translateX.value = Math.min(0, Math.max(-ACILMA_GENISLIGI, yeni));
+      translateX.value = Math.min(0, Math.max(-acilmaGenisligi, yeni));
     })
     .onEnd(() => {
       'worklet';
-      const acilsin = translateX.value < -ACILMA_ESIGI;
-      translateX.value = withSpring(acilsin ? -ACILMA_GENISLIGI : 0, { damping: 20, stiffness: 200 });
-      runOnJS(setAcik)(acilsin);
+      const acilsin = translateX.value < -acilmaEsigi;
+      translateX.value = withSpring(acilsin ? -acilmaGenisligi : 0, { damping: 20, stiffness: 200 });
+      runOnJS(aciklikDegisti)(acilsin);
     });
 
   const satirStili = useAnimatedStyle(() => ({
@@ -87,24 +102,40 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
     }
   }
 
+  function kisayol(islem: () => void) {
+    kapat();
+    islem();
+  }
+
   return (
     <View className="relative overflow-hidden rounded-xl">
-      <View className="absolute inset-y-0 right-0 w-24">
+      {/* Kisayollar ekran okuyucudan gizli: satirin KENDISI `kaydirmaEtiketi`ni tasir (#46 deseni). */}
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        className="absolute inset-y-0 right-0 flex-row"
+        style={{ width: acilmaGenisligi }}
+      >
         <Pressable
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          onPress={() => {
-            kapat();
-            onSil();
-          }}
-          className="h-full w-full items-center justify-center gap-1 bg-danger-bg"
+          testID="kaydir-sil"
+          onPress={() => kisayol(onSil)}
+          className="h-full w-24 items-center justify-center bg-danger-bg"
         >
           <Trash2 color={ikonRenk.onDanger} size={20} />
         </Pressable>
+        {onDuzenle && (
+          <Pressable
+            testID="kaydir-duzenle"
+            onPress={() => kisayol(onDuzenle)}
+            className="h-full w-24 items-center justify-center bg-accent"
+          >
+            <Pencil color={ikonRenk.onAccent} size={20} />
+          </Pressable>
+        )}
       </View>
       <GestureDetector gesture={panHareketi}>
         <Animated.View style={satirStili}>
-          <Pressable onPress={icerigeDokunuldu} accessibilityLabel={silEtiketi}>
+          <Pressable onPress={icerigeDokunuldu} accessibilityLabel={kaydirmaEtiketi}>
             {children}
           </Pressable>
         </Animated.View>

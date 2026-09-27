@@ -80,7 +80,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
     return <View className="overflow-hidden rounded-xl">{kart}</View>;
   }
   return (
-    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} silEtiketi={t('gecmis.antrenmaniSil')}>
+    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} kaydirmaEtiketi={t('gecmis.antrenmaniSil')}>
       {kart}
     </KaydirilabilirSatir>
   );
