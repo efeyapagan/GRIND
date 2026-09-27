@@ -474,6 +474,8 @@ export const tr = {
   },
   yorumlar: {
     baslik: 'GRINDY ne diyor?',
+    basligiKisa: 'GRINDY', // i18n-muaf: ürün adı her dilde aynı
+    yorumDili: 'Yorum dili',
     maskotEtiketi: 'GRINDY, antrenman koçun',
     aciklama:
       'GRINDY son 30 güne kadarki antrenman verine bakıp yorumlar. Belirli bir aralık seçmek şimdilik mümkün değil.',
