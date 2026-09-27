@@ -472,6 +472,14 @@ export const tr = {
     zilEtiketi_one: 'Bildirimler, {{count}} okunmamış',
     zilEtiketi_other: 'Bildirimler, {{count}} okunmamış',
   },
+  paylasim: {
+    baslik: 'Antrenmanı paylaş',
+    paylas: 'Antrenmanı paylaş',
+    galeriyeKaydet: 'Galeriye kaydet',
+    panoyaKopyala: 'Panoya kopyala',
+    izinYok: 'Galeriye kaydetmek için fotoğraf izni gerekiyor. Ayarlardan izin verebilirsin.',
+    hata: 'Görsel hazırlanamadı. Tekrar dener misin?',
+  },
   yorumlar: {
     baslik: 'GRINDY ne diyor?',
     basligiKisa: 'GRINDY', // i18n-muaf: ürün adı her dilde aynı

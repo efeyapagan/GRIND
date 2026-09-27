@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import GecmisKarti from './GecmisKarti';
 
@@ -99,4 +99,42 @@ test('ozet medyan dinlenme yerine antrenman suresini saat ve dakikayla gosterir 
   expect(screen.getByText('5')).toBeTruthy();
   expect(screen.getByText('dk')).toBeTruthy();
   expect(screen.queryByText('dinlenme')).toBeNull();
+});
+
+// ---- Paylasim karti (#433) ----
+
+/** Kullanici karari: paylas ikonu ozet satirinda, okun solunda. */
+test('bitmis antrenmanin karti paylas ikonu tasir', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: 4320 })} onSil={jest.fn()} />);
+
+  expect(screen.getByLabelText('Antrenmanı paylaş')).toBeTruthy();
+});
+
+/**
+ * KRITIK: paylas ikonu ayrinti panelini ACMAZ. Ikisi ic ice Pressable oldugu icin disaridaki
+ * satirin da tetiklenmesi kolay bir hatadir.
+ */
+test('paylas ikonu ayrinti panelini acmaz, paylasim penceresini acar', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: 4320 })} onSil={jest.fn()} />);
+
+  await act(async () => fireEvent.press(screen.getByLabelText('Antrenmanı paylaş')));
+
+  expect(screen.queryByTestId('gecmis-detay-paneli')).toBeNull();
+  expect(screen.getByText('Galeriye kaydet')).toBeTruthy();
+});
+
+/** Ozet satirina dokunmak eskisi gibi paneli acmaya devam eder. */
+test('ozete dokunmak hala paneli acar', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: 4320 })} onSil={jest.fn()} />);
+
+  await act(async () => fireEvent.press(screen.getByText('Push Day')));
+
+  expect(screen.getByTestId('gecmis-detay-paneli')).toBeTruthy();
+});
+
+/** Acik (bitmemis) antrenmanda sure yoktur; paylasilacak bir kart da yoktur (#433). */
+test('acik antrenmanda paylas ikonu cizilmez', async () => {
+  await render(<GecmisKarti oturum={ornekOturum({ durationSeconds: null })} onSil={jest.fn()} />);
+
+  expect(screen.queryByLabelText('Antrenmanı paylaş')).toBeNull();
 });

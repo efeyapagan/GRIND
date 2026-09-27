@@ -19,6 +19,7 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
+import PaylasimPenceresi from '../../src/components/PaylasimPenceresi';
 
 /** Kadran burada açılır: ortadaki kademe, hiç dokunmadan bitirenin göndereceği değerdir. */
 const VARSAYILAN_ZORLUK: Zorluk = 'Medium';
@@ -64,6 +65,12 @@ export default function AntrenmanBitirScreen() {
   const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
   // `sapma`: soru şablonla başlamış ama değişmiş bir antrenmandan mı geliyor (açıklama metni değişir).
   const [kaydetSorusu, setKaydetSorusu] = useState<{ hareketler: SablonTaslakHareketi[]; sapma: boolean } | null>(
+    null,
+  );
+  // #433: biten antrenmanin paylasim karti. Bitirme YANITINDAN gelir -- sure sunucunun hesabi.
+  const [paylasim, setPaylasim] = useState<{ setCount: number; durationSeconds: number } | null>(null);
+  // Paylasim penceresi kapanınca gidilecek yer (şablon sorusu ya da ana sayfa).
+  const [sonrakiAdim, setSonrakiAdim] = useState<{ hareketler: SablonTaslakHareketi[]; sapma: boolean } | null>(
     null,
   );
   // Sapma karşılaştırması için oturumun şablonu; `templateId` null iken sorgu çalışmaz.
@@ -141,20 +148,37 @@ export default function AntrenmanBitirScreen() {
 
   function bitir(secilen: Zorluk | null) {
     const taslak = kaydetTaslagi();
+    const setSayisi = (oturum?.progress ?? []).reduce((toplam, hareket) => toplam + hareket.completedSets, 0);
+
     bitirMutasyonu.mutate(
       { sessionId: oturum!.id, zorluk: secilen },
       {
-        onSuccess: () => {
-          if (taslak) {
+        onSuccess: (biten) => {
+          // #433: seti ve suresi olan bir antrenman paylasilabilir; once kart sunulur, sonra
+          // sablon sorusu / ana sayfa. Suresiz ya da setsiz antrenmanin karti anlamsizdir.
+          if (biten.durationSeconds !== null && setSayisi > 0) {
+            setPaylasim({ setCount: setSayisi, durationSeconds: biten.durationSeconds });
+          } else if (taslak) {
             setKaydetSorusu(taslak);
           } else {
             router.replace('/');
           }
+          setSonrakiAdim(taslak);
           // #363: ana sayfa biten antrenmanı "devam ediyor" diye bir an bile çizmesin.
           oturumBittiTazele(queryClient);
         },
       },
     );
+  }
+
+  /** Paylasim penceresi kapaninca kalinan yerden devam edilir. */
+  function paylasimiKapat() {
+    setPaylasim(null);
+    if (sonrakiAdim) {
+      setKaydetSorusu(sonrakiAdim);
+    } else {
+      router.replace('/');
+    }
   }
 
   return (
@@ -165,6 +189,15 @@ export default function AntrenmanBitirScreen() {
       <Text className="text-center text-body text-muted">
         {t('antrenman.bitirmeSorusu')}
       </Text>
+
+      {paylasim !== null && (
+        <PaylasimPenceresi
+          setCount={paylasim.setCount}
+          durationSeconds={paylasim.durationSeconds}
+          acik
+          onKapat={paylasimiKapat}
+        />
+      )}
 
       {/* Kadran, soru ile alttaki dugmeler arasindaki bosluğun ortasinda durur (#182). */}
       <View className="flex-1 items-center justify-center gap-4">
