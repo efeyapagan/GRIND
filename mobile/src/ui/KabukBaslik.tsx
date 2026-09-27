@@ -7,6 +7,7 @@ import { useOkunmamisBildirimSayisi } from '@grind/shared/api/queries';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
+import YorumDiliSecici from '../components/YorumDiliSecici';
 import GrindyMaskot from './GrindyMaskot';
 import { useIkonRenk } from './renkler';
 
@@ -36,6 +37,7 @@ export default function KabukBaslik() {
   const pathname = usePathname();
   const router = useRouter();
   const anaSayfa = pathname === '/';
+  const yorumlarEkrani = pathname === '/insights';
   const { data: okunmamis = 0 } = useOkunmamisBildirimSayisi(anaSayfa);
 
   function geriGit() {
@@ -126,6 +128,9 @@ export default function KabukBaslik() {
               <GrindyMaskot boyut={28} dekoratif />
             </Pressable>
           </>
+        ) : yorumlarEkrani ? (
+          // #199: GRINDY ekraninda "GRIND" yazisinin yerini yorum dilinin bayragi alir.
+          <YorumDiliSecici />
         ) : (
           <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
         )}

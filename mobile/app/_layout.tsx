@@ -13,6 +13,7 @@ import { odakDinleyicisiniKur } from '../src/queryOdak';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { TemaProvider, useTema } from '../src/ui/TemaContext';
 import { DilProvider, baslangicDili } from '../src/ui/DilContext';
+import { YorumDiliProvider } from '../src/ui/YorumDiliContext';
 import { renkler } from '@grind/shared/designTokens';
 
 const sorguIstemcisi = new QueryClient();
@@ -55,9 +56,12 @@ export default function RootLayout() {
         <TemaProvider>
           <DurumCubugu />
           <DilProvider>
-            <AuthProvider>
-              <Slot />
-            </AuthProvider>
+            {/* Arayuz dilini varsayilan aldigi icin DilProvider'in ICINDE (#199). */}
+            <YorumDiliProvider>
+              <AuthProvider>
+                <Slot />
+              </AuthProvider>
+            </YorumDiliProvider>
           </DilProvider>
         </TemaProvider>
       </QueryClientProvider>

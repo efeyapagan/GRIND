@@ -18,11 +18,13 @@ public class AiInsight
     public DateOnly? RangeFrom { get; set; }
 
     public DateOnly? RangeTo { get; set; }
-    public string Content { get; set; } = null!;
     public string Model { get; set; } = null!;
     public int? TokensUsed { get; set; }
     public decimal? EstimatedCostUsd { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Dil başına bir metin (#199). Tek dilli dönemde üretilmiş kayıtlarda yalnızca "tr" vardır.</summary>
+    public ICollection<AiInsightTranslation> Translations { get; set; } = [];
 
     public User User { get; set; } = null!;
     public WorkoutSession? WorkoutSession { get; set; }

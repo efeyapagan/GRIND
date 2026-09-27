@@ -68,7 +68,7 @@ public class ColumnMappingTests
 
     [Theory]
     [InlineData(typeof(WorkoutSession), "Notes")]
-    [InlineData(typeof(AiInsight), "Content")]
+    [InlineData(typeof(AiInsightTranslation), "Content")]
     public void Serbest_metin_sutunlari_sinirsizdir(Type entityClrType, string propertyName)
     {
         var property = TestModel.Entity(entityClrType).FindProperty(propertyName)!;

@@ -470,6 +470,8 @@ export const en: Katalog = {
   },
   yorumlar: {
     baslik: "What's GRINDY saying?",
+    basligiKisa: 'GRINDY',
+    yorumDili: 'Review language',
     maskotEtiketi: 'GRINDY, your training coach',
     aciklama:
       "GRINDY reviews up to your last 30 days of workout data. Choosing a specific range isn't possible yet.",
