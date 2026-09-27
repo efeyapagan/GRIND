@@ -11,6 +11,15 @@ jest.mock('@grind/shared/api/queries', () => ({
   useTemplate: jest.fn(),
 }));
 
+/**
+ * #433: `useFinishSession` artik biten oturumu doner (paylasim karti suresini oradan alir).
+ * Varsayilan: suresiz -- boylece mevcut testler paylasim penceresiyle karsilasmaz.
+ */
+function bitenOturum(gecersizler: Record<string, unknown> = {}) {
+  return { id: 7, startedAt: '2026-09-20T07:00:00Z', isOpen: false, durationSeconds: null,
+    templateId: null, templateName: null, progress: [], ...gecersizler };
+}
+
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
@@ -91,7 +100,7 @@ test('atla zorluksuz bitirir', async () => {
 });
 
 test('bitince ana sayfaya donulur', async () => {
-  const mutate = jest.fn((_govde, { onSuccess }) => onSuccess());
+  const mutate = jest.fn((_govde, { onSuccess }) => onSuccess(bitenOturum()));
   useFinishSessionMock.mockReturnValue({ mutate, isPending: false, isError: false });
   await ekraniOlustur();
 
@@ -105,7 +114,7 @@ test('bitince ana sayfaya donulur', async () => {
  * antrenmanın "Devam ediyor" kartı bir an çizilip kalkar ve takvim yerinden zıplar.
  */
 test('bitince acik oturum onbellegi temizlenir', async () => {
-  const mutate = jest.fn((_govde, { onSuccess }) => onSuccess());
+  const mutate = jest.fn((_govde, { onSuccess }) => onSuccess(bitenOturum()));
   useFinishSessionMock.mockReturnValue({ mutate, isPending: false, isError: false });
   await ekraniOlustur();
 
@@ -172,7 +181,7 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
   beforeEach(() => {
     useOpenSessionMock.mockReturnValue({ data: SABLONSUZ_HAREKETLI, isLoading: false, isError: false });
     useFinishSessionMock.mockReturnValue({
-      mutate: jest.fn((_govde, { onSuccess }) => onSuccess()),
+      mutate: jest.fn((_govde, { onSuccess }) => onSuccess(bitenOturum())),
       isPending: false,
       isError: false,
     });
@@ -282,5 +291,60 @@ describe('bitirince sablon olarak kaydetme sorusu (#186)', () => {
 
     expect(mockReplace).toHaveBeenCalledWith('/');
     expect(screen.queryByText('Şablon olarak kaydedilsin mi?')).toBeNull();
+  });
+});
+
+// ---- Paylasim karti (#433) ----
+
+describe('bitince paylasim karti', () => {
+  const HAREKETLI = {
+    ...ACIK_OTURUM,
+    progress: [
+      { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: null, completedSets: 3, restSeconds: 90 },
+    ],
+  };
+
+  function bitir(biten: Record<string, unknown>) {
+    useOpenSessionMock.mockReturnValue({ data: HAREKETLI, isLoading: false, isError: false });
+    useFinishSessionMock.mockReturnValue({
+      mutate: jest.fn((_govde, { onSuccess }) => onSuccess(biten)),
+      isPending: false,
+      isError: false,
+    });
+  }
+
+  test('suresi ve seti olan antrenman bitince paylasim penceresi cikar', async () => {
+    bitir(bitenOturum({ durationSeconds: 2880 }));
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+
+    expect(screen.getByText('Galeriye kaydet')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Pencere kapaninca akis kalindigi yerden devam eder -- kullanici ekranda mahsur kalmaz.
+   * Sablonsuz ve hareketli antrenman oldugu icin sirada sablon sorusu (#186) var.
+   */
+  test('pencere kapatilinca kalinan yerden devam edilir', async () => {
+    bitir(bitenOturum({ durationSeconds: 2880 }));
+    await ekraniOlustur();
+    await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Kapat' }));
+
+    await waitFor(() => expect(screen.getByText('Şablon olarak kaydedilsin mi?')).toBeTruthy());
+  });
+
+  /** Suresiz (ya da setsiz) antrenmanin karti anlamsizdir: pencere hic acilmaz, akis eskisi gibi. */
+  test('suresiz antrenmanda pencere acilmaz', async () => {
+    bitir(bitenOturum({ durationSeconds: null }));
+    await ekraniOlustur();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+
+    expect(screen.queryByText('Galeriye kaydet')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Şablon olarak kaydedilsin mi?')).toBeTruthy());
   });
 });

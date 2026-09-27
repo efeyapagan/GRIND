@@ -8,7 +8,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryAddUsageDescription": "GRIND, antrenman kartını galerine kaydetmek için fotoğraflarına erişir."
+      }
     },
     "android": {
       "adaptiveIcon": {

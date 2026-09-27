@@ -16,4 +16,14 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 // Dili kendisi degistiren testler bu mock'u ezer (bkz. src/ui/DilContext.test.tsx).
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
+// #433: yerel modulleri olan paylasim zinciri. Testte gercek modulleri yuklemek
+// ("Super expression must either be null or a function") suite'i dusuruyor; davranislari
+// paylasimGorseli.test.ts kendi mock'lariyla sinar.
+jest.mock('react-native-view-shot', () => ({ captureRef: jest.fn() }));
+jest.mock('expo-media-library', () => ({
+  requestPermissionsAsync: jest.fn(),
+  Asset: { create: jest.fn() },
+}));
+jest.mock('expo-clipboard', () => ({ setImageAsync: jest.fn() }));
+
 require('@grind/shared/i18n').i18nBaslat('tr');

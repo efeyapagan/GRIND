@@ -147,6 +147,8 @@ export interface AcikOturum {
   id: number;
   startedAt: string;
   isOpen: boolean;
+  /** Acikken null; bitirme yanitinda dolu (#73 -- sunucunun hesabi, istemci yeniden hesaplamaz). */
+  durationSeconds: number | null;
   templateId: number | null;
   templateName: string | null;
   // Sablonsuz oturumda bos. Sira, hedef ve gerceklesen sayilar SUNUCUDAN gelir (spec Karar 8).
@@ -222,6 +224,7 @@ function dogrulanmisOturum(yanit: SessionResponse): AcikOturum {
     id: yanit.id,
     startedAt: yanit.startedAt,
     isOpen: yanit.isOpen,
+    durationSeconds: yanit.durationSeconds ?? null,
     templateId: yanit.templateId ?? null,
     templateName: yanit.templateName ?? null,
     progress: (yanit.progress ?? []).map(dogrulanmisIlerleme),
@@ -831,11 +834,14 @@ export function useFinishSession() {
     }: {
       sessionId: number;
       zorluk: Zorluk | null;
-    }): Promise<void> => {
-      await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
+    }): Promise<AcikOturum> => {
+      // Yanit ATILMAZ (#433): bitirme ekrani paylasim karti icin suresini ve set sayisini buradan
+      // alir -- sure sunucunun hesabi, istemcide yeniden hesaplanmaz.
+      const yanit = await request<SessionResponse>(`/sessions/${sessionId}/finish`, {
         method: 'POST',
         body: JSON.stringify({ difficulty: zorluk }),
       });
+      return dogrulanmisOturum(yanit);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
