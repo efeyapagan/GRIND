@@ -6,6 +6,7 @@ import { useAuth } from '../../../src/auth/AuthContext';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import HaftalikHedefSatiri from '../../../src/components/HaftalikHedefSatiri';
+import AntrenmanHedefiSecici from '../../../src/components/AntrenmanHedefiSecici';
 import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
 import TemaSecici from '../../../src/components/TemaSecici';
 import DilSecici from '../../../src/components/DilSecici';
@@ -32,6 +33,7 @@ export default function AccountScreen() {
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <Text className="text-heading text-fg">{t('profil.antrenmanHedefi')}</Text>
         <HaftalikHedefSatiri />
+        <AntrenmanHedefiSecici />
       </View>
       <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
         <GizlilikSeviyesiSecici />

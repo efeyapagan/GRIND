@@ -668,6 +668,27 @@ export function useSetPrivacyLevel() {
 }
 
 /**
+ * Antrenman hedefi (#444). `null` hedefi kaldirir -- "secilmemis" gercek bir durum, varsayilan bir
+ * hedef uydurulmaz.
+ */
+export function useSetTrainingGoal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (trainingGoal: AntrenmanHedefi | null): Promise<void> => {
+      // Swagger nullable bir ENUM'u `| null` diye yazamiyor (weeklyTargetDays'in aksine), bu
+      // yuzden govde tipi uretilen semadan degil buradan geliyor: `null` hedefi kaldiran gecerli
+      // bir degerdir, eksik alan degil.
+      const govde: { trainingGoal: AntrenmanHedefi | null } = { trainingGoal };
+      await request<void>('/settings/training-goal', { method: 'PUT', body: JSON.stringify(govde) });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profil });
+    },
+  });
+}
+
+/**
  * Polling YOK (spec) -- yalnizca `useAddSet`in basarili olunca invalidate ettigi `records`
  * anahtari araciligiyla tazelenir.
  */
@@ -1395,6 +1416,9 @@ export function useDeleteMeasurement() {
 /** Gizlilik seviyesi (#294): geçmiş ve rekorların başkalarına görünürlüğü. */
 export type GizlilikSeviyesi = components['schemas']['PrivacyLevel'];
 
+/** Antrenman hedefi (#444): AI yorumunun baglamina girer. `null` = secilmemis. */
+export type AntrenmanHedefi = components['schemas']['TrainingGoal'];
+
 /** Kullanicinin kendi profili (#280): yas sunucunun hesabidir, istemci dogum tarihinden hesaplamaz. */
 export interface Profil {
   username: string;
@@ -1404,6 +1428,7 @@ export interface Profil {
   hasAvatar: boolean;
   avatarVersion: number | null;
   privacyLevel: GizlilikSeviyesi;
+  trainingGoal: AntrenmanHedefi | null;
 }
 
 function dogrulanmisProfil(yanit: ProfileResponse): Profil {
@@ -1418,6 +1443,7 @@ function dogrulanmisProfil(yanit: ProfileResponse): Profil {
     hasAvatar: yanit.hasAvatar,
     avatarVersion: yanit.avatarVersion ?? null,
     privacyLevel: yanit.privacyLevel,
+    trainingGoal: yanit.trainingGoal ?? null,
   };
 }
 
