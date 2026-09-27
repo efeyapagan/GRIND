@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Brain, Sparkles, Trash2 } from 'lucide-react-native';
+import { Brain, Lightbulb, Sparkles, Trash2, TriangleAlert, Trophy } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
@@ -14,6 +14,7 @@ import {
 import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { formatSaat, formatTarih } from '@grind/shared/lib/format';
+import { yorumuCozumle, type YorumIcerigi } from '@grind/shared/lib/yorumIcerigi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import IkincilDugme from '../../src/ui/IkincilDugme';
@@ -108,6 +109,11 @@ export default function InsightsScreen() {
             <Text className="flex-1 text-body text-muted">{t('yorumlar.aciklama')}</Text>
           </View>
 
+          {/* #454 (kullanici istegi): yorum Ingilizcede daha iyi calisiyor. */}
+          <Text testID="yorumlar-ingilizce-notu" className="text-label text-muted">
+            {t('yorumlar.ingilizceNotu')}
+          </Text>
+
           <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
             {!uretiliyor && (
               <BirincilDugme yukseklik="normal" onPress={yorumIste}>
@@ -194,7 +200,61 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
           <Trash2 color={ikonRenk.muted} size={18} />
         </IkonDugmesi>
       </View>
-      <Text className="text-body text-fg">{yorumMetni(yorum, yorumDili)}</Text>
+      <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />
+    </View>
+  );
+}
+
+/**
+ * Yorumun govdesi (#454). Yapisal yanit ozet + uc gruba ayrilir; cozumlenemeyen her sey (eski
+ * markdown kayitlar, bozuk JSON) DUZ METIN olarak cizilir -- yorum asla kaybolmaz.
+ */
+function YorumGovdesi({ icerik }: { icerik: YorumIcerigi }) {
+  const { t } = useTranslation();
+  const ikonRenk = useIkonRenk();
+
+  if (icerik.bicim === 'duz') {
+    return <Text className="text-body text-fg">{icerik.metin}</Text>;
+  }
+
+  return (
+    <View className="flex-col gap-4">
+      {icerik.ozet !== '' && <Text className="text-body text-fg">{icerik.ozet}</Text>}
+
+      <MaddeGrubu
+        baslik={t('yorumlar.basarilar')}
+        maddeler={icerik.basarilar}
+        ikon={<Trophy color={ikonRenk.success} size={16} />}
+      />
+      <MaddeGrubu
+        baslik={t('yorumlar.uyarilar')}
+        maddeler={icerik.uyarilar}
+        ikon={<TriangleAlert color={ikonRenk.danger} size={16} />}
+      />
+      <MaddeGrubu
+        baslik={t('yorumlar.tavsiyeler')}
+        maddeler={icerik.tavsiyeler}
+        ikon={<Lightbulb color={ikonRenk.accent} size={16} />}
+      />
+    </View>
+  );
+}
+
+/** Bos grup HIC cizilmez: bos bir baslik "burada bir sey eksik" izlenimi birakir. */
+function MaddeGrubu({ baslik, maddeler, ikon }: { baslik: string; maddeler: string[]; ikon: React.ReactNode }) {
+  if (maddeler.length === 0) {
+    return null;
+  }
+
+  return (
+    <View className="flex-col gap-2">
+      <Text className="text-label-xs text-muted uppercase">{baslik}</Text>
+      {maddeler.map((madde) => (
+        <View key={madde} className="flex-row items-start gap-2">
+          <View className="mt-1 shrink-0">{ikon}</View>
+          <Text className="flex-1 text-body text-fg">{madde}</Text>
+        </View>
+      ))}
     </View>
   );
 }

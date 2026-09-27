@@ -29,8 +29,16 @@ public static class AiInsightPrompt
         - 2-4 somut, uygulanabilir öneri.
 
         Yalnızca verideki bilgilere dayan; sayı uydurma. Veri bir sonuç çıkarmaya yetmiyorsa bunu açıkça
-        söyle. Tıbbi teşhis koyma; ağrı veya sakatlık notlarında bir uzmana danışmayı öner. Kısa
-        başlıklar ve maddeler kullan.
+        söyle. Tıbbi teşhis koyma; ağrı veya sakatlık notlarında bir uzmana danışmayı öner.
+
+        Yanıtı SADECE şu JSON nesnesi olarak ver; öncesine ya da sonrasına hiçbir şey yazma:
+        {"ozet": "...", "basarilar": ["..."], "uyarilar": ["..."], "tavsiyeler": ["..."]}
+        - "ozet": bir-iki cümlelik genel değerlendirme.
+        - "basarilar": iyi gidenler (rekorlar, düzenlilik, artan hacim).
+        - "uyarilar": dikkat edilmesi gerekenler (dengesizlik, düşüş, veri yetersizliği).
+        - "tavsiyeler": 2-4 somut, uygulanabilir öneri.
+        Her madde kendi başına okunabilen tek bir cümle olsun; madde içinde markdown kullanma.
+        Bir liste için söyleyecek bir şey yoksa onu boş dizi bırak.
         """;
 
     /// <summary>

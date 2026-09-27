@@ -217,3 +217,68 @@ test('son sayfadaysa (hasNextPage false) onEndReached tetiklense de fetchNextPag
 
   expect(sonuc.fetchNextPage).not.toHaveBeenCalled();
 });
+
+// ---- Yapisal gosterim (#454) ----
+
+const YAPISAL = JSON.stringify({
+  ozet: 'Düzenli gidiyorsun.',
+  basarilar: ['Bench Press rekoru'],
+  uyarilar: ['Çekiş hacmi düşük'],
+  tavsiyeler: ['Haftaya bir kürek günü ekle'],
+});
+
+function yapisalYorum() {
+  return ornekYorum({ translations: [{ language: 'tr', content: YAPISAL }] });
+}
+
+test('yapisal yorumun ozeti ve maddeleri ayri ayri cizilir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([yapisalYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Düzenli gidiyorsun.')).toBeTruthy();
+  expect(screen.getByText('Bench Press rekoru')).toBeTruthy();
+  expect(screen.getByText('Çekiş hacmi düşük')).toBeTruthy();
+  expect(screen.getByText('Haftaya bir kürek günü ekle')).toBeTruthy();
+});
+
+/** Basliklar katalogdan gelir; ham JSON anahtarlari ("basarilar") ekranda gorunmez. */
+test('ham json ekranda gorunmez', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([yapisalYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.queryByText(YAPISAL)).toBeNull();
+  expect(screen.queryByText(/basarilar/)).toBeNull();
+});
+
+/** KRITIK: #454 oncesi kayitlar markdown; yeniden uretilmeyecekler, oldugu gibi okunmali. */
+test('eski markdown yorum duz metin olarak cizilir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(
+    sonsuzSorguSonucu([
+      sayfa([ornekYorum({ translations: [{ language: 'tr', content: '**Genel** gidişat iyi.' }] })]),
+    ]),
+  );
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('**Genel** gidişat iyi.')).toBeTruthy();
+});
+
+/** KRITIK: bozuk JSON'da yorum kaybolmaz -- ucreti odenmis metin gosterilir. */
+test('bozuk json yorumu kaybetmez', async () => {
+  useInfiniteInsightsMock.mockReturnValue(
+    sonsuzSorguSonucu([sayfa([ornekYorum({ translations: [{ language: 'tr', content: '{"ozet": "yarim' }] })])]),
+  );
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('{"ozet": "yarim')).toBeTruthy();
+});
+
+/** Kullanici istegi: aciklamanin altinda yorumun Ingilizcede daha iyi calistigi notu. */
+test('aciklamanin altinda ingilizce notu vardir', async () => {
+  await ekraniOlustur();
+
+  expect(screen.getByTestId('yorumlar-ingilizce-notu')).toBeTruthy();
+});
