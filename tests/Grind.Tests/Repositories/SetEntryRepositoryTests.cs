@@ -530,7 +530,7 @@ public class SetEntryRepositoryTests
         var repository = new SetEntryRepository(context);
         var setler = await repository.GetInRangeAsync(user.Id, null, null);
 
-        Assert.Equal(new[] { 8, 6 }, setler.Select(s => s.Reps));
+        Assert.Equal(new int?[] { 8, 6 }, setler.Select(s => s.Reps));
         // Metin ve JSON egzersiz adını taşıyor; Include yoksa burada NullReferenceException olurdu.
         Assert.All(setler, s => Assert.Equal(exercise.Name, s.Exercise.Name));
         Assert.Empty(context.ChangeTracker.Entries());

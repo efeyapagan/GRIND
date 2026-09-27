@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Exercise;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 using ValidationException = Grind.Api.Common.Exceptions.ValidationException;
 
@@ -51,6 +52,7 @@ public class ExerciseService(
             UserId = currentUser.UserId,
             Name = name,
             Category = request.Category!.Value,
+            Measurement = request.Measurement ?? ExerciseMeasurement.WeightReps,
             IsArchived = false
         };
 
@@ -209,6 +211,7 @@ public class ExerciseService(
         exercise.AlternateName,
         exercise.Category,
         exercise.Equipment,
+        exercise.Measurement,
         exercise.IsArchived,
         IsGlobal: exercise.UserId is null,
         exercise.Media.Select(ToResponse).ToList());

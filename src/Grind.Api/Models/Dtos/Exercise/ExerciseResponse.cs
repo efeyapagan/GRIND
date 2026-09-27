@@ -26,12 +26,17 @@ namespace Grind.Api.Models.Dtos.Exercise;
 /// egzersiz seed'inde set edilir — Create/Update uçlarından yazılamaz, yani kullanıcının kendi
 /// egzersizinde her zaman <c>null</c>.
 /// </param>
+/// <param name="Measurement">
+/// Setlerin neyle ölçüldüğü (#346): kilo + tekrar, yalnızca tekrar ya da süre. İstemci set girişinde hangi
+/// alanları çizeceğini buna göre seçer.
+/// </param>
 public record ExerciseResponse(
     long Id,
     string Name,
     string? AlternateName,
     ExerciseCategory Category,
     ExerciseEquipment? Equipment,
+    ExerciseMeasurement Measurement,
     bool IsArchived,
     bool IsGlobal,
     IReadOnlyList<ExerciseMediaResponse> Media);

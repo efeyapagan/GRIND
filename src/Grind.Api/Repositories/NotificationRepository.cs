@@ -37,7 +37,7 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
         => await context.Set<SetEntry>()
             .Where(e => sessionIds.Contains(e.WorkoutSessionId) && e.RecordType != RecordType.None)
             .Select(e => new RecordSetRow(
-                e.WorkoutSessionId, e.ExerciseId, e.Exercise.Name, e.Weight, e.Reps, e.RecordType, e.CreatedAt,
+                e.WorkoutSessionId, e.ExerciseId, e.Exercise.Name, e.Weight, e.Reps, e.DurationSeconds, e.RecordType, e.CreatedAt,
                 e.WorkoutSession.SessionExercises
                     .Where(x => x.ExerciseId == e.ExerciseId)
                     .Select(x => (int?)x.OrderIndex)

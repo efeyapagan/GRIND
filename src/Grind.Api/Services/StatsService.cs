@@ -2,6 +2,7 @@ using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Stats;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 
 namespace Grind.Api.Services;
@@ -147,12 +148,14 @@ public class StatsService(
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
 
         return sets
-            .Where(s => !s.Exercise.IsArchived)
+            // #346: plato 1RM tahminine dayanır — yalnızca kilolu hareketlerde anlamlı.
+            .Where(s => !s.Exercise.IsArchived && s.Exercise.Measurement == ExerciseMeasurement.WeightReps
+                        && s.Reps is not null)
             .GroupBy(s => s.ExerciseId)
             .Select(g => (
                 Exercise: g.First().Exercise,
                 Plateau: PlateauDetector.Detect(
-                    g.Select(s => (TurkeyDay.LocalDateOf(s.CreatedAt), s.Weight, s.Reps)), today)))
+                    g.Select(s => (TurkeyDay.LocalDateOf(s.CreatedAt), s.Weight, s.Reps!.Value)), today)))
             .Where(x => x.Plateau is not null)
             .Select(x => new PlateauResponse(
                 x.Exercise.Id, x.Exercise.Name, x.Plateau!.Value.BestOneRepMax, x.Plateau.Value.BestOn,

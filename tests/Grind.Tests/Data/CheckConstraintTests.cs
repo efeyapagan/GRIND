@@ -21,10 +21,15 @@ public class CheckConstraintTests
         Assert.DoesNotContain("> 0", sql.Replace(">= 0", string.Empty));
     }
 
+    /// <summary>
+    /// #346: bir set ya tekrarla ya süreyle ölçülür — ikisi birden ya da hiçbiri olamaz, olan da pozitif.
+    /// </summary>
     [Fact]
-    public void Tekrar_sayisi_pozitif_olmalidir()
+    public void Set_ya_pozitif_tekrar_ya_pozitif_sure_tasir()
     {
-        Assert.Contains("> 0", SqlOf<SetEntry>("CK_SetEntry_Reps_Positive"));
+        var sql = SqlOf<SetEntry>("CK_SetEntry_RepsOrDuration");
+        Assert.Contains("\"Reps\" > 0 AND \"DurationSeconds\" IS NULL", sql);
+        Assert.Contains("\"Reps\" IS NULL AND \"DurationSeconds\" > 0", sql);
     }
 
     [Fact]

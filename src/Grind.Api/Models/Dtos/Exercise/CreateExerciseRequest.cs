@@ -20,4 +20,11 @@ public class CreateExerciseRequest
     [Required(ErrorMessage = "Kategori zorunlu.")]
     [EnumDataType(typeof(ExerciseCategory), ErrorMessage = "Geçersiz kategori.")]
     public ExerciseCategory? Category { get; set; }
+
+    /// <summary>
+    /// #346: setlerin neyle ölçüleceği; gönderilmezse kilo + tekrar. Oluşturduktan sonra değiştirilemez —
+    /// güncelleme uçlarında bilerek yok (geçmiş setler tipe uymaz hâle gelirdi).
+    /// </summary>
+    [EnumDataType(typeof(ExerciseMeasurement), ErrorMessage = "Geçersiz ölçüm tipi.")]
+    public ExerciseMeasurement? Measurement { get; set; }
 }

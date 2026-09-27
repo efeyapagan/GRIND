@@ -21,6 +21,12 @@ public class Exercise
     public ExerciseCategory Category { get; set; }
 
     /// <summary>
+    /// Setlerin neyle ölçüldüğü (#346) — kilo + tekrar, yalnızca tekrar ya da süre. Kullanıcı kendi
+    /// hareketinde yalnızca oluştururken seçer; sonradan değişmez (geçmiş setlerle çelişmesin).
+    /// </summary>
+    public ExerciseMeasurement Measurement { get; set; } = ExerciseMeasurement.WeightReps;
+
+    /// <summary>
     /// Hareketin ekipmanı (#413) — set girişindeki "Teki" / "Toplam" ibaresi buna bakar.
     /// <c>null</c> = bilinmiyor, ibare gösterilmez. <see cref="AlternateName"/> gibi yalnızca global
     /// egzersiz seed'inde set edilir; Create/Update uçları bu alanı kabul etmez (kullanıcının

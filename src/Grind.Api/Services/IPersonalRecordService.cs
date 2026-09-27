@@ -19,7 +19,12 @@ public interface IPersonalRecordService
     /// <c>RecordType</c> tarihsel bir anlık görüntüdür, sonradan yeniden yazılmaz.
     /// </summary>
     Task<RecordType> EvaluateNewAsync(
-        long exerciseId, decimal weight, int reps, CancellationToken cancellationToken = default);
+        long exerciseId,
+        ExerciseMeasurement measurement,
+        decimal weight,
+        int? reps,
+        int? durationSeconds,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Kullanıcının bu egzersizdeki TÜM setlerini kronolojik sırayla yeniden tarar ve her

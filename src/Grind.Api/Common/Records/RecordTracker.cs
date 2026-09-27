@@ -15,8 +15,16 @@ namespace Grind.Api.Common.Records;
 /// iyiler"i ilerletir. Bu yüzden bir örnek TEK bir (kullanıcı, egzersiz) serisi için
 /// kullanılır ve yeniden kullanılmaz.
 /// </summary>
-public sealed class RecordTracker
+public sealed class RecordTracker(ExerciseMeasurement measurement)
 {
+    /// <summary>Kilo + tekrar ile ölçülen hareket — #346 öncesi her hareket.</summary>
+    public RecordTracker() : this(ExerciseMeasurement.WeightReps)
+    {
+    }
+
+    // #346: süreli harekette tek kıyas noktası en uzun süre.
+    private int? _maxDurationSeconds;
+
     // Nullable, `0m` DEĞİL: Weight = 0 geçerli bir ağırlıktır (barfiks/dips). Sıfırla
     // başlatmak ilk 0 kg'lık seti "0 > 0 değil" diye rekor saymamaya yol açardı.
     private decimal? _maxWeight;
@@ -29,17 +37,51 @@ public sealed class RecordTracker
     /// <summary>
     /// Bir seti sınıflandırır VE durumu ilerletir. Çağrı sırası kronolojik olmalıdır.
     /// </summary>
-    public RecordType Apply(decimal weight, int reps)
+    public RecordType Apply(decimal weight, int reps) => Apply(weight, reps, durationSeconds: null);
+
+    /// <summary>
+    /// #346: hareketin ölçüm tipine uymayan set (ör. Plank süreli olmadan önce "0 kg × n" girilmiş eski
+    /// set) rekor değildir ve çıtayı etkilemez — süreli harekette süresi, diğerlerinde tekrarı olmayan set.
+    /// </summary>
+    public RecordType Apply(decimal weight, int? reps, int? durationSeconds)
     {
-        var result = Classify(weight, reps);
-        Observe(weight, reps);
+        if (measurement == ExerciseMeasurement.Duration)
+        {
+            return durationSeconds is { } seconds ? ApplyDuration(seconds) : RecordType.None;
+        }
+
+        if (reps is not { } r)
+        {
+            return RecordType.None;
+        }
+
+        var result = Classify(weight, r);
+        Observe(weight, r);
         return result;
+    }
+
+    private RecordType ApplyDuration(int seconds)
+    {
+        // Eşitlik rekor değildir — kilolu hareketlerdeki kuralın aynısı.
+        if (_maxDurationSeconds is { } max && seconds <= max)
+        {
+            return RecordType.None;
+        }
+
+        _maxDurationSeconds = seconds;
+        return RecordType.Duration;
     }
 
     private RecordType Classify(decimal weight, int reps)
     {
-        // Hiç önceki maksimum yoksa "çıtayı sen koydun" — ilk set her zaman ağırlık rekoru.
-        if (_maxWeight is not { } maxWeight || weight > maxWeight)
+        // Hiç önceki maksimum yoksa "çıtayı sen koydun" — kilolu harekette ilk set ağırlık rekoru, ağırlıksız
+        // (tekrar ölçülen) harekette tekrar rekoru (#346: 0 kg'lık bir crunch'a "ağırlık rekoru" denmez).
+        if (_maxWeight is null)
+        {
+            return measurement == ExerciseMeasurement.Reps ? RecordType.Reps : RecordType.Weight;
+        }
+
+        if (weight > _maxWeight)
         {
             return RecordType.Weight;
         }

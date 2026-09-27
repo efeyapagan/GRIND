@@ -16,6 +16,11 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(e => e.Category).HasConversion(new EnumToStringConverter<ExerciseCategory>()).HasMaxLength(20).IsRequired();
         // #413: Category ile aynı desen — adıyla saklanır, yeni bir ekipman türü migration gerektirmez
         // ama var olan adı değiştirmek eski satırları okunamaz yapar. Nullable: null = bilinmiyor.
+        // #346: Category ile aynı desen. Varsayılan değer migration'da var olan satırlar (kullanıcıların
+        // kendi hareketleri) için; kolonun varsayılanı olmasaydı EF yeni NOT NULL kolonu "" ile doldururdu.
+        // Enum'un 1'den başlaması bununla ilgili, bkz. ExerciseMeasurement.
+        builder.Property(e => e.Measurement).HasConversion(new EnumToStringConverter<ExerciseMeasurement>()).HasMaxLength(20)
+            .IsRequired().HasDefaultValue(ExerciseMeasurement.WeightReps);
         builder.Property(e => e.Equipment).HasConversion(new EnumToStringConverter<ExerciseEquipment>()).HasMaxLength(20);
 
         builder.HasOne(e => e.User)

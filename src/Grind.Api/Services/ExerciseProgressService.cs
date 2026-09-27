@@ -4,6 +4,7 @@ using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Stats;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 
 namespace Grind.Api.Services;
@@ -52,12 +53,17 @@ public class ExerciseProgressService(
                     TurkeyDay.LocalDateOf(startedAt),
                     top.Weight,
                     top.Reps,
-                    g.Sum(s => s.Weight * s.Reps),
+                    g.Sum(s => s.Weight * (s.Reps ?? 0)),
                     g.Count(),
-                    // Max, null değerleri yok sayar; hepsi null ise null döner.
-                    g.Max(s => OneRepMaxEstimator.Estimate(s.Weight, s.Reps)),
+                    // Max, null değerleri yok sayar; hepsi null ise null döner. #346: yalnızca kilolu harekette —
+                    // ağırlıksız harekette "ek ağırlık"tan 1RM tahmini anlamsız.
+                    exercise.Measurement == ExerciseMeasurement.WeightReps
+                        ? g.Max(s => s.Reps is { } reps ? OneRepMaxEstimator.Estimate(s.Weight, reps) : null)
+                        : null,
                     positionsBySession[g.Key][exerciseId],
-                    PositionChanged: false);
+                    PositionChanged: false,
+                    g.Max(s => s.Reps),
+                    g.Max(s => s.DurationSeconds));
             })
             .OrderBy(p => p.StartedAt)
             .ThenBy(p => p.SessionId)

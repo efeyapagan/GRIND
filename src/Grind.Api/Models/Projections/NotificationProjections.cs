@@ -10,10 +10,11 @@ public record RecordSessionEvent(long SessionId, DateTime OccurredAt, UserRef Ac
 
 /// <summary>
 /// Rekorlu antrenmanlardaki bir rekor seti. <see cref="OrderIndex"/> hareketin o antrenmandaki sırası;
-/// hareket antrenmanın listesinde yoksa <c>null</c>.
+/// hareket antrenmanın listesinde yoksa <c>null</c>. Set ya <see cref="Reps"/> ya
+/// <see cref="DurationSeconds"/> taşır (#346).
 /// </summary>
 public record RecordSetRow(
-    long SessionId, long ExerciseId, string ExerciseName, decimal Weight, int Reps,
+    long SessionId, long ExerciseId, string ExerciseName, decimal Weight, int? Reps, int? DurationSeconds,
     RecordType RecordType, DateTime CreatedAt, int? OrderIndex);
 
 /// <summary>

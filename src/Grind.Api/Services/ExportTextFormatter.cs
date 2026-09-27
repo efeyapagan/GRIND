@@ -39,6 +39,8 @@ public static class ExportTextFormatter
         "RIR = yedekte kalan tekrar.",
         "[PR: ağırlık] = o egzersizde o ana kadarki en ağır set.",
         "[PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.",
+        "Süreyle ölçülen hareketlerin (plank gibi) setleri saniye olarak yazılır (\"45 sn\"); " +
+        "[PR: süre] = o ana kadarki en uzun süre.",
         "Hareket adının başındaki sayı (\"1.\", \"2.\"...) o oturumda kaçıncı sırada yapıldığıdır; " +
         "sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma " +
         "yaparken dikkate alınmalıdır."
@@ -111,10 +113,18 @@ public static class ExportTextFormatter
 
         foreach (var record in records)
         {
-            Line(text,
-                $"- {SingleLine(record.ExerciseName)} ({record.Category}): " +
-                $"en ağır {SetText(record.BestWeight, record.BestWeightReps)} ({LocalDateText(record.BestWeightAt)}) · " +
-                $"en çok tekrar {SetText(record.BestRepsWeight, record.BestReps)} ({LocalDateText(record.BestRepsAt)})");
+            var head = $"- {SingleLine(record.ExerciseName)} ({record.Category}): ";
+
+            // #346: süreli harekette tek "en iyi" en uzun süredir; kilo ve tekrar anlamsız.
+            if (record.BestDurationSeconds is { } seconds)
+            {
+                Line(text, head + $"en uzun {DurationText(seconds)} ({LocalDateText(record.BestWeightAt)})");
+                continue;
+            }
+
+            Line(text, head +
+                $"en ağır {SetText(record.BestWeight, record.BestWeightReps, null)} ({LocalDateText(record.BestWeightAt)}) · " +
+                $"en çok tekrar {SetText(record.BestRepsWeight, record.BestReps, null)} ({LocalDateText(record.BestRepsAt)})");
         }
     }
 
@@ -234,7 +244,7 @@ public static class ExportTextFormatter
 
     private static string SetWithMarks(SetEntryResponse set)
     {
-        var text = SetText(set.Weight, set.Reps);
+        var text = SetText(set.Weight, set.Reps, set.DurationSeconds);
 
         if (set.Rir is { } rir)
         {
@@ -245,6 +255,7 @@ public static class ExportTextFormatter
         {
             RecordType.Weight => text + " [PR: ağırlık]",
             RecordType.Reps => text + " [PR: tekrar]",
+            RecordType.Duration => text + " [PR: süre]",
             _ => text
         };
     }
@@ -291,7 +302,11 @@ public static class ExportTextFormatter
         return "tüm geçmiş";
     }
 
-    private static string SetText(decimal weight, int reps) => Inv($"{weight:0.##}×{reps}");
+    /// <summary>"60×8"; #346: süreli set "45 sn" (set ya tekrar ya süre taşır).</summary>
+    private static string SetText(decimal weight, int? reps, int? durationSeconds) =>
+        durationSeconds is { } seconds ? DurationText(seconds) : Inv($"{weight:0.##}×{reps}");
+
+    private static string DurationText(int seconds) => Inv($"{seconds} sn");
 
     private static string DateText(DateOnly date) => date.ToString("yyyy-MM-dd", Invariant);
 
