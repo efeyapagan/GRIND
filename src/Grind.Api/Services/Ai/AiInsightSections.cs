@@ -1,65 +1,71 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Grind.Api.Services.Ai;
 
 /// <summary>
-/// Tek LLM çağrısının çok dilli yanıtını dillere böler (#199). Saf: veritabanı, saat, ağ yok.
+/// Tek LLM çağrısının çok dilli yanıtını dillere böler (#199, #463). Saf: veritabanı, saat, ağ yok.
+///
+/// Yanıt TEK bir JSON nesnesidir; dış anahtarlar dil kodları, değerler o dilin yorum nesnesi:
+/// <c>{"tr": {"ozet": ..., ...}, "en": {...}}</c>. Saklanan içerik ALT nesnedir — dil sarmalayıcısı
+/// taşınmaz, çünkü istemci ayrıştırıcısı (<c>yorumIcerigi.ts</c>) doğrudan yorum nesnesini bekler.
+///
+/// #463'e kadar burada metin içinde <c>===GRIND:tr===</c> gibi bir işaret aranıyordu. O düzen
+/// kırılgandı: model işareti bozduğunda ya da atladığında kullanıcı ekranda ham metin/JSON
+/// görüyordu. Artık biçim sağlayıcıya da zorlatılıyor (<c>response_format</c>) ve burada tek bir
+/// <c>JsonDocument.Parse</c> var.
 ///
 /// Neden tek çağrı: uzun export metni GİRDİ tokenlarının çoğunu oluşturur ve dil başına bir çağrı
-/// onu her seferinde yeniden ödetirdi. Tek çağrıda model her dili ayrı bir bölüm olarak yazar.
+/// onu her seferinde yeniden ödetirdi.
 ///
-/// DİKKAT: yanıt bir MODEL ÇIKTISIDIR, sözleşme değil — işaret bozulabilir, atlanabilir. Ücret
-/// çağrı anında doğduğu için hiçbir bozulma yorumu KAYBETTİRMEMELİ: işaret hiç yoksa tüm metin
-/// istenen ilk dile yazılır.
+/// KURAL: ücret çağrı anında doğduğu için hiçbir bozulma yorumu KAYBETTİRMEZ — hiçbir dil
+/// ayıklanamazsa tüm metin istenen İLK dile yazılır ve istemci onu düz metin olarak gösterir.
 /// </summary>
 public static partial class AiInsightSections
 {
-    public static string Marker(string language) => $"===GRIND:{language}===";
-
-    /// <summary>
-    /// İSTENEN dili değil, HERHANGİ bir dil işaretini yakalar: istenmeyen bir dil (modelin fazladan
-    /// yazdığı) de bir bölüm SINIRI olmalı, yoksa metni önceki bölümün içinde kalır.
-    /// </summary>
-    [GeneratedRegex(@"^[ \t]*===GRIND:([A-Za-z-]+)===[ \t]*$", RegexOptions.Multiline)]
-    private static partial Regex MarkerPattern();
+    /// <summary>Model JSON'u bazen ``` bloguna sarar; bu bozuk bir yanıt değil.</summary>
+    [GeneratedRegex(@"^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$")]
+    private static partial Regex KodBlogu();
 
     public static IReadOnlyDictionary<string, string> Split(
         string content, IReadOnlyList<string> languages)
     {
         var sonuc = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var isaretler = MarkerPattern().Matches(content);
 
-        if (isaretler.Count == 0)
+        var govde = (KodBlogu().Match(content) is { Success: true } blok
+            ? blok.Groups[1].Value
+            : content).Trim();
+
+        if (govde.Length == 0)
         {
-            // Model hiç işaret yazmadı: yanıtı çöpe atmak yerine ilk dilin metni say.
-            var tamami = content.Trim();
-            if (tamami.Length > 0 && languages.Count > 0)
-            {
-                sonuc[languages[0]] = tamami;
-            }
-
             return sonuc;
         }
 
-        for (var i = 0; i < isaretler.Count; i++)
+        try
         {
-            var isaret = isaretler[i];
-            var dil = isaret.Groups[1].Value;
-
-            if (!languages.Contains(dil, StringComparer.OrdinalIgnoreCase) || sonuc.ContainsKey(dil))
+            using var belge = JsonDocument.Parse(govde);
+            if (belge.RootElement.ValueKind == JsonValueKind.Object)
             {
-                continue;
+                foreach (var dil in languages)
+                {
+                    // Nesne olmayan bir değer (ör. düz metin) ATLANIR: istemci onu yorum
+                    // nesnesi sanıp çözümleyemez, yarım bir kart göstermektense o dil hiç olmasın.
+                    if (belge.RootElement.TryGetProperty(dil, out var bolum)
+                        && bolum.ValueKind == JsonValueKind.Object)
+                    {
+                        sonuc[dil] = bolum.GetRawText();
+                    }
+                }
             }
+        }
+        catch (JsonException)
+        {
+            // Aşağıdaki geri düşmeye bırakılır: yanıt kaybedilmez.
+        }
 
-            var bolumBasi = isaret.Index + isaret.Length;
-            var bolumSonu = i + 1 < isaretler.Count ? isaretler[i + 1].Index : content.Length;
-
-            // Yalnızca uçlar kırpılır: bölümün kendi satır sonları (başlıklar, maddeler) korunur.
-            var metin = content[bolumBasi..bolumSonu].Trim();
-            if (metin.Length > 0)
-            {
-                sonuc[dil] = metin;
-            }
+        if (sonuc.Count == 0 && languages.Count > 0)
+        {
+            sonuc[languages[0]] = content.Trim();
         }
 
         return sonuc;

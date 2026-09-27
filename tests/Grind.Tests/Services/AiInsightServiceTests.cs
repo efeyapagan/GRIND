@@ -52,10 +52,12 @@ public class AiInsightServiceTests
         }
     }
 
-    /// <summary>Sağlayıcının varsayılan yanıtı: #199'dan beri her dil ayrı bir bölüm.</summary>
+    /// <summary>Sağlayıcının varsayılan yanıtı: #463'ten beri tek JSON, dış anahtarlar dil kodları.</summary>
     private static readonly string VarsayilanIcerik =
-        $"{AiInsightSections.Marker("tr")}\nGüzel gidiyorsun.\n" +
-        $"{AiInsightSections.Marker("en")}\nYou are doing well.";
+        """
+        {"tr":{"ozet":"Güzel gidiyorsun.","tavsiyeler":["Devam"]},
+         "en":{"ozet":"You are doing well.","tavsiyeler":["Keep going"]}}
+        """;
 
     /// <summary>TR 12 Mart 20:00 (UTC 17:00): "bugün" 12 Mart, varsayılan aralık 11 Şubat – 12 Mart.</summary>
     private static readonly DateTime Simdi = new(2026, 3, 12, 17, 0, 0, DateTimeKind.Utc);
@@ -145,9 +147,10 @@ public class AiInsightServiceTests
             Assert.Null(satir.SetEntryId);
             Assert.Equal(new DateOnly(2026, 2, 11), satir.RangeFrom);
             Assert.Equal(new DateOnly(2026, 3, 12), satir.RangeTo);
-            Assert.Equal(
+            Assert.Contains(
                 "Güzel gidiyorsun.",
-                (await context.Set<AiInsightTranslation>().SingleAsync(c => c.AiInsightId == satir.Id && c.Language == "tr")).Content);
+                (await context.Set<AiInsightTranslation>().SingleAsync(c => c.AiInsightId == satir.Id && c.Language == "tr")).Content,
+                StringComparison.Ordinal);
             Assert.Equal("claude-opus-5", satir.Model);
             Assert.Equal(1500, satir.TokensUsed);
             Assert.Equal(0.0123m, satir.EstimatedCostUsd);
@@ -495,17 +498,19 @@ public class AiInsightServiceTests
                 .Where(c => c.AiInsightId == yanit.Id)
                 .ToDictionaryAsync(c => c.Language, c => c.Content);
 
-            Assert.Equal("Güzel gidiyorsun.", ceviriler["tr"]);
-            Assert.Equal("You are doing well.", ceviriler["en"]);
+            Assert.Contains("Güzel gidiyorsun.", ceviriler["tr"], StringComparison.Ordinal);
+            Assert.Contains("You are doing well.", ceviriler["en"], StringComparison.Ordinal);
+            // Dil sarmalayicisi saklanmaz: istemci dogrudan yorum nesnesini bekler.
+            Assert.DoesNotContain("\"tr\"", ceviriler["tr"], StringComparison.Ordinal);
         }
     }
 
     /// <summary>
-    /// KRİTİK: model bölüm işaretini yazmazsa yanıt ÇÖPE ATILMAZ. Çağrının parası ödenmiştir;
-    /// kullanıcı bir yorum görmeli, sıfır satır değil.
+    /// KRİTİK: model JSON yerine düz metin dönerse yanıt ÇÖPE ATILMAZ. Çağrının parası
+    /// ödenmiştir; kullanıcı bir yorum görmeli, sıfır satır değil.
     /// </summary>
     [Fact]
-    public async Task Isaretsiz_yanit_kaybolmaz_tek_ceviri_olarak_saklanir()
+    public async Task Jsonsuz_yanit_kaybolmaz_tek_ceviri_olarak_saklanir()
     {
         var (context, user, exercise, transaction) = await CreateAsync();
         await using (transaction)
