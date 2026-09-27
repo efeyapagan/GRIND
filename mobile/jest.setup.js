@@ -4,6 +4,8 @@ require('react-native-gesture-handler/jestSetup');
 // cocuklari oldugu gibi cizmek yeterli (#332, Takvim). Mock modulun KENDISINE eklenir:
 // expo-router/testing-library reanimated'i ayni modulden yeniden mock'lar, ayri bir fabrika onu ezerdi.
 require('react-native-reanimated/mock').LayoutAnimationConfig = ({ children }) => children;
+// #474: kutuphanenin mock'unda `useReducedMotion` yok; testlerde "hareketi azalt" kapali sayilir.
+require('react-native-reanimated/mock').useReducedMotion = () => false;
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
 // Ekranlar alt menunun payini guvenli alandan hesaplar (#338, `useAltMenuPayi`); tek ekran testlerinde
