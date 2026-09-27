@@ -51,3 +51,33 @@ export function useIkonRenk(): IkonRenkleri {
     onDanger: palet['on-danger-bg'],
   };
 }
+
+/**
+ * #439: birincil (accent dolgulu) dugmenin hafif turuncu parlamasi. Golge NativeWind sinifiyla
+ * renklendirilemedigi icin stil olarak verilir; etkin temanin `accent`i (iki temada ayni).
+ * iOS'ta cizilir; Android'in `elevation`u olmadan golge stili etkisizdir.
+ */
+export function useAccentParlama() {
+  const palet = useRenkPaleti();
+  return { shadowColor: palet.accent, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } };
+}
+
+/**
+ * #439: parmagin altinda kalkik duran kartin golgesi -- kart yerinden koptugu, ustte "suzuldugu"
+ * hissini veren sey. Golge rengi bir palet token'i DEGIL, siyah: bir golge her iki temada da
+ * koyudur, `fg`/`inset` gibi token'lar temaya gore terse doner. Tema farki opaklikta -- acik
+ * temada daha hafif, koyu temada daha belirgin (`SablonMenusu`'nun `bg-black/30` - `bg-black/60`
+ * perdesiyle ayni yaklasim).
+ *
+ * Olculer karuselin dikey nefes payina gore secilidir (bkz. `SablonKaruseli` UST_PAY / ALT_PAY):
+ * golge o payin disina tasarsa `ScrollView` onu kirpar.
+ */
+export function useKalkikGolge() {
+  return {
+    shadowColor: '#000000',
+    shadowOpacity: useEtkinTema() === 'acik' ? 0.25 : 0.55,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  };
+}

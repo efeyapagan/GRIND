@@ -1,10 +1,12 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import { useTemplates, useDeleteTemplate } from '@grind/shared/api/queries';
+import { act, render, screen, fireEvent } from '@testing-library/react-native';
+import { Gesture } from 'react-native-gesture-handler';
+import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
 import SablonlaBasla from './SablonlaBasla';
 
 jest.mock('@grind/shared/api/queries', () => ({
   useTemplates: jest.fn(),
   useDeleteTemplate: jest.fn(),
+  useSablonlariSirala: jest.fn(),
 }));
 
 const mockPush = jest.fn();
@@ -20,7 +22,9 @@ jest.mock('expo-router', () => {
 
 const useTemplatesMock = useTemplates as jest.Mock;
 const useDeleteTemplateMock = useDeleteTemplate as jest.Mock;
+const useSablonlariSiralaMock = useSablonlariSirala as jest.Mock;
 const sil = jest.fn();
+const sirala = jest.fn();
 
 function hareket(exerciseName: string, category: string, plannedSets: number) {
   return { exerciseId: 0, exerciseName, category, isArchived: false, plannedSets, restSeconds: 90 };
@@ -40,12 +44,36 @@ const SABLONLAR = [
   { id: 8, name: 'Pull Day', exercises: [hareket('Pull Up', 'Pull', 3)] },
 ];
 
+let panSpy: jest.SpyInstance;
+
 beforeEach(() => {
   sil.mockReset();
+  sirala.mockReset();
   mockPush.mockReset();
+  panSpy = jest.spyOn(Gesture, 'Pan');
   useTemplatesMock.mockReturnValue({ data: SABLONLAR, isLoading: false, isError: false });
   useDeleteTemplateMock.mockReturnValue({ mutate: sil, isPending: false });
+  useSablonlariSiralaMock.mockReturnValue({ mutate: sirala, isPending: false });
 });
+
+afterEach(() => {
+  panSpy.mockRestore();
+});
+
+/** Son cizimde `indeks`teki kartin basili tutma jesti (her cizim her kart icin yeni jest kurar). */
+function kartJesti(indeks: number) {
+  const hepsi = panSpy.mock.results.map((sonuc) => sonuc.value);
+  return hepsi.slice(-SABLONLAR.length)[indeks].handlers;
+}
+
+/** Parmak basili tutuldu, kaydirilmadan kaldirildi: menu acilir ve acik kalir. */
+async function menuyuAc(indeks: number) {
+  const jest_ = kartJesti(indeks);
+  await act(async () => {
+    jest_.onStart({ translationX: 0, absoluteX: 200 });
+    jest_.onEnd({ translationX: 0, absoluteX: 200 });
+  });
+}
 
 /** #439: kart ilk uc hareketin adini ve "N hareket | M set" ozetini gosterir. */
 test('kart ilk uc hareketin adini, hareket ve toplam set sayisini gosterir', async () => {
@@ -71,7 +99,7 @@ test('basili tutunca acilan menudeki Duzenle sablon formuna gider, antrenmani ba
   const onBasla = jest.fn();
   await render(<SablonlaBasla onBasla={onBasla} bekliyor={false} />);
 
-  await fireEvent(screen.getByText('Push Day'), 'longPress');
+  await menuyuAc(0);
   await fireEvent.press(screen.getByRole('button', { name: 'Şablonu düzenle' }));
 
   expect(mockPush).toHaveBeenCalledWith('/templates/7');
@@ -82,7 +110,7 @@ test('basili tutunca acilan menudeki Duzenle sablon formuna gider, antrenmani ba
 test('menudeki Sil once onay sorar, onaylaninca o sablon silinir', async () => {
   await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
 
-  await fireEvent(screen.getByText('Pull Day'), 'longPress');
+  await menuyuAc(1);
   await fireEvent.press(screen.getByRole('button', { name: 'Şablonu sil' }));
 
   expect(screen.getByText(/Silmek istediğine emin misin/)).toBeTruthy();
@@ -91,4 +119,29 @@ test('menudeki Sil once onay sorar, onaylaninca o sablon silinir', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Evet, sil' }));
 
   expect(sil).toHaveBeenCalledWith(8);
+});
+
+/**
+ * #439: basili tutmaya devam edip yana surukleyince menu kapanir, kart yer degistirir ve yeni sira
+ * SUNUCUYA yazilir ("Şablonları yönet"teki siralamayla ayni veri).
+ */
+test('basili tutup yana surukleyince menu kapanir ve yeni sira sunucuya gonderilir', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  const ilkKart = kartJesti(0);
+  await act(async () => {
+    ilkKart.onStart({ translationX: 0, absoluteX: 200 });
+  });
+  expect(screen.getByTestId('sablon-menusu')).toBeTruthy();
+
+  await act(async () => {
+    ilkKart.onUpdate({ translationX: 400, absoluteX: 600 });
+  });
+  expect(screen.queryByTestId('sablon-menusu')).toBeNull();
+
+  await act(async () => {
+    ilkKart.onEnd({ translationX: 400, absoluteX: 600 });
+  });
+
+  expect(sirala).toHaveBeenCalledWith([8, 7]);
 });
