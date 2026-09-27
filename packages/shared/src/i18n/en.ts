@@ -468,6 +468,14 @@ export const en: Katalog = {
     zilEtiketi_one: 'Notifications, {{count}} unread',
     zilEtiketi_other: 'Notifications, {{count}} unread',
   },
+  paylasim: {
+    baslik: 'Share workout',
+    paylas: 'Share workout',
+    galeriyeKaydet: 'Save to gallery',
+    panoyaKopyala: 'Copy to clipboard',
+    izinYok: 'Saving to your gallery needs photo permission. You can grant it in Settings.',
+    hata: 'Could not create the image. Want to try again?',
+  },
   yorumlar: {
     baslik: "What's GRINDY saying?",
     basligiKisa: 'GRINDY',
