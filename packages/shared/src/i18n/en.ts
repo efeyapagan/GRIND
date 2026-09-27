@@ -480,6 +480,10 @@ export const en: Katalog = {
     baslik: "What's GRINDY saying?",
     basligiKisa: 'GRINDY',
     yorumDili: 'Review language',
+    ingilizceNotu: 'GRINDY works better in English; you can switch the language from the flag in the top right.',
+    basarilar: 'Going well',
+    uyarilar: 'Watch out',
+    tavsiyeler: 'Suggestions',
     maskotEtiketi: 'GRINDY, your training coach',
     aciklama:
       "GRINDY reviews up to your last 30 days of workout data. Choosing a specific range isn't possible yet.",
