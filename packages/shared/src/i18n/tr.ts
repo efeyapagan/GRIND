@@ -357,6 +357,7 @@ export const tr = {
     hicHareketYok: 'Henüz hareket yok.',
     silOnayMesaji: 'Silmek istediğine emin misin? Bu şablonla yapılmış geçmiş antrenmanlar silinmez.',
     sil: 'Şablonu sil',
+    kaydirmaKisayolu: '{{ad}}: sola kaydırınca düzenle ve sil',
     hedefSetGecersiz: 'Hedef set 1-50 arasında olmalı.',
     artikKullanilmiyor: 'Artık kullanılmıyor',
     hareketOnEki: '{{sira}}. hareket',

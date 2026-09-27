@@ -353,6 +353,7 @@ export const en: Katalog = {
     hicHareketYok: 'No exercises yet.',
     silOnayMesaji: 'Are you sure you want to delete this? Past workouts done with this template are not deleted.',
     sil: 'Delete template',
+    kaydirmaKisayolu: '{{ad}}: swipe left to edit or delete',
     hedefSetGecersiz: 'Target sets must be between 1 and 50.',
     artikKullanilmiyor: 'No longer used',
     hareketOnEki: 'Exercise {{sira}}',
