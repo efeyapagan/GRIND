@@ -38,6 +38,8 @@ public class PublicActivityServiceTests
         var egzersiz = TestDatabase.NewExercise(b, $"Egzersiz {Guid.NewGuid():N}");
         var oturum = TestDatabase.NewSession(b);
         oturum.StartedAt = An;
+        // #436: geçmiş yalnızca BİTMİŞ ve seti olan oturumları gösterir.
+        oturum.EndedAt = An.AddMinutes(45);
         context.AddRange(a, b, egzersiz, oturum, new SetEntry
         {
             WorkoutSession = oturum, Exercise = egzersiz,
@@ -84,14 +86,23 @@ public class PublicActivityServiceTests
     [Fact]
     public async Task Kisitli_hesapta_yabanci_son_bes_antrenmani_gorur()
     {
-        var (context, a, b, _, transaction) = await CreateAsync(PrivacyLevel.Kisitli);
+        var (context, a, b, egzersiz, transaction) = await CreateAsync(PrivacyLevel.Kisitli);
         await using (transaction)
         {
             for (var i = 0; i < 7; i++)
             {
                 var oturum = TestDatabase.NewSession(b);
-                oturum.StartedAt = An.AddDays(-i - 1);
+                var an = An.AddDays(-i - 1);
+                oturum.StartedAt = an;
+                // #436: bitmemiş ya da setsiz oturum geçmişe hiç girmez -- sınır testinin
+                // ölçtüğü şey "son 5", "elenmeyen 5" değil.
+                oturum.EndedAt = an.AddMinutes(45);
                 context.Add(oturum);
+                context.Add(new SetEntry
+                {
+                    WorkoutSession = oturum, Exercise = egzersiz,
+                    Weight = 60m, Reps = 8, RecordType = RecordType.None, CreatedAt = an
+                });
             }
             await context.SaveChangesAsync();
             var service = ServiceFor(context, a);
