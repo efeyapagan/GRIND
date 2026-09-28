@@ -16,7 +16,21 @@ public class WorkoutTemplate
     /// </summary>
     public int OrderIndex { get; set; }
 
+    /// <summary>
+    /// Paylaşım override'ı (#467). <c>null</c> = varsayılan: hesabın <c>PrivacyLevel</c>'i
+    /// Acik/Kisitli ise paylaşımda, Gizli ise değil. <c>true</c>/<c>false</c> bu varsayılanı
+    /// şablon bazında tersine çevirir. Hesaplanmış "görünür mü" değeri BURADA SAKLANMAZ.
+    /// </summary>
+    public bool? IsSharedOverride { get; set; }
+
+    /// <summary>
+    /// <c>null</c> = kendi oluşturduğun şablon. Dolu = bir arkadaştan kaydedilmiş kopya (#467);
+    /// kaynak kullanıcı adı değiştirilemediği için canlı join ile okunur, ayrıca kopyalanmaz.
+    /// </summary>
+    public long? SavedFromUserId { get; set; }
+
     public User User { get; set; } = null!;
+    public User? SavedFromUser { get; set; }
     public ICollection<TemplateExercise> TemplateExercises { get; set; } = [];
     public ICollection<WorkoutSession> WorkoutSessions { get; set; } = [];
 }
