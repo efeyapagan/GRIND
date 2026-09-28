@@ -11,7 +11,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useOpenSession } from '@grind/shared/api/queries';
 import { useRestTimerGorunumu } from '@grind/shared/restTimer';
 import { useKalanSure } from '@grind/shared/useKalanSure';
-import { EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
+import { duraklatildiMi, EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
 import { useIkonRenk } from '../ui/renkler';
 
 /**
@@ -109,7 +109,9 @@ export default function DinlenmeKabugu() {
       }
     });
 
-  if (!dinlenme || !genis || bitti || !antrenmandaMi) {
+  // #477: duraklatilmis sayac CIZILMEZ -- sayan bir sey yoksa gosterilecek bir sey de yok.
+  // Kural duraklatilmisliktan turer, ekran adindan degil: kabuk hangi ekranda oldugunu bilmez.
+  if (!dinlenme || duraklatildiMi(dinlenme) || !genis || bitti || !antrenmandaMi) {
     return null;
   }
 
@@ -165,7 +167,7 @@ export function DinlenmeGostergesi() {
 
   // Panelin cizildigi tek durumda (antrenman ekrani + genis + surerken) burasi susar: iki gorunum
   // ayni anda gorunmez.
-  if (!dinlenme || (antrenmandaMi && genis && !bitti)) {
+  if (!dinlenme || duraklatildiMi(dinlenme) || (antrenmandaMi && genis && !bitti)) {
     return null;
   }
   const icerik = bitti ? (
