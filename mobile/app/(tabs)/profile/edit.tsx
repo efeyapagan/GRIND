@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +15,7 @@ import {
   useProfilim,
   type Profil,
 } from '@grind/shared/api/queries';
+import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { formatTarih } from '@grind/shared/lib/format';
 import { PROFIL_FOTOGRAFI_KENARI } from '@grind/shared/lib/profilFotografi';
@@ -49,8 +50,8 @@ export default function ProfiliDuzenleScreen() {
   );
 }
 
-/** Galeri 1:1 kirpar; sonuc sunucuya gitmeden once `PROFIL_FOTOGRAFI_KENARI` JPEG'e kuculur. */
-async function fotografSecVeKucult(): Promise<string | null> {
+/** Galeri 1:1 kirpar (OS'un kendi kirpma ekrani). Iptal edilirse `null`. */
+async function galeridenSec(): Promise<string | null> {
   const secim = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
@@ -60,7 +61,12 @@ async function fotografSecVeKucult(): Promise<string | null> {
   if (secim.canceled || !secim.assets?.[0]) {
     return null;
   }
-  const baglam = ImageManipulator.manipulate(secim.assets[0].uri).resize({
+  return secim.assets[0].uri;
+}
+
+/** Kirpilan gorsel sunucuya gitmeden once `PROFIL_FOTOGRAFI_KENARI` JPEG'e kuculur. */
+async function kucult(uri: string): Promise<string> {
+  const baglam = ImageManipulator.manipulate(uri).resize({
     width: PROFIL_FOTOGRAFI_KENARI,
     height: PROFIL_FOTOGRAFI_KENARI,
   });
@@ -69,36 +75,91 @@ async function fotografSecVeKucult(): Promise<string | null> {
   return kayit.uri;
 }
 
+/** Hatanin kendi metni -- kullanici cihazda gordugunu aktarabilsin diye ekrana yazilir (#510). */
+function hataMetni(hata: unknown): string {
+  return hata instanceof Error ? hata.message : String(hata);
+}
+
+interface FotografHatasi {
+  mesaj: string;
+  ayrinti?: string;
+}
+
 function FotografAlani({ profil }: { profil: Profil }) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const yukle = useFotografiYukle();
   const kaldir = useFotografiKaldir();
-  const [hata, setHata] = useState(false);
-  const mesgul = yukle.isPending || kaldir.isPending;
+  const [hata, setHata] = useState<FotografHatasi | null>(null);
+  // Galeri kapandiktan SONRA kucultme de cihazda zaman alir; gosterge yalnizca yuklemeyi degil onu da kapsar.
+  const [hazirlaniyor, setHazirlaniyor] = useState(false);
+  const calisiyor = hazirlaniyor || yukle.isPending;
+  const mesgul = calisiyor || kaldir.isPending;
 
+  /** Sunucu reddettiyse KENDI mesaji (ör. "JPEG, PNG ya da WebP olmalı"); ulasilamadiysa ayrintisiyla. */
+  function sunucuHatasi(hataNesnesi: unknown): FotografHatasi {
+    if (hataNesnesi instanceof ApiError) {
+      return { mesaj: apiHatasiniAyir(hataNesnesi, []).genelHata ?? t('profil.fotografYuklenemedi') };
+    }
+    return {
+      mesaj: t('profil.fotografGonderilemedi'),
+      ayrinti: t('profil.hataAyrintisi', { ayrinti: hataMetni(hataNesnesi) }),
+    };
+  }
+
+  /**
+   * #510 (kullanici bildirdi, gercek iPhone -- simulatorde akis calisiyor): once tum hatalar tek,
+   * sabit bir "yuklenemedi" mesajina yutuluyordu ve cihazda NEYIN patladigi gorulemiyordu. Akis
+   * artik uc adima bolunur -- galeri, hazirlama (kucultme + dosya), gonderme -- ve her adimin hatasi
+   * kendi adiyla ve hatanin kendi metniyle ekrana yazilir. Hazirlanamayan fotograf gonderilmez.
+   */
   async function sec() {
-    setHata(false);
+    setHata(null);
+    let govde: FormData;
     try {
-      const uri = await fotografSecVeKucult();
-      if (!uri) {
+      const secilen = await galeridenSec();
+      if (!secilen) {
         return;
       }
-      const govde = new FormData();
+      setHazirlaniyor(true);
+      const kucuk = await kucult(secilen);
+      govde = new FormData();
       // Expo 57'nin global fetch'i (expo/fetch) RN'in eski `{ uri, name, type }` parcasini DESTEKLEMEZ
       // ("Unsupported FormDataPart", istek hic gitmez) -- dosya Blob uyumlu `File` olarak eklenir; ad ve
       // tur (`.jpg` -> image/jpeg) dosyanin kendisinden gelir.
-      govde.append('file', new File(uri));
+      govde.append('file', new File(kucuk));
+    } catch (hataNesnesi) {
+      setHazirlaniyor(false);
+      setHata({
+        mesaj: t('profil.fotografHazirlanamadi'),
+        ayrinti: t('profil.hataAyrintisi', { ayrinti: hataMetni(hataNesnesi) }),
+      });
+      return;
+    }
+    setHazirlaniyor(false);
+    try {
       await yukle.mutateAsync(govde);
-    } catch {
-      setHata(true);
+    } catch (hataNesnesi) {
+      setHata(sunucuHatasi(hataNesnesi));
     }
   }
 
   return (
     <View className="flex-col items-center gap-3">
-      <ProfilFotografi profil={profil} boyut="buyuk" />
-      {hata && <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={t('profil.fotografYuklenemedi')} />}
+      <View className="items-center justify-center">
+        <ProfilFotografi profil={profil} boyut="buyuk" />
+        {/* #510: yukleme ve hazirlama surerken gorunur gosterge -- dugmeyi soluklastirmak yetmiyordu. */}
+        {calisiyor && (
+          <View
+            testID="fotograf-yukleniyor"
+            accessibilityLabel={t('ortak.yukleniyor')}
+            className="absolute inset-0 items-center justify-center"
+          >
+            <ActivityIndicator color={ikonRenk.fg} />
+          </View>
+        )}
+      </View>
+      {hata && <HataKutusu baslik={t('profil.fotografYuklenemedi')} mesaj={hata.mesaj} ayrinti={hata.ayrinti} />}
       <View className="w-full flex-row gap-2">
         <Pressable
           accessibilityRole="button"
@@ -114,8 +175,8 @@ function FotografAlani({ profil }: { profil: Profil }) {
             accessibilityRole="button"
             disabled={mesgul}
             onPress={() => {
-              setHata(false);
-              kaldir.mutate(undefined, { onError: () => setHata(true) });
+              setHata(null);
+              kaldir.mutate(undefined, { onError: (hataNesnesi) => setHata(sunucuHatasi(hataNesnesi)) });
             }}
             className={`h-10 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-3 ${mesgul ? 'opacity-60' : ''}`}
           >
