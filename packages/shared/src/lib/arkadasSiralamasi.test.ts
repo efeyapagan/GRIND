@@ -234,3 +234,30 @@ test('siralama donemin hedefine gore yapilir', () => {
   expect(arkadaslariSirala(liste, 'hafta').map((a) => a.username)).toEqual(['yariHedef', 'tamHedef']);
   expect(arkadaslariSirala(liste, 'ay').map((a) => a.username)).toEqual(['tamHedef', 'yariHedef']);
 });
+
+// ---- Kendi satiri (#512) ----
+
+/**
+ * Kullanici karari: donemde KIMSE antrenman yapmadiysa siralamanin anlami yoktur; kullanicinin
+ * kendi satiri en ustte durur. AYIRT EDICI: kendi satiri burada hedefsiz -- normal kuralda
+ * hedefli iki kisinin ALTINA duserdi.
+ */
+test('kimse antrenman yapmadiysa kendi satiri en ustte', () => {
+  const sirali = arkadaslariSirala([
+    arkadas({ username: 'a', weeklyTargetDays: 3 }),
+    arkadas({ username: 'b', weeklyTargetDays: 4 }),
+    arkadas({ username: 'ben', isSelf: true }),
+  ]);
+
+  expect(sirali.map((a) => a.username)).toEqual(['ben', 'a', 'b']);
+});
+
+/** Biri antrenman yaptigi anda #425'in kurali geri gelir: kendi satiri ayricaliksiz siralanir. */
+test('biri antrenman yaptiysa kendi satiri ayricaliksiz siralanir', () => {
+  const sirali = arkadaslariSirala([
+    arkadas({ username: 'ben', isSelf: true, weeklyTargetDays: 3 }),
+    arkadas({ username: 'calisan', trainedDays: 1, weeklyTargetDays: 3 }),
+  ]);
+
+  expect(sirali.map((a) => a.username)).toEqual(['calisan', 'ben']);
+});
