@@ -255,6 +255,8 @@ public class WorkoutSessionRepositoryTests
     {
         var session = TestDatabase.NewSession(user);
         session.StartedAt = startedAtUtc;
+        // #436: geçmiş sorgusu yalnızca BİTMİŞ ve seti olan oturumları döner.
+        session.EndedAt = startedAtUtc.AddMinutes(45);
         context.Add(session);
 
         foreach (var (weight, reps) in sets)
