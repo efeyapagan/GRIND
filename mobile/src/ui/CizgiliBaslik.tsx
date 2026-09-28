@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -13,6 +13,12 @@ const CIZIM_SURESI_MS = 1200;
  * soldan saga yavasca "cizilir": cizgi baslik genisliginde bir kez cizilir, uzerindeki pencere
  * 0'dan tam genislige acilir. Cihazda "hareketi azalt" aciksa (`ReduceMotion.System`) cizgi
  * dogrudan tam gorunur.
+ *
+ * #487 (kullanici bildirdi): antrenman baslayinca baslik kisaliyor ("Antrenmana basla" ->
+ * "Antrenman") ama cizgi ESKI, uzun genisliginde kaliyordu; ekrandan cikip girince duzeliyordu.
+ * Sebep olcumun bayat kalmasi: RN metin degisince `onLayout`u her zaman yeniden tetiklemiyor.
+ * Baslik degisince olcum SIFIRLANIR (cizgi bir an hic cizilmez, yanlis uzunlukta DEGIL) ve
+ * `key={children}` metni yeniden monte ederek taze bir olcum zorlar.
  */
 export default function CizgiliBaslik({ children }: { children: string }) {
   const palet = useRenkPaleti();
@@ -30,11 +36,16 @@ export default function CizgiliBaslik({ children }: { children: string }) {
     }, [ilerleme]),
   );
 
+  useEffect(() => {
+    setGenislik(0);
+  }, [children]);
+
   const pencere = useAnimatedStyle(() => ({ width: genislik * ilerleme.value }), [genislik]);
 
   return (
     <View className="flex-col gap-1 self-start">
       <Text
+        key={children}
         accessibilityRole="header"
         className="text-title font-bold text-fg"
         onLayout={(olay) => setGenislik(olay.nativeEvent.layout.width)}

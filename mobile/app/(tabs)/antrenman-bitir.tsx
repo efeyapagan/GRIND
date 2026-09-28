@@ -130,6 +130,23 @@ export default function AntrenmanBitirScreen() {
     );
   }
 
+  /**
+   * #487 (kullanici bildirdi: "puanlayip kaydettikten sonra siyah ekranda kaldi, sadece ust baslik
+   * vardi"). Antrenman kapandigi an ASAGIDAKI iki kural da dogru gorunur ve pencereyi YUTAR:
+   * `isSuccess` bos doner, "oturum yok" antrenman ekranina yonlendirir. Pencere aciksa ekran
+   * YALNIZCA onu cizer; kapaninca `paylasimiKapat` sirayi (sablon sorusu / ana sayfa) devreder.
+   */
+  if (paylasim) {
+    return (
+      <PaylasimPenceresi
+        setCount={paylasim.setCount}
+        durationSeconds={paylasim.durationSeconds}
+        acik
+        onKapat={paylasimiKapat}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <View className="flex-1 px-4 pt-2">
@@ -212,15 +229,6 @@ export default function AntrenmanBitirScreen() {
       <Text className="text-center text-body text-muted">
         {t('antrenman.bitirmeSorusu')}
       </Text>
-
-      {paylasim !== null && (
-        <PaylasimPenceresi
-          setCount={paylasim.setCount}
-          durationSeconds={paylasim.durationSeconds}
-          acik
-          onKapat={paylasimiKapat}
-        />
-      )}
 
       {/* Kadran, soru ile alttaki dugmeler arasindaki bosluğun ortasinda durur (#182). */}
       <View className="flex-1 items-center justify-center gap-4">
