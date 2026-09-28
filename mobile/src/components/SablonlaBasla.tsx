@@ -113,6 +113,9 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
           {kaydedilenSablonlar.map((sablon) => (
             <SablonKayitliKarti
               key={sablon.id}
+              ref={(kart) => {
+                kartlar.current.set(sablon.id, kart);
+              }}
               ad={sablon.name}
               kaynakKullaniciAdi={sablon.savedFromUsername}
               ozet={sablonOzeti(sablon)}
