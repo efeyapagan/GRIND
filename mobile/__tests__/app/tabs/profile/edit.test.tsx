@@ -21,6 +21,21 @@ jest.mock('@grind/shared/api/queries', () => ({
   useProfilFotografi: () => ({ data: null }),
 }));
 jest.mock('../../../../src/auth/AuthContext', () => ({ useAuth: jest.fn() }));
+
+// #510: fotograf akisinin uc yerel adimi -- galeri, kucultme, dosya. Testte ne dondurecekleri
+// (ya da hangi adimda patlayacaklari) her testte ayrica belirlenir.
+const mockGaleri = jest.fn();
+const mockKucult = jest.fn();
+jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: () => mockGaleri() }));
+jest.mock('expo-image-manipulator', () => ({
+  SaveFormat: { JPEG: 'jpeg' },
+  ImageManipulator: {
+    manipulate: () => ({
+      resize: () => ({ renderAsync: () => mockKucult() }),
+    }),
+  },
+}));
+jest.mock('expo-file-system', () => ({ File: jest.fn() }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
 
 const updateProfile = jest.fn();
@@ -149,4 +164,101 @@ test('sunucu 409 donerse pencerede alinmis yazar', async () => {
   await act(async () => fireEvent.press(within(screen.getByTestId('modal-govde')).getByText('Kaydet')));
 
   expect(await screen.findByText('Bu kullanıcı adı zaten alınmış.')).toBeTruthy();
+});
+
+// ---- Profil fotografi (#510) ----
+
+/**
+ * #510 (kullanici bildirdi, gercek iPhone): fotograf kirpilip secilince "kaydedilmiyor". iOS
+ * simulatorde akis calisiyor (204, 46 KB JPEG); cihazda neyin patladigi GORULEMIYORDU cunku tum
+ * hatalar tek, sabit bir "yuklenemedi" mesajina yutuluyordu. Bu testler hatanin HANGI ADIMDA ve
+ * NEDEN oldugunun ekrana yazildigini sabitler.
+ */
+function galeriSecer() {
+  mockGaleri.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///secilen.heic' }] });
+}
+
+function kucultmeBasarili() {
+  mockKucult.mockResolvedValue({ saveAsync: async () => ({ uri: 'file:///kucuk.jpg' }) });
+}
+
+async function fotografSec() {
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Fotoğraf seç' })));
+}
+
+beforeEach(() => {
+  mockGaleri.mockReset();
+  mockKucult.mockReset();
+});
+
+test('sunucu fotografi reddederse sunucunun kendi mesaji gorunur', async () => {
+  galeriSecer();
+  kucultmeBasarili();
+  (useFotografiYukle as jest.Mock).mockReturnValue({
+    mutateAsync: jest.fn().mockRejectedValue(new ApiError(400, 'Fotoğraf JPEG, PNG ya da WebP olmalı.')),
+    isPending: false,
+  });
+  await ciz();
+
+  await fotografSec();
+
+  expect(screen.getByText('Fotoğraf JPEG, PNG ya da WebP olmalı.')).toBeTruthy();
+});
+
+/** Cihazda patlayan yerel bir adim: hangi adim oldugu VE hatanin kendi metni gorunur. */
+test('fotograf hazirlanamazsa adim ve hatanin ayrintisi gorunur', async () => {
+  galeriSecer();
+  mockKucult.mockRejectedValue(new Error('Could not decode image'));
+  const yukle = jest.fn();
+  (useFotografiYukle as jest.Mock).mockReturnValue({ mutateAsync: yukle, isPending: false });
+  await ciz();
+
+  await fotografSec();
+
+  expect(screen.getByText('Fotoğraf hazırlanamadı.')).toBeTruthy();
+  expect(screen.getByText(/Could not decode image/)).toBeTruthy();
+  // Hazirlanamayan fotograf sunucuya HIC gonderilmez.
+  expect(yukle).not.toHaveBeenCalled();
+});
+
+/** Sunucuya ulasilamazsa (ag, zaman asimi) bu da kendi adiyla soylenir. */
+test('fotograf sunucuya gonderilemezse ayrintisiyla gorunur', async () => {
+  galeriSecer();
+  kucultmeBasarili();
+  (useFotografiYukle as jest.Mock).mockReturnValue({
+    mutateAsync: jest.fn().mockRejectedValue(new TypeError('Network request failed')),
+    isPending: false,
+  });
+  await ciz();
+
+  await fotografSec();
+
+  expect(screen.getByText('Fotoğraf sunucuya gönderilemedi.')).toBeTruthy();
+  expect(screen.getByText(/Network request failed/)).toBeTruthy();
+});
+
+/**
+ * Yukleme surerken gorunur bir gosterge (issue: "bir sey olmuyor" hissi). Yalnizca dugmeyi
+ * soluklastirmak yetmiyordu.
+ */
+test('yukleme surerken gosterge gorunur', async () => {
+  galeriSecer();
+  kucultmeBasarili();
+  (useFotografiYukle as jest.Mock).mockReturnValue({ mutateAsync: jest.fn(), isPending: true });
+  await ciz();
+
+  expect(screen.getByTestId('fotograf-yukleniyor')).toBeTruthy();
+});
+
+/** Galeri iptal edilirse hicbir sey olmaz: ne hata ne gonderim. */
+test('galeri iptal edilirse hata da gonderim de olmaz', async () => {
+  mockGaleri.mockResolvedValue({ canceled: true, assets: null });
+  const yukle = jest.fn();
+  (useFotografiYukle as jest.Mock).mockReturnValue({ mutateAsync: yukle, isPending: false });
+  await ciz();
+
+  await fotografSec();
+
+  expect(yukle).not.toHaveBeenCalled();
+  expect(screen.queryByRole('alert')).toBeNull();
 });
