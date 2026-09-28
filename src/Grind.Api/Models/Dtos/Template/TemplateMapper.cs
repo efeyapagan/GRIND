@@ -18,11 +18,20 @@ public static class TemplateMapper
         template.SavedFromUser?.Username,
         lastUsedAt);
 
-    public static SharedTemplateResponse ToSharedResponse(WorkoutTemplate template) => new(
-        template.Id, template.Name, ExercisesOf(template));
+    /// <summary>
+    /// #467 final review: paylaşılan görünümde (`SharedTemplateService`) sahibin egzersiz listesi
+    /// olduğu gibi değil, İZLEYENE görünür (ve arşivlenmemiş) olanlarla SINIRLI dönmeli --
+    /// aksi hâlde izleyici, kaydedince zaten elenecek olan özel/arşivli bir egzersizin adını
+    /// (Yetkilendirme Kuralı ihlali) veya kopyalanmayacak bir hareketi görür.
+    /// </summary>
+    public static SharedTemplateResponse ToSharedResponse(
+        WorkoutTemplate template, IReadOnlyCollection<long> visibleExerciseIds) => new(
+        template.Id, template.Name, ExercisesOf(template, visibleExerciseIds));
 
-    internal static IReadOnlyList<TemplateExerciseResponse> ExercisesOf(WorkoutTemplate template) =>
+    internal static IReadOnlyList<TemplateExerciseResponse> ExercisesOf(
+        WorkoutTemplate template, IReadOnlyCollection<long>? visibleExerciseIds = null) =>
         template.TemplateExercises
+            .Where(te => visibleExerciseIds == null || visibleExerciseIds.Contains(te.ExerciseId))
             .OrderBy(te => te.OrderIndex)
             .Select(te => new TemplateExerciseResponse(
                 te.Id, te.ExerciseId, te.Exercise.Name, te.Exercise.Category, te.Exercise.IsArchived,

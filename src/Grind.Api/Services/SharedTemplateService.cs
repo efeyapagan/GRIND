@@ -27,29 +27,38 @@ public class SharedTemplateService(
             return [];
 
         var templates = await templateRepository.GetAllAsync(target.Id, cancellationToken);
-        return templates
-            .Where(t => isSelf || IsVisible(t, target.PrivacyLevel))
-            .Select(TemplateMapper.ToSharedResponse)
-            .ToList();
+        var candidates = templates.Where(t => isSelf || IsVisible(t, target.PrivacyLevel)).ToList();
+
+        // Tum sablonlarin butun egzersiz id'leri tek toplu sorguda cozulur (N+1 yerine).
+        var allIds = candidates.SelectMany(t => t.TemplateExercises.Select(te => te.ExerciseId)).Distinct().ToList();
+        var visibleIds = await VisibleExerciseIdsAsync(allIds, cancellationToken);
+
+        return candidates.Select(t => TemplateMapper.ToSharedResponse(t, visibleIds)).ToList();
     }
 
     public async Task<SharedTemplateResponse> GetSharedTemplateDetailAsync(
         string username, long templateId, CancellationToken cancellationToken = default)
-        => TemplateMapper.ToSharedResponse(await VisibleOrThrowAsync(username, templateId, cancellationToken));
+    {
+        var (template, _) = await VisibleOrThrowAsync(username, templateId, cancellationToken);
+        var ids = template.TemplateExercises.Select(te => te.ExerciseId).ToList();
+        var visibleIds = await VisibleExerciseIdsAsync(ids, cancellationToken);
+        return TemplateMapper.ToSharedResponse(template, visibleIds);
+    }
 
     public async Task<TemplateResponse> SaveTemplateAsync(
         string username, long templateId, CancellationToken cancellationToken = default)
     {
-        var source = await VisibleOrThrowAsync(username, templateId, cancellationToken);
+        var (source, target) = await VisibleOrThrowAsync(username, templateId, cancellationToken);
 
         var candidateIds = source.TemplateExercises.Select(te => te.ExerciseId).ToList();
-        var visible = candidateIds.Count == 0
-            ? []
-            : await exerciseRepository.GetVisibleByIdsAsync(candidateIds, currentUser.UserId, cancellationToken);
-        var visibleIds = visible.Select(e => e.Id).ToHashSet();
+        var visibleIds = await VisibleExerciseIdsAsync(candidateIds, cancellationToken);
 
-        // Kaynağın ÖZEL egzersizleri kopyalayana görünmez -- ownership kuralı (CLAUDE.md
-        // Yetkilendirme Kuralı). Bu satırlar sessizce atlanır, global/kendi egzersizler kalır.
+        // Kaynağın ÖZEL veya ARŞİVLENMİŞ egzersizleri kopyalayana görünmez/kopyalanmaz --
+        // ownership kuralı (CLAUDE.md Yetkilendirme Kuralı) ve `WorkoutTemplateService`'in yeni
+        // seçim kuralıyla aynı ("arşivlenmiş bir egzersiz YENİ bir seçime giremez"; burada
+        // kopya YENİ bir şablon olduğu için tüm satırlar "yeni seçim"dir). Bu satırlar sessizce
+        // atlanır, uygun olanlar kalır -- liste ve detay yanıtlarıyla AYNI filtre
+        // (`VisibleExerciseIdsAsync`), böylece izleyicinin gördüğü ile kaydettiği asla ayrışmaz.
         var kopyalanacaklar = source.TemplateExercises
             .Where(te => visibleIds.Contains(te.ExerciseId))
             .OrderBy(te => te.OrderIndex)
@@ -58,7 +67,9 @@ public class SharedTemplateService(
         if (kopyalanacaklar.Count == 0 && source.TemplateExercises.Count > 0)
             throw new ValidationException("Bu şablonun hiçbir hareketi kaydedilemedi.");
 
-        var name = await UniqueNameAsync(source.Name, username, cancellationToken);
+        // Rota parametresindeki `username` degil, DB'den gelen guncel/dogru buyuk-kucuk harfli
+        // `target.Username` kullanilir (#467 final review) -- rota harfleri farkli yazilmis olabilir.
+        var name = await UniqueNameAsync(source.Name, target.Username, cancellationToken);
 
         var kopya = new WorkoutTemplate
         {
@@ -87,7 +98,7 @@ public class SharedTemplateService(
         return TemplateMapper.ToResponse(yeniden, lastUsedAt: null);
     }
 
-    private async Task<WorkoutTemplate> VisibleOrThrowAsync(
+    private async Task<(WorkoutTemplate Template, User Target)> VisibleOrThrowAsync(
         string username, long templateId, CancellationToken cancellationToken)
     {
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
@@ -99,7 +110,25 @@ public class SharedTemplateService(
         if (template is null || (!isSelf && !IsVisible(template, target.PrivacyLevel)))
             throw new NotFoundException(TemplateNotFound);
 
-        return template;
+        return (template, target);
+    }
+
+    /// <summary>
+    /// Verilen egzersiz id'lerinden İZLEYENE (viewer = `currentUser.UserId`) görünen (kendi veya
+    /// global) VE arşivlenmemiş olanların id kümesi -- liste/detay okuması ve kopyalama TEK bu
+    /// kümeye göre filtreler (#467 final review), böylece izleyicinin gördüğü ile kopyaladığı
+    /// asla ayrışmaz. Arşivli olan da elenir: `WorkoutTemplateService.ReplaceExercisesAsync`
+    /// "arşivlenmiş bir egzersiz YENİ bir seçime giremez" kuralıyla aynı -- kopya her zaman YENİ
+    /// bir şablon olduğu için kaynaktaki her satır bu kopya için "yeni seçim"dir.
+    /// </summary>
+    private async Task<HashSet<long>> VisibleExerciseIdsAsync(
+        IReadOnlyCollection<long> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        var visible = await exerciseRepository.GetVisibleByIdsAsync(ids, currentUser.UserId, cancellationToken);
+        return visible.Where(e => !e.IsArchived).Select(e => e.Id).ToHashSet();
     }
 
     private async Task<string> UniqueNameAsync(string name, string sourceUsername, CancellationToken cancellationToken)
@@ -107,11 +136,25 @@ public class SharedTemplateService(
         if (!await templateRepository.NameExistsAsync(currentUser.UserId, name, null, cancellationToken))
             return name;
 
-        var aday = $"{name} ({sourceUsername})";
+        // WorkoutTemplate.Name varchar(100) (WorkoutTemplateConfiguration), Username varchar(50)
+        // (UserConfiguration): "{ad} ({kullanıcı [sayaç]})" eki bu ikisi üst üste eklenince 100'ü
+        // aşabilir. Ek KISALTILMAZ (kullanıcı adını yarım göstermek yanıltıcı olurdu) -- bunun
+        // yerine TABAN (name) eke sığacak kadar kırpılır.
+        const int MaxLen = 100;
+
+        static string Aday(string ad, string sourceUsername, int? sayac, int maxLen)
+        {
+            var ek = sayac is null ? $" ({sourceUsername})" : $" ({sourceUsername} {sayac})";
+            var tabanSiniri = Math.Max(0, maxLen - ek.Length);
+            var taban = ad.Length > tabanSiniri ? ad[..tabanSiniri] : ad;
+            return $"{taban}{ek}";
+        }
+
+        var aday = Aday(name, sourceUsername, null, MaxLen);
         var sayac = 2;
         while (await templateRepository.NameExistsAsync(currentUser.UserId, aday, null, cancellationToken))
         {
-            aday = $"{name} ({sourceUsername} {sayac})";
+            aday = Aday(name, sourceUsername, sayac, MaxLen);
             sayac++;
         }
         return aday;

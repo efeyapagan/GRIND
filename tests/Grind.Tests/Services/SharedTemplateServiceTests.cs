@@ -185,11 +185,84 @@ public class SharedTemplateServiceTests
             context.Add(new TemplateExercise { WorkoutTemplateId = sablon.Id, ExerciseId = bOzelEgzersiz.Id, OrderIndex = 1, PlannedSets = 3 });
             await context.SaveChangesAsync();
 
+            // Liste ve detay yanitlari da B'nin ozel egzersizini ICERMEMELI (#467 final review):
+            // izleyicinin gordugu ile kopyaladigi arasinda fark olmamali (IDOR/veri sizintisi kurali).
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
+            var listedeki = Assert.Single(liste, s => s.Id == sablon.Id);
+            Assert.DoesNotContain(listedeki.Exercises, e => e.ExerciseId == bOzelEgzersiz.Id);
+
+            var detay = await ServiceFor(context, a).GetSharedTemplateDetailAsync(b.Username, sablon.Id);
+            Assert.DoesNotContain(detay.Exercises, e => e.ExerciseId == bOzelEgzersiz.Id);
+
             var kopya = await ServiceFor(context, a).SaveTemplateAsync(b.Username, sablon.Id);
 
             // Yalnizca global egzersiz kopyalanir; B'nin ozel egzersizi A'ya GORUNMEZ (IDOR kurali).
             Assert.Single(kopya.Exercises);
             Assert.DoesNotContain(kopya.Exercises, e => e.ExerciseId == bOzelEgzersiz.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Arsivlenmis_global_egzersiz_listede_detayda_ve_kopyada_gorunmez()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var arsivliEgzersiz = TestDatabase.NewExercise(null, $"Arsivli Global {Guid.NewGuid():N}");
+            arsivliEgzersiz.IsArchived = true;
+            context.Add(arsivliEgzersiz);
+            await context.SaveChangesAsync();
+            context.Add(new TemplateExercise { WorkoutTemplateId = sablon.Id, ExerciseId = arsivliEgzersiz.Id, OrderIndex = 1, PlannedSets = 3 });
+            await context.SaveChangesAsync();
+
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
+            var listedeki = Assert.Single(liste, s => s.Id == sablon.Id);
+            Assert.DoesNotContain(listedeki.Exercises, e => e.ExerciseId == arsivliEgzersiz.Id);
+
+            var detay = await ServiceFor(context, a).GetSharedTemplateDetailAsync(b.Username, sablon.Id);
+            Assert.DoesNotContain(detay.Exercises, e => e.ExerciseId == arsivliEgzersiz.Id);
+
+            var kopya = await ServiceFor(context, a).SaveTemplateAsync(b.Username, sablon.Id);
+            Assert.DoesNotContain(kopya.Exercises, e => e.ExerciseId == arsivliEgzersiz.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Kaydetme_uzun_isim_ve_kullanici_adinda_100_karakteri_asmaz()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            // Sablon adi 100 karakterin neredeyse tamami; B'nin kullanici adi da uzun olsun ki
+            // "{ad} ({kullanici})" eki toplamda 100'u kesin assin.
+            sablon.Name = new string('A', 95);
+            b.Username = $"kullanici-adi-{new string('u', 30)}";
+            await context.SaveChangesAsync();
+
+            context.Add(new WorkoutTemplate { User = a, Name = sablon.Name, CreatedAt = DateTime.UtcNow });
+            await context.SaveChangesAsync();
+
+            var kopya = await ServiceFor(context, a).SaveTemplateAsync(b.Username, sablon.Id);
+
+            Assert.True(kopya.Name.Length <= 100, $"Beklenen <= 100, gelen: {kopya.Name.Length}");
+            Assert.Contains(b.Username, kopya.Name);
+        }
+    }
+
+    [Fact]
+    public async Task Kaydetme_dogru_buyuk_kucuk_harfli_kullanici_adini_kullanir()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            context.Add(new WorkoutTemplate { User = a, Name = sablon.Name, CreatedAt = DateTime.UtcNow });
+            await context.SaveChangesAsync();
+
+            // Rota parametresi farkli harf case'inde gelse bile (case-insensitive kullanici adi
+            // aramasi) isim eki DB'deki dogru case'i kullanmali, rotanin ham degerini degil.
+            var kopya = await ServiceFor(context, a).SaveTemplateAsync(b.Username.ToUpperInvariant(), sablon.Id);
+
+            Assert.Equal($"{sablon.Name} ({b.Username})", kopya.Name);
         }
     }
 }
