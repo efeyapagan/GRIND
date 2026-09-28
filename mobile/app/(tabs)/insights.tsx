@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Brain, Lightbulb, Sparkles, Trash2, TriangleAlert, Trophy } from 'lucide-react-native';
+import { Brain, ChevronDown, ChevronRight, Lightbulb, Sparkles, Trash2, TriangleAlert, Trophy } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
@@ -76,6 +76,14 @@ export default function InsightsScreen() {
 
   const tumYorumlar = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
 
+  /**
+   * #149: ayni anda TEK kutu acik. `undefined` = kullanici henuz secim yapmadi, en yeni yorum
+   * acilir (liste sunucudan yeniden eskiye gelir, istemci ayrica siralamaz). `null` = kullanici
+   * acik olani kapatti; "hepsi kapali" da gecerli bir durumdur ve en yeniye geri donmemeli.
+   */
+  const [secilen, setSecilen] = useState<number | null | undefined>(undefined);
+  const acikId = secilen === undefined ? (tumYorumlar[0]?.id ?? null) : secilen;
+
   return (
     <FlatList
       testID="yorum-liste"
@@ -84,6 +92,8 @@ export default function InsightsScreen() {
       renderItem={({ item }) => (
         <YorumKarti
           yorum={item}
+          acik={acikId === item.id}
+          onAcKapat={() => setSecilen(acikId === item.id ? null : item.id)}
           onayAcik={silinecekId === item.id}
           onSilmeyeBasla={() => setSilinecekId(item.id)}
           onVazgec={() => setSilinecekId(null)}
@@ -163,13 +173,15 @@ export default function InsightsScreen() {
 
 interface YorumKartiProps {
   yorum: Yorum;
+  acik: boolean;
+  onAcKapat: () => void;
   onayAcik: boolean;
   onSilmeyeBasla: () => void;
   onVazgec: () => void;
   onSil: () => void;
 }
 
-function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
+function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumKartiProps) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
@@ -192,16 +204,34 @@ function YorumKarti({ yorum, onayAcik, onSilmeyeBasla, onVazgec, onSil }: YorumK
 
   return (
     <View className="flex-col gap-2 rounded-xl bg-surface-2 p-4">
-      <View className="flex-row items-start justify-between gap-2">
-        <Text className="text-label text-muted">
-          {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
-        </Text>
-        <IkonDugmesi etiket={t('yorumlar.yorumuSil')} onPress={onSilmeyeBasla}>
-          <Trash2 color={ikonRenk.muted} size={18} />
-        </IkonDugmesi>
+      {/* #149: baslik satirinin tamami ac/kapat dugmesidir. Kapaliyken kartin tasidigi tek bilgi
+          tarihtir; silme yalnizca ACIK kartta durur -- kapali satiri iki eylemli yapmak
+          "dokununca acilir" beklentisini bozardi. */}
+      <View className="flex-row items-center justify-between gap-2">
+        <Pressable
+          testID={`yorum-basligi-${yorum.id}`}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: acik }}
+          onPress={onAcKapat}
+          className="min-h-11 flex-1 flex-row items-center gap-2"
+        >
+          {acik ? (
+            <ChevronDown color={ikonRenk.muted} size={18} />
+          ) : (
+            <ChevronRight color={ikonRenk.muted} size={18} />
+          )}
+          <Text className="text-label text-muted">
+            {formatTarih(yorum.createdAt, dil)} {formatSaat(yorum.createdAt)}
+          </Text>
+        </Pressable>
+        {acik && (
+          <IkonDugmesi etiket={t('yorumlar.yorumuSil')} onPress={onSilmeyeBasla}>
+            <Trash2 color={ikonRenk.muted} size={18} />
+          </IkonDugmesi>
+        )}
       </View>
       {/* #463: tercih cozulmeden cizmeyiz -- yoksa ilk kare arayuz diliyle cizilip degisiyor. */}
-      {hazir && <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />}
+      {acik && hazir && <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />}
     </View>
   );
 }

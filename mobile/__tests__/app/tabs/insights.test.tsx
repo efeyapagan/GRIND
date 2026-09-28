@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useDeleteInsight,
@@ -192,8 +192,10 @@ test('iki sayfanin yorumlari birlikte, ust uste yazmadan listelenir', async () =
   );
   await ekraniOlustur();
 
+  // #149: yalnizca en yeni kart ACIK; ikinci sayfanin karti kapali oldugu icin govdesi degil
+  // basligi aranir -- sinanan sey iki sayfanin birlikte LISTELENMESI.
   expect(await screen.findByText('Sayfa1Yorum')).toBeTruthy();
-  expect(screen.getByText('Sayfa2Yorum')).toBeTruthy();
+  expect(screen.getByTestId('yorum-basligi-2')).toBeTruthy();
 });
 
 test('listenin sonuna gelinince (onEndReached) hasNextPage true iken fetchNextPage cagrilir', async () => {
@@ -285,4 +287,72 @@ test('aciklamanin altinda ingilizce notu vardir', async () => {
   await ekraniOlustur();
 
   expect(screen.getByTestId('yorumlar-ingilizce-notu')).toBeTruthy();
+});
+
+// ---- Akordiyon (#149) ----
+
+/** Iki yorum: yeni (id 1) ve eski (id 2). Liste sunucudan yeniden eskiye gelir. */
+function ikiYorum() {
+  return [
+    ornekYorum({ id: 1, createdAt: '2026-09-20T10:00:00Z', translations: [{ language: 'tr', content: 'Yeni yorum.' }] }),
+    ornekYorum({ id: 2, createdAt: '2026-09-14T10:00:00Z', translations: [{ language: 'tr', content: 'Eski yorum.' }] }),
+  ];
+}
+
+/** Kullanici karari: en yeni yorum ustte ve ACIK; digerleri kapali kutu. */
+test('en yeni yorum acik, digerleri kapali gelir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Yeni yorum.')).toBeTruthy();
+  expect(screen.queryByText('Eski yorum.')).toBeNull();
+});
+
+/** Kapali kutuda TARIH muhakkak yazar -- kullanici hangi analiz oldugunu ondan anlar. */
+test('kapali kutuda tarih gorunur', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByTestId('yorum-basligi-2')).toHaveTextContent(/14\.09\.2026/);
+});
+
+/** Kapaliya basinca ACILIR ve onceki acik KAPANIR: ayni anda tek kutu acik. */
+test('kapaliya basinca acilir, onceki acik kapanir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+  await ekraniOlustur();
+
+  await act(async () => fireEvent.press(screen.getByTestId('yorum-basligi-2')));
+
+  expect(screen.getByText('Eski yorum.')).toBeTruthy();
+  expect(screen.queryByText('Yeni yorum.')).toBeNull();
+});
+
+/** Acik kutuya tekrar basmak onu kapatir; hepsi kapali da gecerli bir durumdur. */
+test('acik kutuya basinca kapanir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+  await ekraniOlustur();
+
+  await act(async () => fireEvent.press(screen.getByTestId('yorum-basligi-1')));
+
+  expect(screen.queryByText('Yeni yorum.')).toBeNull();
+});
+
+/** Silme yalnizca ACIK kartta: kapali satiri iki eylemli yapmak "dokununca acilir"i bozar. */
+test('silme dugmesi yalnizca acik kartta bulunur', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  expect(screen.getAllByLabelText('Yorumu sil')).toHaveLength(1);
+});
+
+/** Tek yorum varsa o da acik gelir. */
+test('tek yorum acik gelir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekYorum()])]));
+
+  await ekraniOlustur();
+
+  expect(screen.getByText('Bench Press hacminde son iki haftada artış var.')).toBeTruthy();
 });
