@@ -26,7 +26,7 @@ type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'
 type CreateTemplateRequest = components['schemas']['CreateTemplateRequest'];
 type ReorderTemplatesRequest = components['schemas']['ReorderTemplatesRequest'];
 type UsernameAvailabilityResponse = components['schemas']['UsernameAvailabilityResponse'];
-type ArkadasHaftasi = components['schemas']['WeeklyStandingResponse'];
+type ArkadasDonemi = components['schemas']['StandingResponse'];
 type SessionProgressResponse = components['schemas']['SessionProgressResponse'];
 type StartSessionRequest = components['schemas']['StartSessionRequest'];
 type ExerciseProgressResponse = components['schemas']['ExerciseProgressResponse'];
@@ -109,7 +109,9 @@ export const queryKeys = {
   // #283: kendi profilin (#280) ve bir kullanicinin herkese acik basligi (#281, sayaclar).
   profil: ['profil'] as const,
   // #418: ana ekrandaki arkadas karsilastirmasi. Tek anahtar: liste TEK istekle gelir.
-  arkadasHaftasi: ['arkadasHaftasi'] as const,
+  // #420: donem anahtarin parcasi -- takvim gezindikce her donem kendi onbellegini tutar.
+  arkadasDonemiAll: ['arkadasDonemi'] as const,
+  arkadasDonemi: (from: string, to: string) => [...queryKeys.arkadasDonemiAll, from, to] as const,
   // #372: kullanici adi uygunlugu. Ad anahtarin PARCASIDIR -- her ad kendi sonucunu onbellekler,
   // ayni adi tekrar sormak ag istegi uretmez.
   kullaniciAdiUygun: (kullaniciAdi: string) => ['kullaniciAdiUygun', kullaniciAdi] as const,
@@ -1514,14 +1516,19 @@ export function useProfilim() {
 }
 
 /**
- * Haftalik siralama (#418, #425): CAGIRAN ve arkadaslarinin bu haftaki ozeti: gun sayisi, hedef, bugun antrenman, hacim, set.
- * Sunucu siralamaz -- sira bir arayuz karari (`arkadaslariSirala`). Gizlilik seviyesi `Gizli`
- * olan arkadas yanitta hic yer almaz.
+ * Arkadas siralamasi (#418, #425, #420): CAGIRAN ve arkadaslarinin verilen DONEMDEKI ozeti (ana
+ * sayfa takviminin gosterdigi hafta ya da ay; iki ucu dahil TR gunu): gun sayisi, hedef, bugun
+ * antrenman, hacim, set. Sunucu siralamaz -- sira bir arayuz karari (`arkadaslariSirala`).
+ * Gizlilik seviyesi `Gizli` olan arkadas yanitta hic yer almaz.
  */
-export function useArkadasHaftasi() {
+export function useArkadasDonemi(from: string, to: string) {
   return useQuery({
-    queryKey: queryKeys.arkadasHaftasi,
-    queryFn: async (): Promise<ArkadasHaftasi[]> => request<ArkadasHaftasi[]>('/social/weekly'),
+    queryKey: queryKeys.arkadasDonemi(from, to),
+    queryFn: async (): Promise<ArkadasDonemi[]> =>
+      request<ArkadasDonemi[]>(`/social/weekly?from=${from}&to=${to}`),
+    // Takvim gezindikce onceki liste yeni donem gelene kadar yerinde kalir (useCalendar ile ayni):
+    // aksi halde her kaydirmada kart bosalip yeniden dolar.
+    placeholderData: keepPreviousData,
   });
 }
 

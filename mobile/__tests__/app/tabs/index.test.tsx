@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { useCalendar, useOpenSession } from '@grind/shared/api/queries';
+import { TakvimDonemiProvider } from '../../../src/ui/TakvimDonemiContext';
 import AnaSayfaScreen from '../../../app/(tabs)/index';
 
 // Takvim ve kart GERCEK cizilir (ikisinin de kendi testleri var): sinanan sey ikisinin Ana sayfadaki
@@ -9,7 +10,7 @@ jest.mock('@grind/shared/api/queries', () => ({
   useCalendar: jest.fn(),
   useOpenSession: jest.fn(),
   // #418: ana ekranda arkadas karsilastirmasi da var; bu testin konusu degil, bos liste yeter.
-  useArkadasHaftasi: () => ({ data: [], isLoading: false, isError: false }),
+  useArkadasDonemi: () => ({ data: [], isLoading: false, isError: false }),
   useProfilFotografi: () => ({ data: null }),
 }));
 
@@ -50,10 +51,13 @@ beforeEach(() => {
 });
 
 async function ciz() {
+  // #420: takvim ve arkadas karsilastirmasi donemi paylasilan saglayicidan okur.
   await render(
-    <PageTitleProvider>
-      <AnaSayfaScreen />
-    </PageTitleProvider>,
+    <TakvimDonemiProvider>
+      <PageTitleProvider>
+        <AnaSayfaScreen />
+      </PageTitleProvider>
+    </TakvimDonemiProvider>,
   );
 }
 

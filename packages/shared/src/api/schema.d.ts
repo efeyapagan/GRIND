@@ -2670,7 +2670,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    From?: string;
+                    To?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -2683,9 +2686,20 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["WeeklyStandingResponse"][];
-                        "application/json": components["schemas"]["WeeklyStandingResponse"][];
-                        "text/json": components["schemas"]["WeeklyStandingResponse"][];
+                        "text/plain": components["schemas"]["StandingResponse"][];
+                        "application/json": components["schemas"]["StandingResponse"][];
+                        "text/json": components["schemas"]["StandingResponse"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -4494,6 +4508,23 @@ export interface components {
             restSeconds?: number | null;
             measurement?: components["schemas"]["ExerciseMeasurement"];
         };
+        StandingResponse: {
+            username?: string | null;
+            displayName?: string | null;
+            hasAvatar?: boolean;
+            /** Format: int64 */
+            avatarVersion?: number | null;
+            /** Format: int32 */
+            trainedDays?: number;
+            /** Format: int32 */
+            weeklyTargetDays?: number | null;
+            trainedToday?: boolean;
+            /** Format: int32 */
+            setCount?: number;
+            /** Format: double */
+            volume?: number;
+            isSelf?: boolean;
+        };
         StartSessionRequest: {
             /** Format: int64 */
             templateId?: number | null;
@@ -4607,23 +4638,6 @@ export interface components {
         };
         UsernameAvailabilityResponse: {
             available?: boolean;
-        };
-        WeeklyStandingResponse: {
-            username?: string | null;
-            displayName?: string | null;
-            hasAvatar?: boolean;
-            /** Format: int64 */
-            avatarVersion?: number | null;
-            /** Format: int32 */
-            trainedDaysThisWeek?: number;
-            /** Format: int32 */
-            weeklyTargetDays?: number | null;
-            trainedToday?: boolean;
-            /** Format: int32 */
-            weeklySetCount?: number;
-            /** Format: double */
-            weeklyVolume?: number;
-            isSelf?: boolean;
         };
     };
     responses: never;

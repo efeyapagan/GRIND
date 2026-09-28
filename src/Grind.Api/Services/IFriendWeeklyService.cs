@@ -5,8 +5,11 @@ namespace Grind.Api.Services;
 public interface IFriendWeeklyService
 {
     /// <summary>
-    /// Çağıranın arkadaşlarının BU HAFTAKİ özeti (#418). Sıralama YAPILMAZ — o bir arayüz kararı
-    /// (bkz. WeeklyStandingResponse). Gizlilik seviyesi <c>Gizli</c> olan arkadaş listeye HİÇ girmez.
+    /// Çağıranın ve arkadaşlarının istenen DÖNEMDEKİ özeti (#418, #420; aralık yoksa bu hafta).
+    /// Sıralama YAPILMAZ — o bir arayüz kararı (bkz. StandingResponse). Gizlilik seviyesi
+    /// <c>Gizli</c> olan arkadaş listeye HİÇ girmez.
     /// </summary>
-    Task<IReadOnlyList<WeeklyStandingResponse>> GetAsync(CancellationToken cancellationToken = default);
+    /// <exception cref="Common.Exceptions.ValidationException">Tek uçlu, ters ya da bir aydan uzun aralık.</exception>
+    Task<IReadOnlyList<StandingResponse>> GetAsync(
+        StandingRangeQuery query, CancellationToken cancellationToken = default);
 }

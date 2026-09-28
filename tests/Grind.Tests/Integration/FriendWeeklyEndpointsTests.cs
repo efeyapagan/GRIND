@@ -9,6 +9,8 @@ using Grind.Api.Models.Entities;
 using Grind.Tests;
 using Microsoft.EntityFrameworkCore;
 
+using static Grind.Tests.Integration.ArkadasTestVerisi;
+
 namespace Grind.Tests.Integration;
 
 /// <summary>
@@ -21,74 +23,6 @@ namespace Grind.Tests.Integration;
 [Trait("Category", "Database")]
 public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApiFactory>
 {
-    private const string Password = "yeterince-uzun-sifre";
-    private const string Yol = "/api/social/weekly";
-
-    private static string UniqueUsername() => $"fw_{Guid.NewGuid():N}"[..20];
-
-    private async Task<(HttpClient Client, string Username, long Id)> KayitliAsync()
-    {
-        var client = factory.CreateClient();
-        var username = UniqueUsername();
-        var response = await client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest { Username = username, Password = Password });
-        response.EnsureSuccessStatusCode();
-        var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
-
-        await using var db = TestDatabase.CreateContext();
-        var id = await db.Users.Where(u => u.Username == username).Select(u => u.Id).SingleAsync();
-        return (client, username, id);
-    }
-
-    /// <summary>Karşılıklı takip = arkadaşlık (#281); iki yönü de kurar.</summary>
-    private static async Task ArkadasYapAsync(HttpClient birinci, string birinciAd, HttpClient ikinci, string ikinciAd)
-    {
-        (await birinci.PostAsync($"/api/users/{ikinciAd}/follow", null)).EnsureSuccessStatusCode();
-        (await ikinci.PostAsync($"/api/users/{birinciAd}/follow", null)).EnsureSuccessStatusCode();
-    }
-
-    /// <summary>Verilen TR gününde, seti olan bir antrenman yazar (seti olmayan oturum sayılmaz).</summary>
-    private static async Task AntrenmanYazAsync(long userId, DateOnly gun, decimal agirlik = 100m, int tekrar = 5)
-    {
-        await using var db = TestDatabase.CreateContext();
-        var (baslangic, _) = TurkeyDay.RangeForLocalDate(gun);
-        var oturum = new WorkoutSession { UserId = userId, StartedAt = baslangic.AddHours(10) };
-        db.Add(oturum);
-        await db.SaveChangesAsync();
-        db.Add(new SetEntry
-        {
-            WorkoutSessionId = oturum.Id,
-            ExerciseId = 1,
-            Weight = agirlik,
-            Reps = tekrar,
-            RecordType = RecordType.None,
-            CreatedAt = oturum.StartedAt,
-        });
-        await db.SaveChangesAsync();
-    }
-
-    private static async Task HedefYazAsync(long userId, int? gun)
-    {
-        await using var db = TestDatabase.CreateContext();
-        var kullanici = await db.Users.SingleAsync(u => u.Id == userId);
-        kullanici.WeeklyTargetDays = gun;
-        await db.SaveChangesAsync();
-    }
-
-    private static async Task GizlilikYazAsync(long userId, PrivacyLevel seviye)
-    {
-        await using var db = TestDatabase.CreateContext();
-        var kullanici = await db.Users.SingleAsync(u => u.Id == userId);
-        kullanici.PrivacyLevel = seviye;
-        await db.SaveChangesAsync();
-    }
-
-    private static DateOnly Bugun() => TurkeyDay.LocalDateOf(DateTime.UtcNow);
-
-    private static async Task<List<WeeklyStandingResponse>> ListeleAsync(HttpClient client)
-        => (await client.GetFromJsonAsync<List<WeeklyStandingResponse>>(Yol))!;
-
     [Fact]
     public async Task Tokensiz_401_verir()
     {
@@ -99,9 +33,9 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Karsilikli_olmayan_takip_listede_yok()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (takipEttigim, takipEttigimAd, _) = await KayitliAsync();
-        var (beniTakipEden, beniTakipEdenAd, _) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (takipEttigim, takipEttigimAd, _) = await KayitliAsync(factory);
+        var (beniTakipEden, beniTakipEdenAd, _) = await KayitliAsync(factory);
 
         (await ben.PostAsync($"/api/users/{takipEttigimAd}/follow", null)).EnsureSuccessStatusCode();
         (await beniTakipEden.PostAsync($"/api/users/{benimAd}/follow", null)).EnsureSuccessStatusCode();
@@ -116,8 +50,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Cagiran_kendi_satirini_gorur()
     {
-        var (ben, benimAd, benimId) = await KayitliAsync();
-        var (arkadas, arkadasAd, _) = await KayitliAsync();
+        var (ben, benimAd, benimId) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, _) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
         await HedefYazAsync(benimId, 3);
         await AntrenmanYazAsync(benimId, Bugun());
@@ -126,7 +60,7 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
 
         var kendi = Assert.Single(liste, satir => satir.Username == benimAd);
         Assert.True(kendi.IsSelf);
-        Assert.Equal(1, kendi.TrainedDaysThisWeek);
+        Assert.Equal(1, kendi.TrainedDays);
         Assert.Equal(3, kendi.WeeklyTargetDays);
         Assert.True(kendi.TrainedToday);
         Assert.False(Assert.Single(liste, satir => satir.Username == arkadasAd).IsSelf);
@@ -136,7 +70,7 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Kendi_gizlilik_seviyesi_Gizli_olsa_da_kendi_satiri_gorunur()
     {
-        var (ben, benimAd, benimId) = await KayitliAsync();
+        var (ben, benimAd, benimId) = await KayitliAsync(factory);
         await GizlilikYazAsync(benimId, PrivacyLevel.Gizli);
 
         Assert.Contains(await ListeleAsync(ben), satir => satir.Username == benimAd && satir.IsSelf);
@@ -146,7 +80,7 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Arkadasi_olmayan_yalnizca_kendini_gorur()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
 
         var liste = await ListeleAsync(ben);
 
@@ -157,8 +91,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Haftalik_sayilar_gun_hacim_ve_set_olarak_dogru()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
         await HedefYazAsync(arkadasId, 4);
 
@@ -169,18 +103,18 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
 
         var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
 
-        Assert.Equal(2, satir.TrainedDaysThisWeek);
+        Assert.Equal(2, satir.TrainedDays);
         Assert.Equal(4, satir.WeeklyTargetDays);
-        Assert.Equal(3, satir.WeeklySetCount);
-        Assert.Equal(50m * 10 + 20m * 5 + 100m * 3, satir.WeeklyVolume);
+        Assert.Equal(3, satir.SetCount);
+        Assert.Equal(50m * 10 + 20m * 5 + 100m * 3, satir.Volume);
     }
 
     /// <summary>Kullanıcı kararı: `Gizli` arkadaş yanıtta HİÇ yer almaz ("paylaşmıyor" satırı da yok).</summary>
     [Fact]
     public async Task Gizli_arkadas_listede_hic_yok()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (gizli, gizliAd, gizliId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (gizli, gizliAd, gizliId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, gizli, gizliAd);
         await AntrenmanYazAsync(gizliId, Bugun());
         await GizlilikYazAsync(gizliId, PrivacyLevel.Gizli);
@@ -191,8 +125,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Kisitli_arkadas_listede_var()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
         await GizlilikYazAsync(arkadasId, PrivacyLevel.Kisitli);
 
@@ -202,8 +136,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Pasif_arkadas_listede_yok()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, _) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, _) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
 
         var silme = await arkadas.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/auth/me")
@@ -219,23 +153,23 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Hedefsiz_arkadas_null_hedefle_doner()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
         await AntrenmanYazAsync(arkadasId, Bugun());
 
         var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
 
         Assert.Null(satir.WeeklyTargetDays);
-        Assert.Equal(1, satir.TrainedDaysThisWeek);
+        Assert.Equal(1, satir.TrainedDays);
     }
 
     [Fact]
     public async Task Bugun_antrenman_yapan_arkadas_isaretli()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (bugunYapan, bugunYapanAd, bugunYapanId) = await KayitliAsync();
-        var (yapmayan, yapmayanAd, _) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (bugunYapan, bugunYapanAd, bugunYapanId) = await KayitliAsync(factory);
+        var (yapmayan, yapmayanAd, _) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, bugunYapan, bugunYapanAd);
         await ArkadasYapAsync(ben, benimAd, yapmayan, yapmayanAd);
         await AntrenmanYazAsync(bugunYapanId, Bugun());
@@ -250,8 +184,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Gecen_haftanin_antrenmani_bu_haftaya_sayilmaz()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
 
         var gecenHafta = StreakCalculator.WeekStart(Bugun()).AddDays(-1);
@@ -259,8 +193,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
 
         var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
 
-        Assert.Equal(0, satir.TrainedDaysThisWeek);
-        Assert.Equal(0m, satir.WeeklyVolume);
+        Assert.Equal(0, satir.TrainedDays);
+        Assert.Equal(0m, satir.Volume);
         Assert.False(satir.TrainedToday);
     }
 
@@ -268,8 +202,8 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
     [Fact]
     public async Task Setsiz_oturum_gun_olarak_sayilmaz()
     {
-        var (ben, benimAd, _) = await KayitliAsync();
-        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync();
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
         await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
 
         await using (var db = TestDatabase.CreateContext())
@@ -281,7 +215,7 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
 
         var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
 
-        Assert.Equal(0, satir.TrainedDaysThisWeek);
+        Assert.Equal(0, satir.TrainedDays);
         Assert.False(satir.TrainedToday);
     }
 }
