@@ -18,6 +18,9 @@ public static class TemplateMapper
         template.SavedFromUser?.Username,
         lastUsedAt);
 
+    public static SharedTemplateResponse ToSharedResponse(WorkoutTemplate template) => new(
+        template.Id, template.Name, ExercisesOf(template));
+
     internal static IReadOnlyList<TemplateExerciseResponse> ExercisesOf(WorkoutTemplate template) =>
         template.TemplateExercises
             .OrderBy(te => te.OrderIndex)

@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationSource, WeeklyGoalNotificationSource>();
         services.AddScoped<INotificationSource, RecordNotificationSource>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ISharedTemplateService, SharedTemplateService>();
         return services;
     }
 }
