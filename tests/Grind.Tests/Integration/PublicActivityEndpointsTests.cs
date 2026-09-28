@@ -50,8 +50,9 @@ public class PublicActivityEndpointsTests(GrindApiFactory factory) : IClassFixtu
         (await b.PutAsJsonAsync("/api/settings/privacy-level",
             new UpdatePrivacyLevelRequest { PrivacyLevel = PrivacyLevel.Acik }, Json)).EnsureSuccessStatusCode();
 
-        (await b.PostAsJsonAsync("/api/sessions", new StartSessionRequest { Notes = "omuz sıkıştı" }, Json))
-            .EnsureSuccessStatusCode();
+        var oturumYaniti = await (await b.PostAsJsonAsync(
+            "/api/sessions", new StartSessionRequest { Notes = "omuz sıkıştı" }, Json))
+            .Content.ReadFromJsonAsync<SessionResponse>(Json);
         var egzersiz = await (await b.PostAsJsonAsync("/api/exercises", new CreateExerciseRequest
         {
             Name = $"Egzersiz {Guid.NewGuid():N}",
@@ -59,6 +60,9 @@ public class PublicActivityEndpointsTests(GrindApiFactory factory) : IClassFixtu
         }, Json)).Content.ReadFromJsonAsync<ExerciseResponse>(Json);
         (await b.PostAsJsonAsync("/api/sets",
             new CreateSetRequest { ExerciseId = egzersiz!.Id, Weight = 60m, Reps = 8 }, Json)).EnsureSuccessStatusCode();
+        // #436: geçmiş yalnızca BİTMİŞ oturumları gösterir.
+        (await b.PostAsJsonAsync($"/api/sessions/{oturumYaniti!.Id}/finish",
+            new FinishSessionRequest(), Json)).EnsureSuccessStatusCode();
 
         using var gecmis = JsonDocument.Parse(await c.GetStringAsync($"/api/users/{bAdi}/history"));
         var oturum = Assert.Single(gecmis.RootElement.GetProperty("items").EnumerateArray());

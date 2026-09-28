@@ -12,11 +12,14 @@ namespace Grind.Api.Models.Dtos.History;
 /// <see cref="SetCount"/> YALNIZCA o egzersizin setlerini kapsar ve <see cref="Sets"/> ile
 /// birebir tutarlıdır (spec Karar 8) — ekranda "14 set" yazıp listede 4 set göstermemek için.
 ///
-/// BİLEREK: hiç seti girilmemiş (açılıp hiç kullanılmamış) bir oturum burada
-/// <c>SetCount = 0, TotalVolume = 0</c> ile YİNE GÖRÜNÜR, ama takvim/günlük hacim/streak
-/// uçlarında hiç görünmez (spec Karar 3). Bu bir tutarsızlık değil: geçmiş bir oturum
-/// GÜNLÜĞÜdür (oturumun kendisi olay), istatistikler bir ANTRENMAN günlüğüdür (yalnızca
-/// gerçekten çalışılan gün sayılır). Bu ayrımı "düzeltmeye" kalkışmayın.
+/// #436 (kullanıcı kararı): geçmiş artık yalnızca BİTMİŞ ve EN AZ BİR SETİ olan oturumları
+/// gösterir. Devam eden antrenman kendi ucundan (<c>/api/sessions/open</c>) gelir; şablonla
+/// açılıp hiç set girilmeden bırakılmış oturum listeyi "0 set 0 kg" satırlarıyla kirletiyordu.
+/// Süzgeç <c>WorkoutSessionRepository.FilterHistory</c>'de, tek yerde.
+///
+/// Bu, önceki "geçmiş bir oturum GÜNLÜĞÜdür, setsiz oturum burada yine görünür" kararının
+/// (spec Karar 3) yerini alır. Takvim/hacim/streak uçları zaten kendi süzgeçlerini uyguluyordu
+/// ve değişmedi.
 ///
 /// <see cref="DurationSeconds"/> açık oturumda (issue #73) null — bkz. <see cref="Grind.Api.Common.Time.DurationCalculator"/>.
 ///

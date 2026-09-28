@@ -37,13 +37,25 @@ public class WorkoutHistoryServiceTests
         return (context, user, exercise, service, transaction);
     }
 
-    /// <summary>Verilen UTC anında başlayan, verilen setleri taşıyan bir oturum kurar.</summary>
+    /// <summary>
+    /// Verilen UTC anında başlayan, verilen setleri taşıyan BİTMİŞ bir oturum kurar.
+    ///
+    /// #436'dan beri varsayılan "bitmiş": geçmiş yalnızca bitmiş ve seti olan oturumları gösterir,
+    /// bu yüzden testlerin çoğu için anlamlı olan oturum budur. Açık oturum kuran testler
+    /// <paramref name="bitmis"/>'i <c>false</c> verir.
+    /// </summary>
     private static WorkoutSession Seed(
         AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc,
         params (decimal Weight, int Reps)[] sets)
+        => Seed(context, user, exercise, startedAtUtc, true, sets);
+
+    private static WorkoutSession Seed(
+        AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc,
+        bool bitmis, params (decimal Weight, int Reps)[] sets)
     {
         var session = TestDatabase.NewSession(user);
         session.StartedAt = startedAtUtc;
+        session.EndedAt = bitmis ? startedAtUtc.AddMinutes(45) : null;
         context.Add(session);
 
         foreach (var (weight, reps) in sets)
@@ -84,8 +96,7 @@ public class WorkoutHistoryServiceTests
         var (context, user, exercise, service, transaction) = await CreateAsync();
         await using (transaction)
         {
-            var oturum = Seed(context, user, exercise, An, (100m, 8));
-            oturum.EndedAt = An.AddMinutes(45);
+            Seed(context, user, exercise, An, (100m, 8));
             await context.SaveChangesAsync();
 
             var sonuc = Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
@@ -94,21 +105,8 @@ public class WorkoutHistoryServiceTests
         }
     }
 
-    /// <summary>Issue #73 Karar 1: açık oturumda (EndedAt null) süre hesaplanamaz -- null döner.</summary>
-    [Fact]
-    public async Task Acik_oturumun_suresi_nulldur()
-    {
-        var (context, user, exercise, service, transaction) = await CreateAsync();
-        await using (transaction)
-        {
-            Seed(context, user, exercise, An, (100m, 8));
-            await context.SaveChangesAsync();
-
-            var sonuc = Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
-
-            Assert.Null(sonuc.DurationSeconds);
-        }
-    }
+    // Issue #73 Karar 1 ("açık oturumda süre null") artık GEÇMİŞ düzeyinde sınanamaz: #436'dan
+    // beri açık oturum geçmiş listesine hiç girmiyor. Hesabın kendisi DurationCalculatorTests'te.
 
     [Fact]
     public async Task Oturum_toplam_hacmi_setlerden_hesaplanir()
@@ -391,6 +389,76 @@ public class WorkoutHistoryServiceTests
                 (await service.GetAsync(new HistoryQuery { ExerciseId = bench.Id })).Items);
 
             Assert.Equal([null, 90], oturum.Sets.Select(s => s.RestSeconds));
+        }
+    }
+
+    // ---- Açık ve boş oturumlar geçmişte görünmez (#436) ----
+
+    /// <summary>
+    /// Devam eden antrenman geçmişe girmez: geçmiş "olan biteni" anlatır, süren işi değil.
+    /// Kayıp bir işlevsellik yok -- açık oturum kendi ucundan (`/api/sessions/open`) gelir ve
+    /// bitirilince normal şekilde listede görünür.
+    /// </summary>
+    [Fact]
+    public async Task Devam_eden_oturum_gecmiste_gorunmez()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An, bitmis: false, (100m, 8));
+            await context.SaveChangesAsync();
+
+            Assert.Empty((await service.GetAsync(new HistoryQuery())).Items);
+        }
+    }
+
+    /// <summary>Şablonla açılıp hiç set girilmeden bırakılmış oturum listeyi kirletmez.</summary>
+    [Fact]
+    public async Task Setsiz_oturum_gecmiste_gorunmez()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An);
+            await context.SaveChangesAsync();
+
+            Assert.Empty((await service.GetAsync(new HistoryQuery())).Items);
+        }
+    }
+
+    /// <summary>AYIRT EDİCİ: iki koşul da sağlanıyorsa oturum eskisi gibi görünür.</summary>
+    [Fact]
+    public async Task Bitmis_ve_setli_oturum_gorunur()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An, (100m, 8));
+            await context.SaveChangesAsync();
+
+            Assert.Single((await service.GetAsync(new HistoryQuery())).Items);
+        }
+    }
+
+    /// <summary>
+    /// Eleme SAYFALAMADAN ÖNCE olmalı: sorgudan sonra elense "20 kayıt var" der ama 18 gösterirdi
+    /// ve sonraki sayfa kayardı.
+    /// </summary>
+    [Fact]
+    public async Task Elenen_oturumlar_toplam_sayiya_dahil_edilmez()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, An, (100m, 8));
+            Seed(context, user, exercise, An.AddHours(-2), bitmis: false, (80m, 8));
+            Seed(context, user, exercise, An.AddHours(-4));
+            await context.SaveChangesAsync();
+
+            var sayfa = await service.GetAsync(new HistoryQuery());
+
+            Assert.Equal(1, sayfa.TotalCount);
+            Assert.Single(sayfa.Items);
         }
     }
 }
