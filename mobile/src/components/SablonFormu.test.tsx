@@ -42,7 +42,7 @@ beforeEach(() => {
 test('Herkese acik secilince paylasim mutasyonu override true ile cagrilir', async () => {
   await render(<SablonFormu sablon={sablon} donusYolu="/templates" />);
 
-  await fireEvent.press(screen.getByText('Herkese açık'));
+  await fireEvent.press(screen.getByText('Arkadaşlara açık'));
 
   expect(paylasimMutasyonu).toHaveBeenCalledWith({ id: 1, override: true });
 });

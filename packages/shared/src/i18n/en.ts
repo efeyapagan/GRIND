@@ -399,7 +399,7 @@ export const en: Katalog = {
     dinlenmeDk: '{{dakika}} min',
     paylasBasligi: 'Share this template',
     paylasVarsayilan: 'Follows account setting',
-    paylasHerkeseAcik: 'Public',
+    paylasHerkeseAcik: 'Friends only',
     paylasGizli: 'Hidden',
     paylasAciklama: 'Your friends (mutual follows) can see this template on your profile.',
     paylasimGuncellenemedi: 'Could not update sharing setting.',

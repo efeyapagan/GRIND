@@ -222,7 +222,12 @@ Object Reference) açığıdır.
 > tasarlandı (kullanıcı kararı, spec). Kapı `SharedTemplateService` — `PublicActivityService`'ten
 > AYRI (`GET /api/users/{username}/templates` ve `/templates/{id}`, kaydetme
 > `POST /api/users/{username}/templates/{id}/save`). Görünürlük formülü:
-> `IsSharedOverride ?? (PrivacyLevel != Gizli)`; arkadaş değilsen liste boş, detay/kaydetme 404
+> `SavedFromUserId == null && (IsSharedOverride ?? (PrivacyLevel != Gizli))` — **kaydedilmiş kopya
+> (`SavedFromUserId` dolu) hiçbir seviyede/override'la paylaşılmaz (#534)**: aksi hâlde kaynağın kendi
+> şablonu ona geri döner ve üçüncü kişinin şablonu arkadaşlık kapısı aşılarak kopyalayan üzerinden yeniden
+> dağıtılırdı; yalnızca kişinin kendi oluşturduğu şablonlar paylaşılır (kendi profilinde kopyalarını görür).
+> Formdaki "Herkese açık" seçeneği gerçekte arkadaşlara açıktır (kapı hâlâ arkadaşlıktır), etiketi
+> "Arkadaşlara açık" olarak düzeltildi; gerçek herkese açık seçenek #535. Arkadaş değilsen liste boş, detay/kaydetme 404
 > (sızıntı yok — IDOR koruması, `/history`/`/records`'taki "boş liste 403 DEĞİL" ilkesinden farklı
 > olarak burada arkadaşlık eksikliği zaten görünürlüğün önkoşulu). Gösterilen egzersiz detayları
 > İZLEYENE görünür (kendi veya global) VE arşivlenmemiş olanlarla SINIRLIDIR — sahibin özel/arşivli
