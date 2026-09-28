@@ -89,23 +89,29 @@ export default function CizgiliBaslik({
         {genislik > 0 && (
           <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>
             {cizgi === 'dalga' ? (
-              // Eskiz tarzi: kusursuz bir sinus degil, duzensiz inip cikan el cizimi bir dalga; ustune
-              // ince, kayik ikinci bir "tekrar" darbesi biner.
+              // Eskiz tarzi: duzensiz inip cikan el cizimi dalga; kalem basinci gibi UC parcada
+              // kalinliktan inceye iner (parcalar ayni yerde bitip baslar, yuvarlak uclar birlestirir).
               <>
                 <Path
                   testID="cizgi-dalga"
-                  d={`M2 6 C ${genislik * 0.06} 2 ${genislik * 0.12} 1 ${genislik * 0.2} 4 S ${genislik * 0.3} 9 ${genislik * 0.4} 6 S ${genislik * 0.5} 0.5 ${genislik * 0.6} 4.5 S ${genislik * 0.72} 9 ${genislik * 0.82} 5.5 S ${genislik * 0.9} 2.5 ${genislik - 2} 4`}
+                  d={`M2 6 C ${genislik * 0.05} 1.5 ${genislik * 0.11} 0.5 ${genislik * 0.18} 3.5 S ${genislik * 0.27} 9.5 ${genislik * 0.35} 6.5`}
                   stroke={palet.accent}
-                  strokeWidth={3}
+                  strokeWidth={3.6}
                   strokeLinecap="round"
                   fill="none"
                 />
                 <Path
-                  d={`M${genislik * 0.04} 8 Q ${genislik * 0.35} 3 ${genislik * 0.7} 8.5`}
+                  d={`M${genislik * 0.35} 6.5 C ${genislik * 0.42} 3 ${genislik * 0.47} 0.5 ${genislik * 0.55} 3 S ${genislik * 0.63} 8.5 ${genislik * 0.7} 6`}
                   stroke={palet.accent}
-                  strokeWidth={1.5}
+                  strokeWidth={2.4}
                   strokeLinecap="round"
-                  opacity={0.55}
+                  fill="none"
+                />
+                <Path
+                  d={`M${genislik * 0.7} 6 C ${genislik * 0.75} 4 ${genislik * 0.8} 2 ${genislik * 0.86} 3.5 S ${genislik * 0.93} 5.5 ${genislik - 2} 4.5`}
+                  stroke={palet.accent}
+                  strokeWidth={1.3}
+                  strokeLinecap="round"
                   fill="none"
                 />
               </>
