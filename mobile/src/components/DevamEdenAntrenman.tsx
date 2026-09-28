@@ -38,22 +38,16 @@ export default function DevamEdenAntrenman({
 
   return (
     <View className={`flex-col gap-3 rounded-xl bg-surface-2 p-4 ${className}`}>
+      {/* #502 (kullanici karari): "Devam ediyor" rozeti kalkti, yerini SABLON ADI aldi -- kart bir
+          satir kisaldi. Antrenmanin surdugu bilgisi dugmenin kendi metninde ("Antrenmana devam
+          et") ve ust bardaki sayacta zaten var. Sablonsuz antrenmanda solda gosterilecek ad yok;
+          satirda yalnizca baslangic saati kalir. */}
       <View className="flex-row items-center justify-between gap-2">
-        <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-          <View className="size-2 rounded-full bg-success" />
-          <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
-        </View>
+        {oturum.templateName ? <TurEtiketi>{oturum.templateName}</TurEtiketi> : <View />}
         <Text className="text-label text-muted">{t('antrenman.baslangic', { saat: formatSaat(oturum.startedAt) })}</Text>
       </View>
-      {/* #502: sutun icinde hap tum genislige yayilmasin diye bir satir kabi -- hizalama artik
-          hapin kendi isi degil (bkz. TurEtiketi). */}
-      {oturum.templateName && (
-        <View className="flex-row">
-          <TurEtiketi>{oturum.templateName}</TurEtiketi>
-        </View>
-      )}
       <BirincilDugme yukseklik="normal" onPress={onDevam ?? (() => router.navigate('/antrenman'))}>
-        {t('ortak.devamEt')}
+        {t('antrenman.antrenmanaDevamEt')}
       </BirincilDugme>
     </View>
   );

@@ -76,8 +76,8 @@ function siraNo(metin: string): number {
 test('devam eden antrenman karti haftalik ozet kartlarinin USTUNDE cizilir', async () => {
   await ciz();
 
-  expect(siraNo('Devam ediyor')).toBeLessThan(siraNo('Haftalık seri'));
-  expect(siraNo('Devam ediyor')).toBeLessThan(siraNo('Haftalık hedef'));
+  expect(siraNo('Antrenmana devam et')).toBeLessThan(siraNo('Haftalık seri'));
+  expect(siraNo('Antrenmana devam et')).toBeLessThan(siraNo('Haftalık hedef'));
 });
 
 /**
@@ -101,5 +101,5 @@ test('acik antrenman yokken sayfa beklemeden cizilir', async () => {
   await ciz();
 
   expect(screen.getByText('Haftalık seri')).toBeTruthy();
-  expect(screen.queryByText('Devam ediyor')).toBeNull();
+  expect(screen.queryByText('Antrenmana devam et')).toBeNull();
 });
