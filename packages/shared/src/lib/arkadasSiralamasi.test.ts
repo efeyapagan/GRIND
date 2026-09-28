@@ -3,6 +3,7 @@ import {
   AGIRLIKLAR,
   arkadaslariSirala,
   hedefOrani,
+  liderKullaniciAdi,
   siralamaPuani,
   type ArkadasHaftasi,
 } from './arkadasSiralamasi';
@@ -140,4 +141,53 @@ test('bos liste bos doner ve girdi degistirilmez', () => {
   const sirali = arkadaslariSirala(girdi);
   expect(arkadaslariSirala([])).toEqual([]);
   expect(sirali).not.toBe(girdi);
+});
+
+// ---- Lider (#488) ----
+
+/**
+ * #488: hafta basinda herkes sifirdayken listenin ilk satiri "lider" degildir -- henuz bir
+ * kiyaslama YOKTUR. Taci sirf sirali listenin tepesinde durduğu icin vermek, alfabetik bir
+ * esitligi basari gibi gosteriyordu.
+ */
+test('kimse antrenman yapmadiysa lider yoktur', () => {
+  const sirali = arkadaslariSirala([
+    arkadas({ username: 'a', weeklyTargetDays: 3 }),
+    arkadas({ username: 'b', weeklyTargetDays: 4 }),
+  ]);
+
+  expect(liderKullaniciAdi(sirali)).toBeNull();
+});
+
+/** Kullanici karari: "biri antrenman yaparsa onunla birlikte kiyasa basla". */
+test('tek kisi antrenman yaptiysa lider odur', () => {
+  const sirali = arkadaslariSirala([
+    arkadas({ username: 'calisan', trainedDaysThisWeek: 1, weeklyTargetDays: 4 }),
+    arkadas({ username: 'duran', weeklyTargetDays: 3 }),
+  ]);
+
+  expect(liderKullaniciAdi(sirali)).toBe('calisan');
+});
+
+/**
+ * Sira hedefi OLANLARI one alir; hedefsiz ama calisan biri, hedefli ama hic calismamis birinin
+ * ALTINDA durabilir. Lider yine de calisan kisidir -- tac bir konum degil, bir emek isaretidir.
+ */
+test('lider sirali listenin ilki degil, calisan ilk kisidir', () => {
+  const sirali = arkadaslariSirala([
+    arkadas({ username: 'hedefli', weeklyTargetDays: 3 }),
+    arkadas({ username: 'hedefsiz', trainedDaysThisWeek: 2, weeklyVolume: 500 }),
+  ]);
+
+  expect(sirali[0].username).toBe('hedefli');
+  expect(liderKullaniciAdi(sirali)).toBe('hedefsiz');
+});
+
+/** Gun sayilmayacak kadar erken olabilir ama hacim varsa antrenman yapilmistir. */
+test('yalnizca hacmi olan da lider olabilir', () => {
+  expect(liderKullaniciAdi([arkadas({ username: 'a', weeklyVolume: 120 })])).toBe('a');
+});
+
+test('bos listede lider yoktur', () => {
+  expect(liderKullaniciAdi([])).toBeNull();
 });
