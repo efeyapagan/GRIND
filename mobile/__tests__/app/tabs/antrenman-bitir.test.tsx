@@ -394,7 +394,9 @@ describe('bitirme ekraninda dinlenme sayaci', () => {
     mockOdakBirak();
 
     expect(duraklatildiMi(mockSonDinlenme!)).toBe(false);
-    expect(kalanMs(mockSonDinlenme!, Date.now())).toBe(duraklatilmisKalan);
+    // TAM esitlik beklenemez: `Date.now()` iki okuma arasinda ilerliyor (CI'da 1 ms fark cikti).
+    // Onemli olan duraklamada gecen surenin YUTULMAMIS olmasi; 1 sn tolerans bunu ayirt eder.
+    expect(Math.abs(kalanMs(mockSonDinlenme!, Date.now()) - duraklatilmisKalan)).toBeLessThan(1000);
   });
 
   /** Sayac yoksa ekran hicbir sey yapmaz -- bos bir duraklatma kaydi uretmez. */
