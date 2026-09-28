@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { gorunurSekmeler } from './_layout';
+import { gorunurSekmeler } from '../../../../../../app/(tabs)/profile/u/[username]/_layout';
 
 describe('gorunurSekmeler', () => {
   it('arkadas degilse sablonlar sekmesi listede yok', () => {
