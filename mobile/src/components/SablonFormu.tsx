@@ -218,7 +218,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
           <View className="flex-row gap-2">
             {(
               [
-                { deger: null, etiket: t('sablonlar.paylasVarsayilan', { durum: '' }) },
+                { deger: null, etiket: t('sablonlar.paylasVarsayilan') },
                 { deger: true, etiket: t('sablonlar.paylasHerkeseAcik') },
                 { deger: false, etiket: t('sablonlar.paylasGizli') },
               ] as const
