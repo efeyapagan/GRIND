@@ -87,10 +87,10 @@ test('acik antrenman varken devam eden antrenman karti listenin ustunde durur', 
     </PageTitleProvider>,
   );
 
-  expect(screen.getByText('Devam ediyor')).toBeTruthy();
+  // #502: kartin isareti artik "Devam ediyor" rozeti degil -- sablon adi ve dugmenin kendisi.
   expect(screen.getByText('Push Day A')).toBeTruthy();
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Devam et' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmana devam et' }));
   expect(mockNavigate).toHaveBeenCalledWith('/antrenman');
 });
 
@@ -102,5 +102,5 @@ test('acik antrenman yokken kart cizilmez', async () => {
     </PageTitleProvider>,
   );
 
-  expect(screen.queryByText('Devam ediyor')).toBeNull();
+  expect(screen.queryByText('Antrenmana devam et')).toBeNull();
 });

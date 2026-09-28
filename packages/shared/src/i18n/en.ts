@@ -256,6 +256,7 @@ export const en: Katalog = {
   antrenman: {
     baslik: 'Workout',
     devamEdiyor: 'In progress',
+    antrenmanaDevamEt: 'Resume workout',
     baslangic: 'Started {{saat}}',
     sureyeDon: 'Workout in progress, {{sure}} — back to workout',
     baslatmaGorunumu: 'Back to start workout screen',

@@ -1,6 +1,7 @@
 import { ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@grind/shared/pageTitle';
+import { useOpenSession } from '@grind/shared/api/queries';
 import DevamEdenAntrenman from '../../src/components/DevamEdenAntrenman';
 import Takvim from '../../src/components/Takvim';
 import ArkadasKarsilastirma from '../../src/components/ArkadasKarsilastirma';
@@ -11,16 +12,25 @@ export default function AnaSayfaScreen() {
   const { t } = useTranslation();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle(t('kabuk.anaSayfa'));
+  /**
+   * #502 (kullanici karari): acik antrenman karti takvimin USTUNE dondu. #175'te de orada, #412'de
+   * EN ALTA alinmisti -- acik oturum sorgusu takvimden ayri bir anda cozuldugu icin kart SONRADAN
+   * belirip altindaki her seyi asagi itiyordu ("once takvim geliyor, sonra cakisiyor, sonra takvim
+   * asagi iniyor"). Sorun sira degil ZAMANLAMA: kartin ALTINDAKI hicbir sey, kartin olup olmadigi
+   * bilinmeden cizilmez. Sorgu onbellekteyse bu bekleme hic yasanmaz; yalnizca ilk acilista takvim
+   * bir an gec gelir -- tek seferlik bir belirme, carpismali bir kayma degil.
+   */
+  const { isLoading: oturumYukleniyor } = useOpenSession();
 
   return (
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
-      {/* #412: acik antrenman karti EN ALTTA. #175'te takvimin USTUNDEydi ("ilk gorulen o olsun"),
-          ama acik oturum sorgusu takvimden ayri bir anda cozuluyor: kart sonradan belirince altindaki
-          her sey kayiyor ve takvim izgarasiyla haftalik ozet birbirine giriyordu. En altta oldugunda
-          ustundeki hicbir sey onun gec gelmesinden etkilenmez. */}
-      <Takvim />
-      <ArkadasKarsilastirma />
       <DevamEdenAntrenman />
+      {!oturumYukleniyor && (
+        <>
+          <Takvim />
+          <ArkadasKarsilastirma />
+        </>
+      )}
     </ScrollView>
   );
 }

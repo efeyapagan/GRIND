@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, profilAnaEkraniMi, yonKarari, sabitGeriHedefi } from './geriKaydirma';
+import {
+  altEkranMi,
+  geriGidilsinMi,
+  geriHedefi,
+  kenardanMi,
+  profilAnaEkraniMi,
+  yonKarari,
+  sabitGeriHedefi,
+  BASLATMA_GORUNUMU_YOLU,
+} from './geriKaydirma';
 
 /**
  * #232: sol kenardan saga kaydirarak geri donme karari -- web ve mobil ayni saf fonksiyonlari
@@ -89,7 +98,17 @@ describe('profilAnaEkraniMi (issue #293 -- ust basliktaki hesap ayarlari kisayol
 describe('sabitGeriHedefi (#499 -- sablon olustur ekranindan geri)', () => {
   /** Kullanici karari: nereden girilirse girilsin geri cikis "Antrenmana basla" ekranina doner. */
   test('sablon olustur ekraninin sabit hedefi antrenman ekranidir', () => {
-    expect(sabitGeriHedefi('/templates/new')).toBe('/antrenman');
+    expect(sabitGeriHedefi('/templates/new')).toBe(BASLATMA_GORUNUMU_YOLU);
+  });
+
+  /**
+   * #502 (kullanici bildirdi): duz `/antrenman` ACIK antrenmani gosteriyordu -- sablon olusturup
+   * cikan kullanici "Antrenmana basla" yerine antrenmanin ortasina dusuyordu. Hedef bu yuzden
+   * gorunumu ACIKCA ister; ekran bunu rota parametresinden okur.
+   */
+  test('sabit hedef baslatma gorunumunu acikca ister', () => {
+    expect(BASLATMA_GORUNUMU_YOLU.startsWith('/antrenman?')).toBe(true);
+    expect(BASLATMA_GORUNUMU_YOLU).not.toBe('/antrenman');
   });
 
   /** AYIRT EDICI: baska hicbir ekranin sabit hedefi yok -- onlar gecmise bakmaya devam eder. */

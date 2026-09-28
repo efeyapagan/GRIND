@@ -62,19 +62,19 @@ async function acikAntrenmanlaAc({
 /**
  * #487'de eklenen cikis #494'te yon degistirdi (kullanici karari): hedef Sablonlarim DEGIL, bu
  * ekranin "Antrenmana basla" gorunumu. Oturum ACIK kalir -- ustte ana sayfadaki kartin aynisi
- * durur ve "Devam et" antrenmana geri cevirir.
+ * durur ve "Antrenmana devam et" antrenmana geri cevirir.
  */
-test('geri tusu baslatma gorunumunu acar, Devam et antrenmana geri cevirir', async () => {
+test('geri tusu baslatma gorunumunu acar, kart antrenmana geri cevirir', async () => {
   const state = await acikAntrenmanlaAc();
 
   await fireEvent.press(await screen.findByLabelText('Antrenmana başla ekranına dön'));
 
   expect(await screen.findByText('Şablonlarım')).toBeTruthy();
-  expect(screen.getByText('Devam ediyor')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Antrenmana devam et' })).toBeTruthy();
   // Antrenman KAPANMADI: gorunum degisti, oturum yerinde.
   expect(state.acikOturum).not.toBeNull();
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Devam et' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmana devam et' }));
 
   expect(await screen.findByText('Hareket ekle')).toBeTruthy();
   expect(screen.queryByText('Şablonlarım')).toBeNull();
@@ -114,7 +114,8 @@ test('baslatma gorunumunde ust baslik Antrenmana basla olur', async () => {
 
 /**
  * #499 (kullanici karari): ust satirda artik "Devam ediyor" rozeti degil SABLON ADI durur;
- * baslangic saati bir alt satira, sablon adinin eski yerine iner.
+ * baslangic saati bir alt satira, sablon adinin eski yerine iner. #502'de ayni rozet devam eden
+ * antrenman KARTINDAN da kalkti, yani metin mobilde hicbir yerde cizilmiyor.
  */
 test('ust satirda sablon adi durur, In progress rozeti kalkti', async () => {
   await acikAntrenmanlaAc({ sablonHareketleri: [SABLON_HAREKETI], oturumHareketleri: [OTURUM_HAREKETI] });

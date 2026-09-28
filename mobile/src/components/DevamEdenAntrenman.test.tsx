@@ -36,11 +36,11 @@ test('acik antrenman varken kart sablon adi ve TR baslangic saatiyle gorunur', a
   expect(screen.getByText('Başlangıç 12:00')).toBeTruthy();
 });
 
-test('Devam et antrenman ekranina goturur', async () => {
+test('Antrenmana devam et antrenman ekranina goturur', async () => {
   useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
   await render(<DevamEdenAntrenman />);
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Devam et' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmana devam et' }));
 
   expect(mockNavigate).toHaveBeenCalledWith('/antrenman');
 });
@@ -54,5 +54,34 @@ test('acik antrenman yokken kart cizilmez', async () => {
 
   await render(<DevamEdenAntrenman />);
 
-  expect(screen.queryByText('Devam et')).toBeNull();
+  expect(screen.queryByText('Antrenmana devam et')).toBeNull();
+});
+
+/**
+ * #502 (kullanici karari): "Devam ediyor" rozeti KALKTI -- ust satirin solunda artik sablon adi
+ * durur ve turuncu dugme "Antrenmana devam et" der. Boylece kart bir satir kisalir; "devam
+ * ediyor" bilgisi dugmenin kendi metninde zaten var.
+ */
+test('kart devam ediyor rozeti tasimaz, ust satirda sablon adi durur', async () => {
+  useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
+
+  await render(<DevamEdenAntrenman />);
+
+  expect(screen.queryByText('Devam ediyor')).toBeNull();
+  expect(screen.getByText('Push Day A')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Antrenmana devam et' })).toBeTruthy();
+});
+
+/** Sablonsuz (serbest) antrenmanda solda gosterilecek ad yoktur: satirda yalnizca saat kalir. */
+test('sablonsuz antrenmanda ust satirda yalnizca baslangic saati kalir', async () => {
+  useOpenSessionMock.mockReturnValue({
+    data: { ...ACIK_OTURUM, templateId: null, templateName: null },
+    isLoading: false,
+    isError: false,
+  });
+
+  await render(<DevamEdenAntrenman />);
+
+  expect(screen.getByText('Başlangıç 12:00')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Antrenmana devam et' })).toBeTruthy();
 });
