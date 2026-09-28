@@ -155,11 +155,11 @@ test('hedefli arkadas gun/hedef gosterir', async () => {
 });
 
 /**
- * #420 (kullanici karari): ana ekranda en iyi 7 arkadas; 7'yi asarsa kartin ALTINDA "Tum
+ * #420/#518 (kullanici karari): ana ekranda en iyi 6 arkadas; 6'yi asarsa kartin ALTINDA "Tum
  * arkadaslari gor" baglantisi cikar ve ayri ekrani acar.
  */
-test('ana ekranda en fazla yedi satir ve altta tum arkadaslari gor', async () => {
-  expect(ANA_EKRAN_SATIRI).toBe(7);
+test('ana ekranda en fazla alti satir ve altta tum arkadaslari gor', async () => {
+  expect(ANA_EKRAN_SATIRI).toBe(6);
   veriVer(
     Array.from({ length: ANA_EKRAN_SATIRI + 2 }, (_, i) =>
       arkadas(`k${i}`, { trainedDays: i, weeklyTargetDays: 7 }),
@@ -178,8 +178,8 @@ test('ana ekranda en fazla yedi satir ve altta tum arkadaslari gor', async () =>
   expect(mockPush).toHaveBeenCalledWith('/arkadaslar');
 });
 
-test('yedi ya da daha az arkadasta tum arkadaslari gor cizilmez', async () => {
-  veriVer(Array.from({ length: 7 }, (_, i) => arkadas(`k${i}`, { trainedDays: 1, weeklyTargetDays: 3 })));
+test('alti ya da daha az arkadasta tum arkadaslari gor cizilmez', async () => {
+  veriVer(Array.from({ length: 6 }, (_, i) => arkadas(`k${i}`, { trainedDays: 1, weeklyTargetDays: 3 })));
   await ciz();
 
   expect(screen.queryByText('Tüm arkadaşları gör')).toBeNull();
