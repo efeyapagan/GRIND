@@ -162,6 +162,13 @@ Bu karar #211'deki "Web + Mobil aynı işte" kuralının yerini alır.
   okur.
 - **Web CI kaldırıldı** (`.github/workflows/web.yml` yok). Web'in testleri ve tip kontrolü
   CI'da koşmaz; bir iş bitmeden önce web testlerini koşmak gerekmez.
+- **Web işleri bitti (kullanıcı, 2026-09-28):** web bir kapsam seçeneği olarak önerilmez, web
+  testi/tip kontrolü koşulmaz. Web workspace'inin ARAÇ komutları da kullanılmaz — API tipleri
+  (`packages/shared/src/api/schema.d.ts`) `web/package.json`'daki `api:types` ile DEĞİL, sabit
+  sürümle ve workspace DIŞINDAN üretilir (araç yalnızca `web/node_modules`'ta kurulu; workspace
+  içinden `npx` onu bulamıyor). API 5098'de çalışırken, repo dışındaki bir klasörden:
+  `npm exec --yes --package=openapi-typescript@7.13.0 -- openapi-typescript http://localhost:5098/swagger/v1/swagger.json -o <repo>/packages/shared/src/api/schema.d.ts`.
+  Sürüm web'in kurduğuyla aynı tutulur, yoksa çıktı biçimi kayar.
 - Ortak paketin (`packages/shared` — API sorguları, i18n kataloğu, `format`/`rir`/`grafik`/
   `takvim`/`zorlukKadrani` gibi yardımcılar) testleri `packages/shared/src/**/*.test.ts`'tedir
   (vitest, `npm run test --workspace @grind/shared`) ve Mobile CI'da ortak paketin tip kontrolüyle

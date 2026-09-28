@@ -62,6 +62,21 @@ export function kaydir(gorunum: TakvimGorunumu, gun: string, yon: -1 | 1): strin
 }
 
 /**
+ * Bugunun doneminden GERIYE dogru son `adet` donem, en yenisi basta (#420 -- tum arkadaslar
+ * ekraninin donem penceresi). Her oge o donemin ILK gunudur; takvimin `gosterilen`i gibi kullanilir
+ * ve araligi `gorunumAraligi` ile ayni kuraldan turer. Gelecek donem listede yoktur (#81).
+ */
+export function sonDonemler(gorunum: TakvimGorunumu, bugun: string, adet: number): string[] {
+  let donem = gorunumAraligi(gorunum, bugun).from;
+  const donemler: string[] = [];
+  for (let i = 0; i < adet; i++) {
+    donemler.push(donem);
+    donem = kaydir(gorunum, donem, -1);
+  }
+  return donemler;
+}
+
+/**
  * Gosterilen donemden `yon` yonune gidilebilir mi? Gelecege gezinilmez (#81): bugunun donemindeyken
  * ileri gitmek kapali, geriye gitmek her zaman acik. #315'ten beri gezinme kaydirmayla oldugu icin
  * karar iki platformda da BURADAN okunur -- bir dugmenin `disabled`i degil, hareketin kendisi susar.

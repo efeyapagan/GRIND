@@ -1,17 +1,29 @@
 import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@grind/shared/pageTitle';
-import { useArkadasHaftasi } from '@grind/shared/api/queries';
+import { useArkadasDonemi } from '@grind/shared/api/queries';
 import { arkadaslariSirala, liderKullaniciAdi } from '@grind/shared/lib/arkadasSiralamasi';
+import { gorunumAraligi } from '@grind/shared/lib/takvim';
 import ArkadasSatiri from '../../src/components/ArkadasSatiri';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
+import { useArkadaslarDonemi, useArkadaslarDoneminiKapanistaBirak } from '../../src/ui/TakvimDonemiContext';
 
-/** "Tümünü gör" (#418): ana ekrandaki ilk 5'in tamamı, aynı satır bileşeni ve aynı sırayla. */
+/**
+ * "Tum arkadaslari gor" (#418, #420): ana ekrandaki 7 sinirinin tersine HERKES, ayni satir bileseni
+ * ve ayni sirayla.
+ *
+ * #420: donemi kendine aittir (kullanici karari) -- sag ustteki takvim tusuyla (`DonemSecici`,
+ * `KabukBaslik`) secilir ve ana sayfa takvimini TASIMAZ. Ekran her acilista ana sayfanin o anki
+ * donemiyle baslar; kapaninca kendi secimini birakir.
+ */
 export default function ArkadaslarScreen() {
   const { t } = useTranslation();
   usePageTitle(t('arkadaslar.baslik'));
-  const { data, isLoading, isError } = useArkadasHaftasi();
-  const sirali = arkadaslariSirala(data ?? []);
+  useArkadaslarDoneminiKapanistaBirak();
+  const { gorunum, gosterilen } = useArkadaslarDonemi();
+  const { from, to } = gorunumAraligi(gorunum, gosterilen);
+  const { data, isLoading, isError } = useArkadasDonemi(from, to);
+  const sirali = arkadaslariSirala(data ?? [], gorunum);
   const lider = liderKullaniciAdi(sirali);
 
   return (
@@ -29,7 +41,7 @@ export default function ArkadaslarScreen() {
         </View>
       )}
       {sirali.map((arkadas) => (
-        <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={arkadas.username === lider} />
+        <ArkadasSatiri key={arkadas.username} arkadas={arkadas} gorunum={gorunum} lider={arkadas.username === lider} />
       ))}
       {/* #425: kendi satiri hep geldigi icin tek satir = arkadas yok demek. */}
       {sirali.length === 1 && (

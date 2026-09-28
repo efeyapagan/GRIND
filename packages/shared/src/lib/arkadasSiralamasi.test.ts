@@ -1,23 +1,25 @@
 import { expect, test } from 'vitest';
 import {
   AGIRLIKLAR,
+  AYLIK_HEDEF_CARPANI,
   arkadaslariSirala,
+  donemHedefi,
   hedefOrani,
   liderKullaniciAdi,
   siralamaPuani,
-  type ArkadasHaftasi,
+  type ArkadasDonemi,
 } from './arkadasSiralamasi';
 
-function arkadas(kismi: Partial<ArkadasHaftasi> & { username: string }): ArkadasHaftasi {
+function arkadas(kismi: Partial<ArkadasDonemi> & { username: string }): ArkadasDonemi {
   return {
     displayName: null,
     hasAvatar: false,
     avatarVersion: null,
-    trainedDaysThisWeek: 0,
+    trainedDays: 0,
     weeklyTargetDays: null,
     trainedToday: false,
-    weeklySetCount: 0,
-    weeklyVolume: 0,
+    setCount: 0,
+    volume: 0,
     isSelf: false,
     ...kismi,
   };
@@ -26,23 +28,23 @@ function arkadas(kismi: Partial<ArkadasHaftasi> & { username: string }): Arkadas
 const enYuksek = { hacim: 1000, gun: 5 };
 
 test('hedefe ulasma orani gun/hedef', () => {
-  expect(hedefOrani(arkadas({ username: 'a', trainedDaysThisWeek: 2, weeklyTargetDays: 4 }))).toBe(0.5);
+  expect(hedefOrani(arkadas({ username: 'a', trainedDays: 2, weeklyTargetDays: 4 }))).toBe(0.5);
 });
 
 /** Hedefi asmak orani 1'in USTUNE cikarmaz: cubuk tasmaz, siralama "kim daha cok asti"ya donmez. */
 test('hedefi asan oran 1 ile sinirlanir', () => {
-  expect(hedefOrani(arkadas({ username: 'a', trainedDaysThisWeek: 6, weeklyTargetDays: 4 }))).toBe(1);
+  expect(hedefOrani(arkadas({ username: 'a', trainedDays: 6, weeklyTargetDays: 4 }))).toBe(1);
 });
 
 test('hedefi olmayanin orani yoktur', () => {
-  expect(hedefOrani(arkadas({ username: 'a', trainedDaysThisWeek: 3 }))).toBeNull();
+  expect(hedefOrani(arkadas({ username: 'a', trainedDays: 3 }))).toBeNull();
 });
 
 // ---- Agirlikli puan (#430) ----
 
 test('puan uc bilesenin agirlikli toplamidir', () => {
   const puan = siralamaPuani(
-    arkadas({ username: 'a', trainedDaysThisWeek: 2, weeklyTargetDays: 4, weeklyVolume: 500 }),
+    arkadas({ username: 'a', trainedDays: 2, weeklyTargetDays: 4, volume: 500 }),
     enYuksek,
   );
 
@@ -52,7 +54,7 @@ test('puan uc bilesenin agirlikli toplamidir', () => {
 
 test('gruptaki en yuksek sifirsa o bilesen puana sifir katar', () => {
   const puan = siralamaPuani(
-    arkadas({ username: 'a', trainedDaysThisWeek: 0, weeklyTargetDays: 4 }),
+    arkadas({ username: 'a', trainedDays: 0, weeklyTargetDays: 4 }),
     { hacim: 0, gun: 0 },
   );
 
@@ -60,7 +62,7 @@ test('gruptaki en yuksek sifirsa o bilesen puana sifir katar', () => {
 });
 
 test('hedefi olmayanin hedef bileseni sifirdir ama hacmi puan katar', () => {
-  const puan = siralamaPuani(arkadas({ username: 'a', weeklyVolume: 1000 }), enYuksek);
+  const puan = siralamaPuani(arkadas({ username: 'a', volume: 1000 }), enYuksek);
 
   expect(puan).toBeCloseTo(AGIRLIKLAR.hacim, 10);
 });
@@ -73,8 +75,8 @@ test('hedefi olmayanin hedef bileseni sifirdir ama hacmi puan katar', () => {
  */
 test('esit gunde yuksek hacim dusuk orani gecebilir', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'yuksekOran', trainedDaysThisWeek: 1, weeklyTargetDays: 3, weeklyVolume: 100 }),
-    arkadas({ username: 'yuksekHacim', trainedDaysThisWeek: 1, weeklyTargetDays: 4, weeklyVolume: 5000 }),
+    arkadas({ username: 'yuksekOran', trainedDays: 1, weeklyTargetDays: 3, volume: 100 }),
+    arkadas({ username: 'yuksekHacim', trainedDays: 1, weeklyTargetDays: 4, volume: 5000 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['yuksekHacim', 'yuksekOran']);
@@ -83,8 +85,8 @@ test('esit gunde yuksek hacim dusuk orani gecebilir', () => {
 /** Hacim farki kucukse hedef agirligi (0.5) baskin kalir -- vaat hala kisinin kendi hedefi. */
 test('hacimler yakinsa yuksek oran ustte kalir', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'dusukOran', trainedDaysThisWeek: 1, weeklyTargetDays: 4, weeklyVolume: 1100 }),
-    arkadas({ username: 'yuksekOran', trainedDaysThisWeek: 1, weeklyTargetDays: 3, weeklyVolume: 1000 }),
+    arkadas({ username: 'dusukOran', trainedDays: 1, weeklyTargetDays: 4, volume: 1100 }),
+    arkadas({ username: 'yuksekOran', trainedDays: 1, weeklyTargetDays: 3, volume: 1000 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['yuksekOran', 'dusukOran']);
@@ -92,8 +94,8 @@ test('hacimler yakinsa yuksek oran ustte kalir', () => {
 
 test('cok gun yapan az gun yapanin ustunde', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'az', trainedDaysThisWeek: 1, weeklyTargetDays: 4, weeklyVolume: 1000 }),
-    arkadas({ username: 'cok', trainedDaysThisWeek: 4, weeklyTargetDays: 4, weeklyVolume: 1000 }),
+    arkadas({ username: 'az', trainedDays: 1, weeklyTargetDays: 4, volume: 1000 }),
+    arkadas({ username: 'cok', trainedDays: 4, weeklyTargetDays: 4, volume: 1000 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['cok', 'az']);
@@ -102,8 +104,8 @@ test('cok gun yapan az gun yapanin ustunde', () => {
 /** Kullanici karari (#418) korunur: hedefi olmayan, hacmi ne olursa olsun hedefi olanlardan sonra. */
 test('hedefi olmayanlar hacmi yuksek olsa da en altta', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'hedefsizDev', weeklyVolume: 99999, trainedDaysThisWeek: 7 }),
-    arkadas({ username: 'hedefliKucuk', trainedDaysThisWeek: 1, weeklyTargetDays: 7, weeklyVolume: 1 }),
+    arkadas({ username: 'hedefsizDev', volume: 99999, trainedDays: 7 }),
+    arkadas({ username: 'hedefliKucuk', trainedDays: 1, weeklyTargetDays: 7, volume: 1 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['hedefliKucuk', 'hedefsizDev']);
@@ -111,8 +113,8 @@ test('hedefi olmayanlar hacmi yuksek olsa da en altta', () => {
 
 test('hedefsizler kendi aralarinda puana gore siralanir', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'azHacim', trainedDaysThisWeek: 2, weeklyVolume: 100 }),
-    arkadas({ username: 'cokHacim', trainedDaysThisWeek: 2, weeklyVolume: 5000 }),
+    arkadas({ username: 'azHacim', trainedDays: 2, volume: 100 }),
+    arkadas({ username: 'cokHacim', trainedDays: 2, volume: 5000 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['cokHacim', 'azHacim']);
@@ -120,8 +122,8 @@ test('hedefsizler kendi aralarinda puana gore siralanir', () => {
 
 test('her sey esitse ada gore alfabetik -- sira kararli kalir', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'zeynep', trainedDaysThisWeek: 2, weeklyTargetDays: 4, weeklyVolume: 100 }),
-    arkadas({ username: 'ahmet', trainedDaysThisWeek: 2, weeklyTargetDays: 4, weeklyVolume: 100 }),
+    arkadas({ username: 'zeynep', trainedDays: 2, weeklyTargetDays: 4, volume: 100 }),
+    arkadas({ username: 'ahmet', trainedDays: 2, weeklyTargetDays: 4, volume: 100 }),
   ]);
 
   expect(sirali.map((a) => a.username)).toEqual(['ahmet', 'zeynep']);
@@ -162,7 +164,7 @@ test('kimse antrenman yapmadiysa lider yoktur', () => {
 /** Kullanici karari: "biri antrenman yaparsa onunla birlikte kiyasa basla". */
 test('tek kisi antrenman yaptiysa lider odur', () => {
   const sirali = arkadaslariSirala([
-    arkadas({ username: 'calisan', trainedDaysThisWeek: 1, weeklyTargetDays: 4 }),
+    arkadas({ username: 'calisan', trainedDays: 1, weeklyTargetDays: 4 }),
     arkadas({ username: 'duran', weeklyTargetDays: 3 }),
   ]);
 
@@ -176,7 +178,7 @@ test('tek kisi antrenman yaptiysa lider odur', () => {
 test('lider sirali listenin ilki degil, calisan ilk kisidir', () => {
   const sirali = arkadaslariSirala([
     arkadas({ username: 'hedefli', weeklyTargetDays: 3 }),
-    arkadas({ username: 'hedefsiz', trainedDaysThisWeek: 2, weeklyVolume: 500 }),
+    arkadas({ username: 'hedefsiz', trainedDays: 2, volume: 500 }),
   ]);
 
   expect(sirali[0].username).toBe('hedefli');
@@ -185,9 +187,50 @@ test('lider sirali listenin ilki degil, calisan ilk kisidir', () => {
 
 /** Gun sayilmayacak kadar erken olabilir ama hacim varsa antrenman yapilmistir. */
 test('yalnizca hacmi olan da lider olabilir', () => {
-  expect(liderKullaniciAdi([arkadas({ username: 'a', weeklyVolume: 120 })])).toBe('a');
+  expect(liderKullaniciAdi([arkadas({ username: 'a', volume: 120 })])).toBe('a');
 });
 
 test('bos listede lider yoktur', () => {
   expect(liderKullaniciAdi([])).toBeNull();
+});
+
+// ---- Donem (#420): takvim aylik gorunumdeyken hedef x4 ----
+
+/**
+ * Kullanici karari: aylik donemde karsilastirma hedefi haftalik hedefin 4 KATIDIR. (Bir takvim ayi
+ * 4-5 Pazartesi-Pazar haftasi icerir; kullanici bu farki bilerek sabit x4'u secti.)
+ */
+test('aylik donemde hedef haftalik hedefin 4 katidir', () => {
+  const kisi = arkadas({ username: 'a', weeklyTargetDays: 3 });
+
+  expect(AYLIK_HEDEF_CARPANI).toBe(4);
+  expect(donemHedefi(kisi, 'hafta')).toBe(3);
+  expect(donemHedefi(kisi, 'ay')).toBe(12);
+});
+
+test('hedefsiz kisinin hicbir donemde hedefi yoktur', () => {
+  expect(donemHedefi(arkadas({ username: 'a' }), 'ay')).toBeNull();
+});
+
+/** Ayni gun sayisi haftada hedefi DOLDURUR, ayda ancak yarisini. */
+test('oran donemin hedefine gore hesaplanir', () => {
+  const kisi = arkadas({ username: 'a', trainedDays: 6, weeklyTargetDays: 3 });
+
+  expect(hedefOrani(kisi, 'hafta')).toBe(1);
+  expect(hedefOrani(kisi, 'ay')).toBe(0.5);
+});
+
+/**
+ * AYIRT EDICI: haftalik gorunumde ikisi de hedefini tamamladigi icin (oran 1) hacmi yuksek olan
+ * ustte. Aylik gorunumde "hedefinin tamami" ile "yarisi" ayrisir ve siralama degisir.
+ */
+test('siralama donemin hedefine gore yapilir', () => {
+  const liste = [
+    // Hacimler YAKIN: aylikta oran farki (1 vs 0.5) hacim/gun farkiyla telafi edilemesin.
+    arkadas({ username: 'yariHedef', trainedDays: 6, weeklyTargetDays: 3, volume: 1100 }),
+    arkadas({ username: 'tamHedef', trainedDays: 4, weeklyTargetDays: 1, volume: 1000 }),
+  ];
+
+  expect(arkadaslariSirala(liste, 'hafta').map((a) => a.username)).toEqual(['yariHedef', 'tamHedef']);
+  expect(arkadaslariSirala(liste, 'ay').map((a) => a.username)).toEqual(['tamHedef', 'yariHedef']);
 });

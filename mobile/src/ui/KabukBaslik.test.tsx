@@ -22,6 +22,14 @@ jest.mock('../components/YorumDiliSecici', () => {
     ),
   };
 });
+// #420: tum arkadaslar ekraninda sag ucta donem secici durur; kendi testleri var.
+jest.mock('../components/DonemSecici', () => {
+  const { Pressable } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => <Pressable accessibilityRole="button" accessibilityLabel="Dönem seç" />,
+  };
+});
 let mockBaslik = 'Başlık';
 jest.mock('@grind/shared/pageTitle', () => ({ useHeaderTitle: () => mockBaslik }));
 // Dinlenme gostergesi RestTimerProvider ister; bu testlerin konusu degil.
@@ -223,4 +231,24 @@ test('antrenman bari paylasilan yukseklik sabitini kullanir', async () => {
   expect(screen.getByTestId('antrenman-bari').props.style).toEqual(
     expect.objectContaining({ height: ANTRENMAN_BARI_YUKSEKLIGI }),
   );
+});
+
+/**
+ * #420 (kullanici karari): tum arkadaslar ekraninda solda geri tusu, EN SAGDA takvim (donem
+ * secici) tusu -- GRINDY ekranindaki bayrakla ayni desen: "GRIND" yazisinin yerini alir.
+ */
+test('tum arkadaslar ekraninda sag ucta donem secici, solda geri tusu vardir', async () => {
+  mockPathname = '/arkadaslar';
+  await render(<KabukBaslik />);
+
+  expect(screen.getByLabelText('Dönem seç')).toBeTruthy();
+  expect(screen.getByLabelText('Geri')).toBeTruthy();
+  expect(screen.queryByText('GRIND')).toBeNull();
+});
+
+test('diger ekranlarda donem secici yoktur', async () => {
+  mockPathname = '/templates';
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByLabelText('Dönem seç')).toBeNull();
 });

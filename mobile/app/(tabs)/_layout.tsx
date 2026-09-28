@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { RestTimerProvider } from '@grind/shared/restTimer';
+import { TakvimDonemiProvider } from '../../src/ui/TakvimDonemiContext';
 import {
   KENAR_GENISLIGI,
   YON_KARAR_ESIGI,
@@ -34,18 +35,22 @@ export default function TabsLayout() {
   return (
     <PageTitleProvider>
       <RestTimerProvider>
-        <View className="flex-1 bg-bg">
-          <KabukBaslik />
-          {/* Alt menu icerigin USTUNDE yuzer (#338): icerik ekranin en altina kadar uzanir ve menunun
-              arkasindan kayar. Son satir menunun arkasinda kalmasin diye kaydirilabilir icerik kendi
-              sonuna `useAltMenuPayi()` kadar bosluk birakir (bkz. `KabukTabBar`). */}
-          <GeriKaydirilabilirIcerik />
-          <KabukTabBar />
-          {/* Dinlenme sayacinin genis paneli ust barin USTUNE cizilir ve onu kaplar (en son cocuk =
-              en ustte); kucultulmus hali barin ortasinda `DinlenmeGostergesi` olarak durur. Ikisi
-              ayni anda gorunmez. */}
-          <DinlenmeKabugu />
-        </View>
+        {/* #420: takvimin donemi -- ana sayfa takvimi, arkadas karsilastirmasi, tum arkadaslar
+            ekrani ve onun ust bardaki donem secicisi ayni agacta olsun diye kabugun kokunde. */}
+        <TakvimDonemiProvider>
+          <View className="flex-1 bg-bg">
+            <KabukBaslik />
+            {/* Alt menu icerigin USTUNDE yuzer (#338): icerik ekranin en altina kadar uzanir ve menunun
+                arkasindan kayar. Son satir menunun arkasinda kalmasin diye kaydirilabilir icerik kendi
+                sonuna `useAltMenuPayi()` kadar bosluk birakir (bkz. `KabukTabBar`). */}
+            <GeriKaydirilabilirIcerik />
+            <KabukTabBar />
+            {/* Dinlenme sayacinin genis paneli ust barin USTUNE cizilir ve onu kaplar (en son cocuk =
+                en ustte); kucultulmus hali barin ortasinda `DinlenmeGostergesi` olarak durur. Ikisi
+                ayni anda gorunmez. */}
+            <DinlenmeKabugu />
+          </View>
+        </TakvimDonemiProvider>
       </RestTimerProvider>
     </PageTitleProvider>
   );

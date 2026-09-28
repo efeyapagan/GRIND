@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useDil } from '@grind/shared/i18n';
 import { useCalendar } from '@grind/shared/api/queries';
-import { formatAralik, trBugundenOnce } from '@grind/shared/lib/format';
+import { formatAralik } from '@grind/shared/lib/format';
 import {
   ayBasligi,
   ayinGunu,
@@ -17,9 +17,9 @@ import {
   gunBasligi,
   haftaGunleri,
   kaydir,
-  type TakvimGorunumu,
 } from '@grind/shared/lib/takvim';
 import IkonDugmesi from '../ui/IkonDugmesi';
+import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
 import { useIkonRenk } from '../ui/renkler';
 
 const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
@@ -27,23 +27,22 @@ const GUN_ANAHTARLARI = ['pt', 'sa', 'ca', 'pe', 'cu', 'ct', 'pz'] as const;
 /** Kaydirmanin donem degistirmesi icin gereken yatay mesafe (px). */
 const KAYDIRMA_ESIGI = 40;
 
-interface Props {
-  bugun?: string;
-}
-
 /**
  * Ana Sayfa'daki Takvim (#81, #119/#120 ile buraya tasindi): Aylik/Haftalik izgara. CSS Grid'in
  * RN karsiligi yok -- `ayIzgarasi`/`haftaGunleri` zaten HAFTA SATIRLARI dondurdugu icin izgara
  * duz `flex-row` satirlariyla kurulur (web'deki `grid-cols-7` yerine).
+ *
+ * #420: gorunum ve gosterilen donem artik bilesenin kendi durumu DEGIL, `TakvimDonemiProvider`dan
+ * gelir -- hemen altindaki arkadas karsilastirmasi ayni donemi okur ve ona gore siralanir.
  */
-export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
+export default function Takvim() {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const dil = useDil();
   const router = useRouter();
-  // #315: uygulama HAFTALIK acilir -- kullanici en cok icinde bulundugu haftayla ilgilenir.
-  const [gorunum, setGorunum] = useState<TakvimGorunumu>('hafta');
-  const [gosterilen, setGosterilen] = useState(bugun);
+  // #315: uygulama HAFTALIK acilir (saglayicinin varsayilani) -- kullanici en cok icinde bulundugu
+  // haftayla ilgilenir.
+  const { bugun, gorunum, gosterilen, sec } = useTakvimDonemi();
   // Son gezinme yonu: giris animasyonu hangi taraftan gelecegini buradan okur.
   const [yon, setYon] = useState<-1 | 1>(1);
   const { from, to } = gorunumAraligi(gorunum, gosterilen);
@@ -56,8 +55,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
   const bosMetin = t(gorunum === 'ay' ? 'takvim.buAyYok' : 'takvim.buHaftaYok');
 
   function gorunumDegistir() {
-    setGorunum(gorunum === 'ay' ? 'hafta' : 'ay');
-    setGosterilen(bugun);
+    sec(gorunum === 'ay' ? 'hafta' : 'ay', bugun);
   }
 
   /** Gelecege gezinilmez (#81): kapali yonde hareket sessizce yok sayilir. */
@@ -66,7 +64,7 @@ export default function Takvim({ bugun = trBugundenOnce(0) }: Props) {
       return;
     }
     setYon(gidilenYon);
-    setGosterilen(kaydir(gorunum, gosterilen, gidilenYon));
+    sec(gorunum, kaydir(gorunum, gosterilen, gidilenYon));
   }
 
   // Donem degistirmenin TEK yolu yatay kaydirma (#315): ok dugmeleri kalkti. Dikey hareket

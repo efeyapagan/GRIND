@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { useCalendar, useGunGecmisi } from '@grind/shared/api/queries';
+import { Text } from 'react-native';
+import { TakvimDonemiProvider, useTakvimDonemi } from '../ui/TakvimDonemiContext';
 import Takvim from './Takvim';
 
 jest.mock('@grind/shared/api/queries', () => ({
@@ -44,6 +46,19 @@ beforeEach(() => {
   useGunGecmisiMock.mockReturnValue({ data: undefined, isError: false });
 });
 
+/**
+ * #420: takvimin donemi artik bilesenin kendi durumu DEGIL, paylasilan kaynaktan gelir
+ * (`TakvimDonemiProvider`) -- arkadas karsilastirmasi da ayni donemi okur.
+ */
+async function cizTakvim(ek?: React.ReactNode) {
+  await render(
+    <TakvimDonemiProvider bugun={BUGUN}>
+      <Takvim />
+      {ek}
+    </TakvimDonemiProvider>,
+  );
+}
+
 /** Cagrilan aralik: `useCalendar(from, to)` -- gorunumun hangi donemi istedigini gosterir. */
 function sonAralik(): string {
   const cagrilar = useCalendarMock.mock.calls;
@@ -57,7 +72,7 @@ function sonAralik(): string {
  * `gezilebilirMi`/`kaydir` saf fonksiyonlarinda test edilir (web/src/lib/takvim.test.ts).
  */
 test('uygulama haftalik acilir; gorunum sekmeleri ve ok dugmeleri yoktur', async () => {
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   expect(sonAralik()).toBe('2026-09-14..2026-09-20');
   expect(screen.queryByRole('button', { name: 'Önceki' })).toBeNull();
@@ -67,7 +82,7 @@ test('uygulama haftalik acilir; gorunum sekmeleri ve ok dugmeleri yoktur', async
 });
 
 test('takvim ikonu aylik ve haftalik arasinda gecis yapar', async () => {
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   await fireEvent.press(screen.getByLabelText('Aylık görünüme geç'));
 
@@ -82,7 +97,7 @@ test('takvim ikonu aylik ve haftalik arasinda gecis yapar', async () => {
 /** #324: gun hucresi kucuk bir isaret tasir -- antrenmanli gunde onay, antrenmansizda bos halka. */
 test('antrenman yapilan gunde onay isareti, yapilmayan gunde bos halka vardir', async () => {
   useCalendarMock.mockReturnValue(ozet([{ date: '2026-09-14', sessionCount: 1, setCount: 18, volume: 4200 }]));
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   const antrenmanli = screen.getByLabelText('14 Eylül: 18 set');
   const bos = screen.getByLabelText('15 Eylül: antrenman yok');
@@ -97,7 +112,7 @@ test('antrenman yapilan gunde onay isareti, yapilmayan gunde bos halka vardir', 
  */
 test('gune dokununca o gunun detay ekranina gidilir', async () => {
   useCalendarMock.mockReturnValue(ozet([{ date: '2026-09-14', sessionCount: 1, setCount: 18, volume: 4200 }]));
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   await fireEvent.press(screen.getByLabelText('14 Eylül: 18 set'));
 
@@ -106,7 +121,7 @@ test('gune dokununca o gunun detay ekranina gidilir', async () => {
 
 /** #324: bugun hafif gri bir zeminle vurgulanir; diger gunler zeminsizdir. */
 test('bugunun hucresi gri zeminle vurgulanir, diger gunler degil', async () => {
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   const bugunHucresi = screen.getByLabelText('15 Eylül: antrenman yok');
   const digerHucre = screen.getByLabelText('14 Eylül: antrenman yok');
@@ -118,7 +133,7 @@ test('bugunun hucresi gri zeminle vurgulanir, diger gunler degil', async () => {
 /** #324: "Hedef serisi" yerine bu haftanin ilerlemesi -- x (bu hafta antrenman gunu) / hedef. */
 test('haftalik hedef karti bu haftanin ilerlemesini x/hedef olarak gosterir', async () => {
   useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4, currentTargetStreak: 7 }));
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   expect(screen.getByText('Haftalık hedef')).toBeTruthy();
   expect(screen.getByLabelText('Bu hafta 2 gün, hedef 4')).toBeTruthy();
@@ -127,7 +142,7 @@ test('haftalik hedef karti bu haftanin ilerlemesini x/hedef olarak gosterir', as
 
 /** #324: hedef yokken kart kaybolmaz, hedef belirlemeye cagirir -- hedef ekranina ana sayfadan ulasilsin. */
 test('haftalik hedef yoksa kart hedef belirlemeye cagirir', async () => {
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   expect(screen.getByText('Haftalık hedef')).toBeTruthy();
   expect(screen.getByText('Hedef belirle')).toBeTruthy();
@@ -135,7 +150,7 @@ test('haftalik hedef yoksa kart hedef belirlemeye cagirir', async () => {
 
 test('haftalik hedef kartina dokununca hedef ekranina gidilir', async () => {
   useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   await fireEvent.press(screen.getByText('Haftalık hedef'));
 
@@ -145,9 +160,29 @@ test('haftalik hedef kartina dokununca hedef ekranina gidilir', async () => {
 /** #324: seri karti buyuk sayi + ates ikonu; altinda en uzun seri ("Rekorun"). */
 test('haftalik seri karti seriyi ve en uzun seriyi gosterir', async () => {
   useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 3, longestWeekStreak: 8 }));
-  await render(<Takvim bugun={BUGUN} />);
+  await cizTakvim();
 
   expect(screen.getByText('Haftalık seri')).toBeTruthy();
   expect(screen.getByText('3')).toBeTruthy();
   expect(screen.getByText('Rekorun: 8 hafta')).toBeTruthy();
+});
+
+/** Paylasilan donemi ekrana yazan sonda: takvimin YAZDIGINI baska bir tuketici goruyor mu? */
+function DonemSondasi() {
+  const { gorunum, gosterilen } = useTakvimDonemi();
+  return <Text testID="donem-sondasi">{`${gorunum}:${gosterilen}`}</Text>;
+}
+
+/**
+ * #420'nin yapisal cekirdegi: takvimin donemi TEK kaynaktandir. Takvimde gorunum degisince ayni
+ * saglayiciyi okuyan baska bir bilesen (ana sayfadaki arkadas karsilastirmasi) degisikligi gorur --
+ * iki ayri donem durumu olsaydi takvim ile liste birbirinden ayrisirdi.
+ */
+test('takvimin donemi paylasilan kaynaga yazilir', async () => {
+  await cizTakvim(<DonemSondasi />);
+  expect(screen.getByTestId('donem-sondasi')).toHaveTextContent(`hafta:${BUGUN}`);
+
+  await fireEvent.press(screen.getByLabelText('Aylık görünüme geç'));
+
+  expect(screen.getByTestId('donem-sondasi')).toHaveTextContent(`ay:${BUGUN}`);
 });

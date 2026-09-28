@@ -10,3 +10,10 @@
  * rahat siğar, iki bar da ayni yukseklikte durur.
  */
 export const ANTRENMAN_BARI_YUKSEKLIGI = 64;
+
+/**
+ * Normal ust barin yuksekligi (`KabukBaslik`, `h-16`). Barin sag ucundaki bir dugmenin actigi
+ * pencere (#420, `DonemSecici`) bu yuksekligin HEMEN ALTINDA acilir: sabit bir `mt-*` guvenli alan
+ * yuksekligi cihazdan cihaza degistigi icin pencereyi dugmenin USTUNE bindiriyordu.
+ */
+export const UST_BAR_YUKSEKLIGI = 64;
