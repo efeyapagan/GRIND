@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IAiInsightService, AiInsightService>();
         services.AddScoped<IUserSummaryBuilder, UserSummaryBuilder>();
         services.AddScoped<IFollowService, FollowService>();
+        services.AddScoped<IFriendshipService, FriendshipService>();
         services.AddScoped<IFriendWeeklyService, FriendWeeklyService>();
         services.AddScoped<IPublicActivityService, PublicActivityService>();
         services.AddScoped<IProfileService, ProfileService>();
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationSource, WeeklyGoalNotificationSource>();
         services.AddScoped<INotificationSource, RecordNotificationSource>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ISharedTemplateService, SharedTemplateService>();
         return services;
     }
 }

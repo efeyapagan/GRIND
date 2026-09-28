@@ -11,6 +11,7 @@ namespace Grind.Api.Services;
 public class WorkoutTemplateService(
     IWorkoutTemplateRepository templateRepository,
     IExerciseRepository exerciseRepository,
+    IWorkoutSessionRepository sessionRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser) : IWorkoutTemplateService
 {
@@ -27,13 +28,14 @@ public class WorkoutTemplateService(
         CancellationToken cancellationToken = default)
     {
         var templates = await templateRepository.GetAllAsync(currentUser.UserId, cancellationToken);
-
-        return templates.Select(ToResponse).ToList();
+        var lastUsed = await sessionRepository.GetLastUsedAtByTemplateIdsAsync(
+            currentUser.UserId, templates.Select(t => t.Id).ToList(), cancellationToken);
+        return templates.Select(t => TemplateMapper.ToResponse(t, LastUsedOrNull(lastUsed, t.Id))).ToList();
     }
 
     public async Task<TemplateResponse> GetByIdAsync(
         long id, CancellationToken cancellationToken = default)
-        => ToResponse(await OwnedOrThrowAsync(id, cancellationToken));
+        => await ToResponseAsync(await OwnedOrThrowAsync(id, cancellationToken), cancellationToken);
 
     public async Task<TemplateResponse> CreateAsync(
         CreateTemplateRequest request, CancellationToken cancellationToken = default)
@@ -57,7 +59,7 @@ public class WorkoutTemplateService(
 
         // Yazdıktan sonra yeniden okunuyor: yanıt egzersizlerin adı/kategorisiyle dönüyor ve
         // o veri yeni eklenen satırlarda henüz yüklü değil.
-        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
+        return await ToResponseAsync(await OwnedOrThrowAsync(template.Id, cancellationToken), cancellationToken);
     }
 
     public async Task<TemplateResponse> UpdateAsync(
@@ -74,7 +76,7 @@ public class WorkoutTemplateService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Yazdıktan sonra yeniden okunuyor: bkz. CreateAsync'teki açıklama.
-        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
+        return await ToResponseAsync(await OwnedOrThrowAsync(template.Id, cancellationToken), cancellationToken);
     }
 
     public async Task<TemplateResponse> PatchAsync(
@@ -104,8 +106,24 @@ public class WorkoutTemplateService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Yazdıktan sonra yeniden okunuyor: bkz. CreateAsync'teki açıklama.
-        return ToResponse(await OwnedOrThrowAsync(template.Id, cancellationToken));
+        return await ToResponseAsync(await OwnedOrThrowAsync(template.Id, cancellationToken), cancellationToken);
     }
+
+    private async Task<TemplateResponse> ToResponseAsync(WorkoutTemplate template, CancellationToken cancellationToken)
+    {
+        var lastUsed = await sessionRepository.GetLastUsedAtByTemplateIdsAsync(
+            currentUser.UserId, [template.Id], cancellationToken);
+        return TemplateMapper.ToResponse(template, LastUsedOrNull(lastUsed, template.Id));
+    }
+
+    /// <summary>
+    /// `IReadOnlyDictionary&lt;long, DateTime&gt;.GetValueOrDefault` anahtar yokken `DateTime`'ın
+    /// (value type) varsayılanını (0001-01-01) döner, `null` DEĞİL — hiç kullanılmamış bir
+    /// şablon için "kullanılmamış" ile "0001 yılında kullanılmış" karışmasın diye burada
+    /// açıkça `TryGetValue` ile `DateTime?`'a çevriliyor.
+    /// </summary>
+    private static DateTime? LastUsedOrNull(IReadOnlyDictionary<long, DateTime> lastUsed, long templateId) =>
+        lastUsed.TryGetValue(templateId, out var value) ? value : null;
 
     public async Task DeleteAsync(long id, CancellationToken cancellationToken = default)
     {
@@ -144,7 +162,9 @@ public class WorkoutTemplateService(
         // Tek SaveChangesAsync: sıra ya tamamen yazılır ya hiç (CLAUDE.md, UoW/transaction notu).
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return istenen.Select(id => ToResponse(sirayaGore[id])).ToList();
+        var lastUsed = await sessionRepository.GetLastUsedAtByTemplateIdsAsync(
+            currentUser.UserId, istenen, cancellationToken);
+        return istenen.Select(id => TemplateMapper.ToResponse(sirayaGore[id], LastUsedOrNull(lastUsed, id))).ToList();
     }
 
     /// <summary>
@@ -205,6 +225,15 @@ public class WorkoutTemplateService(
         }
     }
 
+    public async Task<TemplateResponse> UpdateSharingAsync(
+        long id, bool? overrideValue, CancellationToken cancellationToken = default)
+    {
+        var template = await OwnedOrThrowAsync(id, cancellationToken);
+        template.IsSharedOverride = overrideValue;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ToResponseAsync(template, cancellationToken);
+    }
+
     private async Task<WorkoutTemplate> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)
         => await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(TemplateNotFound);
@@ -229,20 +258,4 @@ public class WorkoutTemplateService(
         }
     }
 
-    private static TemplateResponse ToResponse(WorkoutTemplate template) => new(
-        template.Id,
-        template.Name,
-        template.CreatedAt,
-        template.TemplateExercises
-            .OrderBy(te => te.OrderIndex)
-            .Select(te => new TemplateExerciseResponse(
-                te.Id,
-                te.ExerciseId,
-                te.Exercise.Name,
-                te.Exercise.Category,
-                te.Exercise.IsArchived,
-                te.OrderIndex,
-                te.PlannedSets,
-                te.RestSeconds))
-            .ToList());
 }

@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { Slot, useLocalSearchParams, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { History, Trophy } from 'lucide-react-native';
+import { Dumbbell, History, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, type KullaniciProfili } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -13,6 +13,23 @@ import ProfilSekmeleri from '../../../../../src/components/ProfilSekmeleri';
 import TakipDugmesi from '../../../../../src/components/TakipDugmesi';
 
 const LISTE_EKRANLARI = ['friends', 'followers', 'following'];
+
+/**
+ * #467: Şablonlar sekmesi SADECE arkadaşsan görünür (History/Records'un "her zaman görünür,
+ * içerik boşalır" deseninin BİLEREK aksine). Gizli hesapta Geçmiş de düşer (#294'ten beri).
+ */
+export function gorunurSekmeler(kok: string, arkadas: boolean, gizli: boolean) {
+  return (
+    [
+      { to: `${kok}/history`, etiketAnahtari: 'kabuk.sekmeGecmis' as const, ikon: History },
+      { to: `${kok}/records`, etiketAnahtari: 'kabuk.sekmeRekorlar' as const, ikon: Trophy },
+      { to: `${kok}/templates`, etiketAnahtari: 'kabuk.sekmeSablonlar' as const, ikon: Dumbbell },
+    ] as const
+  ).filter((s) => {
+    if (s.to.endsWith('/templates')) return arkadas;
+    return !gizli || s.to.endsWith('/records');
+  });
+}
 
 /**
  * Başlık + sekmeler. Sayfa başlığını da BU bildirir: üst düzende bildirilse efekt sırası gereği (önce
@@ -36,12 +53,7 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
   const arkadas = profil.data.relation === 'Friends';
   const gizli = profil.data.privacyLevel === 'Gizli';
   const kok = `/profile/u/${ad}`;
-  const sekmeler = (
-    [
-      { to: `${kok}/history`, etiketAnahtari: 'kabuk.sekmeGecmis', ikon: History },
-      { to: `${kok}/records`, etiketAnahtari: 'kabuk.sekmeRekorlar', ikon: Trophy },
-    ] as const
-  ).filter((s) => !gizli || s.to.endsWith('/records'));
+  const sekmeler = gorunurSekmeler(kok, arkadas, gizli);
 
   return (
     <>

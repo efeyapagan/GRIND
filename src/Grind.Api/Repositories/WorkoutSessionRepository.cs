@@ -109,6 +109,19 @@ public class WorkoutSessionRepository(AppDbContext context)
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<long, DateTime>> GetLastUsedAtByTemplateIdsAsync(
+        long userId, IReadOnlyCollection<long> templateIds, CancellationToken cancellationToken = default)
+    {
+        if (templateIds.Count == 0)
+            return new Dictionary<long, DateTime>();
+
+        return await Set
+            .Where(s => s.UserId == userId && s.TemplateId != null && templateIds.Contains(s.TemplateId.Value))
+            .GroupBy(s => s.TemplateId!.Value)
+            .Select(g => new { TemplateId = g.Key, LastUsedAt = g.Max(s => s.StartedAt) })
+            .ToDictionaryAsync(x => x.TemplateId, x => x.LastUsedAt, cancellationToken);
+    }
+
     /// <summary>
     /// Geçmiş listesinin ortak süzgeci: hem <c>/api/history</c> (kendi geçmişin) hem
     /// <c>GET /api/users/{username}/history</c> buradan geçer, bu yüzden kural TEK yerde durur.

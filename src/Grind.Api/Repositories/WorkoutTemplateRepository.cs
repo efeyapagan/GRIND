@@ -45,5 +45,6 @@ public class WorkoutTemplateRepository(AppDbContext context)
     private static IQueryable<WorkoutTemplate> WithExercises(IQueryable<WorkoutTemplate> query)
         => query
             .Include(t => t.TemplateExercises.OrderBy(te => te.OrderIndex))
-            .ThenInclude(te => te.Exercise);
+            .ThenInclude(te => te.Exercise)
+            .Include(t => t.SavedFromUser);
 }
