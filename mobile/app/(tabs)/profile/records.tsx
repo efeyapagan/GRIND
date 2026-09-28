@@ -30,7 +30,7 @@ export default function RecordsScreen() {
         <View className="rounded-xl bg-surface-2 p-4">
           <View className="flex-col gap-1">
             <Text className="text-label text-muted">{t('rekorlar.enUzunSeri')}</Text>
-            <Text className="text-metric text-fg">{`${takvimOzeti.longestWeekStreak} hafta`}</Text>
+            <Text className="text-metric text-fg">{t('takvim.haftaSayisi', { count: takvimOzeti.longestWeekStreak })}</Text>
           </View>
         </View>
       )}
