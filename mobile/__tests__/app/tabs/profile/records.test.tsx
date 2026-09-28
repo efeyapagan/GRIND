@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useGuncelTakvimOzeti, usePlatolar, useRecords } from '@grind/shared/api/queries';
+import { i18n } from '@grind/shared/i18n';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import RecordsScreen from '../../../../app/(tabs)/profile/records';
 
@@ -54,4 +55,25 @@ test('platodaki hareketin kartinda plato rozeti ve sunucunun verdigi sure/1RM go
   expect(bench.getByText('8 haftadır ilerleme yok · tahmini 1RM 112,5 kg')).toBeTruthy();
 
   expect(within(screen.getByTestId('rekor-karti-2')).queryByText('Plato')).toBeNull();
+});
+
+/** #517: en uzun seri biriminin (hafta) satir ici yazilmayip katalogdan, dile ve sayiya gore gelmesi. */
+test.each([
+  ['tr', 1, '1 hafta'],
+  ['tr', 3, '3 hafta'],
+  ['en', 1, '1 week'],
+  ['en', 3, '3 weeks'],
+])('en uzun seri %s dilinde %i icin "%s" yazar (#517)', async (dil, hafta, beklenen) => {
+  (useRecords as jest.Mock).mockReturnValue({ data: [], isLoading: false, isError: false });
+  (useGuncelTakvimOzeti as jest.Mock).mockReturnValue({ data: { longestWeekStreak: hafta } });
+  (usePlatolar as jest.Mock).mockReturnValue({ data: [] });
+
+  await i18n.changeLanguage(dil);
+  try {
+    await ekraniOlustur();
+
+    expect(screen.getByText(beklenen)).toBeTruthy();
+  } finally {
+    await i18n.changeLanguage('tr');
+  }
 });
