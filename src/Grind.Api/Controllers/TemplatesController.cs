@@ -75,6 +75,17 @@ public class TemplatesController(IWorkoutTemplateService templateService) : Cont
         => Ok(await templateService.PatchAsync(id, request, cancellationToken));
 
     /// <summary>
+    /// Paylaşım override'ı (#467). Gövde <c>{ "override": true | false | null }</c> — null
+    /// varsayılana (hesabın gizlilik seviyesi) döner.
+    /// </summary>
+    [HttpPut("{id:long}/sharing")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TemplateResponse>> UpdateSharing(
+        long id, UpdateTemplateSharingRequest request, CancellationToken cancellationToken)
+        => Ok(await templateService.UpdateSharingAsync(id, request.Override, cancellationToken));
+
+    /// <summary>
     /// GERÇEK siler (egzersizlerin aksine). Şablon satırları CASCADE ile gider; o şablondan
     /// başlatılmış oturumlar SİLİNMEZ, yalnızca şablon referansını kaybeder.
     /// </summary>

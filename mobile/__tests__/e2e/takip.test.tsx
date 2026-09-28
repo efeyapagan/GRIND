@@ -143,7 +143,7 @@ test('Takipciler sayaci listeyi acar; satirlar iliskiye gore ciziler, Geri takip
   expect(istekler).toContainEqual({ method: 'POST', path: '/users/can/follow' });
 }, 60_000);
 
-test('arkadasin profili: baslik, Takibi birak, yalniz Gecmis ve Rekorlar; gecmis karti silinemez', async () => {
+test('arkadasin profili: baslik, Takibi birak, Gecmis/Rekorlar/Sablonlar; gecmis karti silinemez', async () => {
   takipBackendiKur();
 
   await renderRouterAsync('./app', { initialUrl: '/profile/u/ayse' });
@@ -152,7 +152,7 @@ test('arkadasin profili: baslik, Takibi birak, yalniz Gecmis ve Rekorlar; gecmis
   expect(screen.getByText('24 yaş')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Takibi bırak' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Profili düzenle' })).toBeNull();
-  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar']);
+  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Şablonlar']);
 
   await fireEvent.press(await screen.findByText('Push Day'));
 

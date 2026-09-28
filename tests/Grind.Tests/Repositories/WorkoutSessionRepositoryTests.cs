@@ -560,4 +560,54 @@ public class WorkoutSessionRepositoryTests
 
         Assert.Empty(await repository.GetInRangeAsync(davetsiz.Id, null, null));
     }
+
+    // ---- Faz 15: şablon paylasimi (#467) ----
+
+    [Fact]
+    public async Task GetLastUsedAtByTemplateIdsAsync_en_son_baslangici_dondurur()
+    {
+        var (context, user, repository, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = new WorkoutTemplate { User = user, Name = $"Sablon {Guid.NewGuid():N}", CreatedAt = DateTime.UtcNow };
+            context.Add(sablon);
+            await context.SaveChangesAsync();
+
+            var eski = TestDatabase.NewSession(user);
+            eski.TemplateId = sablon.Id;
+            eski.StartedAt = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
+            var yeni = TestDatabase.NewSession(user);
+            yeni.TemplateId = sablon.Id;
+            yeni.StartedAt = new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc);
+            context.AddRange(eski, yeni);
+            await context.SaveChangesAsync();
+
+            var sonuc = await repository.GetLastUsedAtByTemplateIdsAsync(user.Id, [sablon.Id]);
+
+            Assert.Equal(yeni.StartedAt, sonuc[sablon.Id]);
+        }
+    }
+
+    [Fact]
+    public async Task GetLastUsedAtByTemplateIdsAsync_kullanilmamis_sablon_sozlukte_yok()
+    {
+        var (_, user, repository, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sonuc = await repository.GetLastUsedAtByTemplateIdsAsync(user.Id, [999_999_999]);
+
+            Assert.False(sonuc.ContainsKey(999_999_999));
+        }
+    }
+
+    private static async Task<(AppDbContext Context, User User, WorkoutSessionRepository Repository, IAsyncDisposable Transaction)>
+        CreateAsync()
+    {
+        var context = TestDatabase.CreateContext();
+        var transaction = await context.Database.BeginTransactionAsync();
+        var user = TestDatabase.NewUser();
+        context.Add(user);
+        await context.SaveChangesAsync();
+        return (context, user, new WorkoutSessionRepository(context), transaction);
+    }
 }

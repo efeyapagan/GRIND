@@ -14,8 +14,12 @@ const ALT_BASLIK_HAREKET_SAYISI = 3;
 /**
  * #439: antrenman ekranindaki sablon kartinin ozeti. Esitlikte listede ONCE gelen kategori kazanir
  * ki kart her acilista ayni figuru cizsin; hic hareket yoksa `Other`.
+ *
+ * #467: parametre bilerek `Sablon`in tamami degil yalnizca `exercises` alanini istiyor -- boylece
+ * kendi sablonlarinla ayni ozet fonksiyonu, daha az alan tasiyan `SharedSablon` (baskasinin
+ * paylastigi sablon) icin de degisiklik gerekmeden calisir.
  */
-export function sablonOzeti(sablon: Sablon): SablonOzeti {
+export function sablonOzeti(sablon: Pick<Sablon, 'exercises'>): SablonOzeti {
   // Map ekleme sirasini korur: once say, sonra ilk gorulme sirasiyla en buyugu sec.
   const sayilar = new Map<EgzersizKategorisi, number>();
   for (const hareket of sablon.exercises) {
