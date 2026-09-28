@@ -30,7 +30,7 @@ public class WorkoutTemplateServiceTests
 
         var service = new WorkoutTemplateService(
             new WorkoutTemplateRepository(context), new ExerciseRepository(context),
-            new UnitOfWork(context), new StubCurrentUser(user.Id));
+            new WorkoutSessionRepository(context), new UnitOfWork(context), new StubCurrentUser(user.Id));
 
         return (context, user, service, transaction);
     }
@@ -441,6 +441,39 @@ public class WorkoutTemplateServiceTests
             var kalanOturum = await context.Set<WorkoutSession>().FirstOrDefaultAsync(s => s.Id == oturum.Id);
             Assert.NotNull(kalanOturum);
             Assert.Null(kalanOturum.TemplateId);
+        }
+    }
+
+    // ---- LastUsedAt ----
+
+    [Fact]
+    public async Task LastUsedAt_en_son_antrenman_baslangicini_gosterir()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+            var oturum = TestDatabase.NewSession(user);
+            oturum.TemplateId = olusan.Id;
+            oturum.StartedAt = new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc);
+            context.Add(oturum);
+            await context.SaveChangesAsync();
+
+            var okunan = await service.GetByIdAsync(olusan.Id);
+
+            Assert.Equal(oturum.StartedAt, okunan.LastUsedAt);
+        }
+    }
+
+    [Fact]
+    public async Task LastUsedAt_hic_kullanilmadiysa_null()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+
+            Assert.Null(olusan.LastUsedAt);
         }
     }
 }
