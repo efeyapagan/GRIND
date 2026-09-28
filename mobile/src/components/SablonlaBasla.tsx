@@ -87,7 +87,14 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             onBasla={(sablon) => onBasla(sablon.id)}
             onMenuAc={menuyuAc}
             onMenuKapat={() => setMenu(null)}
-            onSirala={(yeniSira) => siralama.mutate(yeniSira.map((sablon) => sablon.id))}
+            onSirala={(yeniSira) =>
+              // #467: backend `ReorderAsync` kullanicinin TUM sablonlarinin (kendi + kaydedilen) id
+              // kumesini birebir bekler; yalnizca karuseldeki kendi sablonlari gonderilirse 400 doner.
+              siralama.mutate([
+                ...yeniSira.map((sablon) => sablon.id),
+                ...kaydedilenSablonlar.map((sablon) => sablon.id),
+              ])
+            }
             kartCiz={(sablon, dokunus) => (
               <SablonVitrinKarti
                 ref={(kart) => {
