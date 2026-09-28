@@ -265,6 +265,7 @@ export const tr = {
     baslik: 'Antrenman',
     devamEdiyor: 'Devam ediyor',
     baslangic: 'Başlangıç {{saat}}',
+    sureyeDon: 'Antrenmanın devam ediyor, {{sure}} — antrenmana dön',
     iptalEt: 'Antrenmanı iptal et',
     bitir: 'Antrenmanı bitir',
     nasilGecti: 'Nasıl geçti?',
@@ -424,6 +425,10 @@ export const tr = {
     setBirimi: 'set',
     saatBirimi: 'sa',
     dakikaBirimi: 'dk',
+    // #471: özetteki her sayının altında, neyin ne olduğunu söyleyen soluk etiket.
+    etiketSetSayisi: 'Set sayısı',
+    etiketHacim: 'Hacim',
+    etiketSure: 'Süre',
     bosDurumMetni: 'Bu antrenmanda set yok.',
     detayiKapat: 'Antrenman ayrıntısını kapat',
   },

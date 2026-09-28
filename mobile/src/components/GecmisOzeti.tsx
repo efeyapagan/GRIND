@@ -11,6 +11,7 @@ import { useIkonRenk } from '../ui/renkler';
 /**
  * Gecmis antrenmaninin ozeti -- tarih, tur etiketi, set/hacim/sure. #382: hem listedeki kartta
  * (`GecmisKarti`) hem de ayrinti panelinin (`GecmisDetayPaneli`) basliginda ayni gorunur.
+ * #471: her sayinin altinda ne oldugunu soyleyen soluk (`accent-soft`) bir etiket var.
  */
 export default function GecmisOzeti({ oturum }: { oturum: GecmisOturum }) {
   const ikonRenk = useIkonRenk();
@@ -26,18 +27,36 @@ export default function GecmisOzeti({ oturum }: { oturum: GecmisOturum }) {
         </View>
         <TurEtiketi>{oturum.templateName ?? t('gecmis.serbest')}</TurEtiketi>
       </View>
-      <View className="flex-row flex-wrap items-baseline gap-4">
-        <View className="flex-row items-baseline gap-1">
-          <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{oturum.setCount}</Text>
-          <Text className="text-label-xs text-muted uppercase">{t('gecmis.setBirimi')}</Text>
-        </View>
-        <View className="flex-row items-baseline gap-1">
-          <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{formatWeight(oturum.totalVolume, dil)}</Text>
-          <Text className="text-label-xs text-muted uppercase">kg</Text>
-        </View>
-        {/* #246: medyan dinlenmenin (#71) yerini aldi. Acik antrenmanda sure yok, hicbir sey cizilmez. */}
-        {oturum.durationSeconds !== null && <AntrenmanSuresi saniye={oturum.durationSeconds} />}
+      <View className="flex-row flex-wrap items-start gap-4">
+        <OzetDegeri etiket={t('gecmis.etiketSetSayisi')}>
+          <View className="flex-row items-baseline gap-1">
+            <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{oturum.setCount}</Text>
+            <Text className="text-label-xs text-muted uppercase">{t('gecmis.setBirimi')}</Text>
+          </View>
+        </OzetDegeri>
+        <OzetDegeri etiket={t('gecmis.etiketHacim')}>
+          <View className="flex-row items-baseline gap-1">
+            <Text className={`text-metric ${bos ? 'text-muted' : 'text-fg'}`}>{formatWeight(oturum.totalVolume, dil)}</Text>
+            <Text className="text-label-xs text-muted uppercase">kg</Text>
+          </View>
+        </OzetDegeri>
+        {/* #246: medyan dinlenmenin (#71) yerini aldi. Acik antrenmanda sure yok, etiketiyle birlikte cizilmez. */}
+        {oturum.durationSeconds !== null && (
+          <OzetDegeri etiket={t('gecmis.etiketSure')}>
+            <AntrenmanSuresi saniye={oturum.durationSeconds} />
+          </OzetDegeri>
+        )}
       </View>
+    </View>
+  );
+}
+
+/** #471: bir ozet degeri ve altinda ne oldugunu soyleyen soluk turuncu etiket. */
+function OzetDegeri({ etiket, children }: { etiket: string; children: React.ReactNode }) {
+  return (
+    <View className="flex-col">
+      {children}
+      <Text className="text-label-xs text-accent-soft">{etiket}</Text>
     </View>
   );
 }

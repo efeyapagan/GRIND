@@ -2,8 +2,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { oturumBittiTazele, useFinishSession, useOpenSession, useTemplate } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
+import { dinlenmeBaslat, duraklatildiMi, kalanMs, type Dinlenme } from '@grind/shared/lib/dinlenme';
 import AntrenmanBitirScreen from '../../../app/(tabs)/antrenman-bitir';
 
+// #477: ekran, dinlenme sayacini odaklandiginda duraklatip biraktiginda surduruyor.
+let mockDinlenme: Dinlenme | null = null;
+let mockSonDinlenme: Dinlenme | null = null;
+let mockOdakBirak: () => void = () => {};
+jest.mock('@grind/shared/restTimer', () => ({
+  useRestTimer: () => [mockDinlenme, (yeni: Dinlenme | null) => { mockDinlenme = yeni; mockSonDinlenme = yeni; }],
+}));
 jest.mock('@grind/shared/api/queries', () => ({
   oturumBittiTazele: jest.fn(),
   useFinishSession: jest.fn(),
@@ -23,6 +31,11 @@ function bitenOturum(gecersizler: Record<string, unknown> = {}) {
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
+  // Odak kazanma/birakma: geri cagrinin dondurdugu temizleyici "ekrandan cikildi" demektir.
+  useFocusEffect: (geriCagri: () => (() => void) | void) => {
+    const temizle = geriCagri();
+    mockOdakBirak = () => temizle?.();
+  },
   useRouter: () => ({ replace: mockReplace, back: mockBack }),
   Redirect: ({ href }: { href: string }) =>
     require('react').createElement(require('react-native').Text, null, `yonlendirme:${href}`),
@@ -54,6 +67,9 @@ function ekraniOlustur() {
 }
 
 beforeEach(() => {
+  mockDinlenme = null;
+  mockSonDinlenme = null;
+  mockOdakBirak = () => {};
   mockReplace.mockReset();
   mockBack.mockReset();
   oturumBittiTazeleMock.mockReset();
@@ -346,5 +362,49 @@ describe('bitince paylasim karti', () => {
 
     expect(screen.queryByText('Galeriye kaydet')).toBeNull();
     await waitFor(() => expect(screen.getByText('Şablon olarak kaydedilsin mi?')).toBeTruthy());
+  });
+});
+
+// ---- Dinlenme sayaci duraklar (#477) ----
+
+describe('bitirme ekraninda dinlenme sayaci', () => {
+  /** Ekrani sayac CALISIR halde acar ve o andaki sayac degerini dondurur. */
+  async function sayacliEkran() {
+    const simdi = Date.now();
+    mockDinlenme = dinlenmeBaslat(simdi, 90);
+    await ekraniOlustur();
+    return simdi;
+  }
+
+  /**
+   * #477 (kullanici sikayeti): "1-5 degerlendirme sayaci geldiginde sure hala akiyor". Bu ekranda
+   * karar verirken dinlenme tukenmemeli.
+   */
+  test('ekran acilinca sayac duraklatilir', async () => {
+    await sayacliEkran();
+
+    expect(duraklatildiMi(mockSonDinlenme!)).toBe(true);
+  });
+
+  /** "Devam et" ile antrenmana donulunce sayac KALDIGI YERDEN surer. */
+  test('ekrandan cikinca sayac surdurulur', async () => {
+    await sayacliEkran();
+    const duraklatilmisKalan = kalanMs(mockSonDinlenme!, Date.now());
+
+    mockOdakBirak();
+
+    expect(duraklatildiMi(mockSonDinlenme!)).toBe(false);
+    // TAM esitlik beklenemez: `Date.now()` iki okuma arasinda ilerliyor (CI'da 1 ms fark cikti).
+    // Onemli olan duraklamada gecen surenin YUTULMAMIS olmasi; 1 sn tolerans bunu ayirt eder.
+    expect(Math.abs(kalanMs(mockSonDinlenme!, Date.now()) - duraklatilmisKalan)).toBeLessThan(1000);
+  });
+
+  /** Sayac yoksa ekran hicbir sey yapmaz -- bos bir duraklatma kaydi uretmez. */
+  test('sayac yokken bir sey yapilmaz', async () => {
+    mockDinlenme = null;
+
+    await ekraniOlustur();
+
+    expect(mockSonDinlenme).toBeNull();
   });
 });

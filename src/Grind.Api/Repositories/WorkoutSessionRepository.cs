@@ -122,10 +122,28 @@ public class WorkoutSessionRepository(AppDbContext context)
             .ToDictionaryAsync(x => x.TemplateId, x => x.LastUsedAt, cancellationToken);
     }
 
+    /// <summary>
+    /// Geçmiş listesinin ortak süzgeci: hem <c>/api/history</c> (kendi geçmişin) hem
+    /// <c>GET /api/users/{username}/history</c> buradan geçer, bu yüzden kural TEK yerde durur.
+    ///
+    /// #436: geçmişte yalnızca BİTMİŞ ve EN AZ BİR SETİ olan oturumlar görünür.
+    /// - Devam eden antrenman geçmişe girmez; kendi ucundan gelir ve bitirilince listede belirir.
+    ///   Kayıp bir işlevsellik yok, oturum da silinmiyor.
+    /// - Şablonla açılıp hiç set girilmeden bırakılmış oturum listeyi "0 set 0 kg" satırlarıyla
+    ///   kirletiyordu.
+    ///
+    /// Bu, <c>HistorySessionResponse</c>'taki eski "setsiz oturum geçmişte YİNE görünür" kararını
+    /// (geçmiş = oturum günlüğü) BİLEREK geçersiz kılar — kullanıcı kararı.
+    ///
+    /// DİKKAT: bugün mobilde oturum NOTU girilebilen bir ekran yok (`notes` yalnızca API'de), bu
+    /// yüzden setsiz bir oturumda saklanacak bilgi de yok. Not arayüzü eklenirse bu süzgeç yeniden
+    /// düşünülmeli: "setsiz ama notlu oturum veridir" (Faz 11 Karar 8).
+    /// </summary>
     private IQueryable<WorkoutSession> FilterHistory(
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive, long? exerciseId)
     {
-        var query = FilterByRange(userId, fromUtcInclusive, toUtcExclusive);
+        var query = FilterByRange(userId, fromUtcInclusive, toUtcExclusive)
+            .Where(s => s.EndedAt != null && s.SetEntries.Any());
 
         if (exerciseId is { } id)
         {

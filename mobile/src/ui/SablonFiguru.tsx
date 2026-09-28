@@ -1,94 +1,118 @@
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Defs, FeGaussianBlur, Filter, G, Line, Path, Rect } from 'react-native-svg';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import type { EgzersizKategorisi } from '@grind/shared/api/queries';
+import { figurPozu } from './figurPozu';
 import { useRenkPaleti } from './renkler';
 
 const CIZGI = 8;
 /** Figurun cok hafif bulanikligi (viewBox birimi; 112 px'lik figurde ~1,5 px). */
 const BULANIKLIK = 1.3;
 
-/** Govde parcalari ayni kalin, yuvarlak uclu cizgi -- piktogram gorunumu. */
-function Uzuv({ d }: { d: string }) {
-  return <Path d={d} strokeWidth={CIZGI} strokeLinecap="round" strokeLinejoin="round" fill="none" />;
-}
+const AnimasyonluPath = Animated.createAnimatedComponent(Path);
+const AnimasyonluLine = Animated.createAnimatedComponent(Line);
+const AnimasyonluRect = Animated.createAnimatedComponent(Rect);
+const AnimasyonluCircle = Animated.createAnimatedComponent(Circle);
 
-/** Iki ucunda plaka olan bar; `y` barin ekseni. */
-function Bar({ x1, x2, y }: { x1: number; x2: number; y: number }) {
+/** #474: bir inis ya da kalkis; ardindan geri doner (`withRepeat` ters yonde tekrarlar). */
+const YARIM_TUR_MS = 1400;
+
+/**
+ * #474: figurun parcalari; her biri kendi ozelliklerini her karede `figurPozu`ndan okur (UI thread'de).
+ * Hook sayisi kategoriden bagimsiz sabit kalsin diye hepsi her zaman hesaplanir; bari ya da dambili
+ * olmayan figurde o parca cizilmez.
+ */
+function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<number> }) {
+  const baslangic = figurPozu(kategori, 0);
+
+  const barProps = useAnimatedProps(() => {
+    const bar = figurPozu(kategori, p.value).bar;
+    return bar ? { x1: bar.x1, x2: bar.x2, y1: bar.y, y2: bar.y } : {};
+  });
+  const solPlakaProps = useAnimatedProps(() => {
+    const bar = figurPozu(kategori, p.value).bar;
+    return bar ? { x: bar.x1 + 2, y: bar.y - 10 } : {};
+  });
+  const sagPlakaProps = useAnimatedProps(() => {
+    const bar = figurPozu(kategori, p.value).bar;
+    return bar ? { x: bar.x2 - 8, y: bar.y - 10 } : {};
+  });
+  const basProps = useAnimatedProps(() => {
+    const bas = figurPozu(kategori, p.value).bas;
+    return { cx: bas.x, cy: bas.y };
+  });
+  const govdeProps = useAnimatedProps(() => ({ d: figurPozu(kategori, p.value).govde }));
+  const kollarProps = useAnimatedProps(() => ({ d: figurPozu(kategori, p.value).kollar }));
+  const solDambilProps = useAnimatedProps(() => {
+    const dambil = figurPozu(kategori, p.value).agirliklar[0];
+    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+  });
+  const sagDambilProps = useAnimatedProps(() => {
+    const dambil = figurPozu(kategori, p.value).agirliklar[1];
+    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+  });
+
   return (
     <>
-      <Line x1={x1} y1={y} x2={x2} y2={y} strokeWidth={4} strokeLinecap="round" />
-      <Rect x={x1 + 2} y={y - 10} width={6} height={20} rx={2} strokeWidth={0} />
-      <Rect x={x2 - 8} y={y - 10} width={6} height={20} rx={2} strokeWidth={0} />
+      {baslangic.bar && (
+        <>
+          <AnimasyonluLine animatedProps={barProps} strokeWidth={4} strokeLinecap="round" />
+          {baslangic.bar.plakali && (
+            <>
+              <AnimasyonluRect animatedProps={solPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
+              <AnimasyonluRect animatedProps={sagPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
+            </>
+          )}
+        </>
+      )}
+      <AnimasyonluCircle animatedProps={basProps} r={8} strokeWidth={0} />
+      {/* Govde parcalari ayni kalin, yuvarlak uclu cizgi -- piktogram gorunumu. */}
+      <AnimasyonluPath animatedProps={govdeProps} strokeWidth={CIZGI} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <AnimasyonluPath animatedProps={kollarProps} strokeWidth={CIZGI} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {baslangic.agirliklar.length > 0 && (
+        <>
+          <AnimasyonluRect animatedProps={solDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
+          <AnimasyonluRect animatedProps={sagDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
+        </>
+      )}
     </>
   );
 }
-
-/** Push: bari basin ustune iten sporcu. */
-function Itis() {
-  return (
-    <>
-      <Bar x1={10} x2={90} y={14} />
-      <Circle cx={50} cy={32} r={8} strokeWidth={0} />
-      <Uzuv d="M50 44 L50 70 M50 70 L40 96 M50 70 L60 96" />
-      <Uzuv d="M44 46 L32 32 L32 14 M56 46 L68 32 L68 14" />
-    </>
-  );
-}
-
-/** Pull: barfiks cekmis sporcu, dizler bukuk. */
-function Cekis() {
-  return (
-    <>
-      <Line x1={12} y1={8} x2={88} y2={8} strokeWidth={4} strokeLinecap="round" />
-      <Circle cx={50} cy={24} r={8} strokeWidth={0} />
-      <Uzuv d="M44 38 L32 28 L34 8 M56 38 L68 28 L66 8" />
-      <Uzuv d="M50 36 L50 64 M50 64 L42 80 L48 94 M50 64 L58 80 L64 92" />
-    </>
-  );
-}
-
-/** Legs: bar sirtinda, cokmus squat -- yandan. */
-function Squat() {
-  return (
-    <>
-      <Bar x1={22} x2={86} y={30} />
-      <Circle cx={60} cy={16} r={8} strokeWidth={0} />
-      <Uzuv d="M56 30 L40 60 M40 60 L64 66 L58 94" />
-      <Uzuv d="M52 36 L46 30" />
-    </>
-  );
-}
-
-/** Other: iki elinde dambil, biri kivrilmis (curl). */
-function Dambil() {
-  return (
-    <>
-      <Circle cx={50} cy={16} r={8} strokeWidth={0} />
-      <Uzuv d="M50 28 L50 62 M50 62 L42 94 M50 62 L58 94" />
-      <Uzuv d="M46 32 L36 50 L28 36 M54 32 L62 50 L64 64" />
-      <Rect x={20} y={30} width={16} height={6} rx={2} strokeWidth={0} />
-      <Rect x={56} y={64} width={16} height={6} rx={2} strokeWidth={0} />
-    </>
-  );
-}
-
-const FIGURLER: Record<EgzersizKategorisi, () => React.JSX.Element> = {
-  Push: Itis,
-  Pull: Cekis,
-  Legs: Squat,
-  Other: Dambil,
-};
 
 /**
  * #439: sablon kartinin arkasindaki silik sporcu figuru; sablonun baskin kategorisine gore secilir.
  * Referanstaki gibi cok hafif bulanik cizilir: arka planda kalsin, metinle yarismasin.
  * Saf dekorasyon: dokunmayi yutmaz, erisilebilirlik agacina girmez. Renk `fg`, dusuk opaklikla --
  * iki temada da zeminden hafifce ayrilir, metnin okunurlugunu bozmaz.
+ *
+ * #474: figur durmaksizin kendi hareketini yapar (Push overhead press, Pull barfiks, Legs squat, Other
+ * sirayla curl); pozlar `figurPozu`nda. Cihazda "hareketi azalt" aciksa baslangic karesinde -- #439'daki
+ * sabit cizimde -- durur.
  */
 export default function SablonFiguru({ kategori, boyut }: { kategori: EgzersizKategorisi; boyut: number }) {
   const palet = useRenkPaleti();
-  const Figur = FIGURLER[kategori];
+  const hareketiAzalt = useReducedMotion();
+  const p = useSharedValue(0);
+
+  useEffect(() => {
+    if (hareketiAzalt) {
+      p.value = 0;
+      return;
+    }
+    p.value = withRepeat(withTiming(1, { duration: YARIM_TUR_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
+    return () => cancelAnimation(p);
+  }, [hareketiAzalt, p]);
+
   // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir (Parilti ile ayni).
   const filtreId = `figur${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
@@ -105,7 +129,7 @@ export default function SablonFiguru({ kategori, boyut }: { kategori: EgzersizKa
           </Filter>
         </Defs>
         <G stroke={palet.fg} fill={palet.fg} opacity={0.22} filter={`url(#${filtreId})`}>
-          <Figur />
+          <Figur kategori={kategori} p={p} />
         </G>
       </Svg>
     </View>

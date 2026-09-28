@@ -13,8 +13,12 @@ import TurEtiketi from '../ui/TurEtiketi';
  * sunucuda dururken kullanici icin antrenman "kaybolmus" goruntusu olusuyordu. Bu kart acik
  * oturumu gorunur kilar. Oturum yokken (ya da sorgu henuz yuklenmemisken) HIC cizilmez: antrenmansiz
  * bir gunde Ana sayfa bugunku haliyle kalir.
+ *
+ * #480: ayni kart Sablonlarim ekraninda da (ust barin hemen altinda, kaydirmayla kacmayacak
+ * sekilde) cizilir -- `className` yalnizca kartin dis bosluklarini cagirana birakir, govdesi iki
+ * ekranda da AYNIDIR ("ana sayfadaki gibi", kullanici karari).
  */
-export default function DevamEdenAntrenman() {
+export default function DevamEdenAntrenman({ className = '' }: { className?: string }) {
   const { t } = useTranslation();
   const { data: oturum } = useOpenSession();
   const router = useRouter();
@@ -24,7 +28,7 @@ export default function DevamEdenAntrenman() {
   }
 
   return (
-    <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
+    <View className={`flex-col gap-3 rounded-xl bg-surface-2 p-4 ${className}`}>
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
           <View className="size-2 rounded-full bg-success" />

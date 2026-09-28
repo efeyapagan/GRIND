@@ -73,6 +73,13 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>Set eklemek oturumu acar ama KAPATMAZ; #436'dan beri gecmis yalnizca bitmisleri gosterir.</summary>
+    private static async Task AcikOturumuBitirAsync(HttpClient client)
+    {
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+        (await client.PostAsync($"/api/sessions/{acik!.Id}/finish", null)).EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task Gecmis_oturumu_setleriyle_ve_toplamiyla_dondurur()
     {
@@ -80,6 +87,8 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         var exerciseId = await CreateExerciseAsync(client);
         await PostSetAsync(client, exerciseId, 100m, 8);
         await PostSetAsync(client, exerciseId, 60m, 10);
+        // #436: geçmiş yalnızca BİTMİŞ oturumları gösterir.
+        await AcikOturumuBitirAsync(client);
 
         var sayfa = await client.GetFromJsonAsync<PagedResponse<HistorySessionResponse>>(
             "/api/history", Json);
@@ -194,8 +203,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         var client = await AuthenticatedClientAsync();
         var exerciseId = await CreateExerciseAsync(client);
         await PostSetAsync(client, exerciseId, 100m, 8);
-        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
-        (await client.PostAsync($"/api/sessions/{acik!.Id}/finish", null)).EnsureSuccessStatusCode();
+        await AcikOturumuBitirAsync(client);
 
         var ozet = await client.GetFromJsonAsync<DurationSummaryResponse>("/api/stats/duration", Json);
 

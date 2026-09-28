@@ -26,13 +26,17 @@ jest.mock('@grind/shared/pageTitle', () => ({ useHeaderTitle: () => 'Başlık' }
 jest.mock('../components/DinlenmeKabugu', () => ({ DinlenmeGostergesi: () => null }));
 
 let mockOkunmamis: number | undefined = 0;
+// #480: barin sag ucu (`BarSagUcu`) acik oturumu sorar -- oturum yokken "GRIND" yazisi durur.
+let mockAcikOturum: { isOpen: boolean; startedAt: string } | null = null;
 jest.mock('@grind/shared/api/queries', () => ({
   useOkunmamisBildirimSayisi: () => ({ data: mockOkunmamis }),
+  useOpenSession: () => ({ data: mockAcikOturum }),
 }));
 
 beforeEach(() => {
   mockPush.mockReset();
   mockOkunmamis = 0;
+  mockAcikOturum = null;
 });
 
 /** #324: ana sayfada sag ustte "GRIND" yazisinin yerini bildirim ve GRINDY kisayollari alir. */
@@ -134,4 +138,36 @@ test('sablonlar ekraninda ust bar durur', async () => {
   await render(<KabukBaslik />);
 
   expect(screen.getByText('GRIND')).toBeTruthy();
+});
+
+/**
+ * #480 (kullanici karari): "GRIND yazisi kalksin ve orada sure yazsin" -- acik antrenman varken
+ * barin sag ucunda gecen sure durur, boylece baska bir ekrandaki kullanici antrenmaninin
+ * surdugunu gorur. Sure barin ORTASINA konmadi: orasi dinlenme sayacinin yeri.
+ */
+test('acik antrenman varken GRIND yerini gecen sure alir', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-09-20T12:34:56Z'));
+  mockPathname = '/templates';
+  mockAcikOturum = { isOpen: true, startedAt: '2026-09-20T12:29:56Z' };
+
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByText('GRIND')).toBeNull();
+  expect(screen.getByText('5:00')).toBeTruthy();
+  jest.useRealTimers();
+});
+
+/** Antrenman ekraninin kendi barinda da ayni kural isler (iki barda tek bilesen). */
+test('antrenman ekraninda da acik antrenman varken sure gorunur', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-09-20T12:34:56Z'));
+  mockPathname = '/antrenman';
+  mockAcikOturum = { isOpen: true, startedAt: '2026-09-20T12:29:56Z' };
+
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByText('GRIND')).toBeNull();
+  expect(screen.getByText('5:00')).toBeTruthy();
+  jest.useRealTimers();
 });
