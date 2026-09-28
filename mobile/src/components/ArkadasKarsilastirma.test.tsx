@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { useArkadasDonemi } from '@grind/shared/api/queries';
 import { TakvimDonemiProvider } from '../ui/TakvimDonemiContext';
 import ArkadasKarsilastirma, { ANA_EKRAN_SATIRI } from './ArkadasKarsilastirma';
@@ -222,4 +222,31 @@ test('aylik donemde hedef dort kati gosterilir', async () => {
   await ciz('ay', BUGUN);
 
   expect(screen.getByText('6/12 gün')).toBeTruthy();
+});
+
+// ---- Kendi satiri (#512) ----
+
+/** Sinif adindaki `bg-*` zemin sinifi. */
+function zemin(sinif: string | undefined): string | undefined {
+  return sinif?.split(/\s+/).find((parca) => parca.startsWith('bg-'));
+}
+
+/**
+ * Kullanici bildirdi: kendi satiri bir ton acik zeminde (#425) ve hedef cubugunun kanali AYNI
+ * renkteydi -- kanal zeminde kayboluyor, oran okunmuyordu. Kanal HER satir turunde, uzerinde
+ * durdugu zeminden ayrismali.
+ */
+test('hedef cubugunun kanali her satirda satir zemininden ayrisir', async () => {
+  veriVer([
+    arkadas('ben', { isSelf: true, trainedDays: 1, weeklyTargetDays: 3 }),
+    arkadas('ali', { trainedDays: 2, weeklyTargetDays: 3 }),
+  ]);
+  await ciz();
+
+  for (const ad of ['ben', 'ali']) {
+    const satir = screen.getByLabelText(`${ad} profilini aç`);
+    const kanal = within(satir).getByTestId('hedef-kanali');
+    expect(zemin(kanal.props.className)).toBeDefined();
+    expect(zemin(kanal.props.className)).not.toBe(zemin(satir.props.className));
+  }
 });
