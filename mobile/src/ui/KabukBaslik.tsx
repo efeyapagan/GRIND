@@ -5,7 +5,7 @@ import { Bell, ChevronLeft, Menu, Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useOkunmamisBildirimSayisi, useOpenSession } from '@grind/shared/api/queries';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
-import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
+import { altEkranMi, geriHedefi, profilAnaEkraniMi, sabitGeriHedefi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
 import YorumDiliSecici from '../components/YorumDiliSecici';
 import BarSagUcu from './BarSagUcu';
@@ -52,6 +52,13 @@ export default function KabukBaslik() {
   const { data: acikOturum } = useOpenSession();
 
   function geriGit() {
+    // #499: bazi ekranlarin geri hedefi SABITTIR (ör. "Sablon olustur" -> "Antrenmana basla");
+    // gecmise bakmak nereden girildigine gore farkli yerlere dusuruyordu.
+    const sabit = sabitGeriHedefi(pathname);
+    if (sabit) {
+      router.replace(sabit as never);
+      return;
+    }
     const hedef = geriHedefi(pathname, router.canGoBack());
     if (hedef === 'geri') {
       router.back();
@@ -75,8 +82,12 @@ export default function KabukBaslik() {
           {/* #487: antrenman surerken "Antrenmana basla" yaniltiyordu. Cizginin genisligi
               `CizgiliBaslik` icinde basligin kendi olcusunden geldigi icin metin kisalinca cizgi
               de kendiliginden kisalir -- burada bir genislik verilmez. */}
+          {/* #499: baslik EKRANIN bildirdigi baslitir (`usePageTitle`) -- #494'un "Antrenmana basla"
+              gorunumunde ekran antrenman ACIKKEN de o basligi bildirir; oturuma bakan eski ternary
+              orada "Antrenman" yaziyordu. Baslik henuz bildirilmemisken (ilk cizim) oturuma gore
+              makul bir deger kullanilir, bar bir an bos kalmasin. */}
           <CizgiliBaslik>
-            {acikOturum?.isOpen ? t('kabuk.antrenman') : t('sablonlar.antrenmanaBasla')}
+            {baslik || (acikOturum?.isOpen ? t('kabuk.antrenman') : t('sablonlar.antrenmanaBasla'))}
           </CizgiliBaslik>
           <BarSagUcu />
           <DinlenmeGostergesi />

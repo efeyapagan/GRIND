@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, profilAnaEkraniMi, yonKarari } from './geriKaydirma';
+import { altEkranMi, geriGidilsinMi, geriHedefi, kenardanMi, profilAnaEkraniMi, yonKarari, sabitGeriHedefi } from './geriKaydirma';
 
 /**
  * #232: sol kenardan saga kaydirarak geri donme karari -- web ve mobil ayni saf fonksiyonlari
@@ -83,5 +83,20 @@ describe('profilAnaEkraniMi (issue #293 -- ust basliktaki hesap ayarlari kisayol
     expect(profilAnaEkraniMi('/')).toBe(false);
     expect(profilAnaEkraniMi('/antrenman')).toBe(false);
     expect(profilAnaEkraniMi('/templates')).toBe(false);
+  });
+});
+
+describe('sabitGeriHedefi (#499 -- sablon olustur ekranindan geri)', () => {
+  /** Kullanici karari: nereden girilirse girilsin geri cikis "Antrenmana basla" ekranina doner. */
+  test('sablon olustur ekraninin sabit hedefi antrenman ekranidir', () => {
+    expect(sabitGeriHedefi('/templates/new')).toBe('/antrenman');
+  });
+
+  /** AYIRT EDICI: baska hicbir ekranin sabit hedefi yok -- onlar gecmise bakmaya devam eder. */
+  test('diger ekranlarda sabit hedef yoktur', () => {
+    expect(sabitGeriHedefi('/templates')).toBeNull();
+    expect(sabitGeriHedefi('/templates/7')).toBeNull();
+    expect(sabitGeriHedefi('/antrenman')).toBeNull();
+    expect(sabitGeriHedefi('/')).toBeNull();
   });
 });

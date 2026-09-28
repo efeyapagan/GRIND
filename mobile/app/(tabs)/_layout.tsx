@@ -10,6 +10,7 @@ import {
   YON_KARAR_ESIGI,
   geriGidilsinMi,
   geriHedefi,
+  sabitGeriHedefi,
 } from '@grind/shared/lib/geriKaydirma';
 import { useAuth } from '../../src/auth/AuthContext';
 import DinlenmeKabugu from '../../src/components/DinlenmeKabugu';
@@ -71,6 +72,12 @@ function GeriKaydirilabilirIcerik() {
   }, [pathname, kayma]);
 
   function geriGit() {
+    // #499: ust barin geri tusuyla AYNI kurallar -- sabit hedefli ekranlar gecmise bakmaz.
+    const sabit = sabitGeriHedefi(pathname);
+    if (sabit) {
+      router.replace(sabit as never);
+      return;
+    }
     const hedef = geriHedefi(pathname, router.canGoBack());
     if (hedef === 'geri') {
       router.back();

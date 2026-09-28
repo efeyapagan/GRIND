@@ -81,3 +81,16 @@ const PROFIL_ANA_YOLLARI = new Set(['/profile', '/profile/history', '/profile/re
 export function profilAnaEkraniMi(konum: string): boolean {
   return PROFIL_ANA_YOLLARI.has(konum);
 }
+
+/**
+ * Geri tusunun/kaydirmasinin SABIT hedefi olan ekranlar (#499, kullanici karari): gecmise
+ * BAKILMAZ. "Sablon olustur" ekranindan geri cikilinca her zaman "Antrenmana basla" ekranina
+ * donulur -- sablon oradan olusturulur ve kullanici olusturduguyla hemen antrenmana baslar.
+ * Gecmise birakmak nereden girildigine gore (Sablonlarim, antrenman, bitirme sonrasi) farkli
+ * yerlere dusuruyordu.
+ */
+const SABIT_GERI_HEDEFLERI = new Map<string, string>([['/templates/new', '/antrenman']]);
+
+export function sabitGeriHedefi(konum: string): string | null {
+  return SABIT_GERI_HEDEFLERI.get(konum) ?? null;
+}

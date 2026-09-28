@@ -42,6 +42,17 @@ export function sahteBackendOlustur({ olcum = 'WeightReps' }: { olcum?: 'WeightR
       return state.sablonlar;
     }
 
+    // #499: antrenman ekrani, listenin sablonundan sapip sapmadigina bakmak icin oturumun
+    // sablonunu okur ("Sablon olarak kaydet" yalnizca sapmada gorunur).
+    if (method === 'GET' && /^\/templates\/\d+$/.test(path)) {
+      const id = Number(path.split('/')[2]);
+      const sablon = state.sablonlar.find((s: any) => s.id === id);
+      if (!sablon) {
+        throw new ApiError(404, 'Şablon yok');
+      }
+      return sablon;
+    }
+
     if (method === 'POST' && path === '/templates') {
       const yeni = {
         id: state.siradakiSablonId++,

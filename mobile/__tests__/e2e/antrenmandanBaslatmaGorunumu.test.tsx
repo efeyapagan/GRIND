@@ -11,15 +11,38 @@ jest.mock('@grind/shared/api/client', () => {
 
 const requestMock = request as jest.Mock;
 
+/** Sablonun hareketleri: bosken oturumdaki hareket bir SAPMA sayilir (#499). */
+const SABLON_HAREKETI = {
+  id: 1,
+  exerciseId: 1,
+  exerciseName: 'Bench Press',
+  category: 'Push',
+  isArchived: false,
+  orderIndex: 0,
+  plannedSets: 3,
+  restSeconds: 90,
+};
+
+const OTURUM_HAREKETI = {
+  exerciseId: 1,
+  exerciseName: 'Bench Press',
+  plannedSets: 3,
+  completedSets: 0,
+  restSeconds: 90,
+};
+
 /** Acik bir antrenmanla antrenman ekranini acar (gercek rotalar, yalnizca ag katmani sahte). */
-async function acikAntrenmanlaAc() {
+async function acikAntrenmanlaAc({
+  sablonHareketleri = [] as unknown[],
+  oturumHareketleri = [] as unknown[],
+} = {}) {
   await session.write('tok', new Date(Date.now() + 60_000).toISOString(), 'efe');
   const { sahteRequest, state } = sahteBackendOlustur();
   state.sablonlar.push({
     id: 1,
     name: 'Push Day',
     createdAt: new Date().toISOString(),
-    exercises: [],
+    exercises: sablonHareketleri,
   });
   state.acikOturum = {
     id: 1,
@@ -29,7 +52,7 @@ async function acikAntrenmanlaAc() {
     durationSeconds: null,
     templateId: 1,
     templateName: 'Push Day',
-    progress: [],
+    progress: oturumHareketleri,
   };
   requestMock.mockImplementation(sahteRequest);
   await renderRouterAsync('./app', { initialUrl: '/antrenman' });
@@ -75,3 +98,43 @@ test('baslatma gorunumunde baslatma dugmeleri basilamaz', async () => {
   expect(state.acikOturum).toBe(oncekiOturum);
   expect(screen.getByText('Şablonlarım')).toBeTruthy();
 }, 20_000);
+
+/**
+ * #499 (kullanici bildirdi: "menu start workout olmasina ragmen ust baslik workout kaliyor"):
+ * baslatma gorunumunde ust baslik da "Antrenmana basla" olur -- antrenman arka planda surse bile.
+ */
+test('baslatma gorunumunde ust baslik Antrenmana basla olur', async () => {
+  await acikAntrenmanlaAc();
+
+  await fireEvent.press(await screen.findByLabelText('Antrenmana başla ekranına dön'));
+  await screen.findByText('Şablonlarım');
+
+  expect(screen.getByRole('header')).toHaveTextContent('Antrenmana başla');
+});
+
+/**
+ * #499 (kullanici karari): ust satirda artik "Devam ediyor" rozeti degil SABLON ADI durur;
+ * baslangic saati bir alt satira, sablon adinin eski yerine iner.
+ */
+test('ust satirda sablon adi durur, In progress rozeti kalkti', async () => {
+  await acikAntrenmanlaAc({ sablonHareketleri: [SABLON_HAREKETI], oturumHareketleri: [OTURUM_HAREKETI] });
+
+  expect(await screen.findByText('Push Day')).toBeTruthy();
+  expect(screen.queryByText('Devam ediyor')).toBeNull();
+  expect(screen.getByText(/^Başlangıç /)).toBeTruthy();
+});
+
+/** Liste sablonuyla AYNI: kisayola gerek yok (kullanici: "degisiklik yapilmadiysa cikmasin"). */
+test('sapma yokken Sablon olarak kaydet gorunmez', async () => {
+  await acikAntrenmanlaAc({ sablonHareketleri: [SABLON_HAREKETI], oturumHareketleri: [OTURUM_HAREKETI] });
+
+  await screen.findByText('Push Day');
+  expect(screen.queryByText('Şablon olarak kaydet')).toBeNull();
+});
+
+/** Sablonda olmayan hareket eklendiyse kisayol "Hareket ekle"nin altinda cikar. */
+test('sapma varken Sablon olarak kaydet gorunur', async () => {
+  await acikAntrenmanlaAc({ sablonHareketleri: [], oturumHareketleri: [OTURUM_HAREKETI] });
+
+  expect(await screen.findByText('Şablon olarak kaydet')).toBeTruthy();
+});
