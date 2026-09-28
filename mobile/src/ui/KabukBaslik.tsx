@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Menu, Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { useOkunmamisBildirimSayisi } from '@grind/shared/api/queries';
+import { useOkunmamisBildirimSayisi, useOpenSession } from '@grind/shared/api/queries';
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
@@ -11,6 +11,7 @@ import YorumDiliSecici from '../components/YorumDiliSecici';
 import BarSagUcu from './BarSagUcu';
 import CizgiliBaslik from './CizgiliBaslik';
 import GrindyMaskot from './GrindyMaskot';
+import { ANTRENMAN_BARI_YUKSEKLIGI } from './olculer';
 import { useIkonRenk } from './renkler';
 
 /**
@@ -33,6 +34,10 @@ import { useIkonRenk } from './renkler';
  *
  * #480: "GRIND" yazisinin durdugu her yerde, ACIK ANTRENMAN varken yerini gecen sure alir
  * (`BarSagUcu`) -- kullanici baska bir ekrana gectiginde antrenmaninin surdugunu gorur.
+ *
+ * #487: antrenman barinin basligi oturuma gore degisir ("Antrenmana basla" -> "Antrenman") ve
+ * barin yuksekligi artik ACIK bir sabittir (`ANTRENMAN_BARI_YUKSEKLIGI`) -- dinlenme sayacinin
+ * genis paneli ayni sabitle cizilir ve bari TAM kapatir.
  */
 export default function KabukBaslik() {
   const ikonRenk = useIkonRenk();
@@ -44,6 +49,7 @@ export default function KabukBaslik() {
   const anaSayfa = pathname === '/';
   const yorumlarEkrani = pathname === '/insights';
   const { data: okunmamis = 0 } = useOkunmamisBildirimSayisi(anaSayfa);
+  const { data: acikOturum } = useOpenSession();
 
   function geriGit() {
     const hedef = geriHedefi(pathname, router.canGoBack());
@@ -61,8 +67,17 @@ export default function KabukBaslik() {
   if (pathname === '/antrenman') {
     return (
       <View style={{ paddingTop: insets.top }} className="bg-bg">
-        <View className="relative flex-row items-center justify-between gap-3 px-4 pb-1 pt-2">
-          <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
+        <View
+          testID="antrenman-bari"
+          style={{ height: ANTRENMAN_BARI_YUKSEKLIGI }}
+          className="relative flex-row items-center justify-between gap-3 px-4"
+        >
+          {/* #487: antrenman surerken "Antrenmana basla" yaniltiyordu. Cizginin genisligi
+              `CizgiliBaslik` icinde basligin kendi olcusunden geldigi icin metin kisalinca cizgi
+              de kendiliginden kisalir -- burada bir genislik verilmez. */}
+          <CizgiliBaslik>
+            {acikOturum?.isOpen ? t('kabuk.antrenman') : t('sablonlar.antrenmanaBasla')}
+          </CizgiliBaslik>
           <BarSagUcu />
           <DinlenmeGostergesi />
         </View>
