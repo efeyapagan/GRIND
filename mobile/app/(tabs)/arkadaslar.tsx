@@ -2,7 +2,7 @@ import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import { useArkadasHaftasi } from '@grind/shared/api/queries';
-import { arkadaslariSirala } from '@grind/shared/lib/arkadasSiralamasi';
+import { arkadaslariSirala, liderKullaniciAdi } from '@grind/shared/lib/arkadasSiralamasi';
 import ArkadasSatiri from '../../src/components/ArkadasSatiri';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 
@@ -12,6 +12,7 @@ export default function ArkadaslarScreen() {
   usePageTitle(t('arkadaslar.baslik'));
   const { data, isLoading, isError } = useArkadasHaftasi();
   const sirali = arkadaslariSirala(data ?? []);
+  const lider = liderKullaniciAdi(sirali);
 
   return (
     <EkranKaydirici contentContainerClassName="gap-3 px-4 pt-2 pb-4">
@@ -27,8 +28,8 @@ export default function ArkadaslarScreen() {
           <Text className="text-label text-muted">{t('arkadaslar.bosAciklama')}</Text>
         </View>
       )}
-      {sirali.map((arkadas, sira) => (
-        <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={sira === 0} />
+      {sirali.map((arkadas) => (
+        <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={arkadas.username === lider} />
       ))}
       {/* #425: kendi satiri hep geldigi icin tek satir = arkadas yok demek. */}
       {sirali.length === 1 && (

@@ -98,6 +98,28 @@ test('lider rozeti yalnizca en ustteki satirda', async () => {
   expect(screen.getAllByText('Lider')).toHaveLength(1);
 });
 
+/** #488: hafta basinda herkes sifirdayken hic tac cizilmez. */
+test('kimse antrenman yapmadiysa lider rozeti cizilmez', async () => {
+  veriVer([
+    arkadas('a', { weeklyTargetDays: 3 }),
+    arkadas('b', { weeklyTargetDays: 4 }),
+  ]);
+  await render(<ArkadasKarsilastirma />);
+
+  expect(screen.queryByText('Lider')).toBeNull();
+});
+
+/** Biri calisir calismaz kiyas baslar: tac o kisiye gider. */
+test('ilk antrenmani yapan lider olur', async () => {
+  veriVer([
+    arkadas('a', { weeklyTargetDays: 3 }),
+    arkadas('b', { trainedDaysThisWeek: 1, weeklyTargetDays: 4 }),
+  ]);
+  await render(<ArkadasKarsilastirma />);
+
+  expect(screen.getAllByText('Lider')).toHaveLength(1);
+});
+
 test('bugun antrenman yapan isaretlenir', async () => {
   veriVer([arkadas('a', { trainedDaysThisWeek: 1, weeklyTargetDays: 3, trainedToday: true })]);
   await render(<ArkadasKarsilastirma />);

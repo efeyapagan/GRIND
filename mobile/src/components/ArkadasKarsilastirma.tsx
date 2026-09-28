@@ -2,7 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useArkadasHaftasi } from '@grind/shared/api/queries';
-import { arkadaslariSirala } from '@grind/shared/lib/arkadasSiralamasi';
+import { arkadaslariSirala, liderKullaniciAdi } from '@grind/shared/lib/arkadasSiralamasi';
 import ArkadasSatiri from './ArkadasSatiri';
 
 /** Ana ekranda gosterilen satir sayisi; gerisi "Tümünü gör" ekraninda (#418, kullanici karari). */
@@ -37,6 +37,7 @@ export default function ArkadasKarsilastirma() {
   }
 
   const sirali = arkadaslariSirala(data ?? []);
+  const lider = liderKullaniciAdi(sirali);
   const yalnizKendisi = sirali.length <= 1;
 
   return (
@@ -55,8 +56,8 @@ export default function ArkadasKarsilastirma() {
       </View>
 
       <View className="flex-col gap-2">
-        {sirali.slice(0, ANA_EKRAN_SATIRI).map((arkadas, sira) => (
-          <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={sira === 0} />
+        {sirali.slice(0, ANA_EKRAN_SATIRI).map((arkadas) => (
+          <ArkadasSatiri key={arkadas.username} arkadas={arkadas} lider={arkadas.username === lider} />
         ))}
       </View>
       {/* #425: kendi satiri hep geldigi icin liste bos olmaz; arkadas YOKSA ipucu satiri. */}
