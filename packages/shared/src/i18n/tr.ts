@@ -264,6 +264,7 @@ export const tr = {
     baslik: 'Antrenman',
     devamEdiyor: 'Devam ediyor',
     baslangic: 'Başlangıç {{saat}}',
+    sureyeDon: 'Antrenmanın devam ediyor, {{sure}} — antrenmana dön',
     iptalEt: 'Antrenmanı iptal et',
     bitir: 'Antrenmanı bitir',
     nasilGecti: 'Nasıl geçti?',

@@ -7,6 +7,7 @@ import {
   formatSaat,
   formatTarih,
   formatWeight,
+  gecenSureMetni,
   saatDakika,
   trBugundenOnce,
 } from './format';
@@ -117,4 +118,25 @@ test('saatDakika sureyi en yakin dakikaya yuvarlar, 60 dakikayi saate tasir (#24
   expect(saatDakika(3480)).toEqual({ saat: 0, dakika: 58 });
   // 59,5 dk "60 dk" diye degil "1 sa 0 dk" diye okunmali.
   expect(saatDakika(3570)).toEqual({ saat: 1, dakika: 0 });
+});
+
+describe('gecenSureMetni (#480 -- ust bardaki antrenman sayaci)', () => {
+  test('bir saatin altinda "m:ss", ustunde "s:mm:ss" yazar', () => {
+    expect(gecenSureMetni(0)).toBe('0:00');
+    expect(gecenSureMetni(9_000)).toBe('0:09');
+    expect(gecenSureMetni(12 * 60_000 + 34_000)).toBe('12:34');
+    expect(gecenSureMetni(59 * 60_000 + 59_000)).toBe('59:59');
+    expect(gecenSureMetni(3_600_000)).toBe('1:00:00');
+    expect(gecenSureMetni(3_600_000 + 5 * 60_000 + 9_000)).toBe('1:05:09');
+  });
+
+  test('saniye ASAGI yuvarlanir -- gecen sure oldugundan buyuk gorunmez', () => {
+    expect(gecenSureMetni(999)).toBe('0:00');
+    expect(gecenSureMetni(59_999)).toBe('0:59');
+  });
+
+  /** Cihaz saati sunucununkinden geride kalirsa fark negatif olur; eksili bir sayac gorunmemeli. */
+  test('negatif fark 0:00 olur', () => {
+    expect(gecenSureMetni(-5_000)).toBe('0:00');
+  });
 });

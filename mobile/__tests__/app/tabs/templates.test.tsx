@@ -1,26 +1,40 @@
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Gesture } from 'react-native-gesture-handler';
-import { useTemplates, useSablonlariSirala } from '@grind/shared/api/queries';
+import { useOpenSession, useTemplates, useSablonlariSirala } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import SablonlarScreen from '../../../app/(tabs)/templates/index';
 
 jest.mock('@grind/shared/api/queries', () => ({
   useTemplates: jest.fn(),
   useSablonlariSirala: jest.fn(),
+  useOpenSession: jest.fn(),
 }));
 
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => {
   const { Text } = require('react-native');
   return {
     Link: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text>,
-    useRouter: () => ({ push: jest.fn() }),
+    useRouter: () => ({ push: jest.fn(), navigate: mockNavigate }),
   };
 });
+
+const ACIK_OTURUM = {
+  id: 7,
+  startedAt: '2026-09-20T09:00:00Z',
+  isOpen: true,
+  durationSeconds: null,
+  templateId: 3,
+  templateName: 'Push Day A',
+  progress: [],
+};
 
 const mutate = jest.fn();
 
 beforeEach(() => {
   mutate.mockReset();
+  mockNavigate.mockReset();
+  (useOpenSession as jest.Mock).mockReturnValue({ data: null });
   (useTemplates as jest.Mock).mockReturnValue({
     data: [
       { id: 7, name: 'Push Day', exercises: [] },
@@ -57,4 +71,36 @@ test('sablonu surukleyip birakinca yeni sira sunucuya gonderilir', async () => {
 
   await waitFor(() => expect(mutate).toHaveBeenCalledWith([8, 9, 7]));
   panSpy.mockRestore();
+});
+
+/**
+ * #480 (kullanici karari): antrenman surerken Sablonlarim'a gelen kullanici antrenmaninin
+ * kaybolmadigini gormeli -- ust barin hemen altinda ana sayfadaki kartin AYNISI durur ve tek
+ * dokunusla antrenmana doner.
+ */
+test('acik antrenman varken devam eden antrenman karti listenin ustunde durur', async () => {
+  (useOpenSession as jest.Mock).mockReturnValue({ data: ACIK_OTURUM });
+
+  await render(
+    <PageTitleProvider>
+      <SablonlarScreen />
+    </PageTitleProvider>,
+  );
+
+  expect(screen.getByText('Devam ediyor')).toBeTruthy();
+  expect(screen.getByText('Push Day A')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Devam et' }));
+  expect(mockNavigate).toHaveBeenCalledWith('/antrenman');
+});
+
+/** AYIRT EDICI: antrenman yokken ekran bugunku haliyle kalir -- bos bir kutu belirmez. */
+test('acik antrenman yokken kart cizilmez', async () => {
+  await render(
+    <PageTitleProvider>
+      <SablonlarScreen />
+    </PageTitleProvider>,
+  );
+
+  expect(screen.queryByText('Devam ediyor')).toBeNull();
 });
