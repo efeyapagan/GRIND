@@ -54,6 +54,23 @@ export function formatSaat(iso: string): string {
 }
 
 /**
+ * Devam eden antrenmanin gecen suresi (#480): bir saatin altinda "m:ss", ustunde "s:mm:ss".
+ * Saniye ASAGI yuvarlanir -- gecen sure "0:00"dan baslar; `kalanSureMetni` bunun tersini yapar
+ * (kalan sure yukari yuvarlanir ki "0:00" ancak sure gercekten dolunca gorunsun). Negatif fark
+ * (cihaz saati sunucununkinden geride) "0:00" olur, eksili bir sayac gorunmez.
+ */
+export function gecenSureMetni(ms: number): string {
+  const toplamSaniye = Math.max(0, Math.floor(ms / 1000));
+  const ikiHane = (deger: number) => String(deger).padStart(2, '0');
+  const saat = Math.floor(toplamSaniye / 3600);
+  const dakika = Math.floor((toplamSaniye % 3600) / 60);
+  const saniye = toplamSaniye % 60;
+  return saat > 0
+    ? `${saat}:${ikiHane(dakika)}:${ikiHane(saniye)}`
+    : `${dakika}:${ikiHane(saniye)}`;
+}
+
+/**
  * Grafik ekseni icin kisa tarih ("12 Eyl" / "12 Sep"), TR gunune gore. Ingilizcede ay kisaltmasi
  * `en-US`'ten alinir ve gun-ay sirasiyla elle dizilir: `en-GB` yeni ICU surumlerinde "Sept" verir.
  */
