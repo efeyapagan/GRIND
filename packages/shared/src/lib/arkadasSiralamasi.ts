@@ -86,6 +86,8 @@ export function siralamaPuani(
  *
  * Sunucu siralamaz: "hangi olcut ne kadar agirlik tasir" bir arayuz karari, bu yuzden hesap
  * burada ve testli.
+ *
+ * Istisna (#512): donemde kimse antrenman yapmadiysa kullanicinin kendi satiri en usttedir.
  */
 export function arkadaslariSirala(
   arkadaslar: readonly ArkadasDonemi[],
@@ -96,7 +98,7 @@ export function arkadaslariSirala(
     gun: Math.max(0, ...arkadaslar.map((a) => a.trainedDays ?? 0)),
   };
 
-  return [...arkadaslar].sort((a, b) => {
+  const sirali = [...arkadaslar].sort((a, b) => {
     const hedefliA = hedefOrani(a) !== null;
     const hedefliB = hedefOrani(b) !== null;
     if (hedefliA !== hedefliB) return hedefliA ? -1 : 1;
@@ -106,6 +108,17 @@ export function arkadaslariSirala(
 
     return (a.username ?? '').localeCompare(b.username ?? '');
   });
+
+  // #512 (kullanici karari): donemde KIMSE antrenman yapmadiysa siralamanin anlami yok -- kullanici
+  // kendi satirini en ustte gorur. Olcu lider kuraliyla (#488) AYNI: "tac yok" ile "sen ustte" hep
+  // birlikte olur. Biri calistigi anda #425'in kurali geri gelir (kendi satiri ayricaliksiz).
+  if (!sirali.some(donemdeCalistiMi)) {
+    const kendisi = sirali.findIndex((arkadas) => arkadas.isSelf === true);
+    if (kendisi > 0) {
+      sirali.unshift(...sirali.splice(kendisi, 1));
+    }
+  }
+  return sirali;
 }
 
 /** Donemde antrenman yapmis mi (#488): gun sayilmamis olabilir ama hacim varsa yapilmistir. */

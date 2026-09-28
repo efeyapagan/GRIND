@@ -78,7 +78,9 @@ export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
           <View className="flex-row items-center gap-2">
             {/* Cubuk bir ilerleme GOSTERGESI, dokunulabilir degil -- erisilebilirlik agacinda
                 degeri satirin metninde zaten var. */}
-            <View className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-4">
+            {/* #512: kanal `inset` -- kendi satirinin zemini (`surface-4`, #425) kanalla AYNI renkti ve
+                kanal kayboluyordu. `inset` iki satir zemininden de, iki temada da ayrisir. */}
+            <View testID="hedef-kanali" className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-inset">
               <View className="h-full rounded-full bg-accent" style={{ width: `${Math.round(oran * 100)}%` }} />
             </View>
             <Text className="shrink-0 text-label text-muted">
