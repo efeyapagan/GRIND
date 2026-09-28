@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   FadeIn,
@@ -10,7 +10,7 @@ import Animated, {
   type EntryAnimationsValues,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ClipboardList, Plus } from 'lucide-react-native';
@@ -126,8 +126,23 @@ export default function AntrenmanScreen() {
    * soluk/basilamaz olur: acik antrenman varken ikinci bir antrenman baslatilmaz.
    */
   const [baslatmaGorunumu, setBaslatmaGorunumu] = useState(false);
+  /**
+   * #502 (kullanici bildirdi: "sablon olusturup kaydedince aktif antrenmana atiyor"): rota bu
+   * gorunumu ACIKCA isteyebilir (`BASLATMA_GORUNUMU_YOLU`). Parametre TEK SEFERLIKTIR ve okunur
+   * okunmaz temizlenir; yoksa sekmeye her donuste -- kullanici antrenmanina donmek istese bile --
+   * baslatma gorunumu acilirdi.
+   */
+  const { baslat } = useLocalSearchParams<{ baslat?: string }>();
   // Ekranin iki yuzu; ayni anda yalnizca biri cizilir.
   const antrenmaniGoster = gorunenOturum !== null && !baslatmaGorunumu;
+  /**
+   * #502: "ikinci antrenman baslatilmaz" engelinin gercek sarti ACIK ANTRENMAN VAR olmasidir --
+   * "baslatma gorunumundeyim" degil. #494'te ikisi ayni seye denk geliyordu (bu gorunume yalnizca
+   * acik antrenmandan geri tusuyla gelinirdi); rota da gorunumu isteyebildigi icin ayrildilar ve
+   * sart artik acikca yazilir. Yoksa antrenmani OLMAYAN kullanici, sablon olusturup dondugunde
+   * basilamayan dugmelerle karsilasiyordu.
+   */
+  const acikAntrenmanVar = gorunenOturum?.isOpen === true;
   const baslatmayiGoster = !oturumYukleniyor && !oturumHataliMi && (oturum == null || baslatmaGorunumu);
   /**
    * #499 (kullanici bildirdi: "menu start workout olmasina ragmen ust baslik workout kaliyor"):
@@ -318,8 +333,20 @@ export default function AntrenmanScreen() {
     useCallback(() => () => setBaslatmaGorunumu(false), []),
   );
 
+  // Odak efektinden AYRI: parametreyi orada temizlemek efektin kendi temizleyicisini tetikleyip
+  // gorunumu ayni anda geri kapatirdi.
+  useEffect(() => {
+    if (baslat === '1') {
+      setBaslatmaGorunumu(true);
+      router.setParams({ baslat: undefined });
+    }
+  }, [baslat, router]);
+
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
+    // #502: antrenman baslatildiginda baslatma YUZU birakilir -- yoksa acilan antrenman yerine
+    // onu baslatan ekran ekranda kalirdi.
+    setBaslatmaGorunumu(false);
     baslatMutasyonu.mutate(templateId, {
       onSuccess: (acilan) => {
         if (acilan.templateId !== templateId) {
@@ -463,14 +490,17 @@ export default function AntrenmanScreen() {
           {/* #494: acik antrenman varken bu gorunume geri tusuyla gelinir. Ustte ana sayfadaki
               kartin AYNISI durur ("Sablonlarim" basliginin uzerinde) ve "Devam et" ekrani
               antrenmana geri cevirir -- gezinmez, cunku zaten bu ekrandayiz. */}
-          {baslatmaGorunumu && <DevamEdenAntrenman onDevam={() => setBaslatmaGorunumu(false)} />}
+          {acikAntrenmanVar && <DevamEdenAntrenman onDevam={() => setBaslatmaGorunumu(false)} />}
           {/* Acik antrenman varken TUM baslatma dugmeleri soluk ve basilamaz (kullanici karari):
               ikinci bir antrenman baslatilmaz. */}
-          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending || baslatmaGorunumu} />
+          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending || acikAntrenmanVar} />
           {/* #186: ikincil yol -- sablonsuz antrenman; hareketler acildiktan sonra eklenir. */}
           <IkincilDugme
-            onPress={() => baslatMutasyonu.mutate(null)}
-            disabled={baslatMutasyonu.isPending || baslatmaGorunumu}
+            onPress={() => {
+              setBaslatmaGorunumu(false);
+              baslatMutasyonu.mutate(null);
+            }}
+            disabled={baslatMutasyonu.isPending || acikAntrenmanVar}
           >
             {t('antrenman.bosBaslat')}
           </IkincilDugme>

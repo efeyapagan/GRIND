@@ -45,7 +45,13 @@ export default function DevamEdenAntrenman({
         </View>
         <Text className="text-label text-muted">{t('antrenman.baslangic', { saat: formatSaat(oturum.startedAt) })}</Text>
       </View>
-      {oturum.templateName && <TurEtiketi>{oturum.templateName}</TurEtiketi>}
+      {/* #502: sutun icinde hap tum genislige yayilmasin diye bir satir kabi -- hizalama artik
+          hapin kendi isi degil (bkz. TurEtiketi). */}
+      {oturum.templateName && (
+        <View className="flex-row">
+          <TurEtiketi>{oturum.templateName}</TurEtiketi>
+        </View>
+      )}
       <BirincilDugme yukseklik="normal" onPress={onDevam ?? (() => router.navigate('/antrenman'))}>
         {t('ortak.devamEt')}
       </BirincilDugme>

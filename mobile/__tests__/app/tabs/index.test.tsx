@@ -49,6 +49,14 @@ beforeEach(() => {
   });
 });
 
+async function ciz() {
+  await render(
+    <PageTitleProvider>
+      <AnaSayfaScreen />
+    </PageTitleProvider>,
+  );
+}
+
 /** Cizilen agactaki sira: sayfa tek bir dikey kolon oldugu icin agac sirasi = ekrandaki sira. */
 function siraNo(metin: string): number {
   const sira = JSON.stringify(screen.toJSON()).indexOf(metin);
@@ -60,17 +68,38 @@ function siraNo(metin: string): number {
  * Issue #175: acik antrenman karti Ana sayfaya baglidir -- uygulama yeniden acildiginda kullanicinin
  * dustugu ekran burasi ve antrenman "kaybolmus" gorunmemeli.
  *
- * Issue #412: kart #175'ten beri sayfanin EN USTUNDEYDI; acik oturum sorgusu takvimden ayri bir anda
- * cozuldugu icin kart sonradan belirince altindaki her sey kayiyor ve takvim izgarasiyla haftalik ozet
- * birbirine giriyordu. Kart artik en altta: ustundeki hicbir sey onun gec gelmesinden etkilenmez.
+ * #412'de kart EN ALTA alinmisti: acik oturum sorgusu takvimden ayri bir anda cozuldugu icin kart
+ * sonradan belirince altindaki her sey kayiyor, takvim izgarasiyla haftalik ozet birbirine
+ * giriyordu. #502 (kullanici karari) karti geri USTE aldi -- ama sebebi kacinarak degil COZEREK:
+ * bkz. bir sonraki test.
  */
-test('devam eden antrenman karti haftalik ozet kartlarinin ALTINDA cizilir', async () => {
-  await render(
-    <PageTitleProvider>
-      <AnaSayfaScreen />
-    </PageTitleProvider>,
-  );
+test('devam eden antrenman karti haftalik ozet kartlarinin USTUNDE cizilir', async () => {
+  await ciz();
 
-  expect(siraNo('Devam ediyor')).toBeGreaterThan(siraNo('Haftalık seri'));
-  expect(siraNo('Devam ediyor')).toBeGreaterThan(siraNo('Haftalık hedef'));
+  expect(siraNo('Devam ediyor')).toBeLessThan(siraNo('Haftalık seri'));
+  expect(siraNo('Devam ediyor')).toBeLessThan(siraNo('Haftalık hedef'));
+});
+
+/**
+ * #502'nin cekirdegi (kullanici bildirdi: "once takvim geliyor, sonra cakisiyor, sonra takvim
+ * asagi iniyor"): kartin ALTINDAKI hicbir sey, kartin olup olmadigi BILINMEDEN cizilmez. Boylece
+ * itilecek bir sey olmaz -- #412'nin kacindigi kayma bu sefer imkansiz.
+ */
+test('oturum sorgusu cozulmeden altindaki hicbir sey cizilmez', async () => {
+  useOpenSessionMock.mockReturnValue({ data: undefined, isLoading: true, isError: false });
+
+  await ciz();
+
+  expect(screen.queryByText('Haftalık seri')).toBeNull();
+  expect(screen.queryByText('Arkadaşlar')).toBeNull();
+});
+
+/** Acik antrenman YOKKEN sayfa bugunku haliyle kalir: kart yok, geri kalan gecikmeden cizilir. */
+test('acik antrenman yokken sayfa beklemeden cizilir', async () => {
+  useOpenSessionMock.mockReturnValue({ data: { isOpen: false }, isLoading: false, isError: false });
+
+  await ciz();
+
+  expect(screen.getByText('Haftalık seri')).toBeTruthy();
+  expect(screen.queryByText('Devam ediyor')).toBeNull();
 });
