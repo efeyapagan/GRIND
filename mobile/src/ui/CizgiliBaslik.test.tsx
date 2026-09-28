@@ -46,3 +46,32 @@ test('baslik degisince cizgi eski genisligini korumaz', async () => {
   });
   expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(120);
 });
+
+/**
+ * #499: olcum METNE baglidir -- baska bir metne ait olcum yok sayilir. Boylece cizgi ya dogru
+ * uzunlukta cizilir ya hic cizilmez; "bir sure yanlis uzunlukta durma" hali kalmadi (kullanici:
+ * "ilk acilista yine uzun ciziliyor").
+ */
+test('eski metne ait olcum yeni baslikta kullanilmaz', async () => {
+  const { rerender } = await render(<CizgiliBaslik>Antrenmana başla</CizgiliBaslik>);
+  await act(async () => {
+    screen.getByRole('header').props.onLayout({ nativeEvent: { layout: { width: 210 } } });
+  });
+
+  // Yeni baslik, ESKI metne ait olcumu tasiyan bir olay: yok sayilmali.
+  await rerender(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  expect(screen.queryByTestId('baslik-cizgisi', gizliDahil)).toBeNull();
+});
+
+/** Cizgi yerlesime GIRMEZ: bilesenin yuksekligi metin kadardir, bar metni ortalar (#499). */
+test('cizgi metnin altina asilir, yerlesime girmez', async () => {
+  await render(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  await act(async () => {
+    screen.getByRole('header').props.onLayout({ nativeEvent: { layout: { width: 120 } } });
+  });
+
+  const cizgiKabi = screen.getByTestId('baslik-cizgisi', gizliDahil).parent;
+  expect(cizgiKabi?.props.style).toEqual(
+    expect.arrayContaining([expect.objectContaining({ top: '100%' })]),
+  );
+});

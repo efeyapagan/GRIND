@@ -22,7 +22,8 @@ jest.mock('../components/YorumDiliSecici', () => {
     ),
   };
 });
-jest.mock('@grind/shared/pageTitle', () => ({ useHeaderTitle: () => 'Başlık' }));
+let mockBaslik = 'Başlık';
+jest.mock('@grind/shared/pageTitle', () => ({ useHeaderTitle: () => mockBaslik }));
 // Dinlenme gostergesi RestTimerProvider ister; bu testlerin konusu degil.
 jest.mock('../components/DinlenmeKabugu', () => ({ DinlenmeGostergesi: () => null }));
 
@@ -38,6 +39,7 @@ beforeEach(() => {
   mockPush.mockReset();
   mockOkunmamis = 0;
   mockAcikOturum = null;
+  mockBaslik = 'Başlık';
 });
 
 /** #324: ana sayfada sag ustte "GRIND" yazisinin yerini bildirim ve GRINDY kisayollari alir. */
@@ -117,8 +119,9 @@ test('diger ekranlarda bayrak yoktur', async () => {
  * #466 (kullanici karari): antrenman ekraninin KENDI ust bari var -- sayfa basligi yerine alti
  * cizili "Antrenmana basla" ve saginda GRIND. Icerikle kaymaz, tepede sabit durur.
  */
-test('antrenman ekraninda bar alti cizili basligi ve GRIND i gosterir', async () => {
+test('antrenman ekraninda bar ekranin bildirdigi basligi ve GRIND i gosterir', async () => {
   mockPathname = '/antrenman';
+  mockBaslik = 'Antrenmana başla';
   await render(<KabukBaslik />);
 
   expect(screen.getByText('Antrenmana başla')).toBeTruthy();
@@ -178,22 +181,32 @@ test('antrenman ekraninda da acik antrenman varken sure gorunur', async () => {
  * baslik "Antrenman" olur; cizginin kisalmasi `CizgiliBaslik`in kendi olcumunden gelir
  * (bkz. CizgiliBaslik.test.tsx).
  */
-test('acik antrenmanda bar basligi Antrenman olur', async () => {
+/**
+ * #499: antrenman barinin basligini EKRAN bildirir (`usePageTitle`) -- #494'un "Antrenmana basla"
+ * gorunumunde antrenman ACIK olsa da baslik odur. Oturuma bakan eski kural orada "Antrenman"
+ * yaziyordu (kullanici: "menu start workout ama ust baslik workout kaliyor").
+ */
+test('antrenman barinin basligi acik oturumda da ekrandan gelir', async () => {
   mockPathname = '/antrenman';
   mockAcikOturum = { isOpen: true, startedAt: '2026-09-20T12:29:56Z' };
+  mockBaslik = 'Antrenmana başla';
 
   await render(<KabukBaslik />);
 
-  expect(screen.getByRole('header')).toHaveTextContent('Antrenman');
-  expect(screen.queryByText('Antrenmana başla')).toBeNull();
+  expect(screen.getByRole('header')).toHaveTextContent('Antrenmana başla');
 });
 
-/** AYIRT EDICI: oturum yokken baslik bugunku haliyle kalir. */
-test('acik antrenman yokken bar basligi Antrenmana basla kalir', async () => {
+/** Ekran basligini henuz bildirmediyse (ilk cizim) bar bos kalmaz: oturuma gore makul bir deger. */
+test('baslik bildirilmemisken oturuma gore yedek baslik yazilir', async () => {
   mockPathname = '/antrenman';
+  mockBaslik = '';
+  mockAcikOturum = { isOpen: true, startedAt: '2026-09-20T12:29:56Z' };
 
-  await render(<KabukBaslik />);
+  const { rerender } = await render(<KabukBaslik />);
+  expect(screen.getByRole('header')).toHaveTextContent('Antrenman');
 
+  mockAcikOturum = null;
+  await rerender(<KabukBaslik />);
   expect(screen.getByText('Antrenmana başla')).toBeTruthy();
 });
 

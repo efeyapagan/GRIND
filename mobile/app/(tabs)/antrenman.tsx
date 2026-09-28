@@ -25,6 +25,7 @@ import {
   useReorderSessionExercises,
   useSessionSets,
   useStartSession,
+  useTemplate,
   type SetKaydi,
 } from '@grind/shared/api/queries';
 import { formatSaat } from '@grind/shared/lib/format';
@@ -32,7 +33,7 @@ import { adaGoreSirala } from '@grind/shared/lib/egzersizler';
 import { GERI_AL_MS, useGecikmeliSilme } from '@grind/shared/lib/gecikmeliSilme';
 import { hedefTamamlandi, varsayilanHareket } from '@grind/shared/lib/ilerleme';
 import { dinlenmeBaslat, dinlenmeSuresi } from '@grind/shared/lib/dinlenme';
-import { oturumdanSablonHareketleri } from '@grind/shared/lib/sablonTaslagi';
+import { oturumdanSablonHareketleri, sablondanSapmaVarMi } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import SetList from '../../src/components/SetList';
 import AntrenmanAltAlani from '../../src/components/AntrenmanAltAlani';
@@ -104,7 +105,6 @@ export default function AntrenmanScreen() {
   const { t } = useTranslation();
   const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
-  usePageTitle(t(gorunenOturum ? 'kabuk.antrenman' : 'kabuk.antrenmanBaslat'));
   const {
     data: setler,
     isLoading: setlerYukleniyor,
@@ -129,6 +129,12 @@ export default function AntrenmanScreen() {
   // Ekranin iki yuzu; ayni anda yalnizca biri cizilir.
   const antrenmaniGoster = gorunenOturum !== null && !baslatmaGorunumu;
   const baslatmayiGoster = !oturumYukleniyor && !oturumHataliMi && (oturum == null || baslatmaGorunumu);
+  /**
+   * #499 (kullanici bildirdi: "menu start workout olmasina ragmen ust baslik workout kaliyor"):
+   * ust bar basligi EKRANIN gosterdigi yuzden gelir, oturumun acik olup olmamasindan degil --
+   * baslatma gorunumunde antrenman surse bile baslik "Antrenmana basla"dir.
+   */
+  usePageTitle(t(antrenmaniGoster ? 'kabuk.antrenman' : 'sablonlar.antrenmanaBasla'));
   const [panelAcik, setPanelAcik] = useState(false);
   // #396: duzenlenen set -- duzenleyici ekranin ortasinda acilir. `panelAcik`a dokunulmaz: odak
   // modundan gelindiyse duzenleyici kapaninca odak karti + set paneli geri gelir.
@@ -166,6 +172,18 @@ export default function AntrenmanScreen() {
   );
   const ilerleme = gorunenOturum?.progress ?? [];
   const gorunenIlerleme = ilerleme.filter((hareket) => hareket.exerciseId !== kaldirilanHareketId);
+  /**
+   * #499 (kullanici karari): "Sablon olarak kaydet" yalnizca liste sablonundan SAPTIYSA gorunur --
+   * hareket eklendiyse YA DA cikarildiysa (`sablondanSapmaVarMi`). Sablonsuz antrenmanda liste
+   * zaten yeni bir sablon adayidir. Sablon henuz yuklenmediyse kisayol GOSTERILMEZ: olmayan bir
+   * sapmayi varsaymaktansa bir sorgu beklemek yeter (bitirme ekranindaki kuralla ayni tercih).
+   */
+  const { data: oturumSablonu } = useTemplate(gorunenOturum?.templateId ?? null);
+  const sablonOlarakKaydetGorunur =
+    antrenmaniGoster &&
+    gorunenIlerleme.length > 0 &&
+    (gorunenOturum.templateId === null ||
+      (oturumSablonu ? sablondanSapmaVarMi(gorunenIlerleme, oturumSablonu.exercises) : false));
 
   const secilebilirIdler = useMemo(() => new Set((egzersizler ?? []).map((eg) => eg.id)), [egzersizler]);
   const sablonVarsayilani = egzersizler ? varsayilanHareket(gorunenIlerleme, secilebilirIdler) : null;
@@ -320,11 +338,13 @@ export default function AntrenmanScreen() {
         onKlavyeAcildi={panelAcik || duzenlenen ? kaydirmaYok : undefined}
       >
         <View className="flex-col gap-1">
-          <View className="flex-row items-center justify-between gap-2">
+          <View className="flex-row items-start justify-between gap-2">
             {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
-                soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
+                soruyu kapatan X düğmesi de kalktı. #499 (kullanici karari): "Devam ediyor" rozeti
+                de kalkti -- yerini SABLON ADI aldi; oturumun baslangic saati bir alt satira,
+                sablon adinin eski yerine indi. */}
             {antrenmaniGoster && gorunenOturum.isOpen && (
-              <View className="min-w-0 flex-row items-center gap-1">
+              <View className="min-w-0 flex-1 flex-row items-center gap-1 pt-1">
                 {/* #487: antrenman ekrani bir sekme koku, ust barda geri tusu yok (#466) --
                     baslatan kullanici geri cikamiyordu. Cikis "Devam ediyor" rozetinin SOLUNDA
                     durur (kullanici karari). #494: hedef Sablonlarim DEGIL, bu ekranin
@@ -339,10 +359,7 @@ export default function AntrenmanScreen() {
                 >
                   <ChevronLeft color={ikonRenk.fg} size={22} />
                 </Pressable>
-                <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-                  <View className="size-2 rounded-full bg-success" />
-                  <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
-                </View>
+                {gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}
               </View>
             )}
             {/* "Hareket ekle" artik oturum durumundan BAGIMSIZ HER ZAMAN burada durur (yeni tasarim):
@@ -350,34 +367,36 @@ export default function AntrenmanScreen() {
                 AntrenmanAltAlani `bitirCagrisi`/`iptalCagrisi`), boylece bos oturumda da dolu
                 oturumda da bu iki eylem hep AYNI yerde durur. */}
             {antrenmaniGoster && gorunenOturum.isOpen && (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setHareketEkleAcik(true)}
-                className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
-              >
-                <Plus color={ikonRenk.muted} size={18} />
-                <Text className="text-label text-muted">{t('antrenman.hareketEkle')}</Text>
-              </Pressable>
+              <View className="shrink-0 items-end">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setHareketEkleAcik(true)}
+                  className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
+                >
+                  <Plus color={ikonRenk.muted} size={18} />
+                  <Text className="text-label text-muted">{t('antrenman.hareketEkle')}</Text>
+                </Pressable>
+                {/* #499 (kullanici karari): "Sablon olarak kaydet" artik "Hareket ekle"nin ALTINDA
+                    ve YALNIZCA liste sablonundan saptiysa (hareket eklendi ya da cikarildi) --
+                    degismemis bir listeyi yeniden sablon yapmanin anlami yok. #209: bos listeden
+                    sablon olmaz. */}
+                {sablonOlarakKaydetGorunur && (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={sablonOlarakKaydet}
+                    className="min-h-11 flex-row items-center gap-1 rounded-lg px-2"
+                  >
+                    <ClipboardList color={ikonRenk.muted} size={18} />
+                    <Text className="text-label text-muted">{t('antrenman.sablonOlarakKaydet')}</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
           </View>
         {antrenmaniGoster && (
-          <View className="mt-2 flex-row items-center justify-between gap-2">
-            <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
-            <Text className="text-label text-muted">
-              {t('antrenman.baslangic', { saat: formatSaat(gorunenOturum.startedAt) })}
-            </Text>
-          </View>
-        )}
-        {/* #209: bos listeden sablon olmaz -- eylem yalnizca hareket varken gorunur. */}
-        {antrenmaniGoster && gorunenIlerleme.length > 0 && (
-          <Pressable
-            accessibilityRole="button"
-            onPress={sablonOlarakKaydet}
-            className="-ml-2 min-h-11 flex-row items-center gap-1 self-start rounded-lg px-2"
-          >
-            <ClipboardList color={ikonRenk.muted} size={18} />
-            <Text className="text-label text-muted">{t('antrenman.sablonOlarakKaydet')}</Text>
-          </Pressable>
+          <Text className="text-label text-muted">
+            {t('antrenman.baslangic', { saat: formatSaat(gorunenOturum.startedAt) })}
+          </Text>
         )}
         {baslatMutasyonu.isError && (
           <Text accessibilityRole="alert" className="text-label text-danger">
