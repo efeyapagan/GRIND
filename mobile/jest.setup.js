@@ -1,8 +1,3 @@
-// format.ts artik cihazin yerel saat dilimini kullaniyor (#434) -- mock olmazsa formatSaat/
-// formatTarih gibi fonksiyonlarin testleri makinenin/CI'in TZ'sine gore degisir. Cihaz dilini
-// (asagida) sabitleyen mantigin aynisi.
-process.env.TZ = 'Europe/Istanbul';
-
 require('react-native-gesture-handler/jestSetup');
 
 // Resmi mock `LayoutAnimationConfig`i bos birakir ("ADD ME IF NEEDED"); jest'te animasyon yok,
