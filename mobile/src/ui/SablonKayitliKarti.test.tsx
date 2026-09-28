@@ -6,7 +6,7 @@ const sablon = {
   id: 1,
   name: 'Push Day (efe)',
   savedFromUsername: 'efe',
-  exercises: [{ exerciseId: 1, exerciseName: 'Bench Press', category: 'Push', isArchived: false, plannedSets: 4, restSeconds: 90 }],
+  exercises: [{ exerciseId: 1, exerciseName: 'Bench Press', category: 'Push' as const, isArchived: false, plannedSets: 4, restSeconds: 90 }],
 };
 
 test('karta dokununca onBasla cagrilir', async () => {
