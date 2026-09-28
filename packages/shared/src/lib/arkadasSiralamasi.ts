@@ -74,3 +74,22 @@ export function arkadaslariSirala(arkadaslar: readonly ArkadasHaftasi[]): Arkada
     return (a.username ?? '').localeCompare(b.username ?? '');
   });
 }
+
+/** Bu hafta antrenman yapmis mi (#488): gun sayilmamis olabilir ama hacim varsa yapilmistir. */
+function haftadaCalistiMi(arkadas: ArkadasHaftasi): boolean {
+  return (arkadas.trainedDaysThisWeek ?? 0) > 0 || (arkadas.weeklyVolume ?? 0) > 0;
+}
+
+/**
+ * Lider olan kisinin kullanici adi ya da lider yoksa `null` (#488, kullanici karari). Hafta
+ * basinda herkes sifirdayken KIMSE lider degildir: taci sirf sirali listenin tepesinde durdugu
+ * icin vermek, alfabetik bir esitligi basari gibi gosteriyordu. Biri antrenman yapar yapmaz kiyas
+ * baslar.
+ *
+ * Lider, sirali listenin ILKI degil, calismis ILK kisidir: sira hedefi olanlari one aldigi icin
+ * hedefsiz ama calisan biri, hedefli ama hic calismamis birinin ALTINDA durabilir -- tac bir
+ * konum degil, bir emek isaretidir.
+ */
+export function liderKullaniciAdi(sirali: readonly ArkadasHaftasi[]): string | null {
+  return sirali.find(haftadaCalistiMi)?.username ?? null;
+}
