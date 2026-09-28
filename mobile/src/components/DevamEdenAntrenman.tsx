@@ -17,8 +17,17 @@ import TurEtiketi from '../ui/TurEtiketi';
  * #480: ayni kart Sablonlarim ekraninda da (ust barin hemen altinda, kaydirmayla kacmayacak
  * sekilde) cizilir -- `className` yalnizca kartin dis bosluklarini cagirana birakir, govdesi iki
  * ekranda da AYNIDIR ("ana sayfadaki gibi", kullanici karari).
+ *
+ * #494: ayni kart antrenman ekraninin "Antrenmana basla" gorunumunde de durur. Orada "Devam et"
+ * GEZINMEZ (zaten o ekrandayiz) -- `onDevam` ile ekran kendi gorunumunu geri cevirir.
  */
-export default function DevamEdenAntrenman({ className = '' }: { className?: string }) {
+export default function DevamEdenAntrenman({
+  className = '',
+  onDevam,
+}: {
+  className?: string;
+  onDevam?: () => void;
+}) {
   const { t } = useTranslation();
   const { data: oturum } = useOpenSession();
   const router = useRouter();
@@ -37,7 +46,7 @@ export default function DevamEdenAntrenman({ className = '' }: { className?: str
         <Text className="text-label text-muted">{t('antrenman.baslangic', { saat: formatSaat(oturum.startedAt) })}</Text>
       </View>
       {oturum.templateName && <TurEtiketi>{oturum.templateName}</TurEtiketi>}
-      <BirincilDugme yukseklik="normal" onPress={() => router.navigate('/antrenman')}>
+      <BirincilDugme yukseklik="normal" onPress={onDevam ?? (() => router.navigate('/antrenman'))}>
         {t('ortak.devamEt')}
       </BirincilDugme>
     </View>

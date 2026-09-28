@@ -10,7 +10,7 @@ import Animated, {
   type EntryAnimationsValues,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ClipboardList, Plus } from 'lucide-react-native';
@@ -45,6 +45,7 @@ import HareketGecmisi from '../../src/components/HareketGecmisi';
 import HareketKartlari from '../../src/components/HareketKartlari';
 import OdakKarti from '../../src/components/OdakKarti';
 import SablonlaBasla from '../../src/components/SablonlaBasla';
+import DevamEdenAntrenman from '../../src/components/DevamEdenAntrenman';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
 import IkincilDugme from '../../src/ui/IkincilDugme';
@@ -118,6 +119,16 @@ export default function AntrenmanScreen() {
   const siraMutasyonu = useReorderSessionExercises();
   const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
+  /**
+   * #494 (kullanici karari): acik antrenmandayken geri tusu ekrandan CIKMAZ, bu ekrani
+   * "Antrenmana basla" gorunumune dondurur -- oturum acik kalir, arka planda sayar. Gorunumde
+   * ustte ana sayfadaki "devam eden antrenman" kartinin aynisi durur ve TUM baslatma dugmeleri
+   * soluk/basilamaz olur: acik antrenman varken ikinci bir antrenman baslatilmaz.
+   */
+  const [baslatmaGorunumu, setBaslatmaGorunumu] = useState(false);
+  // Ekranin iki yuzu; ayni anda yalnizca biri cizilir.
+  const antrenmaniGoster = gorunenOturum !== null && !baslatmaGorunumu;
+  const baslatmayiGoster = !oturumYukleniyor && !oturumHataliMi && (oturum == null || baslatmaGorunumu);
   const [panelAcik, setPanelAcik] = useState(false);
   // #396: duzenlenen set -- duzenleyici ekranin ortasinda acilir. `panelAcik`a dokunulmaz: odak
   // modundan gelindiyse duzenleyici kapaninca odak karti + set paneli geri gelir.
@@ -280,6 +291,15 @@ export default function AntrenmanScreen() {
     });
   }
 
+  /**
+   * #494: baslatma gorunumu EKRANA OZEL ve gecicidir -- odak birakilinca sifirlanir. Ust bardaki
+   * sureye ya da ana sayfadaki karta dokunup donen kullanici antrenmanini gorur, az once biraktigi
+   * sablon listesini degil.
+   */
+  useFocusEffect(
+    useCallback(() => () => setBaslatmaGorunumu(false), []),
+  );
+
   function sablonlaBasla(templateId: number) {
     setBaslatmaBilgisi(null);
     baslatMutasyonu.mutate(templateId, {
@@ -303,16 +323,17 @@ export default function AntrenmanScreen() {
           <View className="flex-row items-center justify-between gap-2">
             {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
                 soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
-            {gorunenOturum?.isOpen && (
+            {antrenmaniGoster && gorunenOturum.isOpen && (
               <View className="min-w-0 flex-row items-center gap-1">
                 {/* #487: antrenman ekrani bir sekme koku, ust barda geri tusu yok (#466) --
-                    sablondan antrenman baslatan kullanici Sablonlarim'a donemiyordu. Cikis
-                    "Devam ediyor" rozetinin SOLUNDA durur (kullanici karari). Yukseklik satiri
-                    buyutmesin diye kutu kucuk, dokunma alani `hitSlop` ile buyutulur. */}
+                    baslatan kullanici geri cikamiyordu. Cikis "Devam ediyor" rozetinin SOLUNDA
+                    durur (kullanici karari). #494: hedef Sablonlarim DEGIL, bu ekranin
+                    "Antrenmana basla" gorunumu -- oturum acik kalir. Yukseklik satiri buyutmesin
+                    diye kutu kucuk, dokunma alani `hitSlop` ile buyutulur. */}
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={t('antrenman.sablonlaraDon')}
-                  onPress={() => router.navigate('/templates')}
+                  accessibilityLabel={t('antrenman.baslatmaGorunumu')}
+                  onPress={() => setBaslatmaGorunumu(true)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}
                   className="-ml-1 size-8 items-center justify-center"
                 >
@@ -328,7 +349,7 @@ export default function AntrenmanScreen() {
                 "Antrenmani iptal et" / "Antrenmani bitir" ise AYNI konumda -- alt alanda (bkz.
                 AntrenmanAltAlani `bitirCagrisi`/`iptalCagrisi`), boylece bos oturumda da dolu
                 oturumda da bu iki eylem hep AYNI yerde durur. */}
-            {gorunenOturum?.isOpen && (
+            {antrenmaniGoster && gorunenOturum.isOpen && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setHareketEkleAcik(true)}
@@ -339,7 +360,7 @@ export default function AntrenmanScreen() {
               </Pressable>
             )}
           </View>
-        {gorunenOturum && (
+        {antrenmaniGoster && (
           <View className="mt-2 flex-row items-center justify-between gap-2">
             <View>{gorunenOturum.templateName && <TurEtiketi>{gorunenOturum.templateName}</TurEtiketi>}</View>
             <Text className="text-label text-muted">
@@ -348,7 +369,7 @@ export default function AntrenmanScreen() {
           </View>
         )}
         {/* #209: bos listeden sablon olmaz -- eylem yalnizca hareket varken gorunur. */}
-        {gorunenOturum && gorunenIlerleme.length > 0 && (
+        {antrenmaniGoster && gorunenIlerleme.length > 0 && (
           <Pressable
             accessibilityRole="button"
             onPress={sablonOlarakKaydet}
@@ -389,7 +410,7 @@ export default function AntrenmanScreen() {
         </Text>
       )}
 
-      {gorunenOturum && (
+      {antrenmaniGoster && (
         <>
           {setlerYukleniyor && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
           {setlerHataliMi && (
@@ -418,11 +439,20 @@ export default function AntrenmanScreen() {
         </>
       )}
 
-      {!oturumYukleniyor && !oturumHataliMi && !oturum && (
+      {baslatmayiGoster && (
         <>
-          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending} />
+          {/* #494: acik antrenman varken bu gorunume geri tusuyla gelinir. Ustte ana sayfadaki
+              kartin AYNISI durur ("Sablonlarim" basliginin uzerinde) ve "Devam et" ekrani
+              antrenmana geri cevirir -- gezinmez, cunku zaten bu ekrandayiz. */}
+          {baslatmaGorunumu && <DevamEdenAntrenman onDevam={() => setBaslatmaGorunumu(false)} />}
+          {/* Acik antrenman varken TUM baslatma dugmeleri soluk ve basilamaz (kullanici karari):
+              ikinci bir antrenman baslatilmaz. */}
+          <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending || baslatmaGorunumu} />
           {/* #186: ikincil yol -- sablonsuz antrenman; hareketler acildiktan sonra eklenir. */}
-          <IkincilDugme onPress={() => baslatMutasyonu.mutate(null)} disabled={baslatMutasyonu.isPending}>
+          <IkincilDugme
+            onPress={() => baslatMutasyonu.mutate(null)}
+            disabled={baslatMutasyonu.isPending || baslatmaGorunumu}
+          >
             {t('antrenman.bosBaslat')}
           </IkincilDugme>
         </>
@@ -447,7 +477,7 @@ export default function AntrenmanScreen() {
         />
       )}
 
-      {gorunenOturum ? (
+      {antrenmaniGoster ? (
         <AntrenmanAltAlani
           egzersizler={eklenebilirEgzersizler}
           onHareketEkle={hareketEkle}

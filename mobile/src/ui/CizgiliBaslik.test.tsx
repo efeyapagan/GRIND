@@ -25,3 +25,24 @@ test('cizgi basligin olculen genisligini alir', async () => {
   });
   expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(120);
 });
+
+/**
+ * #487 (kullanici bildirdi): antrenman baslayinca baslik kisaliyor ama cizgi ESKI uzunlugunda
+ * kaliyordu ("olmasi gerekenden uzun"); ekrandan cikip girince duzeliyordu. Bayat olcum atilir --
+ * cizgi yeni baslik olculene kadar CIZILMEZ, yanlis uzunlukta beklemez.
+ */
+test('baslik degisince cizgi eski genisligini korumaz', async () => {
+  const { rerender } = await render(<CizgiliBaslik>Antrenmana başla</CizgiliBaslik>);
+  await act(async () => {
+    screen.getByRole('header').props.onLayout({ nativeEvent: { layout: { width: 210 } } });
+  });
+  expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(210);
+
+  await rerender(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  expect(screen.queryByTestId('baslik-cizgisi', gizliDahil)).toBeNull();
+
+  await act(async () => {
+    screen.getByRole('header').props.onLayout({ nativeEvent: { layout: { width: 120 } } });
+  });
+  expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(120);
+});

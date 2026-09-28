@@ -408,3 +408,36 @@ describe('bitirme ekraninda dinlenme sayaci', () => {
     expect(mockSonDinlenme).toBeNull();
   });
 });
+
+/**
+ * #487 (kullanici bildirdi): "antrenmani bitirip puanladim, puanlama ekranindan sonra siyah
+ * ekranda kaldi, sadece ust baslik vardi". Gercek `useFinishSession` basariyla bitince
+ * `isSuccess`i TRUE yapar; #363'un o bayrakla bos donen kurali paylasim penceresini yutuyordu ve
+ * kullanici hicbir yere gidemiyordu. Mevcut paylasim testleri bunu goremiyordu: mock `isSuccess`i
+ * hic doldurmuyor.
+ */
+test('bitirme basariya dondukten SONRA da paylasim penceresi cizilir (siyah ekran degil)', async () => {
+  const HAREKETLI = {
+    ...ACIK_OTURUM,
+    progress: [
+      { exerciseId: 1, exerciseName: 'Bench Press', plannedSets: null, completedSets: 3, restSeconds: 90 },
+    ],
+  };
+  useOpenSessionMock.mockReturnValue({ data: HAREKETLI, isLoading: false, isError: false });
+  // Gercek mutasyonun davranisi: onSuccess'ten sonraki cizimlerde `isSuccess` true olur.
+  let bitti = false;
+  useFinishSessionMock.mockImplementation(() => ({
+    mutate: (_govde: unknown, { onSuccess }: { onSuccess: (biten: unknown) => void }) => {
+      bitti = true;
+      onSuccess(bitenOturum({ durationSeconds: 2880 }));
+    },
+    isPending: false,
+    isError: false,
+    isSuccess: bitti,
+  }));
+  await ekraniOlustur();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı bitir' }));
+
+  expect(screen.getByText('Galeriye kaydet')).toBeTruthy();
+});
