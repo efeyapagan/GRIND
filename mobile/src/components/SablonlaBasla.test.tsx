@@ -163,3 +163,61 @@ test('Duzenle dugmesi sablonlar ekranina gider', async () => {
   expect(screen.queryByText('Tümünü gör')).toBeNull();
   expect(screen.getByText('Düzenle')).toBeTruthy();
 });
+
+// ---- Kaydedilenler bolumu (#467) ----
+
+test('kaydedilen sablonlar en son kullanilana gore siralanir, kendi sablonlarindan ayri gorunur', async () => {
+  useTemplatesMock.mockReturnValue({
+    data: [
+      { id: 1, name: 'Kendi Sablonum', exercises: [], savedFromUsername: null, lastUsedAt: null },
+      { id: 2, name: 'Eski Kayit', exercises: [], savedFromUsername: 'efe', lastUsedAt: '2026-09-01T00:00:00Z' },
+      { id: 3, name: 'Yeni Kayit', exercises: [], savedFromUsername: 'efe', lastUsedAt: '2026-09-20T00:00:00Z' },
+    ],
+    isLoading: false,
+    isError: false,
+  });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getByText('Kaydedilenler')).toBeTruthy();
+  const satirlar = screen.getAllByText(/Kayit$/);
+  expect(satirlar.map((s) => s.props.children)).toEqual(['Yeni Kayit', 'Eski Kayit']);
+});
+
+test('kaydedilen sablon yoksa Kaydedilenler basligi gorunmez', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.queryByText('Kaydedilenler')).toBeNull();
+});
+
+/**
+ * #467 final review: backend ReorderAsync kullanicinin TUM sablonlarinin (kendi + kaydedilen) id
+ * kumesini birebir bekler. Karuseldeki surukleme yalnizca kendi sablonlarini gonderirse, kullanicinin
+ * en az bir kaydedilen sablonu varken her reorder 400 dondururdu -- bu regresyonu yakalar.
+ */
+test('surukleyip siralayinca kaydedilen sablonlarin id leri de gonderilir', async () => {
+  useTemplatesMock.mockReturnValue({
+    data: [
+      ...SABLONLAR,
+      { id: 3, name: 'Kayitli Sablon', exercises: [], savedFromUsername: 'efe', lastUsedAt: '2026-09-20T00:00:00Z' },
+    ],
+    isLoading: false,
+    isError: false,
+  });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  const ilkKart = kartJesti(0);
+  await act(async () => {
+    ilkKart.onStart({ translationX: 0, absoluteX: 200 });
+  });
+  await act(async () => {
+    ilkKart.onUpdate({ translationX: 400, absoluteX: 600 });
+  });
+  await act(async () => {
+    ilkKart.onEnd({ translationX: 400, absoluteX: 600 });
+  });
+
+  // Kendi sablonlari yeni sirada (8, 7), ardindan kaydedilen sablonun id'si (3) -- TUM kume.
+  expect(sirala).toHaveBeenCalledWith([8, 7, 3]);
+});

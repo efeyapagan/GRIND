@@ -6,7 +6,7 @@ import SekmeDugmesi from '../ui/SekmeDugmesi';
 
 export interface ProfilSekmesi {
   to: string;
-  etiketAnahtari: 'kabuk.sekmeGecmis' | 'kabuk.sekmeRekorlar' | 'kabuk.sekmeOlcumler';
+  etiketAnahtari: 'kabuk.sekmeGecmis' | 'kabuk.sekmeRekorlar' | 'kabuk.sekmeOlcumler' | 'kabuk.sekmeSablonlar';
   ikon: LucideIcon;
 }
 

@@ -82,4 +82,11 @@ public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
         DateTime? fromUtcInclusive,
         DateTime? toUtcExclusive,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen şablon id'leri için o kullanıcının son antrenman başlangıcı (#467 — kaydedilen
+    /// şablonların "en son kullanılana göre" sıralanması). Eşleşmeyen/kullanılmamış id sözlükte yer almaz.
+    /// </summary>
+    Task<IReadOnlyDictionary<long, DateTime>> GetLastUsedAtByTemplateIdsAsync(
+        long userId, IReadOnlyCollection<long> templateIds, CancellationToken cancellationToken = default);
 }

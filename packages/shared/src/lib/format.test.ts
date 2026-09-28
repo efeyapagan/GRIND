@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
+  ayniTrGunuMu,
   formatAralik,
   formatFark,
   formatGoreliTarih,
@@ -12,8 +13,9 @@ import {
   trBugundenOnce,
 } from './format';
 
-// Turkiye 2016'dan beri yaz saati uygulamiyor, sabit UTC+3 -- bu yuzden bu testler
-// cihazin/CI'in yerel saat dilimine bagli olmadan hep ayni sonucu vermeli.
+// vitest.config.ts test.env ile TZ=Europe/Istanbul sabitliyor -- bu yuzden format.ts artik cihazin
+// yerel dilimini kullansa da (#434) asagidaki testler makinenin/CI'in gercek TZ'sinden bagimsiz,
+// hep ayni sonucu verir.
 test('formatTarih gun sinirini dogru gecer', () => {
   // UTC 21:30 -> TR (UTC+3) 00:30, yani ERTESI GUN.
   expect(formatTarih('2026-03-10T21:30:00Z', 'tr')).toBe('11.03.2026');
@@ -138,5 +140,34 @@ describe('gecenSureMetni (#480 -- ust bardaki antrenman sayaci)', () => {
   /** Cihaz saati sunucununkinden geride kalirsa fark negatif olur; eksili bir sayac gorunmemeli. */
   test('negatif fark 0:00 olur', () => {
     expect(gecenSureMetni(-5_000)).toBe('0:00');
+  });
+});
+
+describe('cihazin yerel saat dilimi (#434)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test('formatSaat, formatTarih ve trBugundenOnce sabit TR yerine calistigi ortamin dilimini kullanir', () => {
+    // Ayni an: UTC 2026-03-10T23:30:00Z.
+    vi.stubEnv('TZ', 'Europe/Istanbul');
+    expect(formatSaat('2026-03-10T23:30:00Z')).toBe('02:30');
+    expect(formatTarih('2026-03-10T23:30:00Z', 'tr')).toBe('11.03.2026');
+    expect(trBugundenOnce(0, new Date('2026-03-10T23:30:00Z'))).toBe('2026-03-11');
+
+    // Ayni an, Los Angeles'ta (Mart 2026'da yaz saati UTC-7): hem saat hem GUN farkli.
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    expect(formatSaat('2026-03-10T23:30:00Z')).toBe('16:30');
+    expect(formatTarih('2026-03-10T23:30:00Z', 'tr')).toBe('10.03.2026');
+    expect(trBugundenOnce(0, new Date('2026-03-10T23:30:00Z'))).toBe('2026-03-10');
+  });
+
+  test('ayniTrGunuMu cihazin dilimi ne olursa olsun HER ZAMAN TR gunune gore karsilastirir', () => {
+    // TR'de ayni gun (11 Mart 00:30 ve 11 Mart 23:00), Los Angeles'ta FARKLI takvim gunleri
+    // (10 Mart 16:30 ve 11 Mart 15:00) -- backend'in gercek 409 kontrolu TR'ye gore oldugu icin
+    // bu fonksiyon device TZ'den etkilenmemeli.
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    expect(ayniTrGunuMu('2026-03-10T21:30:00Z', '2026-03-11T20:00:00Z')).toBe(true);
+    expect(ayniTrGunuMu('2026-03-10T09:00:00Z', '2026-03-10T21:30:00Z')).toBe(false);
   });
 });

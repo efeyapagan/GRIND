@@ -15,6 +15,11 @@ public class WorkoutTemplateConfiguration : IEntityTypeConfiguration<WorkoutTemp
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(t => t.SavedFromUser)
+            .WithMany()
+            .HasForeignKey(t => t.SavedFromUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // ExerciseConfiguration'daki (UserId, Name) unique index'in aynısı: bir kullanıcı
         // aynı isimde iki şablon oluşturamaz (uygulama katmanındaki ön-kontrolü DB seviyesinde
         // arkalar — bkz. UnitOfWork'ün 23505 -> ConflictException çevirisi). Kapsam kasıtlı

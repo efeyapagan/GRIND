@@ -3434,6 +3434,62 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/templates/{id}/sharing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTemplateSharingRequest"];
+                    "text/json": components["schemas"]["UpdateTemplateSharingRequest"];
+                    "application/*+json": components["schemas"]["UpdateTemplateSharingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TemplateResponse"];
+                        "application/json": components["schemas"]["TemplateResponse"];
+                        "text/json": components["schemas"]["TemplateResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/search": {
         parameters: {
             query?: never;
@@ -3944,6 +4000,169 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SharedTemplateResponse"][];
+                        "application/json": components["schemas"]["SharedTemplateResponse"][];
+                        "text/json": components["schemas"]["SharedTemplateResponse"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SharedTemplateResponse"];
+                        "application/json": components["schemas"]["SharedTemplateResponse"];
+                        "text/json": components["schemas"]["SharedTemplateResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{username}/templates/{id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TemplateResponse"];
+                        "application/json": components["schemas"]["TemplateResponse"];
+                        "text/json": components["schemas"]["TemplateResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4508,6 +4727,12 @@ export interface components {
             restSeconds?: number | null;
             measurement?: components["schemas"]["ExerciseMeasurement"];
         };
+        SharedTemplateResponse: {
+            /** Format: int64 */
+            id?: number;
+            name?: string | null;
+            exercises?: components["schemas"]["TemplateExerciseResponse"][] | null;
+        };
         StandingResponse: {
             username?: string | null;
             displayName?: string | null;
@@ -4562,6 +4787,10 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             exercises?: components["schemas"]["TemplateExerciseResponse"][] | null;
+            isSharedOverride?: boolean | null;
+            savedFromUsername?: string | null;
+            /** Format: date-time */
+            lastUsedAt?: string | null;
         };
         /** @enum {string} */
         TrainingGoal: "Hipertrofi" | "Guc" | "KiloVerme" | "GenelForm";
@@ -4592,6 +4821,9 @@ export interface components {
         UpdateTemplateRequest: {
             name: string;
             exercises: components["schemas"]["TemplateExerciseRequest"][];
+        };
+        UpdateTemplateSharingRequest: {
+            override?: boolean | null;
         };
         UpdateTrainingGoalRequest: {
             trainingGoal?: components["schemas"]["TrainingGoal"];

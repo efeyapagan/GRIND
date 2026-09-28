@@ -9,4 +9,10 @@ public record TemplateResponse(
     long Id,
     string Name,
     DateTime CreatedAt,
-    IReadOnlyList<TemplateExerciseResponse> Exercises);
+    IReadOnlyList<TemplateExerciseResponse> Exercises,
+    /// <summary>#467: null = varsayılan (hesabın PrivacyLevel'ine göre), true/false override.</summary>
+    bool? IsSharedOverride,
+    /// <summary>#467: null = kendi şablonun; dolu = bir arkadaştan kaydedilmiş kopya.</summary>
+    string? SavedFromUsername,
+    /// <summary>#467: bu şablonla en son ne zaman antrenman başlatıldığı; hiç başlatılmadıysa null.</summary>
+    DateTime? LastUsedAt);

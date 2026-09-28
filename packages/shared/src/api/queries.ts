@@ -49,6 +49,8 @@ type FriendHistorySessionResponsePagedResponse = components['schemas']['FriendHi
 type UpdateProfileDetailsRequest = components['schemas']['UpdateProfileDetailsRequest'];
 type NotificationResponse = components['schemas']['NotificationResponse'];
 type UnreadNotificationCountResponse = components['schemas']['UnreadNotificationCountResponse'];
+type SharedTemplateResponse = components['schemas']['SharedTemplateResponse'];
+type UpdateTemplateSharingRequest = components['schemas']['UpdateTemplateSharingRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -134,6 +136,13 @@ export const queryKeys = {
   bildirimlerAll: ['bildirimler'] as const,
   bildirimler: ['bildirimler', 'liste'] as const,
   okunmamisBildirim: ['bildirimler', 'okunmamis'] as const,
+  // #467: bir kullanicinin paylasilan sablonlari; onek sayesinde kaydetme/paylasim degisikligi
+  // hem listeyi hem detayi tazeler.
+  paylasilanSablonlarAll: (kullaniciAdi: string) => ['paylasilanSablonlar', kullaniciAdi] as const,
+  paylasilanSablonlar: (kullaniciAdi: string) =>
+    [...queryKeys.paylasilanSablonlarAll(kullaniciAdi), 'liste'] as const,
+  paylasilanSablon: (kullaniciAdi: string, id: number) =>
+    [...queryKeys.paylasilanSablonlarAll(kullaniciAdi), id] as const,
 };
 
 export interface HareketIlerlemesi {
@@ -1046,6 +1055,9 @@ export interface Sablon {
   id: number;
   name: string;
   exercises: SablonHareketi[];
+  isSharedOverride: boolean | null;
+  savedFromUsername: string | null;
+  lastUsedAt: string | null;
 }
 
 function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHareketi {
@@ -1073,6 +1085,26 @@ function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHarek
 function dogrulanmisSablon(yanit: TemplateResponse): Sablon {
   if (yanit.id === undefined || !yanit.name) {
     throw new Error('Sunucudan eksik sablon yaniti alindi.');
+  }
+  return {
+    id: yanit.id,
+    name: yanit.name,
+    exercises: (yanit.exercises ?? []).map(dogrulanmisSablonHareketi),
+    isSharedOverride: yanit.isSharedOverride ?? null,
+    savedFromUsername: yanit.savedFromUsername ?? null,
+    lastUsedAt: yanit.lastUsedAt ?? null,
+  };
+}
+
+export interface SharedSablon {
+  id: number;
+  name: string;
+  exercises: SablonHareketi[];
+}
+
+function dogrulanmisSharedSablon(yanit: SharedTemplateResponse): SharedSablon {
+  if (yanit.id === undefined || !yanit.name) {
+    throw new Error('Sunucudan eksik paylasilan sablon yaniti alindi.');
   }
   return {
     id: yanit.id,
@@ -1194,6 +1226,59 @@ export function useDeleteTemplate() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
       void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+    },
+  });
+}
+
+export function useSharedTemplates(kullaniciAdi: string | null) {
+  return useQuery({
+    queryKey: queryKeys.paylasilanSablonlar(kullaniciAdi ?? ''),
+    queryFn: async (): Promise<SharedSablon[]> => {
+      const yanit = await request<SharedTemplateResponse[]>(`/users/${kullaniciAdi}/templates`);
+      return yanit.map(dogrulanmisSharedSablon);
+    },
+    enabled: kullaniciAdi !== null,
+  });
+}
+
+export function useSharedTemplate(kullaniciAdi: string | null, id: number | null) {
+  return useQuery({
+    queryKey: queryKeys.paylasilanSablon(kullaniciAdi ?? '', id ?? 0),
+    queryFn: async (): Promise<SharedSablon> =>
+      dogrulanmisSharedSablon(
+        await request<SharedTemplateResponse>(`/users/${kullaniciAdi}/templates/${id}`),
+      ),
+    enabled: kullaniciAdi !== null && id !== null,
+  });
+}
+
+/** Kaydedince kendi sablon listen ANINDA tazelenir -- "My Templates" altinda yeni kart gorunur. */
+export function useSaveSharedTemplate(kullaniciAdi: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<Sablon> =>
+      dogrulanmisSablon(
+        await request<TemplateResponse>(`/users/${kullaniciAdi}/templates/${id}/save`, { method: 'POST' }),
+      ),
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+    },
+  });
+}
+
+export function useUpdateTemplateSharing() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, override: yeniDurum }: { id: number; override: boolean | null }): Promise<Sablon> => {
+      const govde: UpdateTemplateSharingRequest = { override: yeniDurum };
+      return dogrulanmisSablon(
+        await request<TemplateResponse>(`/templates/${id}/sharing`, { method: 'PUT', body: JSON.stringify(govde) }),
+      );
+    },
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
     },
   });
 }

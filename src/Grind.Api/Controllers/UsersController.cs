@@ -4,6 +4,7 @@ using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Profile;
 using Grind.Api.Models.Dtos.Record;
 using Grind.Api.Models.Dtos.Social;
+using Grind.Api.Models.Dtos.Template;
 using Grind.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,8 @@ namespace Grind.Api.Controllers;
 public class UsersController(
     IFollowService followService,
     IProfileService profileService,
-    IPublicActivityService publicActivityService) : ControllerBase
+    IPublicActivityService publicActivityService,
+    ISharedTemplateService sharedTemplateService) : ControllerBase
 {
     /// <summary>Kullanıcı adı ön-ekiyle arama (büyük/küçük harf duyarsız), en fazla 20 sonuç.</summary>
     [HttpGet("search")]
@@ -129,4 +131,35 @@ public class UsersController(
     public async Task<ActionResult<PagedResponse<UserSummaryResponse>>> GetFollowing(
         string username, [FromQuery] PagedQuery query, CancellationToken cancellationToken)
         => Ok(await followService.GetFollowingAsync(username, query, cancellationToken));
+
+    /// <summary>
+    /// Hedefin paylaşılan şablonları (#467) — arkadaşlık ŞARTTIR (History/Records'un aksine).
+    /// Arkadaş değilsen boş liste, hedef pasif/yoksa 404.
+    /// </summary>
+    [HttpGet("{username}/templates")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<SharedTemplateResponse>>> GetSharedTemplates(
+        string username, CancellationToken cancellationToken)
+        => Ok(await sharedTemplateService.GetSharedTemplatesAsync(username, cancellationToken));
+
+    /// <summary>Görünür değilse 404 (hangi şablonun var olduğunu sızdırmaz).</summary>
+    [HttpGet("{username}/templates/{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SharedTemplateResponse>> GetSharedTemplateDetail(
+        string username, long id, CancellationToken cancellationToken)
+        => Ok(await sharedTemplateService.GetSharedTemplateDetailAsync(username, id, cancellationToken));
+
+    /// <summary>Kendi hesabına anlık görüntü olarak kopyalar (#467).</summary>
+    [HttpPost("{username}/templates/{id:long}/save")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TemplateResponse>> SaveSharedTemplate(
+        string username, long id, CancellationToken cancellationToken)
+    {
+        var saved = await sharedTemplateService.SaveTemplateAsync(username, id, cancellationToken);
+        return Created($"/api/templates/{saved.Id}", saved);
+    }
 }

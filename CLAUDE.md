@@ -7,6 +7,17 @@ tekrar rekoru). Antrenman verileri (hacim, geçmiş, rekorlar) dışa aktarılab
 veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 
 ## Kapsam ve Sıra — ÖNEMLİ
+- **Şablon paylaşımı (#467, 2026-09-27)** — kullanıcılar antrenman şablonlarını arkadaşlarıyla
+  (karşılıklı takip şartlı — `History`/`Records`'taki `PrivacyLevel`-tabanlı herkese açık modelin
+  AKSİNE) paylaşabilir; beğenilen bir şablon kendi hesaba **anlık görüntü** olarak kopyalanır,
+  oradan doğrudan antrenman başlatılır. `WorkoutTemplate.IsSharedOverride` hesabın `PrivacyLevel`
+  varsayılanını şablon bazında tersine çevirir, `SavedFromUserId` kopyanın kaynağını canlı join ile
+  tutar (bkz. Domain Modeli). Görünürlük kapısı `SharedTemplateService` — `PublicActivityService`'ten
+  AYRI (bkz. Yetkilendirme Kuralı istisnası). Başkasının profilinde "Şablonlar" sekmesi yalnızca
+  arkadaşsan render edilir (History/Records'taki "her zaman görünür + boş durum" deseninin aksine).
+  Kaydetme sırasında isim çakışırsa otomatik ayırt edici eklenir (`"{ad} ({kaynakKullaniciAdi})"`),
+  409 dönülmez. Yalnızca `mobile/` kapsamındadır (web donduruldu, #326). Ayrıntı:
+  [docs/superpowers/specs/2026-09-27-sablon-paylasimi-design.md](docs/superpowers/specs/2026-09-27-sablon-paylasimi-design.md).
 - **Web donduruldu (#326, 2026-09-25).** Yeni geliştirme yalnızca `mobile/`'a yapılır, Web CI
   kaldırıldı. Aşağıdaki web maddeleri tarihçedir; ayrıntı "Web DONDURULDU" bölümünde.
 - **Backend tamamlandı (Faz 0-13, 2026-09-12).** Frontend kararı verildi: **React + Vite +
@@ -204,6 +215,21 @@ Object Reference) açığıdır.
 > geçmişte sakladığı "şu an bir antrenman bitirdi" bilgisini takipçiye verir. Kabul gerekçesi: rekorlar
 > her seviyede açıktır (kullanıcı kararı, #325). Not, ölçü, AI yorumu ve rekorsuz setler bildirimde yer
 > almaz. Uç yalnız `currentUserId`'nin bildirimlerini döner.
+>
+> Şablon paylaşımı (#467): yukarıdaki iki istisnanın AKSİNE bu kapı arkadaşlık ŞARTLIDIR (kendin
+> hariç, karşılıklı takip gerekir) — `PrivacyLevel` tek başına yeterli değildir; bilinçli bir fark,
+> çünkü paylaşım burada "herkese açık profil" değil "arkadaşlar arası" bir özellik olarak
+> tasarlandı (kullanıcı kararı, spec). Kapı `SharedTemplateService` — `PublicActivityService`'ten
+> AYRI (`GET /api/users/{username}/templates` ve `/templates/{id}`, kaydetme
+> `POST /api/users/{username}/templates/{id}/save`). Görünürlük formülü:
+> `IsSharedOverride ?? (PrivacyLevel != Gizli)`; arkadaş değilsen liste boş, detay/kaydetme 404
+> (sızıntı yok — IDOR koruması, `/history`/`/records`'taki "boş liste 403 DEĞİL" ilkesinden farklı
+> olarak burada arkadaşlık eksikliği zaten görünürlüğün önkoşulu). Gösterilen egzersiz detayları
+> İZLEYENE görünür (kendi veya global) VE arşivlenmemiş olanlarla SINIRLIDIR — sahibin özel/arşivli
+> bir egzersizinin adını arkadaşa göstermek de aynı Yetkilendirme Kuralı'nın kapsamındadır; liste,
+> detay ve kaydetme AYNI süzgeçten geçer ki izleyicinin gördüğü ile kopyaladığı asla ayrışmasın.
+> Paylaşılmayan: oturum geçmişi, notlar, ölçüler, AI yorumu, export (yalnızca şablonun kendisi —
+> egzersiz listesi ve hedef set sayıları).
 
 > Karar (JWT içeriği): JWT SADECE kimlik taşır (`UserId`, `Username`) — rol/plan gibi
 > zamanla değişebilecek öznitelikler token'a claim olarak gömülmez. Sebep: kullanıcı
@@ -264,7 +290,12 @@ Object Reference) açığıdır.
   `Category` (Push / Pull / Legs / Other), `Measurement` (`WeightReps` / `Reps` / `Duration` — setlerin
   neyle ölçüldüğü, #346; kullanıcı yalnızca oluştururken seçer), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
-- **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`
+- **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`, `IsSharedOverride`
+  (nullable `bool`, #467 — hesaplanan "görünür mü" değeri SAKLANMAZ: `null` = hesabın `PrivacyLevel`
+  varsayılanı geçerli, `true`/`false` = bu şablon için istisnai açma/gizleme), `SavedFromUserId`
+  (nullable, FK → `User`, RESTRICT, #467 — `null` = kendi şablonun, doluysa bir arkadaştan kaydedilmiş
+  kopya; kullanıcı adı değişebildiği için "kimden kaydedildi" ayrı bir string alanda değil canlı join
+  ile çözülür)
 - **TemplateExercise**: `Id`, `WorkoutTemplateId` (FK), `ExerciseId` (FK), `OrderIndex`,
   `PlannedSets` — o egzersiz için hedeflenen set sayısı (ağırlık/tekrar burada YOK, onlar
   gerçek performans anında `SetEntry`'ye girilir), `RestSeconds` — setler arası dinlenme (0–900 sn,
