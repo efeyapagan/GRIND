@@ -20,12 +20,15 @@ export default function PaylasilanSablonDetayEkrani() {
   const { data: sablon, isLoading, isError } = useSharedTemplate(ad, templateId);
   const kaydetMutasyonu = useSaveSharedTemplate(ad);
   const [kaydetHatasi, setKaydetHatasi] = useState<string | null>(null);
+  const [kaydedildi, setKaydedildi] = useState(false);
 
   async function kaydet() {
     setKaydetHatasi(null);
     try {
       await kaydetMutasyonu.mutateAsync(templateId);
-      router.push('/(tabs)' as never);
+      // Sessizce yonlendirmek yerine kisa bir onay gosterip sonra geri donulur (#467 final review).
+      setKaydedildi(true);
+      setTimeout(() => router.push('/(tabs)' as never), 800);
     } catch {
       setKaydetHatasi(t('sablonlar.sablonKaydedilemedi'));
     }
@@ -37,10 +40,15 @@ export default function PaylasilanSablonDetayEkrani() {
       {isError && <HataKutusu baslik={t('sablonlar.tekilHata')} mesaj={t('sablonlar.arkadasSablonlariAlinamadi')} />}
       {sablon && (
         <>
-          <BirincilDugme yukseklik="normal" disabled={kaydetMutasyonu.isPending} onPress={kaydet}>
+          <BirincilDugme yukseklik="normal" disabled={kaydetMutasyonu.isPending || kaydedildi} onPress={kaydet}>
             {t('sablonlar.sablonuKaydet')}
           </BirincilDugme>
           {kaydetHatasi && <HataKutusu baslik={t('sablonlar.sablonKaydedilemedi')} mesaj={kaydetHatasi} />}
+          {kaydedildi && (
+            <Text accessibilityRole="alert" className="text-body text-success">
+              {t('sablonlar.sablonKaydedildi')}
+            </Text>
+          )}
 
           <Text className="text-heading font-bold text-fg">{sablon.name}</Text>
           <View className="flex-col gap-3">
@@ -48,7 +56,7 @@ export default function PaylasilanSablonDetayEkrani() {
               <View key={hareket.exerciseId} className="rounded-xl border border-surface-4 bg-surface-2 p-4">
                 <Text className="text-body-lg text-fg">{hareket.exerciseName}</Text>
                 <Text className="text-label text-muted">
-                  {t('sablonlar.hareketSayisi', { count: hareket.plannedSets })}
+                  {t('setler.setSayisi', { count: hareket.plannedSets })}
                 </Text>
               </View>
             ))}
