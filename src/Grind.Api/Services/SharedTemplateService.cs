@@ -160,6 +160,11 @@ public class SharedTemplateService(
         return aday;
     }
 
+    // Kaydedilmiş kopya (`SavedFromUserId` dolu) hiçbir seviyede/override'la paylaşılmaz (#534):
+    // aksi hâlde kaynağın kendi şablonu ona geri döner ve üçüncü kişinin şablonu, arkadaşlık
+    // kapısı aşılarak, kopyalayan üzerinden yeniden dağıtılır. Yalnızca kişinin kendi
+    // oluşturduğu şablonlar paylaşılır.
     private static bool IsVisible(WorkoutTemplate template, PrivacyLevel ownerLevel) =>
-        template.IsSharedOverride ?? ownerLevel != PrivacyLevel.Gizli;
+        template.SavedFromUserId is null
+        && (template.IsSharedOverride ?? ownerLevel != PrivacyLevel.Gizli);
 }

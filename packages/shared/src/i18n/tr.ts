@@ -406,7 +406,7 @@ export const tr = {
     dinlenmeDk: '{{dakika}} dk',
     paylasBasligi: 'Bu şablonu paylaş',
     paylasVarsayilan: 'Hesap ayarına göre',
-    paylasHerkeseAcik: 'Herkese açık',
+    paylasHerkeseAcik: 'Arkadaşlara açık',
     paylasGizli: 'Gizli',
     paylasAciklama: 'Arkadaşların (karşılıklı takip) bu şablonu profilinde görebilir.',
     paylasimGuncellenemedi: 'Paylaşım ayarı güncellenemedi.',

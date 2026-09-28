@@ -106,6 +106,88 @@ public class SharedTemplateServiceTests
         }
     }
 
+    // ---- Kaydedilmiş kopya paylaşılmaz (#534) ----
+
+    [Fact]
+    public async Task Arkadasin_benden_kaydettigi_kopya_profilinde_bana_gosterilmez()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik);
+        await using (transaction)
+        {
+            // B, A'nin sablonunu kaydetmis: B'nin profilindeki bu satir A'nin kendi sablonu.
+            sablon.SavedFromUserId = a.Id;
+            await context.SaveChangesAsync();
+
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
+            Assert.DoesNotContain(liste, s => s.Id == sablon.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Arkadasin_ucuncu_kisiden_kaydettigi_kopya_zincirleme_paylasilmaz()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik);
+        await using (transaction)
+        {
+            // B, X'in sablonunu kaydetmis; A, X ile arkadas bile olmayabilir -- X'in "yalnizca
+            // arkadaslarim" kapisi B uzerinden delinmemeli.
+            var x = TestDatabase.NewUser();
+            context.Add(x);
+            await context.SaveChangesAsync();
+            sablon.SavedFromUserId = x.Id;
+            await context.SaveChangesAsync();
+
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
+            Assert.DoesNotContain(liste, s => s.Id == sablon.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Kopya_icin_detay_ve_kaydetme_404_verir()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik);
+        await using (transaction)
+        {
+            sablon.SavedFromUserId = a.Id;
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => ServiceFor(context, a).GetSharedTemplateDetailAsync(b.Username, sablon.Id));
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => ServiceFor(context, a).SaveTemplateAsync(b.Username, sablon.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Kopyada_true_override_paylasimi_acmaz()
+    {
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Gizli);
+        await using (transaction)
+        {
+            sablon.SavedFromUserId = a.Id;
+            sablon.IsSharedOverride = true;
+            await context.SaveChangesAsync();
+
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
+            Assert.DoesNotContain(liste, s => s.Id == sablon.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Kendi_profilinde_kaydettigi_kopyalari_gormeye_devam_eder()
+    {
+        var (context, a, b, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var kopya = new WorkoutTemplate { User = a, Name = $"Kopya {Guid.NewGuid():N}", CreatedAt = DateTime.UtcNow, SavedFromUserId = b.Id };
+            context.Add(kopya);
+            await context.SaveChangesAsync();
+
+            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(a.Username);
+            Assert.Contains(liste, s => s.Id == kopya.Id);
+        }
+    }
+
     // ---- Arkadaşlık şartı ----
 
     [Fact]
