@@ -39,7 +39,14 @@ const CIZIM_SURESI_MS = 1200;
  *   yapistiriyordu (sagdaki GRIND ortada kaldigi icin ikisi hizasizdi). Cizgi zaten yerlesimin
  *   disinda oldugu icin kokun yuksekligi metin kadardir; ortalama dogrudan metni ortalar.
  */
-export default function CizgiliBaslik({ children }: { children: string }) {
+export default function CizgiliBaslik({
+  children,
+  cizgi = 'kavis',
+}: {
+  children: string;
+  /** #524: 'kavis' antrenman ekraninin, 'dalga' Ana sayfanin cizgisidir; olcum/animasyon ortak. */
+  cizgi?: 'kavis' | 'dalga';
+}) {
   const palet = useRenkPaleti();
   const [olcum, setOlcum] = useState<{ metin: string; genislik: number; yukseklik: number } | null>(null);
   const ilerleme = useSharedValue(0);
@@ -81,14 +88,27 @@ export default function CizgiliBaslik({ children }: { children: string }) {
       >
         {genislik > 0 && (
           <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>
-            {/* Ortasi hafif yukari kalkan, sagda incelen el cizimi bir kavis. */}
-            <Path
-              d={`M2 ${CIZGI_YUKSEKLIGI - 3} Q ${genislik * 0.45} 1 ${genislik - 2} ${CIZGI_YUKSEKLIGI - 5}`}
-              stroke={palet.accent}
-              strokeWidth={3}
-              strokeLinecap="round"
-              fill="none"
-            />
+            {cizgi === 'dalga' ? (
+              // Iki kez inip cikan, sagda incelen dalga.
+              <Path
+                testID="cizgi-dalga"
+                d={`M2 ${CIZGI_YUKSEKLIGI - 4} C ${genislik * 0.15} 0 ${genislik * 0.3} 0 ${genislik * 0.45} ${CIZGI_YUKSEKLIGI - 4} S ${genislik * 0.75} ${CIZGI_YUKSEKLIGI} ${genislik - 2} 3`}
+                stroke={palet.accent}
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill="none"
+              />
+            ) : (
+              // Ortasi hafif yukari kalkan, sagda incelen el cizimi bir kavis.
+              <Path
+                testID="cizgi-kavis"
+                d={`M2 ${CIZGI_YUKSEKLIGI - 3} Q ${genislik * 0.45} 1 ${genislik - 2} ${CIZGI_YUKSEKLIGI - 5}`}
+                stroke={palet.accent}
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill="none"
+              />
+            )}
           </Svg>
         )}
       </Animated.View>

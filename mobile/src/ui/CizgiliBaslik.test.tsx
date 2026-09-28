@@ -125,3 +125,24 @@ test('baslik kokunu dikeyde yukari sabitlemez', async () => {
   // `self-start` saran barin `items-center`'ini ezip basligi tepeye yapistiriyordu.
   expect(screen.getByRole('header').parent?.props.className).not.toContain('self-start');
 });
+
+/**
+ * #524: Ana sayfa basligi da ayni cizgiyi cizer ama BICIMI bir tik farklidir (dalgali); varsayilan
+ * (Antrenmana basla) kavis oldugu gibi kalir. Olcum/animasyon mantigi iki bicimde ortaktir.
+ */
+test('varsayilan cizgi kavistir', async () => {
+  await render(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  await olc(120);
+
+  expect(screen.getByTestId('cizgi-kavis', gizliDahil)).toBeTruthy();
+  expect(screen.queryByTestId('cizgi-dalga', gizliDahil)).toBeNull();
+});
+
+test('dalga bicimi secilince dalgali cizgi cizilir, genislik yine basliktan gelir', async () => {
+  await render(<CizgiliBaslik cizgi="dalga">Ana sayfa</CizgiliBaslik>);
+  await olc(150);
+
+  expect(screen.getByTestId('cizgi-dalga', gizliDahil)).toBeTruthy();
+  expect(screen.queryByTestId('cizgi-kavis', gizliDahil)).toBeNull();
+  expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(150);
+});
