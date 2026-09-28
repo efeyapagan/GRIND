@@ -10,7 +10,9 @@ using Grind.Api.Repositories;
 namespace Grind.Api.Services;
 
 /// <summary>
-/// Ana ekrandaki haftalık sıralama (#418) -- ÇAĞIRAN ve arkadaşları (#425).
+/// Ana ekrandaki arkadaş sıralaması (#418) -- ÇAĞIRAN ve arkadaşları (#425). #420'den beri
+/// "bu hafta"ya sabit değil: istemcinin istediği DÖNEMDE (takvimin gösterdiği hafta ya da ay)
+/// hesaplanır; parametresiz çağrı bugünkü haftadır. Sınıf ve uç adındaki "weekly" o günden kalma.
 ///
 /// YETKİLENDİRME (CLAUDE.md'deki "herkese açık antrenman verisi" istisnasının genişlemesi):
 /// haftalık özet yalnızca ARKADAŞLARA (karşılıklı takip, #281) ve yalnızca gizlilik seviyesi
@@ -19,7 +21,7 @@ namespace Grind.Api.Services;
 /// antrenman yapıp yapmadığına dair bir ipucu taşımamalı.
 ///
 /// Tüm hesap SORGULANIR, saklanmaz (CLAUDE.md, Veritabanı Tasarım Kuralları): iki sorgu -- biri
-/// arkadaş listesi, biri o arkadaşların bu haftaki oturum toplamları. Arkadaş başına istek yok.
+/// arkadaş listesi, biri o arkadaşların dönemdeki oturum toplamları. Arkadaş başına istek yok.
 /// </summary>
 public class FriendWeeklyService(
     IFollowRepository followRepository,
@@ -29,9 +31,13 @@ public class FriendWeeklyService(
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFriendWeeklyService
 {
-    public async Task<IReadOnlyList<WeeklyStandingResponse>> GetAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StandingResponse>> GetAsync(
+        StandingRangeQuery query, CancellationToken cancellationToken = default)
     {
+        var bugun = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
+        // Doğrulama her sorgudan ÖNCE: bozuk aralık veritabanına hiç gitmez.
+        var (donemBasi, donemSonu) = StandingRange.Resolve(query.From, query.To, bugun);
+
         var arkadaslar = (await followRepository.GetFriendsForWeeklyAsync(currentUser.UserId, cancellationToken))
             .Where(a => a.PrivacyLevel != PrivacyLevel.Gizli)
             .ToList();
@@ -45,11 +51,9 @@ public class FriendWeeklyService(
                 kendisi.PrivacyLevel, kendisi.WeeklyTargetDays))
             .ToList();
 
-        var bugun = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
-        var haftaBasi = StreakCalculator.WeekStart(bugun);
-        // Hafta sonunun UTC karşılığı: Pazar'ın SONU = ertesi Pazartesi'nin başlangıcı (hariç).
-        var (baslangicUtc, _) = TurkeyDay.RangeForLocalDate(haftaBasi);
-        var (_, bitisUtc) = TurkeyDay.RangeForLocalDate(haftaBasi.AddDays(6));
+        // Dönem sonunun UTC karşılığı: son günün SONU = ertesi günün başlangıcı (hariç).
+        var (baslangicUtc, _) = TurkeyDay.RangeForLocalDate(donemBasi);
+        var (_, bitisUtc) = TurkeyDay.RangeForLocalDate(donemSonu);
 
         var idler = satirSahipleri.Select(a => a.Id).ToList();
         var oturumlar = await sessionRepository.GetSessionAggregatesForUsersAsync(
@@ -63,7 +67,7 @@ public class FriendWeeklyService(
             .ToList();
     }
 
-    private static WeeklyStandingResponse Satir(
+    private static StandingResponse Satir(
         FriendRef arkadas,
         IEnumerable<UserSessionAggregate> oturumlar,
         DateOnly bugun,
@@ -75,13 +79,14 @@ public class FriendWeeklyService(
         var gunler = liste.Select(o => TurkeyDay.LocalDateOf(o.StartedAt)).ToHashSet();
         var avatarGuncelleme = avatarlar.TryGetValue(arkadas.Id, out var an) ? an : (DateTime?)null;
 
-        return new WeeklyStandingResponse(
+        return new StandingResponse(
             arkadas.Username,
             arkadas.DisplayName,
             avatarGuncelleme is not null,
             avatarGuncelleme is { } guncelleme ? AvatarVersion.Of(guncelleme) : null,
             gunler.Count,
             arkadas.WeeklyTargetDays,
+            // Geçmiş dönemde dönem dışındaki oturumlar okunmadığı için bu kendiliğinden false.
             gunler.Contains(bugun),
             liste.Sum(o => o.SetCount),
             liste.Sum(o => o.Volume),

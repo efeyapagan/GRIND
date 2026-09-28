@@ -16,14 +16,18 @@ namespace Grind.Api.Controllers;
 public class SocialController(IFriendWeeklyService friendWeeklyService) : ControllerBase
 {
     /// <summary>
-    /// Haftalık sıralama: ÇAĞIRAN ve arkadaşları (#425). Gün sayısı, hedef, bugün antrenman
-    /// yaptı mı, hacim ve set. Sıralama istemcide (bir arayüz kararı); gizlilik seviyesi
-    /// <c>Gizli</c> olan ARKADAŞ yoktur, ama çağıranın kendi satırı her zaman vardır.
+    /// Arkadaş sıralaması: ÇAĞIRAN ve arkadaşları (#425), istenen DÖNEMDE (#420 — takvimin
+    /// gösterdiği hafta ya da ay; <c>from</c>/<c>to</c> ikisi birden ya da hiçbiri, hiçbiri = bu
+    /// hafta, en fazla 31 gün). Gün sayısı, hedef, bugün antrenman yaptı mı, hacim ve set.
+    /// Sıralama istemcide (bir arayüz kararı); gizlilik seviyesi <c>Gizli</c> olan ARKADAŞ yoktur,
+    /// ama çağıranın kendi satırı her zaman vardır. Yol adındaki "weekly" #418'den kalma: ikinci bir
+    /// uç açmak yerine bu uç genişletildi.
     /// </summary>
     [HttpGet("weekly")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<IReadOnlyList<WeeklyStandingResponse>>> GetWeeklyStandings(
-        CancellationToken cancellationToken)
-        => Ok(await friendWeeklyService.GetAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<StandingResponse>>> GetStandings(
+        [FromQuery] StandingRangeQuery query, CancellationToken cancellationToken)
+        => Ok(await friendWeeklyService.GetAsync(query, cancellationToken));
 }

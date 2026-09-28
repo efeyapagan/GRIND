@@ -4,24 +4,27 @@ import { Crown, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import { formatWeight } from '@grind/shared/lib/format';
-import { hedefOrani, type ArkadasHaftasi } from '@grind/shared/lib/arkadasSiralamasi';
+import { donemHedefi, hedefOrani, type ArkadasDonemi } from '@grind/shared/lib/arkadasSiralamasi';
+import type { TakvimGorunumu } from '@grind/shared/lib/takvim';
 import ProfilFotografi from './ProfilFotografi';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
-  arkadas: ArkadasHaftasi;
+  arkadas: ArkadasDonemi;
+  /** #420: takvimin donemi -- aylikta hedef x4 gosterilir. */
+  gorunum: TakvimGorunumu;
   /** Listenin en ustundeki satir (#418): yalnizca bir kisi lider rozeti alir. */
   lider: boolean;
 }
 
 /**
- * Arkadas karsilastirmasinin bir satiri (#418): fotograf, ad, haftalik ilerleme, bugun isareti,
- * haftalik hacim. Dokununca o kisinin profiline gider.
+ * Arkadas karsilastirmasinin bir satiri (#418): fotograf, ad, DONEMDEKI ilerleme (#420), bugun
+ * isareti, donemdeki hacim. Dokununca o kisinin profiline gider.
  *
  * Hedefi olmayan arkadas (kullanici karari) cubuk yerine yalnizca gun sayisini gosterir --
  * "0/0" gibi anlamsiz bir oran cizmek yerine ne yaptigini soyler.
  */
-export default function ArkadasSatiri({ arkadas, lider }: Props) {
+export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
   const { t } = useTranslation();
   const dil = useDil();
   const router = useRouter();
@@ -29,8 +32,8 @@ export default function ArkadasSatiri({ arkadas, lider }: Props) {
 
   const kendisi = arkadas.isSelf === true;
   const ad = arkadas.displayName ?? arkadas.username ?? '';
-  const gun = arkadas.trainedDaysThisWeek ?? 0;
-  const oran = hedefOrani(arkadas);
+  const gun = arkadas.trainedDays ?? 0;
+  const oran = hedefOrani(arkadas, gorunum);
 
   return (
     <Pressable
@@ -79,13 +82,13 @@ export default function ArkadasSatiri({ arkadas, lider }: Props) {
               <View className="h-full rounded-full bg-accent" style={{ width: `${Math.round(oran * 100)}%` }} />
             </View>
             <Text className="shrink-0 text-label text-muted">
-              {t('arkadaslar.hedefliGun', { gun, hedef: arkadas.weeklyTargetDays })}
+              {t('arkadaslar.hedefliGun', { gun, hedef: donemHedefi(arkadas, gorunum) })}
             </Text>
           </View>
         )}
       </View>
       <Text className="shrink-0 text-label text-muted">
-        {t('arkadaslar.haftalikHacim', { kg: formatWeight(arkadas.weeklyVolume ?? 0, dil) })}
+        {t('arkadaslar.haftalikHacim', { kg: formatWeight(arkadas.volume ?? 0, dil) })}
       </Text>
     </Pressable>
   );

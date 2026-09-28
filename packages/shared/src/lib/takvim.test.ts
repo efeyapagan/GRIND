@@ -1,5 +1,15 @@
 import { expect, test } from 'vitest';
-import { ayBasligi, ayIzgarasi, gezilebilirMi, gunBasligi, haftaGunleri, kaydir, setKademesi } from './takvim';
+import {
+  ayBasligi,
+  ayIzgarasi,
+  gezilebilirMi,
+  gorunumAraligi,
+  gunBasligi,
+  haftaGunleri,
+  kaydir,
+  setKademesi,
+  sonDonemler,
+} from './takvim';
 
 test('ay izgarasi Pazartesi baslar; ay disindaki hucreler bostur', () => {
   // 1 Eylul 2026 Salı, 30 Eylul Carsamba.
@@ -70,4 +80,30 @@ test('kaydirma haftalikta 7 gun, aylikta bir ay ilerler', () => {
   expect(kaydir('hafta', '2026-09-25', -1)).toBe('2026-09-18');
   expect(kaydir('ay', '2026-09-25', 1)).toBe('2026-10-01');
   expect(kaydir('ay', '2026-09-25', -1)).toBe('2026-08-01');
+});
+
+// ---- Donem secici (#420) ----
+
+/**
+ * Tum arkadaslar ekraninin donem penceresi: bugunun doneminden GERIYE dogru son donemler, en
+ * yenisi basta. Her oge o donemin icinde bir gun (takvimin `gosterilen`i gibi) -- aralik
+ * `gorunumAraligi` ile ayni kuraldan turer, ikinci bir donem hesabi yoktur.
+ */
+test('son haftalar bugunun haftasindan geriye, en yenisi basta', () => {
+  const haftalar = sonDonemler('hafta', '2026-09-30', 3).map((gun) => gorunumAraligi('hafta', gun).from);
+
+  expect(haftalar).toEqual(['2026-09-28', '2026-09-21', '2026-09-14']);
+});
+
+test('son aylar bugunun ayindan geriye ve yil gecisini asar', () => {
+  const aylar = sonDonemler('ay', '2026-02-10', 3).map((gun) => gorunumAraligi('ay', gun).from);
+
+  expect(aylar).toEqual(['2026-02-01', '2026-01-01', '2025-12-01']);
+});
+
+/** Gelecege gidilmez (#81): listenin ilk ogesi bugunun donemidir, sonrasi yoktur. */
+test('listede gelecek donem yoktur', () => {
+  const [ilk] = sonDonemler('hafta', '2026-09-30', 5);
+
+  expect(gezilebilirMi('hafta', ilk, 1, '2026-09-30')).toBe(false);
 });

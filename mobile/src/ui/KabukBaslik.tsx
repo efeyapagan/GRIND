@@ -7,6 +7,7 @@ import { useOkunmamisBildirimSayisi, useOpenSession } from '@grind/shared/api/qu
 import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi, sabitGeriHedefi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
+import DonemSecici from '../components/DonemSecici';
 import YorumDiliSecici from '../components/YorumDiliSecici';
 import BarSagUcu from './BarSagUcu';
 import CizgiliBaslik from './CizgiliBaslik';
@@ -35,6 +36,9 @@ import { useIkonRenk } from './renkler';
  * #480: "GRIND" yazisinin durdugu her yerde, ACIK ANTRENMAN varken yerini gecen sure alir
  * (`BarSagUcu`) -- kullanici baska bir ekrana gectiginde antrenmaninin surdugunu gorur.
  *
+ * #420: tum arkadaslar ekraninda "GRIND"in yerini donem secici (takvim tusu) alir -- #199'un
+ * bayragiyla ayni desen.
+ *
  * #487: antrenman barinin basligi oturuma gore degisir ("Antrenmana basla" -> "Antrenman") ve
  * barin yuksekligi artik ACIK bir sabittir (`ANTRENMAN_BARI_YUKSEKLIGI`) -- dinlenme sayacinin
  * genis paneli ayni sabitle cizilir ve bari TAM kapatir.
@@ -48,6 +52,7 @@ export default function KabukBaslik() {
   const router = useRouter();
   const anaSayfa = pathname === '/';
   const yorumlarEkrani = pathname === '/insights';
+  const arkadaslarEkrani = pathname === '/arkadaslar';
   const { data: okunmamis = 0 } = useOkunmamisBildirimSayisi(anaSayfa);
   const { data: acikOturum } = useOpenSession();
 
@@ -178,6 +183,9 @@ export default function KabukBaslik() {
         ) : yorumlarEkrani ? (
           // #199: GRINDY ekraninda "GRIND" yazisinin yerini yorum dilinin bayragi alir.
           <YorumDiliSecici />
+        ) : arkadaslarEkrani ? (
+          // #420: tum arkadaslar ekraninda en sagda donem secici (takvim tusu); solda geri tusu.
+          <DonemSecici />
         ) : (
           <BarSagUcu />
         )}
