@@ -4,9 +4,15 @@ import { useOpenSession } from '@grind/shared/api/queries';
 import { RestTimerProvider, useRestTimer } from '@grind/shared/restTimer';
 import { dinlenmeBaslat, duraklat } from '@grind/shared/lib/dinlenme';
 import DinlenmeKabugu, { DinlenmeGostergesi } from './DinlenmeKabugu';
+import { ANTRENMAN_BARI_YUKSEKLIGI } from '../ui/olculer';
 
 jest.mock('@grind/shared/api/queries', () => ({ useOpenSession: jest.fn() }));
-jest.mock('expo-router', () => ({ usePathname: () => '/' }));
+let mockPathname = '/';
+jest.mock('expo-router', () => ({ usePathname: () => mockPathname }));
+
+beforeEach(() => {
+  mockPathname = '/';
+});
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
 jest.mock('expo-keep-awake', () => ({
   activateKeepAwakeAsync: jest.fn(() => Promise.resolve()),
@@ -80,4 +86,20 @@ test('duraklatilmis sayac ne genis panelde ne gostergede cizilir', async () => {
 
   // Ne kalan sure ne de sayaca ait herhangi bir metin cizilir.
   expect(screen.queryByText(/\d:\d\d/)).toBeNull();
+});
+
+/**
+ * #487 (kullanici bildirdi): genis panel `h-12` (48 px) iken antrenman barindan kisa kaliyordu ve
+ * basligin altindaki kavisli turuncu cizgi panelin ALTINDAN gorunuyordu. Panel bari TAM kapatmali;
+ * iki yer de AYNI sabitten okur (bar tarafi: KabukBaslik.test.tsx).
+ */
+test('genis panel antrenman bariyla ayni yukseklikte cizilir', async () => {
+  mockPathname = '/antrenman';
+  useOpenSessionMock.mockReturnValue({ data: { id: 7, isOpen: true }, isSuccess: true });
+
+  await render(<Kabuk />);
+
+  expect(screen.getByTestId('dinlenme-paneli').props.style).toEqual(
+    expect.objectContaining({ height: ANTRENMAN_BARI_YUKSEKLIGI }),
+  );
 });

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import KabukBaslik from './KabukBaslik';
+import { ANTRENMAN_BARI_YUKSEKLIGI } from './olculer';
 
 const mockPush = jest.fn();
 let mockPathname = '/';
@@ -170,4 +171,43 @@ test('antrenman ekraninda da acik antrenman varken sure gorunur', async () => {
   expect(screen.queryByText('GRIND')).toBeNull();
   expect(screen.getByText('5:00')).toBeTruthy();
   jest.useRealTimers();
+});
+
+/**
+ * #487 (kullanici karari): antrenman sururken bar "Antrenmana basla" yaziyordu. Acik oturumda
+ * baslik "Antrenman" olur; cizginin kisalmasi `CizgiliBaslik`in kendi olcumunden gelir
+ * (bkz. CizgiliBaslik.test.tsx).
+ */
+test('acik antrenmanda bar basligi Antrenman olur', async () => {
+  mockPathname = '/antrenman';
+  mockAcikOturum = { isOpen: true, startedAt: '2026-09-20T12:29:56Z' };
+
+  await render(<KabukBaslik />);
+
+  expect(screen.getByRole('header')).toHaveTextContent('Antrenman');
+  expect(screen.queryByText('Antrenmana başla')).toBeNull();
+});
+
+/** AYIRT EDICI: oturum yokken baslik bugunku haliyle kalir. */
+test('acik antrenman yokken bar basligi Antrenmana basla kalir', async () => {
+  mockPathname = '/antrenman';
+
+  await render(<KabukBaslik />);
+
+  expect(screen.getByText('Antrenmana başla')).toBeTruthy();
+});
+
+/**
+ * #487: dinlenme sayacinin genis paneli bu barin USTUNE oturur ve onu TAM kapatmali -- panel
+ * kisa kalinca basligin altindaki turuncu cizgi altindan gorunuyordu. Iki yer de AYNI sabitten
+ * okur (panel tarafi: DinlenmeKabugu.test.tsx).
+ */
+test('antrenman bari paylasilan yukseklik sabitini kullanir', async () => {
+  mockPathname = '/antrenman';
+
+  await render(<KabukBaslik />);
+
+  expect(screen.getByTestId('antrenman-bari').props.style).toEqual(
+    expect.objectContaining({ height: ANTRENMAN_BARI_YUKSEKLIGI }),
+  );
 });

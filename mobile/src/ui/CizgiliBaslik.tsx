@@ -49,7 +49,7 @@ export default function CizgiliBaslik({ children }: { children: string }) {
         style={[{ height: CIZGI_YUKSEKLIGI }, pencere]}
       >
         {genislik > 0 && (
-          <Svg width={genislik} height={CIZGI_YUKSEKLIGI}>
+          <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>
             {/* Ortasi hafif yukari kalkan, sagda incelen el cizimi bir kavis. */}
             <Path
               d={`M2 ${CIZGI_YUKSEKLIGI - 3} Q ${genislik * 0.45} 1 ${genislik - 2} ${CIZGI_YUKSEKLIGI - 5}`}
