@@ -1,15 +1,20 @@
 import type { Dil } from '../i18n/dil';
 
 /**
- * Turkiye 2016'dan beri yaz saati uygulamiyor (sabit UTC+3), ama zaman dilimini yine de
- * cihazin ayarina degil acikca 'Europe/Istanbul'a baglıyoruz -- aksi halde bu fonksiyonlar
- * calistigi makinenin/CI'in yerel saatine bagli, kararsiz sonuclar uretir.
+ * Turkiye 2016'dan beri yaz saati uygulamiyor (sabit UTC+3). `ayniTrGunuMu` backend'in KENDI
+ * gun sinirini (her zaman TR) tahmin etmeye calistigi icin bunu acikca kullanmaya devam eder --
+ * cihaz farkli bir dilimdeyse bile.
  */
 const TR_ZAMAN_DILIMI = 'Europe/Istanbul';
 
-function tarihParcalariniAl(iso: string): { gun: string; ay: string; yil: string } {
+/**
+ * `zamanDilimi` verilmezse `Intl` calistigi ortamin (cihazin/makinenin) yerel dilimini kullanir --
+ * antrenman saati ve takvim gecisi gibi goruntuleme yerlerinde istenen budur (#434). Sabit bir
+ * dilim gereken tek yer (`ayniTrGunuMu`) `TR_ZAMAN_DILIMI`'ni acikca gecer.
+ */
+function tarihParcalariniAl(iso: string, zamanDilimi?: string): { gun: string; ay: string; yil: string } {
   const bicimlendirici = new Intl.DateTimeFormat('en-US', {
-    timeZone: TR_ZAMAN_DILIMI,
+    timeZone: zamanDilimi,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -23,11 +28,12 @@ function tarihParcalariniAl(iso: string): { gun: string; ay: string; yil: string
  * Iki ISO zaman damgasi TR takvim gununde ayni mi (issue #260 -- "bugun icin baska bir olcum
  * girdiniz" tespiti). Backend'in ayni kontrolu (`TurkeyDay.RangeFor`) ile ayni mantik, istemci
  * tarafinda: yalnizca UI'nin "popup gostersin mi" karari icin, sunucudaki gercek 409 kontrolunun
- * YERINE gecmez.
+ * YERINE gecmez. Backend gun sinirini HER ZAMAN TR'ye gore ciziyor (CLAUDE.md) -- bu yuzden #434
+ * ile digerlerinin aksine cihazin dilimine GECMEZ, TR'yi acikca kullanir.
  */
 export function ayniTrGunuMu(isoA: string, isoB: string): boolean {
-  const a = tarihParcalariniAl(isoA);
-  const b = tarihParcalariniAl(isoB);
+  const a = tarihParcalariniAl(isoA, TR_ZAMAN_DILIMI);
+  const b = tarihParcalariniAl(isoB, TR_ZAMAN_DILIMI);
   return a.gun === b.gun && a.ay === b.ay && a.yil === b.yil;
 }
 
@@ -45,7 +51,6 @@ export function formatTarih(iso: string, dil: Dil): string {
 
 export function formatSaat(iso: string): string {
   const bicimlendirici = new Intl.DateTimeFormat('en-GB', {
-    timeZone: TR_ZAMAN_DILIMI,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -71,19 +76,18 @@ export function gecenSureMetni(ms: number): string {
 }
 
 /**
- * Grafik ekseni icin kisa tarih ("12 Eyl" / "12 Sep"), TR gunune gore. Ingilizcede ay kisaltmasi
- * `en-US`'ten alinir ve gun-ay sirasiyla elle dizilir: `en-GB` yeni ICU surumlerinde "Sept" verir.
+ * Grafik ekseni icin kisa tarih ("12 Eyl" / "12 Sep"), cihazin yerel gunune gore (#434).
+ * Ingilizcede ay kisaltmasi `en-US`'ten alinir ve gun-ay sirasiyla elle dizilir: `en-GB` yeni ICU
+ * surumlerinde "Sept" verir.
  */
 export function formatKisaTarih(iso: string, dil: Dil): string {
   if (dil === 'tr') {
     return new Intl.DateTimeFormat('tr-TR', {
-      timeZone: TR_ZAMAN_DILIMI,
       day: 'numeric',
       month: 'short',
     }).format(new Date(iso));
   }
   const parcalar = new Intl.DateTimeFormat('en-US', {
-    timeZone: TR_ZAMAN_DILIMI,
     day: 'numeric',
     month: 'short',
   }).formatToParts(new Date(iso));
@@ -112,7 +116,11 @@ export function saatDakika(saniye: number): { saat: number; dakika: number } {
   return { saat: Math.floor(toplamDakika / 60), dakika: toplamDakika % 60 };
 }
 
-/** "YYYY-MM-DD": TR bugununden `gun` gun onceki TR gunu (API'nin DateOnly `From` parametresi icin). */
+/**
+ * "YYYY-MM-DD": cihazin bugununden (#434) `gun` gun onceki gun (API'nin DateOnly `From` parametresi
+ * icin ve `Takvim.tsx`'in "bugun" siniri icin). `ayniTrGunuMu`'nun aksine backend'in TR gun sinirini
+ * TAKLIT ETMEZ -- kullanicinin "su an hangi gundeyim" sorusuna cevap verir.
+ */
 export function trBugundenOnce(gun: number, simdi: Date = new Date()): string {
   const { gun: ayinGunu, ay, yil } = tarihParcalariniAl(
     new Date(simdi.getTime() - gun * 86_400_000).toISOString(),
