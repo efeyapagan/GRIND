@@ -5,6 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import SablonVitrinKarti from '../ui/SablonVitrinKarti';
+import SablonKayitliKarti from '../ui/SablonKayitliKarti';
 import SablonMenusu, { type Kutu } from './SablonMenusu';
 import SablonKaruseli from './SablonKaruseli';
 
@@ -42,6 +43,14 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
 
   const kartGenisligi = Math.min(Math.round(ekranGenisligi * KART_ORANI), EN_GENIS_KART);
 
+  // #467: kendi sablonlari (karusel) ile baskasindan kaydedilenler (dikey liste) ayri gosterilir.
+  // `!s.savedFromUsername` (strict `=== null` DEGIL): eski/mock sablon nesnelerinde alan hic yoksa
+  // (undefined) da kendi sablonu sayilmali.
+  const kendiSablonlari = (sablonlar ?? []).filter((s) => !s.savedFromUsername);
+  const kaydedilenSablonlar = [...(sablonlar ?? []).filter((s) => s.savedFromUsername)].sort(
+    (a, b) => new Date(b.lastUsedAt ?? 0).getTime() - new Date(a.lastUsedAt ?? 0).getTime(),
+  );
+
   function menuyuAc(sablon: Sablon) {
     setMenu({ sablon, kaynak: null });
     kartlar.current.get(sablon.id)?.measureInWindow((x, y, genislik) => {
@@ -54,7 +63,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
       <View className="flex-col gap-3">
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-heading text-fg">{t('sablonlar.sablonlarim')}</Text>
-          {sablonlar && sablonlar.length > 0 && (
+          {kendiSablonlari.length > 0 && (
             // RN'de Text rengi miras ALINMAZ: `Link`e verilen renk metne gecmez, metin ayri bir Text.
             <Link href="/templates" className="min-h-11 justify-center">
               <Text className="text-label text-accent-soft">{t('sablonlar.duzenleListe')}</Text>
@@ -68,11 +77,11 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             {t('sablonlar.hata')}
           </Text>
         )}
-        {sablonlar && sablonlar.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicSablonYok')}</Text>}
+        {sablonlar && kendiSablonlari.length === 0 && <Text className="text-body text-muted">{t('sablonlar.hicSablonYok')}</Text>}
 
-        {sablonlar && sablonlar.length > 0 && (
+        {kendiSablonlari.length > 0 && (
           <SablonKaruseli
-            sablonlar={sablonlar}
+            sablonlar={kendiSablonlari}
             kartGenisligi={kartGenisligi}
             aralik={KART_ARALIGI}
             onBasla={(sablon) => onBasla(sablon.id)}
@@ -97,6 +106,23 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
           />
         )}
       </View>
+
+      {kaydedilenSablonlar.length > 0 && (
+        <View className="flex-col gap-3">
+          <Text className="text-heading text-fg">{t('sablonlar.kaydedilenlerBasligi')}</Text>
+          {kaydedilenSablonlar.map((sablon) => (
+            <SablonKayitliKarti
+              key={sablon.id}
+              ad={sablon.name}
+              kaynakKullaniciAdi={sablon.savedFromUsername}
+              ozet={sablonOzeti(sablon)}
+              onBasla={() => onBasla(sablon.id)}
+              onMenu={() => menuyuAc(sablon)}
+              disabled={bekliyor}
+            />
+          ))}
+        </View>
+      )}
 
       {menu && (
         <SablonMenusu
