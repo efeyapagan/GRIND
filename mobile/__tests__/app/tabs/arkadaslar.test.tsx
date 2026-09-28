@@ -49,7 +49,7 @@ test('ekran ana sayfanin donemiyle acilir', async () => {
   expect(useArkadasDonemiMock).toHaveBeenLastCalledWith('2026-08-01', '2026-08-31');
 });
 
-/** Ana sayfadaki 7 sinirinin tersine burada HERKES listelenir. */
+/** Ana sayfadaki 6 sinirinin tersine burada HERKES listelenir. */
 test('ekranda tum arkadaslar listelenir', async () => {
   useArkadasDonemiMock.mockReturnValue({
     data: Array.from({ length: 10 }, (_, i) => arkadas(`k${i}`, i % 4)),

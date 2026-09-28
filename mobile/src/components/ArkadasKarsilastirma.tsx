@@ -9,9 +9,9 @@ import ArkadasSatiri from './ArkadasSatiri';
 
 /**
  * Ana ekranda gosterilen satir sayisi; gerisi "Tum arkadaslari gor" ekraninda. #418'de 5'ti, #420'de
- * 7 oldu (kullanici karari: "en fazla en iyi 7 arkadas").
+ * 7, #518'de 6 oldu (kullanici karari).
  */
-export const ANA_EKRAN_SATIRI = 7;
+export const ANA_EKRAN_SATIRI = 6;
 
 /**
  * Ana ekrandaki arkadas karsilastirmasi (#418): sira `arkadaslariSirala` ile hesaplanir (ortak
