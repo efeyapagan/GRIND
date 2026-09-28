@@ -40,3 +40,24 @@ export function sablondaOlmayanHareketVarMi(
   const sablondakiler = new Set(sablonHareketleri.map((hareket) => hareket.exerciseId));
   return ilerleme.some((hareket) => !sablondakiler.has(hareket.exerciseId));
 }
+
+/**
+ * Antrenmanin hareket listesi sablonundan SAPTI mi -- hareket eklenmis YA DA cikarilmis (#499,
+ * kullanici karari): "sablondan farkli bir egzersiz eklendiyse veya cikarildiysa save as template
+ * ciksin, degisiklik yapilmadiysa gerek yok". Antrenman ekranindaki kisayol bunu kullanir.
+ *
+ * ⚠️ Bitirme ekranindaki SORU hala `sablondaOlmayanHareketVarMi` ile karar verir (yalnizca
+ * EKLEME): orada "o gun o hareketi atlamak" yeni bir sablon istegi sayilmaz. Iki kural bilerek
+ * ayridir; birini degistiren otekine de bakmali.
+ */
+export function sablondanSapmaVarMi(
+  ilerleme: readonly HareketIlerlemesi[],
+  sablonHareketleri: readonly { exerciseId: number }[],
+): boolean {
+  const sablondakiler = new Set(sablonHareketleri.map((hareket) => hareket.exerciseId));
+  const oturumdakiler = new Set(ilerleme.map((hareket) => hareket.exerciseId));
+  if (sablondakiler.size !== oturumdakiler.size) {
+    return true;
+  }
+  return [...sablondakiler].some((id) => !oturumdakiler.has(id));
+}
