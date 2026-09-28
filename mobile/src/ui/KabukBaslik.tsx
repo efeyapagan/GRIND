@@ -8,6 +8,7 @@ import { useHeaderTitle } from '@grind/shared/pageTitle';
 import { altEkranMi, geriHedefi, profilAnaEkraniMi } from '@grind/shared/lib/geriKaydirma';
 import { DinlenmeGostergesi } from '../components/DinlenmeKabugu';
 import YorumDiliSecici from '../components/YorumDiliSecici';
+import BarSagUcu from './BarSagUcu';
 import CizgiliBaslik from './CizgiliBaslik';
 import GrindyMaskot from './GrindyMaskot';
 import { useIkonRenk } from './renkler';
@@ -29,6 +30,9 @@ import { useIkonRenk } from './renkler';
  * diger ekranlarda bar degismez.
  *
  * #325: zilde okunmamis sayisi rozeti; sayi yalnizca ana sayfada istenir.
+ *
+ * #480: "GRIND" yazisinin durdugu her yerde, ACIK ANTRENMAN varken yerini gecen sure alir
+ * (`BarSagUcu`) -- kullanici baska bir ekrana gectiginde antrenmaninin surdugunu gorur.
  */
 export default function KabukBaslik() {
   const ikonRenk = useIkonRenk();
@@ -59,7 +63,7 @@ export default function KabukBaslik() {
       <View style={{ paddingTop: insets.top }} className="bg-bg">
         <View className="relative flex-row items-center justify-between gap-3 px-4 pb-1 pt-2">
           <CizgiliBaslik>{t('sablonlar.antrenmanaBasla')}</CizgiliBaslik>
-          <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+          <BarSagUcu />
           <DinlenmeGostergesi />
         </View>
       </View>
@@ -149,7 +153,7 @@ export default function KabukBaslik() {
           // #199: GRINDY ekraninda "GRIND" yazisinin yerini yorum dilinin bayragi alir.
           <YorumDiliSecici />
         ) : (
-          <Text className="shrink-0 text-label text-muted uppercase">GRIND</Text>
+          <BarSagUcu />
         )}
         {/* EN SON cocuk: ust uste binen kardeslerin (baslik, GRIND) USTUNDE kalsin -- yoksa baslik
             yazisi gostergenin uzerine cizilir ve dokunusu yakalayabilir. */}
