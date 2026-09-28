@@ -10,6 +10,9 @@ import {
   kalanSureMetni,
   sureEkle,
   VARSAYILAN_DINLENME_SN,
+  duraklat,
+  surdur,
+  duraklatildiMi,
 } from './dinlenme';
 
 const T0 = 1_000_000;
@@ -91,4 +94,74 @@ describe('dinlenme kaydi (issue #190 -- kalici depo)', () => {
     expect(dinlenmeKaydiAyristir('{ bozuk json', 7, 1, T0)).toBeNull();
     expect(dinlenmeKaydiAyristir('{"sessionId":7}', 7, 1, T0)).toBeNull();
   });
+});
+
+// ---- Duraklatma (#477) ----
+
+const AN = T0;
+
+/** Bitirme ekranindayken sure akmamali: kalan, zaman gecse de sabit kalir. */
+test('duraklatilmis sayacin kalani zaman gecse de degismez', () => {
+  const dinlenme = duraklat(dinlenmeBaslat(AN, 90)!, AN + 30_000);
+
+  expect(kalanMs(dinlenme, AN + 30_000)).toBe(60_000);
+  expect(kalanMs(dinlenme, AN + 120_000)).toBe(60_000);
+});
+
+/** "Devam et" ile donulunce KALDIGI YERDEN surer: bitis ani duraklama kadar ileri kayar. */
+test('surdurulen sayac kaldigi yerden devam eder', () => {
+  const duraklatilmis = duraklat(dinlenmeBaslat(AN, 90)!, AN + 30_000);
+
+  const surdurulen = surdur(duraklatilmis, AN + 200_000);
+
+  expect(kalanMs(surdurulen, AN + 200_000)).toBe(60_000);
+  expect(kalanMs(surdurulen, AN + 210_000)).toBe(50_000);
+});
+
+/** Duraklatilmis sayac "bitti" saymaz; yoksa geri donunce bitmis gorunurdu. */
+test('duraklatilmis sayac beklerken bitmez', () => {
+  const dinlenme = duraklat(dinlenmeBaslat(AN, 90)!, AN + 10_000);
+
+  expect(bittiMi(dinlenme, AN + 10_000_000)).toBe(false);
+});
+
+/** Ilerleme cubugu da donar: duraklatilmisken oran sabit. */
+test('duraklatilmisken oran sabit kalir', () => {
+  const dinlenme = duraklat(dinlenmeBaslat(AN, 100)!, AN + 50_000);
+
+  expect(gecenOran(dinlenme, AN + 50_000)).toBeCloseTo(0.5, 5);
+  expect(gecenOran(dinlenme, AN + 900_000)).toBeCloseTo(0.5, 5);
+});
+
+/** Ekran iki kez odaklanabilir (ornegin geri/ileri); ikinci duraklatma kalani KAYDIRMAMALI. */
+test('ikinci kez duraklatmak kalani degistirmez', () => {
+  const bir = duraklat(dinlenmeBaslat(AN, 90)!, AN + 30_000);
+  const iki = duraklat(bir, AN + 120_000);
+
+  expect(kalanMs(iki, AN + 120_000)).toBe(60_000);
+});
+
+/** Duraklatilmamis bir sayaci surdurmek bir sey degistirmez (idempotent). */
+test('duraklatilmamis sayaci surdurmek zararsizdir', () => {
+  const dinlenme = dinlenmeBaslat(AN, 90)!;
+
+  expect(surdur(dinlenme, AN + 30_000)).toEqual(dinlenme);
+});
+
+test('duraklatilmis mi sorusu dogru cevaplanir', () => {
+  const calisan = dinlenmeBaslat(AN, 90)!;
+
+  expect(duraklatildiMi(calisan)).toBe(false);
+  expect(duraklatildiMi(duraklat(calisan, AN))).toBe(true);
+});
+
+/**
+ * Uygulama duraklatilmisken kapanirsa kayit geri yuklenebilmeli: duraklatilmis bir sayac
+ * "suresi dolmus" sayilip ATILMAMALI.
+ */
+test('duraklatilmis sayac kalici kayittan geri yuklenir', () => {
+  const dinlenme = duraklat(dinlenmeBaslat(AN, 90)!, AN + 30_000);
+  const ham = dinlenmeKaydiUret(7, 3, dinlenme);
+
+  expect(dinlenmeKaydiAyristir(ham, 7, 3, AN + 10_000_000)).toEqual(dinlenme);
 });

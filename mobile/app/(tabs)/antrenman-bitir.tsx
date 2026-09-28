@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   oturumBittiTazele,
@@ -16,6 +16,8 @@ import {
   type SablonTaslakHareketi,
 } from '@grind/shared/lib/sablonTaslagi';
 import { usePageTitle } from '@grind/shared/pageTitle';
+import { useRestTimer } from '@grind/shared/restTimer';
+import { duraklat, surdur } from '@grind/shared/lib/dinlenme';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
@@ -69,6 +71,27 @@ export default function AntrenmanBitirScreen() {
   );
   // #433: biten antrenmanin paylasim karti. Bitirme YANITINDAN gelir -- sure sunucunun hesabi.
   const [paylasim, setPaylasim] = useState<{ setCount: number; durationSeconds: number } | null>(null);
+  const [dinlenme, setDinlenme] = useRestTimer();
+  // Temizleyici kapanisinin BAYAT bir sayac gormemesi icin: odak birakilirken gecerli deger.
+  const dinlenmeRef = useRef(dinlenme);
+  dinlenmeRef.current = dinlenme;
+
+  /**
+   * #477: bu ekranda dinlenme sayaci DURAKLAR ve gorunmez. Kullanici zorlugu secerken dinlenmesi
+   * tukenmemeli; "Devam et" ile antrenmana donulunce sayac KALDIGI YERDEN surer.
+   *
+   * Duraklatma/surdurme odaga baglidir (ekranin monte olmasina degil): geri tusu, "Devam et" ve
+   * sekme degistirme ayni yoldan gecer. `duraklat`/`surdur` idempotent, iki kez odaklanmak zarar
+   * vermez.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      setDinlenme(dinlenmeRef.current ? duraklat(dinlenmeRef.current, Date.now()) : null);
+      return () => {
+        setDinlenme(dinlenmeRef.current ? surdur(dinlenmeRef.current, Date.now()) : null);
+      };
+    }, [setDinlenme]),
+  );
   // Paylasim penceresi kapanınca gidilecek yer (şablon sorusu ya da ana sayfa).
   const [sonrakiAdim, setSonrakiAdim] = useState<{ hareketler: SablonTaslakHareketi[]; sapma: boolean } | null>(
     null,
