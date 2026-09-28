@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import KabukBaslik from './KabukBaslik';
 import { ANTRENMAN_BARI_YUKSEKLIGI } from './olculer';
 
@@ -62,6 +62,31 @@ test('ana sayfada bildirim ve GRINDY dugmeleri GRIND yazisinin yerini alir', asy
 
   await fireEvent.press(screen.getByLabelText("GRINDY'ye git"));
   expect(mockPush).toHaveBeenCalledWith('/insights');
+});
+
+/**
+ * #524 (kullanici karari): Ana sayfa basligi "Antrenmana basla" ile AYNI yazi tipi/boyutta ve
+ * altinda dalgali cizgisi vardir; diger ekranlarin basligi duz metin kalir.
+ */
+test('ana sayfa basligi cizgilidir ve antrenman basligiyla ayni yazi stilindedir', async () => {
+  mockPathname = '/';
+  mockBaslik = 'Ana sayfa';
+  await render(<KabukBaslik />);
+
+  const baslik = screen.getByRole('header');
+  await act(async () => {
+    baslik.props.onLayout({ nativeEvent: { layout: { width: 120, height: 31 } } });
+  });
+  expect(baslik.props.className).toContain('text-title');
+  expect(baslik.props.className).toContain('font-bold');
+  expect(screen.getByTestId('baslik-cizgisi', { includeHiddenElements: true })).toBeTruthy();
+});
+
+test('ana sayfa disindaki ekranlarin basliginda cizgi yoktur', async () => {
+  mockPathname = '/templates';
+  await render(<KabukBaslik />);
+
+  expect(screen.queryByTestId('baslik-cizgisi', { includeHiddenElements: true })).toBeNull();
 });
 
 test('ana sayfa disinda GRIND yazisi durur, kisayollar yoktur', async () => {
