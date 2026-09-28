@@ -131,7 +131,7 @@ export default function KabukBaslik() {
 
   return (
     <View style={{ paddingTop: insets.top }} className="bg-bg">
-      <View className="relative h-16 flex-row items-center gap-2 px-4">
+      <View className={`relative flex-row items-center gap-2 px-4 ${anaSayfa ? 'h-[76px]' : 'h-16'}`}>
         {altEkranMi(pathname) && (
           <Pressable
             accessibilityRole="button"

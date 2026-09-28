@@ -89,15 +89,26 @@ export default function CizgiliBaslik({
         {genislik > 0 && (
           <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>
             {cizgi === 'dalga' ? (
-              // Iki kez inip cikan, sagda incelen dalga.
-              <Path
-                testID="cizgi-dalga"
-                d={`M2 ${CIZGI_YUKSEKLIGI - 4} C ${genislik * 0.15} 0 ${genislik * 0.3} 0 ${genislik * 0.45} ${CIZGI_YUKSEKLIGI - 4} S ${genislik * 0.75} ${CIZGI_YUKSEKLIGI} ${genislik - 2} 3`}
-                stroke={palet.accent}
-                strokeWidth={3}
-                strokeLinecap="round"
-                fill="none"
-              />
+              // Eskiz tarzi: kusursuz bir sinus degil, duzensiz inip cikan el cizimi bir dalga; ustune
+              // ince, kayik ikinci bir "tekrar" darbesi biner.
+              <>
+                <Path
+                  testID="cizgi-dalga"
+                  d={`M2 6 C ${genislik * 0.06} 2 ${genislik * 0.12} 1 ${genislik * 0.2} 4 S ${genislik * 0.3} 9 ${genislik * 0.4} 6 S ${genislik * 0.5} 0.5 ${genislik * 0.6} 4.5 S ${genislik * 0.72} 9 ${genislik * 0.82} 5.5 S ${genislik * 0.9} 2.5 ${genislik - 2} 4`}
+                  stroke={palet.accent}
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <Path
+                  d={`M${genislik * 0.04} 8 Q ${genislik * 0.35} 3 ${genislik * 0.7} 8.5`}
+                  stroke={palet.accent}
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  opacity={0.55}
+                  fill="none"
+                />
+              </>
             ) : (
               // Ortasi hafif yukari kalkan, sagda incelen el cizimi bir kavis.
               <Path
