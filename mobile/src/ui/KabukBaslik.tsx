@@ -142,9 +142,16 @@ export default function KabukBaslik() {
             <ChevronLeft color={ikonRenk.fg} size={22} />
           </Pressable>
         )}
-        <Text numberOfLines={1} className="flex-1 text-heading text-fg">
-          {baslik}
-        </Text>
+        {anaSayfa ? (
+          // #524: Ana sayfa basligi "Antrenmana basla" ile ayni stil + dalgali cizgi.
+          <View className="min-w-0 flex-1 flex-row">
+            <CizgiliBaslik cizgi="dalga">{baslik}</CizgiliBaslik>
+          </View>
+        ) : (
+          <Text numberOfLines={1} className="flex-1 text-heading text-fg">
+            {baslik}
+          </Text>
+        )}
         {anaSayfa ? (
           <>
             <Pressable
