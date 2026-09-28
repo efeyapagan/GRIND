@@ -476,4 +476,51 @@ public class WorkoutTemplateServiceTests
             Assert.Null(olusan.LastUsedAt);
         }
     }
+
+    // ---- Paylaşım override'ı (#467) ----
+
+    [Fact]
+    public async Task UpdateSharingAsync_override_yazar_ve_okunur()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+            Assert.Null(olusan.IsSharedOverride);
+
+            var guncel = await service.UpdateSharingAsync(olusan.Id, true);
+
+            Assert.True(guncel.IsSharedOverride);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateSharingAsync_null_ile_varsayilana_dondurulebilir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+            await service.UpdateSharingAsync(olusan.Id, false);
+
+            var guncel = await service.UpdateSharingAsync(olusan.Id, null);
+
+            Assert.Null(guncel.IsSharedOverride);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateSharingAsync_baskasinin_sablonunda_404_verir()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            var digerSablon = new WorkoutTemplate { User = digerKullanici, Name = UniqueName(), CreatedAt = DateTime.UtcNow };
+            context.Add(digerSablon);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateSharingAsync(digerSablon.Id, true));
+        }
+    }
 }

@@ -225,6 +225,15 @@ public class WorkoutTemplateService(
         }
     }
 
+    public async Task<TemplateResponse> UpdateSharingAsync(
+        long id, bool? overrideValue, CancellationToken cancellationToken = default)
+    {
+        var template = await OwnedOrThrowAsync(id, cancellationToken);
+        template.IsSharedOverride = overrideValue;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ToResponseAsync(template, cancellationToken);
+    }
+
     private async Task<WorkoutTemplate> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)
         => await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(TemplateNotFound);

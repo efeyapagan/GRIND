@@ -32,4 +32,11 @@ public interface IWorkoutTemplateService
     /// </summary>
     Task<IReadOnlyList<TemplateResponse>> ReorderAsync(
         ReorderTemplatesRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Paylaşım override'ını yazar (#467): null = varsayılana dön (hesabın PrivacyLevel'ine göre),
+    /// true/false şablon bazında zorlar. Başkasının şablonunda NotFoundException (404).
+    /// </summary>
+    Task<TemplateResponse> UpdateSharingAsync(
+        long id, bool? overrideValue, CancellationToken cancellationToken = default);
 }
