@@ -6,8 +6,11 @@ import Svg, { Path } from 'react-native-svg';
 import { useRenkPaleti } from './renkler';
 
 const CIZGI_YUKSEKLIGI = 10;
-/** Cizgi metnin hemen altinda baslar; yerlesime girmedigi icin bu bosluk stille verilir. */
-const CIZGI_BOSLUGU = 2;
+/**
+ * Cizgi metnin hemen altinda baslar; yerlesime girmedigi icin bu bosluk stille verilir.
+ * 2 px iken Turkce alt kuyruklar ("ş", "ğ") cizgiye DEGIYORDU (#502, simulatorde gorunur).
+ */
+const CIZGI_BOSLUGU = 5;
 const CIZIM_SURESI_MS = 1200;
 
 /**
@@ -26,12 +29,22 @@ const CIZIM_SURESI_MS = 1200;
  *   degisince `onLayout`u her zaman tetiklemiyor ve sifirlama ile olay arasindaki sira garanti
  *   degil. Olcum hangi metne ait oldugunu tasir; baska bir metne ait olcum yok sayilir, yani
  *   cizgi ya DOGRU uzunlukta cizilir ya hic cizilmez -- yanlis uzunlukta asla.
+ *
+ * #502 (kullanici bildirdi, #499'un iki yan etkisi):
+ * - Cizginin konumu YUZDE degil, olculen metin YUKSEKLIGI. `top: '100%'` React Native'de metin
+ *   kutusunun altina degil ~35 pt asagiya dusuyordu: cizgi baslikla sayfanin ilk basligi
+ *   arasindaki bosluga kaciyor, alti cizili bir baslik yerine basibos bir cizgi gibi duruyordu.
+ *   Olcum zaten `onLayout`tan geliyor; yukseklik de ayni olaydan alinir, ikinci bir kaynak yok.
+ * - Kokteki `self-start` KALKTI: saran barin `items-center`'ini eziyor ve basligi barin TEPESINE
+ *   yapistiriyordu (sagdaki GRIND ortada kaldigi icin ikisi hizasizdi). Cizgi zaten yerlesimin
+ *   disinda oldugu icin kokun yuksekligi metin kadardir; ortalama dogrudan metni ortalar.
  */
 export default function CizgiliBaslik({ children }: { children: string }) {
   const palet = useRenkPaleti();
-  const [olcum, setOlcum] = useState<{ metin: string; genislik: number } | null>(null);
+  const [olcum, setOlcum] = useState<{ metin: string; genislik: number; yukseklik: number } | null>(null);
   const ilerleme = useSharedValue(0);
-  const genislik = olcum?.metin === children ? olcum.genislik : 0;
+  const gecerli = olcum?.metin === children ? olcum : null;
+  const genislik = gecerli?.genislik ?? 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -47,13 +60,15 @@ export default function CizgiliBaslik({ children }: { children: string }) {
   const pencere = useAnimatedStyle(() => ({ width: genislik * ilerleme.value }), [genislik]);
 
   return (
-    <View className="flex-col self-start">
+    <View className="flex-col">
       <Text
         // Metin degisince yeniden monte olur: taze bir `onLayout` garanti edilir.
         key={children}
         accessibilityRole="header"
         className="text-title font-bold text-fg"
-        onLayout={(olay) => setOlcum({ metin: children, genislik: olay.nativeEvent.layout.width })}
+        onLayout={({ nativeEvent: { layout } }) =>
+          setOlcum({ metin: children, genislik: layout.width, yukseklik: layout.height })
+        }
       >
         {children}
       </Text>
@@ -62,7 +77,7 @@ export default function CizgiliBaslik({ children }: { children: string }) {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         className="absolute left-0 overflow-hidden"
-        style={[{ top: '100%', marginTop: CIZGI_BOSLUGU, height: CIZGI_YUKSEKLIGI }, pencere]}
+        style={[{ top: (gecerli?.yukseklik ?? 0) + CIZGI_BOSLUGU, height: CIZGI_YUKSEKLIGI }, pencere]}
       >
         {genislik > 0 && (
           <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>

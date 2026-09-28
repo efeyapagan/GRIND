@@ -89,7 +89,15 @@ export function profilAnaEkraniMi(konum: string): boolean {
  * Gecmise birakmak nereden girildigine gore (Sablonlarim, antrenman, bitirme sonrasi) farkli
  * yerlere dusuruyordu.
  */
-const SABIT_GERI_HEDEFLERI = new Map<string, string>([['/templates/new', '/antrenman']]);
+/**
+ * Antrenman ekraninin "Antrenmana basla" YUZU (#502). Duz `/antrenman` yetmez: o yol acik bir
+ * antrenman varken antrenmanin kendisini gosterir ve sablon olusturup cikan kullanici
+ * antrenmanin ortasina dusuyordu (kullanici bildirdi). Rota bu yuzden gorunumu ACIKCA ister;
+ * ekran parametreyi okur ve tuketir.
+ */
+export const BASLATMA_GORUNUMU_YOLU = '/antrenman?baslat=1';
+
+const SABIT_GERI_HEDEFLERI = new Map<string, string>([['/templates/new', BASLATMA_GORUNUMU_YOLU]]);
 
 export function sabitGeriHedefi(konum: string): string | null {
   return SABIT_GERI_HEDEFLERI.get(konum) ?? null;
