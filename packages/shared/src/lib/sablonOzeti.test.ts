@@ -7,7 +7,14 @@ function hareket(exerciseName: string, category: SablonHareketi['category'], pla
 }
 
 function sablon(exercises: SablonHareketi[]): Sablon {
-  return { id: 1, name: 'Push Day', exercises };
+  return {
+    id: 1,
+    name: 'Push Day',
+    exercises,
+    isSharedOverride: null,
+    savedFromUsername: null,
+    lastUsedAt: null,
+  };
 }
 
 /**
