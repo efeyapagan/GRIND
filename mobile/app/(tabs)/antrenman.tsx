@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import { useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus } from 'lucide-react-native';
+import { ChevronLeft, ClipboardList, Plus } from 'lucide-react-native';
 import {
   hareketiKaldir,
   setDegistiTazele,
@@ -304,9 +304,24 @@ export default function AntrenmanScreen() {
             {/* #153: zorluk sorusu artık bu başlıkta açılmıyor (kendi ekranı var), bu yüzden #151'in
                 soruyu kapatan X düğmesi de kalktı -- sol tarafta yalnızca durum rozeti kalır. */}
             {gorunenOturum?.isOpen && (
-              <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
-                <View className="size-2 rounded-full bg-success" />
-                <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
+              <View className="min-w-0 flex-row items-center gap-1">
+                {/* #487: antrenman ekrani bir sekme koku, ust barda geri tusu yok (#466) --
+                    sablondan antrenman baslatan kullanici Sablonlarim'a donemiyordu. Cikis
+                    "Devam ediyor" rozetinin SOLUNDA durur (kullanici karari). Yukseklik satiri
+                    buyutmesin diye kutu kucuk, dokunma alani `hitSlop` ile buyutulur. */}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('antrenman.sablonlaraDon')}
+                  onPress={() => router.navigate('/templates')}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}
+                  className="-ml-1 size-8 items-center justify-center"
+                >
+                  <ChevronLeft color={ikonRenk.fg} size={22} />
+                </Pressable>
+                <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1">
+                  <View className="size-2 rounded-full bg-success" />
+                  <Text className="text-label text-fg">{t('antrenman.devamEdiyor')}</Text>
+                </View>
               </View>
             )}
             {/* "Hareket ekle" artik oturum durumundan BAGIMSIZ HER ZAMAN burada durur (yeni tasarim):

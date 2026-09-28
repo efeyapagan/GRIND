@@ -12,6 +12,7 @@ import { useOpenSession } from '@grind/shared/api/queries';
 import { useRestTimerGorunumu } from '@grind/shared/restTimer';
 import { useKalanSure } from '@grind/shared/useKalanSure';
 import { duraklatildiMi, EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
+import { ANTRENMAN_BARI_YUKSEKLIGI } from '../ui/olculer';
 import { useIkonRenk } from '../ui/renkler';
 
 /**
@@ -117,9 +118,15 @@ export default function DinlenmeKabugu() {
 
   return (
     <GestureDetector gesture={yukariKaydir}>
-      {/* Ust barin uzerine oturur (ayni guvenli alan dolgusu), ondan ince bir serit olarak. */}
+      {/* Ust barin uzerine oturur: ayni guvenli alan dolgusu, ayni yukseklik. #487: yukseklik
+          `h-12` (48 px) iken bardan kisa kaliyordu ve basligin altindaki turuncu cizgi panelin
+          ALTINDAN gorunuyordu -- iki yer de ayni sabitten okur. */}
       <View style={{ paddingTop: insets.top }} className="absolute inset-x-0 top-0 z-50 bg-surface-2">
-        <View className="relative h-12 flex-row items-center justify-between gap-2 px-4">
+        <View
+          testID="dinlenme-paneli"
+          style={{ height: ANTRENMAN_BARI_YUKSEKLIGI }}
+          className="relative flex-row items-center justify-between gap-2 px-4"
+        >
           <View className="min-w-0 flex-row items-center gap-2">
             <Timer color={ikonRenk.muted} size={18} />
             <Text className="text-metric text-fg">{metin}</Text>
