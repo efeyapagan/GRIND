@@ -13,6 +13,30 @@ const CIZGI_YUKSEKLIGI = 10;
 const CIZGI_BOSLUGU = 5;
 const CIZIM_SURESI_MS = 1200;
 
+/** Kavis uc parcada cizilir; kalinlik parca parca azalir (#524). */
+const KAVIS_PARCALARI = [
+  { t0: 0, t1: 0.36, kalinlik: 3.6 },
+  { t0: 0.36, t1: 0.7, kalinlik: 2.4 },
+  { t0: 0.7, t1: 1, kalinlik: 1.3 },
+];
+
+/** Tek bir ikinci derece Bezier kavisinin [t0, t1] araligi (de Casteljau alt egrisi). */
+function kavisParcasi(genislik: number, t0: number, t1: number): string {
+  const p0 = { x: 2, y: CIZGI_YUKSEKLIGI - 3 };
+  const c = { x: genislik * 0.45, y: 1 };
+  const p2 = { x: genislik - 2, y: CIZGI_YUKSEKLIGI - 5 };
+  const nokta = (t: number) => ({
+    x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * c.x + t ** 2 * p2.x,
+    y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * c.y + t ** 2 * p2.y,
+  });
+  const a = (1 - t0) * (1 - t1);
+  const b = (1 - t0) * t1 + t0 * (1 - t1);
+  const d = t0 * t1;
+  const bas = nokta(t0);
+  const son = nokta(t1);
+  return `M${bas.x} ${bas.y} Q ${a * p0.x + b * c.x + d * p2.x} ${a * p0.y + b * c.y + d * p2.y} ${son.x} ${son.y}`;
+}
+
 /**
  * #439: altini kavisli `accent` bir cizgiyle cizen sayfa basligi. Ekrana her girildiginde cizgi
  * soldan saga yavasca "cizilir": cizgi baslik genisliginde bir kez cizilir, uzerindeki pencere
@@ -116,15 +140,20 @@ export default function CizgiliBaslik({
                 />
               </>
             ) : (
-              // Ortasi hafif yukari kalkan, sagda incelen el cizimi bir kavis.
-              <Path
-                testID="cizgi-kavis"
-                d={`M2 ${CIZGI_YUKSEKLIGI - 3} Q ${genislik * 0.45} 1 ${genislik - 2} ${CIZGI_YUKSEKLIGI - 5}`}
-                stroke={palet.accent}
-                strokeWidth={3}
-                strokeLinecap="round"
-                fill="none"
-              />
+              // Ortasi hafif yukari kalkan el cizimi kavis; dalgayla ayni sekilde sona dogru incelir.
+              <>
+                {KAVIS_PARCALARI.map((parca, sira) => (
+                  <Path
+                    key={sira}
+                    testID={sira === 0 ? 'cizgi-kavis' : undefined}
+                    d={kavisParcasi(genislik, parca.t0, parca.t1)}
+                    stroke={palet.accent}
+                    strokeWidth={parca.kalinlik}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                ))}
+              </>
             )}
           </Svg>
         )}
