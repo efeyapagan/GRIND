@@ -46,6 +46,7 @@ export default function SablonKayitliKarti({
       accessibilityActions={[{ name: 'longpress' }]}
       onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onMenu()}
       onPress={onBasla}
+      onLongPress={onMenu}
       disabled={disabled}
       className="flex-row items-center gap-3 overflow-hidden rounded-2xl border border-surface-4 bg-surface-2 p-3"
       style={{ height: KAYITLI_KART_YUKSEKLIGI, width: genislik, opacity: disabled ? 0.6 : 1 }}

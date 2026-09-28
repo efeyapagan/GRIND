@@ -41,3 +41,22 @@ test('kimden kaydedildigi metni gorunur', async () => {
 
   expect(screen.getByText('efe tarafından paylaşıldı')).toBeTruthy();
 });
+
+/** #467 final review: basili tutma (touch/sighted kullanici) menuyu acar, screen reader eylemiyle sinirli degil. */
+test('basili tutunca onMenu cagrilir', async () => {
+  const onMenu = jest.fn();
+  await render(
+    <SablonKayitliKarti
+      ad={sablon.name}
+      kaynakKullaniciAdi={sablon.savedFromUsername}
+      ozet={sablonOzeti(sablon)}
+      onBasla={jest.fn()}
+      onMenu={onMenu}
+      disabled={false}
+    />,
+  );
+
+  fireEvent(screen.getByRole('button', { name: sablon.name }), 'longPress');
+
+  expect(onMenu).toHaveBeenCalledTimes(1);
+});
