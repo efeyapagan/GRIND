@@ -24,9 +24,15 @@ public class SharedTemplateServiceTests
         var context = TestDatabase.CreateContext();
         var transaction = await context.Database.BeginTransactionAsync();
         var (a, b) = (TestDatabase.NewUser(), TestDatabase.NewUser());
-        b.PrivacyLevel = bSeviyesi;
         var egzersiz = TestDatabase.NewExercise(null, $"Global Egzersiz {Guid.NewGuid():N}");
         context.AddRange(a, b, egzersiz);
+        await context.SaveChangesAsync();
+
+        // Seviye EKLEMEDEN SONRA yazilir (#540'ta bulundu): `PrivacyLevel`in veritabani varsayilani
+        // `Kisitli` ve `Acik` enum'un 0'i (CLR varsayilani). EF eklemede 0'i "ayarlanmamis" sayip
+        // veritabani varsayilanini yazar -- yani eklerken verilen `Acik` sessizce `Kisitli` oluyordu.
+        // Guncelleme bu tuzaga dusmez.
+        b.PrivacyLevel = bSeviyesi;
         await context.SaveChangesAsync();
 
         var sablon = new WorkoutTemplate { User = b, Name = $"Sablon {Guid.NewGuid():N}", CreatedAt = DateTime.UtcNow };
@@ -54,55 +60,65 @@ public class SharedTemplateServiceTests
             new FriendshipService(new FollowRepository(context)), new UnitOfWork(context), current);
     }
 
-    // ---- Görünürlük matrisi ----
+    // ---- Görünürlük: Public / Friends / Hidden (#540) ----
 
-    [Fact]
-    public async Task Acik_hesapta_arkadas_override_olmadan_gorur()
+    /// <summary>
+    /// #540: şablon seçilmemişse görünürlüğü HESAP seviyesinden türer (saklanmaz): Açık→Public
+    /// (uygulamadaki herkes), Kısıtlı→Friends (karşılıklı takip), Gizli→Hidden (kimse).
+    /// </summary>
+    [Theory]
+    [InlineData(PrivacyLevel.Acik, false, true)]
+    [InlineData(PrivacyLevel.Kisitli, false, false)]
+    [InlineData(PrivacyLevel.Kisitli, true, true)]
+    [InlineData(PrivacyLevel.Gizli, true, false)]
+    public async Task Varsayilan_gorunurluk_hesap_seviyesinden_turer(PrivacyLevel seviye, bool arkadas, bool gorur)
     {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik);
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(seviye, arkadas);
         await using (transaction)
         {
             var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
-            Assert.Contains(liste, s => s.Id == sablon.Id);
+            Assert.Equal(gorur, liste.Any(s => s.Id == sablon.Id));
         }
     }
 
-    [Fact]
-    public async Task Gizli_hesapta_arkadas_override_olmadan_goremez()
+    /// <summary>
+    /// Kullanıcı kararı: hesap seviyesi ne olursa olsun üç seçeneğin HERHANGİ biri seçilebilir ve
+    /// seçilen, hesaptan türeyen varsayılanı ezer.
+    /// </summary>
+    [Theory]
+    [InlineData(PrivacyLevel.Gizli, TemplateVisibility.Public, false, true)]
+    [InlineData(PrivacyLevel.Acik, TemplateVisibility.Friends, false, false)]
+    [InlineData(PrivacyLevel.Acik, TemplateVisibility.Friends, true, true)]
+    [InlineData(PrivacyLevel.Acik, TemplateVisibility.Hidden, true, false)]
+    public async Task Secilen_gorunurluk_hesap_seviyesini_ezer(
+        PrivacyLevel seviye, TemplateVisibility gorunurluk, bool arkadas, bool gorur)
     {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Gizli);
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(seviye, arkadas);
         await using (transaction)
         {
-            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
-            Assert.DoesNotContain(liste, s => s.Id == sablon.Id);
-        }
-    }
-
-    [Fact]
-    public async Task Gizli_hesapta_true_override_ile_gorunur()
-    {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Gizli);
-        await using (transaction)
-        {
-            sablon.IsSharedOverride = true;
+            sablon.Visibility = gorunurluk;
             await context.SaveChangesAsync();
 
             var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
-            Assert.Contains(liste, s => s.Id == sablon.Id);
+            Assert.Equal(gorur, liste.Any(s => s.Id == sablon.Id));
         }
     }
 
+    /// <summary>Public şablon arkadaş olmayana da açıktır: detayı görür ve kendine kaydeder.</summary>
     [Fact]
-    public async Task Acik_hesapta_false_override_ile_gizlenir()
+    public async Task Public_sablonu_arkadas_olmayan_gorur_ve_kaydeder()
     {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik);
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Kisitli, arkadas: false);
         await using (transaction)
         {
-            sablon.IsSharedOverride = false;
+            sablon.Visibility = TemplateVisibility.Public;
             await context.SaveChangesAsync();
 
-            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
-            Assert.DoesNotContain(liste, s => s.Id == sablon.Id);
+            var detay = await ServiceFor(context, a).GetSharedTemplateDetailAsync(b.Username, sablon.Id);
+            var kopya = await ServiceFor(context, a).SaveTemplateAsync(b.Username, sablon.Id);
+
+            Assert.Equal(sablon.Id, detay.Id);
+            Assert.Equal(b.Username, kopya.SavedFromUsername);
         }
     }
 
@@ -159,13 +175,13 @@ public class SharedTemplateServiceTests
     }
 
     [Fact]
-    public async Task Kopyada_true_override_paylasimi_acmaz()
+    public async Task Kopyada_public_secimi_bile_paylasimi_acmaz()
     {
         var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Gizli);
         await using (transaction)
         {
             sablon.SavedFromUserId = a.Id;
-            sablon.IsSharedOverride = true;
+            sablon.Visibility = TemplateVisibility.Public;
             await context.SaveChangesAsync();
 
             var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
@@ -188,23 +204,12 @@ public class SharedTemplateServiceTests
         }
     }
 
-    // ---- Arkadaşlık şartı ----
+    // ---- Friends kademesi arkadaş olmayana sızmaz ----
 
     [Fact]
-    public async Task Arkadas_degilse_acik_hesapta_bile_bos_liste_alir()
+    public async Task Arkadas_degilse_friends_sablonunun_detayi_404_sizdirmaz()
     {
-        var (context, a, b, _, _, transaction) = await CreateAsync(PrivacyLevel.Acik, arkadas: false);
-        await using (transaction)
-        {
-            var liste = await ServiceFor(context, a).GetSharedTemplatesAsync(b.Username);
-            Assert.Empty(liste);
-        }
-    }
-
-    [Fact]
-    public async Task Arkadas_degilse_detay_ucuna_404_verir_sizdirmaz()
-    {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik, arkadas: false);
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Kisitli, arkadas: false);
         await using (transaction)
         {
             var hata = await Assert.ThrowsAsync<NotFoundException>(
@@ -214,9 +219,9 @@ public class SharedTemplateServiceTests
     }
 
     [Fact]
-    public async Task Arkadas_degilse_kaydetme_ucuna_404_verir()
+    public async Task Arkadas_degilse_friends_sablonunu_kaydedemez()
     {
-        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Acik, arkadas: false);
+        var (context, a, b, sablon, _, transaction) = await CreateAsync(PrivacyLevel.Kisitli, arkadas: false);
         await using (transaction)
         {
             await Assert.ThrowsAsync<NotFoundException>(

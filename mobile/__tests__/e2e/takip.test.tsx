@@ -159,13 +159,14 @@ test('arkadasin profili: baslik, Takibi birak, Gecmis/Rekorlar/Sablonlar; gecmis
   expect(screen.queryByText(/sil/i)).toBeNull();
 }, 20_000);
 
-test('gizli hesapta yalniz Rekorlar sekmesi; gecmis istenmez; Takip et POST atar ve dugme tazelenir', async () => {
+// #540: Sablonlar sekmesi arkadas olmayana da cizilir -- "Herkese acik" sablon Gizli hesapta bile olabilir.
+test('gizli hesapta Rekorlar ve Sablonlar sekmesi; gecmis istenmez; Takip et POST atar ve dugme tazelenir', async () => {
   const istekler = takipBackendiKur();
 
   await renderRouterAsync('./app', { initialUrl: '/profile/u/mehmet' });
 
   expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeTruthy();
-  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Rekorlar']);
+  expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Rekorlar', 'Şablonlar']);
 
   await fireEvent.press(screen.getByRole('button', { name: 'Takip et' }));
 

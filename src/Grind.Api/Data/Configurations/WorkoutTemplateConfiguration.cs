@@ -1,6 +1,8 @@
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Grind.Api.Data.Configurations;
 
@@ -9,6 +11,11 @@ public class WorkoutTemplateConfiguration : IEntityTypeConfiguration<WorkoutTemp
     public void Configure(EntityTypeBuilder<WorkoutTemplate> builder)
     {
         builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
+
+        // #540: adıyla saklanır (PrivacyLevel/SessionDifficulty ile aynı desen); null = seçilmemiş.
+        builder.Property(t => t.Visibility)
+            .HasConversion(new EnumToStringConverter<TemplateVisibility>())
+            .HasMaxLength(20);
 
         builder.HasOne(t => t.User)
             .WithMany(u => u.WorkoutTemplates)

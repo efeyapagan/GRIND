@@ -1,4 +1,5 @@
 using Grind.Api.Models.Entities;
+using Grind.Api.Services;
 
 namespace Grind.Api.Models.Dtos.Template;
 
@@ -14,7 +15,7 @@ public static class TemplateMapper
         template.Name,
         template.CreatedAt,
         ExercisesOf(template),
-        template.IsSharedOverride,
+        TemplateVisibilityRules.Effective(template.Visibility, template.User.PrivacyLevel),
         template.SavedFromUser?.Username,
         lastUsedAt);
 

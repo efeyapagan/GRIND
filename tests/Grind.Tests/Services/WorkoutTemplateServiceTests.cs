@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Template;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 using Grind.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -477,35 +478,35 @@ public class WorkoutTemplateServiceTests
         }
     }
 
-    // ---- Paylaşım override'ı (#467) ----
+    // ---- Görünürlük (#467, #540) ----
 
+    /// <summary>
+    /// Yanıttaki görünürlük ETKİN değerdir: seçilmemişse sahibin hesap seviyesinden türer
+    /// (varsayılan kullanıcı Kısıtlı → Friends). İstemci eşlemeyi ikinci kez yapmaz.
+    /// </summary>
     [Fact]
-    public async Task UpdateSharingAsync_override_yazar_ve_okunur()
+    public async Task Yeni_sablonun_gorunurlugu_hesap_seviyesinden_turer()
     {
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
             var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
-            Assert.Null(olusan.IsSharedOverride);
 
-            var guncel = await service.UpdateSharingAsync(olusan.Id, true);
-
-            Assert.True(guncel.IsSharedOverride);
+            Assert.Equal(TemplateVisibility.Friends, olusan.Visibility);
         }
     }
 
     [Fact]
-    public async Task UpdateSharingAsync_null_ile_varsayilana_dondurulebilir()
+    public async Task UpdateSharingAsync_secilen_gorunurlugu_yazar_ve_okunur()
     {
         var (_, _, service, transaction) = await CreateAsync();
         await using (transaction)
         {
             var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1)));
-            await service.UpdateSharingAsync(olusan.Id, false);
 
-            var guncel = await service.UpdateSharingAsync(olusan.Id, null);
+            var guncel = await service.UpdateSharingAsync(olusan.Id, TemplateVisibility.Public);
 
-            Assert.Null(guncel.IsSharedOverride);
+            Assert.Equal(TemplateVisibility.Public, guncel.Visibility);
         }
     }
 
@@ -520,7 +521,7 @@ public class WorkoutTemplateServiceTests
             context.Add(digerSablon);
             await context.SaveChangesAsync();
 
-            await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateSharingAsync(digerSablon.Id, true));
+            await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateSharingAsync(digerSablon.Id, TemplateVisibility.Public));
         }
     }
 }

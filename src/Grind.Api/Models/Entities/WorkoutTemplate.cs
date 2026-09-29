@@ -1,3 +1,5 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Entities;
 
 public class WorkoutTemplate
@@ -17,11 +19,12 @@ public class WorkoutTemplate
     public int OrderIndex { get; set; }
 
     /// <summary>
-    /// Paylaşım override'ı (#467). <c>null</c> = varsayılan: hesabın <c>PrivacyLevel</c>'i
-    /// Acik/Kisitli ise paylaşımda, Gizli ise değil. <c>true</c>/<c>false</c> bu varsayılanı
-    /// şablon bazında tersine çevirir. Hesaplanmış "görünür mü" değeri BURADA SAKLANMAZ.
+    /// Kimin görebileceği (#540; #467'deki <c>bool? IsSharedOverride</c>'ın yerini aldı).
+    /// <c>null</c> = seçilmemiş: hesabın <c>PrivacyLevel</c>'inden türer (Açık→Public,
+    /// Kısıtlı→Friends, Gizli→Hidden). Türeyen/etkin değer BURADA SAKLANMAZ
+    /// (<see cref="Services.TemplateVisibilityRules"/>).
     /// </summary>
-    public bool? IsSharedOverride { get; set; }
+    public TemplateVisibility? Visibility { get; set; }
 
     /// <summary>
     /// <c>null</c> = kendi oluşturduğun şablon. Dolu = bir arkadaştan kaydedilmiş kopya (#467);

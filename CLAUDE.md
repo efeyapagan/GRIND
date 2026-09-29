@@ -10,8 +10,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **Şablon paylaşımı (#467, 2026-09-27)** — kullanıcılar antrenman şablonlarını arkadaşlarıyla
   (karşılıklı takip şartlı — `History`/`Records`'taki `PrivacyLevel`-tabanlı herkese açık modelin
   AKSİNE) paylaşabilir; beğenilen bir şablon kendi hesaba **anlık görüntü** olarak kopyalanır,
-  oradan doğrudan antrenman başlatılır. `WorkoutTemplate.IsSharedOverride` hesabın `PrivacyLevel`
-  varsayılanını şablon bazında tersine çevirir, `SavedFromUserId` kopyanın kaynağını canlı join ile
+  oradan doğrudan antrenman başlatılır. **#540 (2026-09-29):** `WorkoutTemplate.Visibility`
+  (`Public`/`Friends`/`Hidden`) kimin göreceğini belirler — `Public` arkadaş OLMAYANA da açıktır,
+  seçilmemişse hesabın `PrivacyLevel`'inden türer (bkz. Yetkilendirme Kuralı istisnası), `SavedFromUserId` kopyanın kaynağını canlı join ile
   tutar (bkz. Domain Modeli). Görünürlük kapısı `SharedTemplateService` — `PublicActivityService`'ten
   AYRI (bkz. Yetkilendirme Kuralı istisnası). Başkasının profilinde "Şablonlar" sekmesi yalnızca
   arkadaşsan render edilir (History/Records'taki "her zaman görünür + boş durum" deseninin aksine).
@@ -216,20 +217,20 @@ Object Reference) açığıdır.
 > her seviyede açıktır (kullanıcı kararı, #325). Not, ölçü, AI yorumu ve rekorsuz setler bildirimde yer
 > almaz. Uç yalnız `currentUserId`'nin bildirimlerini döner.
 >
-> Şablon paylaşımı (#467): yukarıdaki iki istisnanın AKSİNE bu kapı arkadaşlık ŞARTLIDIR (kendin
-> hariç, karşılıklı takip gerekir) — `PrivacyLevel` tek başına yeterli değildir; bilinçli bir fark,
-> çünkü paylaşım burada "herkese açık profil" değil "arkadaşlar arası" bir özellik olarak
-> tasarlandı (kullanıcı kararı, spec). Kapı `SharedTemplateService` — `PublicActivityService`'ten
-> AYRI (`GET /api/users/{username}/templates` ve `/templates/{id}`, kaydetme
-> `POST /api/users/{username}/templates/{id}/save`). Görünürlük formülü:
-> `SavedFromUserId == null && (IsSharedOverride ?? (PrivacyLevel != Gizli))` — **kaydedilmiş kopya
-> (`SavedFromUserId` dolu) hiçbir seviyede/override'la paylaşılmaz (#534)**: aksi hâlde kaynağın kendi
-> şablonu ona geri döner ve üçüncü kişinin şablonu arkadaşlık kapısı aşılarak kopyalayan üzerinden yeniden
-> dağıtılırdı; yalnızca kişinin kendi oluşturduğu şablonlar paylaşılır (kendi profilinde kopyalarını görür).
-> Formdaki "Herkese açık" seçeneği gerçekte arkadaşlara açıktır (kapı hâlâ arkadaşlıktır), etiketi
-> "Arkadaşlara açık" olarak düzeltildi; gerçek herkese açık seçenek #535. Arkadaş değilsen liste boş, detay/kaydetme 404
-> (sızıntı yok — IDOR koruması, `/history`/`/records`'taki "boş liste 403 DEĞİL" ilkesinden farklı
-> olarak burada arkadaşlık eksikliği zaten görünürlüğün önkoşulu). Gösterilen egzersiz detayları
+> Şablon paylaşımı (#467, #540): kapı `SharedTemplateService` — `PublicActivityService`'ten AYRI
+> (`GET /api/users/{username}/templates` ve `/templates/{id}`, kaydetme
+> `POST /api/users/{username}/templates/{id}/save`). **#540 (kullanıcı kararı, 2026-09-29) bu istisnayı
+> GENİŞLETTİ:** #467'de kapı arkadaşlık ŞARTLIYDI; artık kimin göreceğini şablonun kademesi belirler
+> (`WorkoutTemplate.Visibility`, kural TEK yerde: `TemplateVisibilityRules`) — `Public` = kimlikli
+> HERKES (arkadaş olmayan da görür ve kaydeder), `Friends` = yalnızca karşılıklı takip, `Hidden` =
+> kimse. Seçilmemişse (`null`) hesap seviyesinden TÜRER ve saklanmaz: `Acik`→`Public`,
+> `Kisitli`→`Friends`, `Gizli`→`Hidden`; kullanıcı hesap seviyesi ne olursa olsun üçünden birini
+> seçebilir. **Kaydedilmiş kopya (`SavedFromUserId` dolu) hiçbir kademede paylaşılmaz (#534)** — `Public`
+> seçilse bile: aksi hâlde üçüncü kişinin şablonu, onun kendi seçimi aşılarak kopyalayan üzerinden
+> yeniden dağıtılırdı; yalnızca kişinin kendi oluşturduğu şablonlar paylaşılır (kendi profilinde
+> kopyalarını görür). Görmeye yetkin olmadığın şablonun detayı/kaydetmesi 404 (olmayan şablonla AYNI
+> yanıt — kademe ya da varlık sızmaz); liste yalnızca görebildiklerini içerir. Başkasının profilindeki
+> "Şablonlar" sekmesi artık herkese çizilir, içeriği bu kurala göre süzülür. Gösterilen egzersiz detayları
 > İZLEYENE görünür (kendi veya global) VE arşivlenmemiş olanlarla SINIRLIDIR — sahibin özel/arşivli
 > bir egzersizinin adını arkadaşa göstermek de aynı Yetkilendirme Kuralı'nın kapsamındadır; liste,
 > detay ve kaydetme AYNI süzgeçten geçer ki izleyicinin gördüğü ile kopyaladığı asla ayrışmasın.
@@ -295,9 +296,10 @@ Object Reference) açığıdır.
   `Category` (Push / Pull / Legs / Other), `Measurement` (`WeightReps` / `Reps` / `Duration` — setlerin
   neyle ölçüldüğü, #346; kullanıcı yalnızca oluştururken seçer), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
-- **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`, `IsSharedOverride`
-  (nullable `bool`, #467 — hesaplanan "görünür mü" değeri SAKLANMAZ: `null` = hesabın `PrivacyLevel`
-  varsayılanı geçerli, `true`/`false` = bu şablon için istisnai açma/gizleme), `SavedFromUserId`
+- **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`, `Visibility`
+  (nullable enum `Public`/`Friends`/`Hidden`, adıyla saklanır — #540, #467'deki `bool? IsSharedOverride`'ın
+  yerini aldı; `null` = seçilmemiş, hesabın `PrivacyLevel`'inden türer ve türeyen değer SAKLANMAZ; eski
+  `true` → `Friends`, `false` → `Hidden` olarak taşındı), `SavedFromUserId`
   (nullable, FK → `User`, RESTRICT, #467 — `null` = kendi şablonun, doluysa bir arkadaştan kaydedilmiş
   kopya; kullanıcı adı değişebildiği için "kimden kaydedildi" ayrı bir string alanda değil canlı join
   ile çözülür)
