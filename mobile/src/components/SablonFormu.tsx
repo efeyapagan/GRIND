@@ -191,12 +191,6 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
 
   const kaydediliyor = olusturMutasyonu.isPending || guncelleMutasyonu.isPending;
 
-  function paylasimSecenegi(): 'varsayilan' | 'acik' | 'gizli' {
-    if (sablon?.isSharedOverride === true) return 'acik';
-    if (sablon?.isSharedOverride === false) return 'gizli';
-    return 'varsayilan';
-  }
-
   return (
     <View className="flex-col gap-5">
       {genelHata && <HataKutusu baslik={t('sablonlar.kaydedilemedi')} mesaj={genelHata} />}
@@ -214,26 +208,27 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
       {sablon && (
         <View className="flex-col gap-2">
           <Text className="text-heading text-fg">{t('sablonlar.paylasBasligi')}</Text>
-          <Text className="text-label text-muted">{t('sablonlar.paylasAciklama')}</Text>
+          {/* #540: uc kademe -- herkes / arkadaslar (karsilikli takip) / kimse. Isaretli olan ETKIN
+              gorunurluk: secilmemisse sunucu hesap seviyesinden turetir (Acik->Herkese acik,
+              Kisitli->Arkadaslar, Gizli->Gizli). Hesap seviyesi ne olursa olsun uc secenek de
+              secilebilir. Eski "yalnizca arkadaslarin gorur" aciklamasi uc kademeyle celistigi icin
+              kalkti. */}
           <View className="flex-row gap-2">
             {(
               [
-                { deger: null, etiket: t('sablonlar.paylasVarsayilan') },
-                { deger: true, etiket: t('sablonlar.paylasHerkeseAcik') },
-                { deger: false, etiket: t('sablonlar.paylasGizli') },
+                { deger: 'Public', etiket: t('sablonlar.paylasHerkeseAcik') },
+                { deger: 'Friends', etiket: t('sablonlar.paylasArkadaslar') },
+                { deger: 'Hidden', etiket: t('sablonlar.paylasGizli') },
               ] as const
             ).map((secenek) => {
-              const secili =
-                (secenek.deger === null && paylasimSecenegi() === 'varsayilan') ||
-                (secenek.deger === true && paylasimSecenegi() === 'acik') ||
-                (secenek.deger === false && paylasimSecenegi() === 'gizli');
+              const secili = sablon.visibility === secenek.deger;
               return (
                 <Pressable
-                  key={String(secenek.deger)}
+                  key={secenek.deger}
                   accessibilityRole="button"
                   accessibilityState={{ selected: secili }}
                   disabled={paylasimMutasyonu.isPending}
-                  onPress={() => sablon && paylasimMutasyonu.mutate({ id: sablon.id, override: secenek.deger })}
+                  onPress={() => paylasimMutasyonu.mutate({ id: sablon.id, visibility: secenek.deger })}
                   className={`h-11 flex-1 items-center justify-center rounded-xl ${secili ? 'bg-accent' : 'bg-surface-3'}`}
                 >
                   <Text className={`text-label ${secili ? 'text-on-accent' : 'text-fg'}`}>{secenek.etiket}</Text>

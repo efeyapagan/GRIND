@@ -46,5 +46,7 @@ public class WorkoutTemplateRepository(AppDbContext context)
         => query
             .Include(t => t.TemplateExercises.OrderBy(te => te.OrderIndex))
             .ThenInclude(te => te.Exercise)
-            .Include(t => t.SavedFromUser);
+            .Include(t => t.SavedFromUser)
+            // #540: yanıttaki ETKİN görünürlük sahibin gizlilik seviyesinden türer.
+            .Include(t => t.User);
 }

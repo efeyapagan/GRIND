@@ -25,7 +25,7 @@ const sablon = {
   id: 1,
   name: 'Push Day',
   exercises: [],
-  isSharedOverride: null,
+  visibility: 'Friends' as const,
   savedFromUsername: null,
   lastUsedAt: null,
 };
@@ -39,12 +39,33 @@ beforeEach(() => {
   useUpdateTemplateSharingMock.mockReturnValue({ mutate: paylasimMutasyonu, isPending: false, isError: false });
 });
 
-test('Herkese acik secilince paylasim mutasyonu override true ile cagrilir', async () => {
+/**
+ * #540: uc secenek -- Herkese acik (uygulamadaki herkes), Arkadaslar (karsilikli takip), Gizli.
+ * Etkin gorunurluk isaretlidir; sunucu onu hesap seviyesinden turetip gonderir, istemci eslemeyi
+ * ikinci kez yapmaz. "Hesap ayarina gore" secenegi yok.
+ */
+test('uc gorunurluk secenegi var ve etkin olan isaretli', async () => {
   await render(<SablonFormu sablon={sablon} donusYolu="/templates" />);
 
-  await fireEvent.press(screen.getByText('Arkadaşlara açık'));
+  expect(screen.getByRole('button', { name: 'Herkese açık' })).not.toBeSelected();
+  expect(screen.getByRole('button', { name: 'Arkadaşlar' })).toBeSelected();
+  expect(screen.getByRole('button', { name: 'Gizli' })).not.toBeSelected();
+  expect(screen.queryByText('Hesap ayarına göre')).toBeNull();
+});
 
-  expect(paylasimMutasyonu).toHaveBeenCalledWith({ id: 1, override: true });
+test('Herkese acik secilince gorunurluk Public olarak gonderilir', async () => {
+  await render(<SablonFormu sablon={sablon} donusYolu="/templates" />);
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Herkese açık' }));
+
+  expect(paylasimMutasyonu).toHaveBeenCalledWith({ id: 1, visibility: 'Public' });
+});
+
+/** Issue: "Arkadaslarin ... gorebilir" aciklamasi uc secenekle celisiyordu (Public herkese acik). */
+test('yalnizca arkadaslardan soz eden aciklama yok', async () => {
+  await render(<SablonFormu sablon={sablon} donusYolu="/templates" />);
+
+  expect(screen.queryByText(/karşılıklı takip/)).toBeNull();
 });
 
 test('yeni sablon olustururken (sablon null) paylasim kontrolu gorunmez', async () => {

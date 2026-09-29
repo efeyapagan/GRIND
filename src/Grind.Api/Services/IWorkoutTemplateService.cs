@@ -1,4 +1,5 @@
 using Grind.Api.Models.Dtos.Template;
+using Grind.Api.Models.Enums;
 
 namespace Grind.Api.Services;
 
@@ -34,9 +35,9 @@ public interface IWorkoutTemplateService
         ReorderTemplatesRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Paylaşım override'ını yazar (#467): null = varsayılana dön (hesabın PrivacyLevel'ine göre),
-    /// true/false şablon bazında zorlar. Başkasının şablonunda NotFoundException (404).
+    /// Görünürlüğü yazar (#467, #540): Public / Friends / Hidden — hesap seviyesi ne olursa olsun.
+    /// Başkasının şablonunda NotFoundException (404).
     /// </summary>
     Task<TemplateResponse> UpdateSharingAsync(
-        long id, bool? overrideValue, CancellationToken cancellationToken = default);
+        long id, TemplateVisibility visibility, CancellationToken cancellationToken = default);
 }
