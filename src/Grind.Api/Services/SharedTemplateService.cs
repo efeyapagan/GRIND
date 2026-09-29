@@ -23,11 +23,14 @@ public class SharedTemplateService(
     {
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var isSelf = target.Id == currentUser.UserId;
-        if (!isSelf && !await friendshipService.AreFriendsAsync(currentUser.UserId, target.Id, cancellationToken))
-            return [];
+        // #540: arkadaşlık artık KAPI değil, kademenin bir girdisi -- Public şablonu arkadaş olmayan
+        // da görür, Friends şablonunu yalnız arkadaş.
+        var areFriends = !isSelf && await friendshipService.AreFriendsAsync(currentUser.UserId, target.Id, cancellationToken);
 
         var templates = await templateRepository.GetAllAsync(target.Id, cancellationToken);
-        var candidates = templates.Where(t => isSelf || IsVisible(t, target.PrivacyLevel)).ToList();
+        var candidates = templates
+            .Where(t => isSelf || TemplateVisibilityRules.IsVisibleTo(t, target.PrivacyLevel, areFriends))
+            .ToList();
 
         // Tum sablonlarin butun egzersiz id'leri tek toplu sorguda cozulur (N+1 yerine).
         var allIds = candidates.SelectMany(t => t.TemplateExercises.Select(te => te.ExerciseId)).Distinct().ToList();
@@ -103,11 +106,11 @@ public class SharedTemplateService(
     {
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
         var isSelf = target.Id == currentUser.UserId;
-        if (!isSelf && !await friendshipService.AreFriendsAsync(currentUser.UserId, target.Id, cancellationToken))
-            throw new NotFoundException(TemplateNotFound);
+        var areFriends = !isSelf && await friendshipService.AreFriendsAsync(currentUser.UserId, target.Id, cancellationToken);
 
+        // Görünmeyen şablon ile olmayan şablon AYNI 404: kademesi ya da varlığı sızmaz.
         var template = await templateRepository.GetOwnedByIdAsync(templateId, target.Id, cancellationToken);
-        if (template is null || (!isSelf && !IsVisible(template, target.PrivacyLevel)))
+        if (template is null || (!isSelf && !TemplateVisibilityRules.IsVisibleTo(template, target.PrivacyLevel, areFriends)))
             throw new NotFoundException(TemplateNotFound);
 
         return (template, target);
@@ -159,12 +162,4 @@ public class SharedTemplateService(
         }
         return aday;
     }
-
-    // Kaydedilmiş kopya (`SavedFromUserId` dolu) hiçbir seviyede/override'la paylaşılmaz (#534):
-    // aksi hâlde kaynağın kendi şablonu ona geri döner ve üçüncü kişinin şablonu, arkadaşlık
-    // kapısı aşılarak, kopyalayan üzerinden yeniden dağıtılır. Yalnızca kişinin kendi
-    // oluşturduğu şablonlar paylaşılır.
-    private static bool IsVisible(WorkoutTemplate template, PrivacyLevel ownerLevel) =>
-        template.SavedFromUserId is null
-        && (template.IsSharedOverride ?? ownerLevel != PrivacyLevel.Gizli);
 }

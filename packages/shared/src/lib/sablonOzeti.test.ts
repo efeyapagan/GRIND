@@ -11,7 +11,7 @@ function sablon(exercises: SablonHareketi[]): Sablon {
     id: 1,
     name: 'Push Day',
     exercises,
-    isSharedOverride: null,
+    visibility: 'Friends',
     savedFromUsername: null,
     lastUsedAt: null,
   };

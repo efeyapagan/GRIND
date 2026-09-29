@@ -3,6 +3,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Template;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 using ValidationException = Grind.Api.Common.Exceptions.ValidationException;
 
@@ -226,10 +227,10 @@ public class WorkoutTemplateService(
     }
 
     public async Task<TemplateResponse> UpdateSharingAsync(
-        long id, bool? overrideValue, CancellationToken cancellationToken = default)
+        long id, TemplateVisibility visibility, CancellationToken cancellationToken = default)
     {
         var template = await OwnedOrThrowAsync(id, cancellationToken);
-        template.IsSharedOverride = overrideValue;
+        template.Visibility = visibility;
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await ToResponseAsync(template, cancellationToken);
     }

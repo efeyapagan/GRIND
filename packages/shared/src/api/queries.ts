@@ -1051,11 +1051,18 @@ export interface SablonHareketi {
   restSeconds: number;
 }
 
+/** Sablonu kimin gorebilecegi (#540): herkes / arkadaslar / kimse. */
+export type SablonGorunurlugu = components['schemas']['TemplateVisibility'];
+
 export interface Sablon {
   id: number;
   name: string;
   exercises: SablonHareketi[];
-  isSharedOverride: boolean | null;
+  /**
+   * ETKIN gorunurluk: secilmemisse sunucu sahibinin hesap seviyesinden turetir (Acik->Public,
+   * Kisitli->Friends, Gizli->Hidden). Istemci eslemeyi ikinci kez yapmaz.
+   */
+  visibility: SablonGorunurlugu;
   savedFromUsername: string | null;
   lastUsedAt: string | null;
 }
@@ -1090,7 +1097,9 @@ function dogrulanmisSablon(yanit: TemplateResponse): Sablon {
     id: yanit.id,
     name: yanit.name,
     exercises: (yanit.exercises ?? []).map(dogrulanmisSablonHareketi),
-    isSharedOverride: yanit.isSharedOverride ?? null,
+    // Eksik gelirse en kisitli kademe varsayilir: bilinmeyen gorunurlugu "herkese acik" gostermek
+    // yaniltici olurdu.
+    visibility: yanit.visibility ?? 'Hidden',
     savedFromUsername: yanit.savedFromUsername ?? null,
     lastUsedAt: yanit.lastUsedAt ?? null,
   };
@@ -1270,8 +1279,8 @@ export function useSaveSharedTemplate(kullaniciAdi: string) {
 export function useUpdateTemplateSharing() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, override: yeniDurum }: { id: number; override: boolean | null }): Promise<Sablon> => {
-      const govde: UpdateTemplateSharingRequest = { override: yeniDurum };
+    mutationFn: async ({ id, visibility }: { id: number; visibility: SablonGorunurlugu }): Promise<Sablon> => {
+      const govde: UpdateTemplateSharingRequest = { visibility };
       return dogrulanmisSablon(
         await request<TemplateResponse>(`/templates/${id}/sharing`, { method: 'PUT', body: JSON.stringify(govde) }),
       );

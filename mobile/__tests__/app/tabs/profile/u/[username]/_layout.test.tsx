@@ -1,28 +1,27 @@
 import { describe, it, expect } from '@jest/globals';
 import { gorunurSekmeler } from '../../../../../../app/(tabs)/profile/u/[username]/_layout';
 
+/**
+ * #540: Sablonlar sekmesi artik arkadasliga bagli DEGIL -- "Herkese acik" (Public) bir sablonu
+ * arkadas olmayan da gorur (kullanici karari). Sekme herkese cizilir; icerigi sunucu kademeye gore
+ * suzer, gorecek sablon yoksa bos durum gorunur. Gizli hesapta bile acik secilmis sablon olabilir.
+ */
 describe('gorunurSekmeler', () => {
-  it('arkadas degilse sablonlar sekmesi listede yok', () => {
-    const sekmeler = gorunurSekmeler('/profile/u/efe', false, false);
-
-    expect(sekmeler.some((s) => s.to.endsWith('/templates'))).toBe(false);
-  });
-
-  it('arkadassa sablonlar sekmesi listede var', () => {
-    const sekmeler = gorunurSekmeler('/profile/u/efe', true, false);
+  it('arkadas olmayana da sablonlar sekmesi cizilir', () => {
+    const sekmeler = gorunurSekmeler('/profile/u/efe', false);
 
     expect(sekmeler.some((s) => s.to.endsWith('/templates'))).toBe(true);
   });
 
-  it('arkadas ve gizli hesap: sadece rekorlar ve sablonlar (gecmis dusuyor)', () => {
-    const sekmeler = gorunurSekmeler('/profile/u/efe', true, true);
+  it('gizli hesap: gecmis duser, rekorlar ve sablonlar kalir', () => {
+    const sekmeler = gorunurSekmeler('/profile/u/efe', true);
 
     expect(sekmeler.map((s) => s.to.split('/').pop())).toEqual(['records', 'templates']);
   });
 
-  it('arkadas olmayan gizli hesap: sadece rekorlar', () => {
-    const sekmeler = gorunurSekmeler('/profile/u/efe', false, true);
+  it('gizli olmayan hesap: uc sekme', () => {
+    const sekmeler = gorunurSekmeler('/profile/u/efe', false);
 
-    expect(sekmeler.map((s) => s.to.split('/').pop())).toEqual(['records']);
+    expect(sekmeler.map((s) => s.to.split('/').pop())).toEqual(['history', 'records', 'templates']);
   });
 });

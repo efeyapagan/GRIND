@@ -1,3 +1,5 @@
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Dtos.Template;
 
 /// <summary>
@@ -10,8 +12,11 @@ public record TemplateResponse(
     string Name,
     DateTime CreatedAt,
     IReadOnlyList<TemplateExerciseResponse> Exercises,
-    /// <summary>#467: null = varsayılan (hesabın PrivacyLevel'ine göre), true/false override.</summary>
-    bool? IsSharedOverride,
+    /// <summary>
+    /// #540: ETKİN görünürlük — seçilmemişse sahibin hesap seviyesinden türer. İstemci eşlemeyi
+    /// ikinci kez yapmaz; bu değeri işaretler.
+    /// </summary>
+    TemplateVisibility Visibility,
     /// <summary>#467: null = kendi şablonun; dolu = bir arkadaştan kaydedilmiş kopya.</summary>
     string? SavedFromUsername,
     /// <summary>#467: bu şablonla en son ne zaman antrenman başlatıldığı; hiç başlatılmadıysa null.</summary>

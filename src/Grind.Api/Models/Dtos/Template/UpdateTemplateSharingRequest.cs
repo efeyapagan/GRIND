@@ -1,10 +1,15 @@
+using System.ComponentModel.DataAnnotations;
+using Grind.Api.Models.Enums;
+
 namespace Grind.Api.Models.Dtos.Template;
 
 /// <summary>
-/// Tek alanlı gövde (#467): burada <c>null</c> "dokunma" DEĞİL "varsayılana dön" anlamına gelir
-/// — <c>PatchTemplateRequest</c>'teki null semantiğiyle karıştırılmasın diye ayrı bir uç.
+/// Şablonun görünürlüğü (#467, #540): <c>Public</c> / <c>Friends</c> / <c>Hidden</c>. Hesap seviyesi
+/// ne olursa olsun üçünden biri seçilebilir. "Varsayılana dön" yok: bir kez seçilen şablon hesap
+/// seviyesinden türemeyi bırakır.
 /// </summary>
 public class UpdateTemplateSharingRequest
 {
-    public bool? Override { get; set; }
+    [Required]
+    public TemplateVisibility? Visibility { get; set; }
 }

@@ -15,10 +15,12 @@ import TakipDugmesi from '../../../../../src/components/TakipDugmesi';
 const LISTE_EKRANLARI = ['friends', 'followers', 'following'];
 
 /**
- * #467: Şablonlar sekmesi SADECE arkadaşsan görünür (History/Records'un "her zaman görünür,
- * içerik boşalır" deseninin BİLEREK aksine). Gizli hesapta Geçmiş de düşer (#294'ten beri).
+ * Gizli hesapta Geçmiş düşer (#294'ten beri). #540: Şablonlar sekmesi artık HERKESE çizilir —
+ * "Herkese açık" bir şablonu arkadaş olmayan da görür; içeriği sunucu kademeye göre süzer, görecek
+ * şablon yoksa boş durum görünür (History/Records'un deseni). #467'de yalnızca arkadaşa çiziliyordu.
+ * Gizli hesapta bile "Herkese açık" seçilmiş şablon olabileceği için sekme orada da kalır.
  */
-export function gorunurSekmeler(kok: string, arkadas: boolean, gizli: boolean) {
+export function gorunurSekmeler(kok: string, gizli: boolean) {
   return (
     [
       { to: `${kok}/history`, etiketAnahtari: 'kabuk.sekmeGecmis' as const, ikon: History },
@@ -26,7 +28,7 @@ export function gorunurSekmeler(kok: string, arkadas: boolean, gizli: boolean) {
       { to: `${kok}/templates`, etiketAnahtari: 'kabuk.sekmeSablonlar' as const, ikon: Dumbbell },
     ] as const
   ).filter((s) => {
-    if (s.to.endsWith('/templates')) return arkadas;
+    if (s.to.endsWith('/templates')) return true;
     return !gizli || s.to.endsWith('/records');
   });
 }
@@ -53,7 +55,7 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
   const arkadas = profil.data.relation === 'Friends';
   const gizli = profil.data.privacyLevel === 'Gizli';
   const kok = `/profile/u/${ad}`;
-  const sekmeler = gorunurSekmeler(kok, arkadas, gizli);
+  const sekmeler = gorunurSekmeler(kok, gizli);
 
   return (
     <>

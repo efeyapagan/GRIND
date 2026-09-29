@@ -3470,6 +3470,17 @@ export interface paths {
                         "text/json": components["schemas"]["TemplateResponse"];
                     };
                 };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
@@ -4787,11 +4798,13 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             exercises?: components["schemas"]["TemplateExerciseResponse"][] | null;
-            isSharedOverride?: boolean | null;
+            visibility?: components["schemas"]["TemplateVisibility"];
             savedFromUsername?: string | null;
             /** Format: date-time */
             lastUsedAt?: string | null;
         };
+        /** @enum {string} */
+        TemplateVisibility: "Public" | "Friends" | "Hidden";
         /** @enum {string} */
         TrainingGoal: "Hipertrofi" | "Guc" | "KiloVerme" | "GenelForm";
         UnreadNotificationCountResponse: {
@@ -4823,7 +4836,7 @@ export interface components {
             exercises: components["schemas"]["TemplateExerciseRequest"][];
         };
         UpdateTemplateSharingRequest: {
-            override?: boolean | null;
+            visibility: components["schemas"]["TemplateVisibility"];
         };
         UpdateTrainingGoalRequest: {
             trainingGoal?: components["schemas"]["TrainingGoal"];
