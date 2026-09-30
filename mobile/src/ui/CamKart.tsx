@@ -7,11 +7,17 @@ interface Props {
   onPress?: () => void;
   /** Kartin ic duzeni (ör. `flex-row gap-3 p-4`); kartin kendisi yalnizca cam yuzeydir. */
   className?: string;
+  /**
+   * Kartin DIS yerlesimi (ör. yan yana kartlarda `flex-1`). Varsayilan bos: dikey bir sutunda `flex-1`
+   * kartin boyunu cokertebilir, bu yuzden karar cagiranin.
+   */
+  disClassName?: string;
   children: React.ReactNode;
 }
 
 /**
- * Liquid Glass kart yuzeyi (#491, ilk kullanim #547 -- ana sayfanin ozet kartlari). Uc katman:
+ * Liquid Glass kart yuzeyi (#491; #547 -- ana sayfanin ozet kartlari ve arkadas karsilastirmasi). Yeni
+ * kartlarin varsayilan yuzeyi (kullanici karari; gorsel tasarim spec'i Karar 9). Uc katman:
  * - gercek blur (`CamYuzey`; #491 kullanici karari -- Android'de duz perde, bilinen fark);
  * - ustten asagi sonen ince bir parilti (camin ustune dusen isik);
  * - sac teli kenar.
@@ -21,14 +27,14 @@ interface Props {
  * Tailwind'in hazir paleti (`white/10` gibi) kullanilmaz; `border-fg/10` gibi ekler de kullanilmaz
  * (degiskene bagli renkte calismiyor, kenar siyah cikiyordu).
  */
-export default function CamKart({ onPress, className = '', children }: Props) {
+export default function CamKart({ onPress, className = '', disClassName = '', children }: Props) {
   const palet = useRenkPaleti();
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={onPress}
-      className="flex-1 overflow-hidden rounded-3xl"
+      className={`overflow-hidden rounded-3xl ${disClassName}`}
     >
       <CamYuzey />
       <Svg style={StyleSheet.absoluteFill} pointerEvents="none">

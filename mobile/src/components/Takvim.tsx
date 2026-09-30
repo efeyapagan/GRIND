@@ -312,7 +312,7 @@ function OzetKarti({
   const ikonRenk = useIkonRenk();
   // #547: kart Liquid Glass yuzeyi (CamKart) -- #544'teki duz, kenarli yuzey kaba bulundu.
   return (
-    <CamKart onPress={onPress} className="flex-row gap-3 p-4">
+    <CamKart onPress={onPress} disClassName="flex-1" className="flex-row gap-3 p-4">
       <View className="min-w-0 flex-1 flex-col gap-1">
         <View className="flex-row items-center gap-1.5">
           <Ikon color={ikonRenk.muted} size={16} />
