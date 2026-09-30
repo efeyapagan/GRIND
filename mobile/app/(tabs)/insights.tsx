@@ -18,7 +18,7 @@ import { yorumuCozumle, type YorumIcerigi } from '@grind/shared/lib/yorumIcerigi
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import IkincilDugme from '../../src/ui/IkincilDugme';
-import IkonDugmesi from '../../src/ui/IkonDugmesi';
+import CamIkonDugmesi from '../../src/ui/CamIkonDugmesi';
 import IkonKapsulu from '../../src/ui/IkonKapsulu';
 import CamKart from '../../src/ui/CamKart';
 import BosDurum from '../../src/ui/BosDurum';
@@ -126,7 +126,7 @@ export default function InsightsScreen() {
             {t('yorumlar.ingilizceNotu')}
           </Text>
 
-          <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+          <CamKart testID="yorum-iste-karti" className="flex-col gap-3 p-4">
             {!uretiliyor && (
               <BirincilDugme yukseklik="normal" onPress={yorumIste}>
                 <Sparkles color={ikonRenk.onAccent} size={20} />
@@ -150,7 +150,7 @@ export default function InsightsScreen() {
             )}
 
             {durum === 'hata' && genelHata && <HataKutusu baslik={t('yorumlar.alinamadi')} mesaj={genelHata} />}
-          </View>
+          </CamKart>
 
           {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
@@ -227,9 +227,9 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
           </Text>
         </Pressable>
         {acik && (
-          <IkonDugmesi etiket={t('yorumlar.yorumuSil')} onPress={onSilmeyeBasla}>
+          <CamIkonDugmesi etiket={t('yorumlar.yorumuSil')} onPress={onSilmeyeBasla}>
             <Trash2 color={ikonRenk.muted} size={18} />
-          </IkonDugmesi>
+          </CamIkonDugmesi>
         )}
       </View>
       {/* #463: tercih cozulmeden cizmeyiz -- yoksa ilk kare arayuz diliyle cizilip degisiyor. */}

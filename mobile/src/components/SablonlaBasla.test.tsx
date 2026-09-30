@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
 import SablonlaBasla from './SablonlaBasla';
@@ -92,6 +92,15 @@ test('Basla dugmesi o sablonla antrenmani baslatir', async () => {
   await fireEvent.press(screen.getAllByRole('button', { name: 'Başla' })[1]);
 
   expect(onBasla).toHaveBeenCalledWith(8);
+});
+
+/** #491 Gorev 3: kartin "Basla" dugmesi de "Sablon olustur" gibi BirincilDugme -- ustten hafif parilti tasir. */
+test('kartin Basla dugmesi birincil dugmedeki parilti katmanini tasir', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  const basla = screen.getAllByRole('button', { name: 'Başla' })[0];
+
+  expect(within(basla).getByTestId('birincil-dugme-parilti')).toBeTruthy();
 });
 
 /** #439: yana kaydirma liste gezintisine gittigi icin kisayollar basili tutunca acilan menude. */

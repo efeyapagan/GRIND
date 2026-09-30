@@ -224,19 +224,10 @@ test('aylik donemde hedef dort kati gosterilir', async () => {
   expect(screen.getByText('6/12 gün')).toBeTruthy();
 });
 
-// ---- Kendi satiri (#512) ----
+// ---- Cam satirlar ve ince ilerleme cizgisi (#491, gorsel tasarim spec'i Karar 9) ----
 
-/** Sinif adindaki `bg-*` zemin sinifi. */
-function zemin(sinif: string | undefined): string | undefined {
-  return sinif?.split(/\s+/).find((parca) => parca.startsWith('bg-'));
-}
-
-/**
- * Kullanici bildirdi: kendi satiri bir ton acik zeminde (#425) ve hedef cubugunun kanali AYNI
- * renkteydi -- kanal zeminde kayboluyor, oran okunmuyordu. Kanal HER satir turunde, uzerinde
- * durdugu zeminden ayrismali.
- */
-test('hedef cubugunun kanali her satirda satir zemininden ayrisir', async () => {
+/** Satirlar duz `bg-surface-*` degil cam kart (`CamKart`). */
+test('satirlar cam yuzeydedir', async () => {
   veriVer([
     arkadas('ben', { isSelf: true, trainedDays: 1, weeklyTargetDays: 3 }),
     arkadas('ali', { trainedDays: 2, weeklyTargetDays: 3 }),
@@ -244,9 +235,36 @@ test('hedef cubugunun kanali her satirda satir zemininden ayrisir', async () => 
   await ciz();
 
   for (const ad of ['ben', 'ali']) {
-    const satir = screen.getByLabelText(`${ad} profilini aç`);
-    const kanal = within(satir).getByTestId('hedef-kanali');
-    expect(zemin(kanal.props.className)).toBeDefined();
-    expect(zemin(kanal.props.className)).not.toBe(zemin(satir.props.className));
+    const sinif: string = screen.getByLabelText(`${ad} profilini aç`).props.className;
+    expect(sinif).toContain('rounded-3xl');
+    expect(sinif).not.toMatch(/bg-surface/);
   }
+});
+
+/**
+ * #425: kendi satiri hemen bulunsun. Vurgu cam uzerinde SVG'de `fg` dolgusu + `fillOpacity` (spec
+ * Karar 9). Kullanici bildirdi: `bg-fg opacity-5` sinifi uygulanmayip satiri TAM acik gri (koyu temada)
+ * dolduruyordu -- opaklik burada sinifla DEGIL SVG ozelligiyle verilir ve dusuk kalir.
+ */
+test('kendi satirinin vurgusu dusuk opakliktadir, baskasininki yoktur', async () => {
+  veriVer([
+    arkadas('ben', { isSelf: true, trainedDays: 1, weeklyTargetDays: 3 }),
+    arkadas('ali', { trainedDays: 2, weeklyTargetDays: 3 }),
+  ]);
+  await ciz();
+
+  const vurgu = within(screen.getByLabelText('ben profilini aç')).getByTestId('kendi-satir-vurgusu');
+  expect(vurgu.props.fillOpacity).toBeGreaterThan(0);
+  expect(vurgu.props.fillOpacity).toBeLessThanOrEqual(0.1);
+  expect(within(screen.getByLabelText('ali profilini aç')).queryByTestId('kendi-satir-vurgusu')).toBeNull();
+});
+
+/** Hedef cubugu NativeWind View degil SVG: ray tam genisliktedir, dolgu oran kadar (2/3 gun -> %67). */
+test('hedef cubugu svg cizilir: ray tam, dolgu orana gore', async () => {
+  veriVer([arkadas('ali', { trainedDays: 2, weeklyTargetDays: 3 })]);
+  await ciz();
+
+  const satir = within(screen.getByLabelText('ali profilini aç'));
+  expect(satir.getByTestId('hedef-ray').props.width).toBe('100%');
+  expect(satir.getByTestId('hedef-dolgu').props.width).toBe('67%');
 });
