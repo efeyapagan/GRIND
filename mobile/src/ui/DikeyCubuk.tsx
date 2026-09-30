@@ -12,7 +12,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
-import AlevCizimi, { ALEV_ORANI, KivilcimCizimi, alevIlkKezMi } from './AlevCizimi';
+import AlevCizimi, { ALEV_ORANI, KivilcimCizimi } from './AlevCizimi';
+import { DartTahtasi, OK_ORANI, OkCizimi } from './DartCizimi';
+import { acilistaIlkKezMi } from './acilisAnimasyonu';
 import { useRenkPaleti } from './renkler';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
@@ -24,10 +26,12 @@ interface Props {
   /** Erisilebilirlik agacindaki deger (ekran okuyucu "3 / 8" okur). */
   deger?: { min: number; max: number; now: number };
   /**
-   * #547: halkanin yerine ALEV (rekordaki seri). Uygulamanin ilk acilisinda alev cubugun dibinden
-   * yerine tirmanir, dolgu da onunla birlikte yukselir; sonra orada sabit kalir.
+   * #547: dolgunun ucundaki isaret. `halka` (varsayilan); `alev` rekordaki seri -- uygulamanin ilk
+   * acilisinda cubugun dibinden yerine tirmanir, dolgu da onunla yukselir, dipten kivilcimlar firlar;
+   * `dart` tutulan haftalik hedef -- ilk acilista cubugun dibinden 5 ok atilip tahtanin tam ortasina
+   * saplanir, sonra tahtada tek ok kalir. Iki animasyon da uygulama SURECI basina bir kez.
    */
-  alev?: boolean;
+  isaret?: 'halka' | 'alev' | 'dart';
 }
 
 const GENISLIK = 16;
@@ -40,6 +44,18 @@ const ALEV_YUKSEKLIK = ALEV_GENISLIK / ALEV_ORANI;
 /** Alevin kutusunun bu orani dolgunun ucunun USTUNDE kalir: alev dolgunun ucunda "yanar". */
 const ALEV_TABANI = 0.65;
 const HAREKET = { reduceMotion: ReduceMotion.System } as const;
+
+const TAHTA = 22;
+const OK_GENISLIK = 7;
+const OK_YUKSEKLIK = OK_GENISLIK / OK_ORANI;
+const OK_SAYISI = 5;
+/** Oklar arasi gecikme ve bir okun ucus suresi (ms). */
+const OK_ARALIGI = 260;
+const OK_UCUS = 420;
+/** Saplanmis okun egimi: ucu tahtaya, tuyleri sag alta. */
+const OK_ACISI = -30;
+/** Tahtanin her isabette hafifce sarsilmasi. */
+const SARSINTI = 190;
 
 /**
  * Tirmanista cubugun dibinden firlayan kivilcimlar (#547, kullanici karari: "daha cafcafli patlasin,
@@ -106,6 +122,72 @@ function Kivilcim({ ayar, rayAlt, rayUst }: { ayar: KivilcimAyari; rayAlt: numbe
 }
 
 /**
+ * Tek bir dart oku (#547): cubugun dibinden firlar, hafif bir yay cizerek tahtanin tam ortasina ucundan
+ * saplanir ve egilir. Son ok disindakiler saplaninca soner -- tahtada tek ok kalir. `ucsun` degilse ok
+ * dogrudan saplanmis haliyle cizilir (surecin sonraki takilislari).
+ */
+function Ok({
+  sira,
+  ucsun,
+  sonuncu,
+  rayAlt,
+  hedefY,
+}: {
+  sira: number;
+  ucsun: boolean;
+  sonuncu: boolean;
+  rayAlt: number;
+  hedefY: number;
+}) {
+  // 0..1 ucus, 1..2 (son ok disinda) saplandiktan sonra sonme.
+  const t = useSharedValue(ucsun ? 0 : 1);
+
+  useEffect(() => {
+    if (!ucsun) {
+      return;
+    }
+    const ucus = withTiming(1, { duration: OK_UCUS, easing: Easing.out(Easing.quad), ...HAREKET });
+    t.value = withDelay(
+      sira * OK_ARALIGI,
+      sonuncu ? ucus : withSequence(ucus, withDelay(120, withTiming(2, { duration: 160, ...HAREKET }))),
+    );
+  }, [t, ucsun, sonuncu, sira]);
+
+  const stil = useAnimatedStyle(() => {
+    const u = Math.min(1, t.value);
+    const baslangic = rayAlt - 6;
+    const ucY = baslangic + (hedefY - baslangic) * u;
+    // Hafif yay: oklar sirayla sagdan ve soldan gelir.
+    const yay = Math.sin(u * Math.PI) * (sira % 2 === 0 ? -4 : 4);
+    const opaklik = t.value <= 1 ? (u < 0.05 ? u / 0.05 : 1) : 2 - t.value;
+    return {
+      top: ucY,
+      opacity: opaklik,
+      transform: [{ translateX: yay }, { rotate: `${OK_ACISI * u}deg` }],
+    };
+  }, [rayAlt, hedefY]);
+
+  return (
+    <Animated.View
+      testID={ucsun ? 'ucan-ok' : 'saplanmis-ok'}
+      className="absolute"
+      style={[
+        {
+          left: (GENISLIK - OK_GENISLIK) / 2,
+          width: OK_GENISLIK,
+          height: OK_YUKSEKLIK,
+          // Egilme ve yay okun UCU etrafinda: ucu tahtanin merkezinde kalir.
+          transformOrigin: 'top',
+        },
+        stil,
+      ]}
+    >
+      <OkCizimi genislik={OK_GENISLIK} />
+    </Animated.View>
+  );
+}
+
+/**
  * Ozet kartlarinin sagindaki dikey sayac (#544; #547'de Liquid Glass diliyle yeniden).
  *
  * #544'un ilk hali "kaba" bulundu (kullanici: "Apple'inki cok daha naif"): yuva simsiyah (`inset`),
@@ -115,24 +197,43 @@ function Kivilcim({ ayar, rayAlt, rayUst }: { ayar: KivilcimAyari; rayAlt: numbe
  * - alttan yukari parlayan gradyan dolgu (`accent`, altta %35 -> ustte tam);
  * - 10 pt'lik ince kenarli halka, `accent` ile hafif parlar -- ya da rekordaysa halkanin yerinde ALEV.
  *
- * Alevin tirmanisi uygulama SURECI basina bir kez oynar (`alevIlkKezMi`); tirmanirken cubugun dibinden
- * kivilcimlar firlar. Cihazda "hareketi azalt" aciksa (`ReduceMotion.System`) alev dogrudan yerinde
- * baslar, kivilcimlar hic gorunmez.
+ * Alevin tirmanisi ve ok atisi uygulama SURECI basina bir kez oynar (`acilistaIlkKezMi`, her biri kendi
+ * anahtariyla). Cihazda "hareketi azalt" aciksa (`ReduceMotion.System`) ikisi de dogrudan son haliyle
+ * baslar: alev yerinde, tahtada tek ok; kivilcimlar ve ucan oklar gorunmez.
  *
  * Cizim SVG'de: ince cizgiler ve gradyan NativeWind siniflariyla kaba kaliyordu; yukseklik
  * `onLayout`tan gelir (sayac kartin boyunca uzanir).
  */
-export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props) {
+export default function DikeyCubuk({ testID, oran, deger, isaret = 'halka' }: Props) {
   const palet = useRenkPaleti();
   const [yukseklik, setYukseklik] = useState(0);
-  // Bayrak yalnizca alevli sayacta ve TEK bir baslaticida tuketilir (uygulama StrictMode kullanmiyor).
-  const [oynat] = useState(() => alev && alevIlkKezMi());
-  // Isaretin (halka/alev) hedefe dogru ne kadar yol aldigi: 0 = rayin dibi, 1 = yerinde.
-  const ilerleme = useSharedValue(oynat ? 0 : 1);
+  const alev = isaret === 'alev';
+  const dart = isaret === 'dart';
+  // Bayrak yalnizca animasyonlu isarette ve TEK bir baslaticida tuketilir (uygulama StrictMode kullanmiyor).
+  const [oynat] = useState(() => isaret !== 'halka' && acilistaIlkKezMi(isaret));
+  // Isaretin hedefe dogru ne kadar yol aldigi: 0 = rayin dibi, 1 = yerinde. Yalnizca alev tirmanir.
+  const ilerleme = useSharedValue(alev && oynat ? 0 : 1);
   const titreme = useSharedValue(1);
+  const sarsinti = useSharedValue(1);
 
   useEffect(() => {
-    if (!oynat) {
+    if (!oynat || !dart) {
+      return;
+    }
+    // Her isabette tahta hafifce sarsilir: ilk ok saplaninca, sonra her OK_ARALIGI'da bir.
+    const sars = () =>
+      withSequence(
+        withTiming(1.14, { duration: 70, ...HAREKET }),
+        withTiming(1, { duration: SARSINTI - 70, ...HAREKET }),
+      );
+    sarsinti.value = withSequence(
+      withDelay(OK_UCUS, sars()),
+      ...Array.from({ length: OK_SAYISI - 1 }, () => withDelay(OK_ARALIGI - SARSINTI, sars())),
+    );
+  }, [oynat, dart, sarsinti]);
+
+  useEffect(() => {
+    if (!oynat || !alev) {
       return;
     }
     ilerleme.value = withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic), ...HAREKET });
@@ -145,7 +246,7 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
       ),
       withTiming(1, { duration: 150, ...HAREKET }),
     );
-  }, [oynat, ilerleme, titreme]);
+  }, [oynat, alev, ilerleme, titreme]);
 
   const orta = GENISLIK / 2;
   const rayUst = UC_PAYI;
@@ -158,10 +259,16 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
 
   const isaretStili = useAnimatedStyle(() => {
     const y = rayAlt - (oran ?? 0) * ilerleme.value * (rayAlt - rayUst);
-    return alev
-      ? { top: y - ALEV_YUKSEKLIK * ALEV_TABANI, transform: [{ scaleX: titreme.value }] }
-      : { top: y - HALKA / 2 };
-  }, [oran, rayAlt, rayUst, alev]);
+    if (alev) {
+      return { top: y - ALEV_YUKSEKLIK * ALEV_TABANI, transform: [{ scaleX: titreme.value }] };
+    }
+    if (dart) {
+      return { top: y - TAHTA / 2, transform: [{ scale: sarsinti.value }] };
+    }
+    return { top: y - HALKA / 2 };
+  }, [oran, rayAlt, rayUst, alev, dart]);
+  // Oklarin saplanacagi nokta: tahtanin merkezi (tahta tirmanmaz, dogrudan yerindedir).
+  const tahtaMerkezi = rayAlt - (oran ?? 0) * (rayAlt - rayUst);
 
   return (
     <View
@@ -194,7 +301,7 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
         </Svg>
       )}
       {/* Tirmanis sirasinda dipten firlayan kivilcimlar; yalnizca surecin ilk tirmanisinda. */}
-      {oynat && (
+      {oynat && alev && (
         <View testID="alev-kivilcimlari" pointerEvents="none" className="absolute inset-0">
           {KIVILCIMLAR.map((ayar, sira) => (
             <Kivilcim key={sira} ayar={ayar} rayAlt={rayAlt} rayUst={rayUst} />
@@ -214,11 +321,17 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
                   left: (GENISLIK - ALEV_GENISLIK) / 2,
                   transformOrigin: 'bottom',
                 }
-              : { width: HALKA, height: HALKA, left: (GENISLIK - HALKA) / 2 },
+              : dart
+                ? { width: TAHTA, height: TAHTA, left: (GENISLIK - TAHTA) / 2 }
+                : { width: HALKA, height: HALKA, left: (GENISLIK - HALKA) / 2 },
             isaretStili,
           ]}
         >
-          {alev ? (
+          {dart ? (
+            <View testID={`${testID}-dart`}>
+              <DartTahtasi boyut={TAHTA} />
+            </View>
+          ) : alev ? (
             <View testID={`${testID}-alev`}>
               <View testID={oynat ? 'alev-oynuyor' : 'alev-sabit'}>
                 <AlevCizimi genislik={ALEV_GENISLIK} />
@@ -238,6 +351,25 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
             />
           )}
         </Animated.View>
+      )}
+      {/* Oklar tahtanin USTUNDE: ilk acilista 5 ok ucar, sonra yalnizca tam ortadan saplanmis tek ok. */}
+      {dart && oran !== null && (
+        <View pointerEvents="none" className="absolute inset-0">
+          {oynat ? (
+            Array.from({ length: OK_SAYISI }, (_, sira) => (
+              <Ok
+                key={sira}
+                sira={sira}
+                ucsun
+                sonuncu={sira === OK_SAYISI - 1}
+                rayAlt={rayAlt}
+                hedefY={tahtaMerkezi}
+              />
+            ))
+          ) : (
+            <Ok sira={0} ucsun={false} sonuncu rayAlt={rayAlt} hedefY={tahtaMerkezi} />
+          )}
+        </View>
       )}
     </View>
   );

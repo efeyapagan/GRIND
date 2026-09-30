@@ -3,28 +3,6 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useRenkPaleti } from './renkler';
 
 /**
- * "Bu surecte alev zaten tirmandi mi" -- uygulama SURECI basina bir kez (#547, kullanici karari:
- * "uygulama ilk acildiginda alevler yukselerek en uste cikacak", sonra kapatilip acilana kadar tepede
- * kalacak). Modul seviyesinde tutulur: ekrandan cikip donmek bileseni yeniden takar ama bu degeri
- * sifirlamaz; uygulama kapatilip acilinca modul yeniden yuklenir ve animasyon tekrar oynar.
- */
-let tirmandi = false;
-
-/** Bayragi tuketir: surecin ilk cagrisi `true`, sonrakiler `false`. */
-export function alevIlkKezMi(): boolean {
-  if (tirmandi) {
-    return false;
-  }
-  tirmandi = true;
-  return true;
-}
-
-/** Yalnizca testler icin: bir sonraki takilisi "uygulamanin ilk acilisi" yapar. */
-export function alevOturumunuSifirla() {
-  tirmandi = false;
-}
-
-/**
  * Alevin en-boy orani (genislik : yukseklik). Kare kutuda "yayvan", 3:4'te "enine genis", yatayda
  * %70'e sikistirilinca "boydan cok uzun" bulundu; dikeyde de %85'e kisaltildi (~0.62).
  */

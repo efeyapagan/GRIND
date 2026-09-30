@@ -18,7 +18,7 @@ import {
   haftaGunleri,
   kaydir,
 } from '@grind/shared/lib/takvim';
-import { hedefCubugu, hedefKalan, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
 import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -170,7 +170,7 @@ export default function Takvim() {
                   deger={{ min: 0, max: ozet.longestWeekStreak, now: ozet.currentWeekStreak }}
                   // #547: rekorunu her hafta tazeleyen kullanicinin alevi halkanin yerini alir -- YALNIZ
                   // seri kartinda ve haftalik hedeften bagimsiz (kullanici karari).
-                  alev={rekordaMi(ozet.currentWeekStreak, ozet.longestWeekStreak)}
+                  isaret={rekordaMi(ozet.currentWeekStreak, ozet.longestWeekStreak) ? 'alev' : 'halka'}
                 />
               }
             >
@@ -196,6 +196,9 @@ export default function Takvim() {
                 <DikeyCubuk
                   testID="hedef-cubugu"
                   oran={hedefCubugu(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays)}
+                  // #547: haftalik hedef tuttuysa halkanin yerini dart tahtasi alir -- YALNIZ hedef
+                  // kartinda ve seriden bagimsiz (kullanici karari).
+                  isaret={hedefTuttuMu(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays) ? 'dart' : 'halka'}
                   deger={
                     ozet.weeklyTargetDays === null
                       ? undefined

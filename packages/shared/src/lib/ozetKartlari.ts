@@ -34,3 +34,11 @@ export function hedefKalan(gun: number, hedef: number): number {
 export function rekordaMi(mevcut: number, enUzun: number): boolean {
   return mevcut > 0 && mevcut === enUzun;
 }
+
+/**
+ * Haftalik hedef TUTTU mu (#547): bu haftaki gun hedefe ulasti ya da gecti. Hedef yoksa tutulacak bir
+ * sey yoktur. Seriden bagimsizdir (kullanici karari).
+ */
+export function hedefTuttuMu(gun: number, hedef: number | null): boolean {
+  return hedef !== null && hedef > 0 && gun >= hedef;
+}

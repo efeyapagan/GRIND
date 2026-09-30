@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { hedefCubugu, hedefKalan, rekordaMi, seriCubugu } from './ozetKartlari';
+import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from './ozetKartlari';
 
 /**
  * #544 (kullanici karari): ana sayfadaki iki ozet kartinin dikey cubugu. Seri cubugu mevcut seriyi
@@ -43,4 +43,16 @@ test('mevcut seri en uzun seriye esitse rekordadir', () => {
 /** Hic seri yokken "rekor" yoktur: 0 = 0 bir rekor degildir. */
 test('hic seri yokken rekorda degildir', () => {
   expect(rekordaMi(0, 0)).toBe(false);
+});
+
+/** #547 (kullanici karari): haftalik hedef TUTTUYSA hedef cubugunun tepesinde dart tahtasi cizilir. */
+test('bu haftaki gun hedefe ulasti ya da gectiyse hedef tutmustur', () => {
+  expect(hedefTuttuMu(4, 4)).toBe(true);
+  expect(hedefTuttuMu(5, 4)).toBe(true);
+  expect(hedefTuttuMu(3, 4)).toBe(false);
+});
+
+/** Hedef koymamis kullanicinin tutacagi bir hedef yoktur. */
+test('hedef yoksa hedef tutmus sayilmaz', () => {
+  expect(hedefTuttuMu(3, null)).toBe(false);
 });
