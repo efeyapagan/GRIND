@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
 import Svg, { Line } from 'react-native-svg';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
+import BirincilDugme from './BirincilDugme';
 import CamYuzey from './CamYuzey';
 import IkonKapsulu from './IkonKapsulu';
 import SablonFiguru from './SablonFiguru';
@@ -114,16 +115,15 @@ export default function SablonVitrinKarti({
             Yukseklik simdiden ayrildi ki satir eklenince kart ve karusel kaymasin. */}
         <View className="mb-3 mt-1 h-5" />
 
-        <Pressable
-          accessibilityRole="button"
+        <BirincilDugme
+          yukseklik="kompakt"
           accessibilityLabel={t('sablonlar.kartBasla')}
           onPress={onBasla}
           disabled={disabled}
-          className="h-11 items-center justify-center rounded-xl bg-accent"
           style={parlama}
         >
-          <Text className="text-body-lg font-bold text-on-accent">{t('sablonlar.kartBasla')}</Text>
-        </Pressable>
+          {t('sablonlar.kartBasla')}
+        </BirincilDugme>
       </View>
     </Pressable>
   );
