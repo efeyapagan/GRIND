@@ -306,7 +306,8 @@ alır.
 
 **Bitti sayılmadan:** iki temada gözle denenir; iOS'ta blur, Android'de düz perde beklenir.
 
-Uygulanan yerler: ana sayfanın özet kartları ve arkadaş karşılaştırması (#547). Diğer kartlara yayılması
+Uygulanan yerler: ana sayfanın özet kartları, arkadaş karşılaştırması ve takvimin görünüm tuşu
+(`CamIkonDugmesi` — `IkonDugmesi`'nin cam hâli; cam dile geçen ikon düğmeleri bunu kullanır) (#547). Diğer kartlara yayılması
 #491'in görevleri (geçmiş ve AI yorum kartlarında önce kaydırma performansı ölçülür).
 
 ---

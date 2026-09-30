@@ -5,6 +5,8 @@ import { useRenkPaleti } from './renkler';
 
 interface Props {
   onPress?: () => void;
+  /** Dokunulabilir kartin erisilebilir adi (ör. yalnizca ikondan olusan cam dugme). */
+  accessibilityLabel?: string;
   /** Kartin ic duzeni (ör. `flex-row gap-3 p-4`); kartin kendisi yalnizca cam yuzeydir. */
   className?: string;
   /**
@@ -27,11 +29,18 @@ interface Props {
  * Tailwind'in hazir paleti (`white/10` gibi) kullanilmaz; `border-fg/10` gibi ekler de kullanilmaz
  * (degiskene bagli renkte calismiyor, kenar siyah cikiyordu).
  */
-export default function CamKart({ onPress, className = '', disClassName = '', children }: Props) {
+export default function CamKart({
+  onPress,
+  accessibilityLabel,
+  className = '',
+  disClassName = '',
+  children,
+}: Props) {
   const palet = useRenkPaleti();
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel}
       disabled={!onPress}
       onPress={onPress}
       className={`overflow-hidden rounded-3xl ${disClassName}`}

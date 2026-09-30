@@ -19,9 +19,9 @@ import {
   kaydir,
 } from '@grind/shared/lib/takvim';
 import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import CamIkonDugmesi from '../ui/CamIkonDugmesi';
 import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
-import IkonDugmesi from '../ui/IkonDugmesi';
 import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -90,12 +90,13 @@ export default function Takvim() {
         {/* #315: donem basligi ve SAG kosesinde gorunum ikonu -- ikon gun kartlarinin DISINDA. */}
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-body-lg text-fg">{donemBasligi}</Text>
-          <IkonDugmesi
+          {/* #547: ozet kartlariyla ayni cam dil (spec Karar 9). */}
+          <CamIkonDugmesi
             etiket={t(gorunum === 'ay' ? 'takvim.haftalikGorunumeGec' : 'takvim.aylikGorunumeGec')}
             onPress={gorunumDegistir}
           >
-            <CalendarDays color={ikonRenk.muted} size={20} />
-          </IkonDugmesi>
+            <CalendarDays color={ikonRenk.fg} size={20} />
+          </CamIkonDugmesi>
         </View>
 
         {/* #332: giris animasyonu YALNIZCA donem degisince calisir, takvimin ilk montajinda degil.
