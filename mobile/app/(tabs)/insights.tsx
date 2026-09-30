@@ -20,6 +20,7 @@ import BirincilDugme from '../../src/ui/BirincilDugme';
 import IkincilDugme from '../../src/ui/IkincilDugme';
 import IkonDugmesi from '../../src/ui/IkonDugmesi';
 import IkonKapsulu from '../../src/ui/IkonKapsulu';
+import CamKart from '../../src/ui/CamKart';
 import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
@@ -189,7 +190,7 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
   const { yorumDili, hazir } = useYorumDili();
   if (onayAcik) {
     return (
-      <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
+      <CamKart testID={`yorum-silme-karti-${yorum.id}`} className="flex-col gap-3 p-4">
         <Text className="text-body text-fg">{t('yorumlar.silmeOnayi')}</Text>
         <View className="flex-row gap-2">
           <Pressable onPress={onSil} className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg">
@@ -199,12 +200,12 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
             <IkincilDugme onPress={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </View>
         </View>
-      </View>
+      </CamKart>
     );
   }
 
   return (
-    <View className="flex-col gap-2 rounded-xl bg-surface-2 p-4">
+    <CamKart testID={`yorum-karti-${yorum.id}`} className="flex-col gap-2 p-4">
       {/* #149: baslik satirinin tamami ac/kapat dugmesidir. Kapaliyken kartin tasidigi tek bilgi
           tarihtir; silme yalnizca ACIK kartta durur -- kapali satiri iki eylemli yapmak
           "dokununca acilir" beklentisini bozardi. */}
@@ -233,7 +234,7 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
       </View>
       {/* #463: tercih cozulmeden cizmeyiz -- yoksa ilk kare arayuz diliyle cizilip degisiyor. */}
       {acik && hazir && <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />}
-    </View>
+    </CamKart>
   );
 }
 

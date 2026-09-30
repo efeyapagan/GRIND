@@ -7,6 +7,7 @@ interface Props {
   onPress?: () => void;
   /** Dokunulabilir kartin erisilebilir adi (ör. yalnizca ikondan olusan cam dugme). */
   accessibilityLabel?: string;
+  testID?: string;
   /** Kartin ic duzeni (ör. `flex-row gap-3 p-4`); kartin kendisi yalnizca cam yuzeydir. */
   className?: string;
   /**
@@ -32,6 +33,7 @@ interface Props {
 export default function CamKart({
   onPress,
   accessibilityLabel,
+  testID,
   className = '',
   disClassName = '',
   children,
@@ -41,6 +43,7 @@ export default function CamKart({
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={accessibilityLabel}
+      testID={testID}
       disabled={!onPress}
       onPress={onPress}
       className={`overflow-hidden rounded-3xl ${disClassName}`}
