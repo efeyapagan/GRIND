@@ -12,9 +12,24 @@ beforeEach(() => alevOturumunuSifirla());
 test('ilk takilista alev tirmanir, sonraki takilislarda tepede sabittir', async () => {
   const ilk = await render(<DikeyCubuk testID="seri" oran={1} alev />);
   expect(screen.getByTestId('alev-oynuyor')).toBeTruthy();
-  ilk.unmount();
+  // Bu RNTL surumunde unmount da asenkron: beklenmezse sonraki render ile act() cakisir.
+  await ilk.unmount();
 
   await render(<DikeyCubuk testID="seri" oran={1} alev />);
   expect(screen.queryByTestId('alev-oynuyor')).toBeNull();
   expect(screen.getByTestId('alev-sabit')).toBeTruthy();
+});
+
+/**
+ * Kullanici karari: alev tirmanirken cubugun dibinden kucuk kivilcimlar (kucuk alevler ve kivilcim
+ * cizimleri) yukari firlayip soner. Yalnizca tirmanista -- sonraki takilislarda yok.
+ */
+test('tirmanirken dipten kivilcimlar firlar, sonraki takilislarda yoktur', async () => {
+  const ilk = await render(<DikeyCubuk testID="seri" oran={1} alev />);
+  expect(screen.getByTestId('alev-kivilcimlari')).toBeTruthy();
+  // Bu RNTL surumunde unmount da asenkron: beklenmezse sonraki render ile act() cakisir.
+  await ilk.unmount();
+
+  await render(<DikeyCubuk testID="seri" oran={1} alev />);
+  expect(screen.queryByTestId('alev-kivilcimlari')).toBeNull();
 });

@@ -6,12 +6,13 @@ import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
-import AlevCizimi, { alevIlkKezMi } from './AlevCizimi';
+import AlevCizimi, { ALEV_ORANI, KivilcimCizimi, alevIlkKezMi } from './AlevCizimi';
 import { useRenkPaleti } from './renkler';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
@@ -34,10 +35,75 @@ const GENISLIK = 16;
 const UC_PAYI = 8;
 const RAY_KALINLIGI = 2.5;
 const HALKA = 10;
-const ALEV = 24;
+const ALEV_GENISLIK = 16;
+const ALEV_YUKSEKLIK = ALEV_GENISLIK / ALEV_ORANI;
 /** Alevin kutusunun bu orani dolgunun ucunun USTUNDE kalir: alev dolgunun ucunda "yanar". */
-const ALEV_TABANI = 0.72;
+const ALEV_TABANI = 0.65;
 const HAREKET = { reduceMotion: ReduceMotion.System } as const;
+
+/**
+ * Tirmanista cubugun dibinden firlayan kivilcimlar (#547, kullanici karari: "daha cafcafli patlasin,
+ * daha buyuk olabilir"). Iki dalga: ilki acilis aninda dipten iki yana birden patlar, ikincisi alevin
+ * pesinden gelir. `yukselis` cubugun boyunun ne kadarina cikacagi, `dx` yana savrulmasi (kartin kenarina
+ * tasmasin diye en fazla 12 pt).
+ */
+const KIVILCIMLAR = [
+  { gecikme: 0, dx: -12, yukselis: 0.45, tur: 'kivilcim', boyut: 10 },
+  { gecikme: 0, dx: 11, yukselis: 0.5, tur: 'kivilcim', boyut: 9 },
+  { gecikme: 60, dx: -5, yukselis: 0.65, tur: 'alev', boyut: 10 },
+  { gecikme: 80, dx: 7, yukselis: 0.7, tur: 'alev', boyut: 9 },
+  { gecikme: 160, dx: -12, yukselis: 0.35, tur: 'kivilcim', boyut: 8 },
+  { gecikme: 200, dx: 12, yukselis: 0.4, tur: 'kivilcim', boyut: 8 },
+  { gecikme: 320, dx: -3, yukselis: 0.85, tur: 'kivilcim', boyut: 11 },
+  { gecikme: 420, dx: 9, yukselis: 0.75, tur: 'alev', boyut: 8 },
+  { gecikme: 520, dx: -9, yukselis: 0.8, tur: 'kivilcim', boyut: 9 },
+  { gecikme: 640, dx: 4, yukselis: 0.95, tur: 'kivilcim', boyut: 10 },
+  { gecikme: 760, dx: -6, yukselis: 0.9, tur: 'alev', boyut: 8 },
+] as const;
+
+type KivilcimAyari = (typeof KIVILCIMLAR)[number];
+
+/**
+ * Tek bir kivilcim: dipte parlayarak buyur (patlama), yukselirken yana savrulur, kuculur ve soner;
+ * yildizlar yukselirken doner.
+ */
+function Kivilcim({ ayar, rayAlt, rayUst }: { ayar: KivilcimAyari; rayAlt: number; rayUst: number }) {
+  const t = useSharedValue(0);
+  const yukseklik = ayar.tur === 'alev' ? ayar.boyut / ALEV_ORANI : ayar.boyut;
+
+  useEffect(() => {
+    t.value = withDelay(
+      ayar.gecikme,
+      withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic), ...HAREKET }),
+    );
+  }, [t, ayar.gecikme]);
+
+  const stil = useAnimatedStyle(() => {
+    const y = rayAlt - t.value * ayar.yukselis * (rayAlt - rayUst);
+    // Patlama: ilk %20'de 0.4 -> 1.3 buyur, sonra 0.4'e kuculur.
+    const olcek = t.value < 0.2 ? 0.4 + 0.9 * (t.value / 0.2) : 1.3 - 0.9 * ((t.value - 0.2) / 0.8);
+    // Hizla belirir, yolun yarisina kadar tam parlak kalir, sonra soner.
+    const opaklik = t.value < 0.1 ? t.value / 0.1 : t.value < 0.5 ? 1 : 1 - (t.value - 0.5) / 0.5;
+    return {
+      top: y - yukseklik / 2,
+      opacity: opaklik,
+      transform: [
+        { translateX: ayar.dx * t.value },
+        { scale: olcek },
+        { rotate: ayar.tur === 'kivilcim' ? `${t.value * 180}deg` : '0deg' },
+      ],
+    };
+  }, [rayAlt, rayUst]);
+
+  return (
+    <Animated.View
+      className="absolute"
+      style={[{ left: (GENISLIK - ayar.boyut) / 2, width: ayar.boyut, height: yukseklik }, stil]}
+    >
+      {ayar.tur === 'alev' ? <AlevCizimi genislik={ayar.boyut} /> : <KivilcimCizimi boyut={ayar.boyut} />}
+    </Animated.View>
+  );
+}
 
 /**
  * Ozet kartlarinin sagindaki dikey sayac (#544; #547'de Liquid Glass diliyle yeniden).
@@ -49,8 +115,9 @@ const HAREKET = { reduceMotion: ReduceMotion.System } as const;
  * - alttan yukari parlayan gradyan dolgu (`accent`, altta %35 -> ustte tam);
  * - 10 pt'lik ince kenarli halka, `accent` ile hafif parlar -- ya da rekordaysa halkanin yerinde ALEV.
  *
- * Alevin tirmanisi uygulama SURECI basina bir kez oynar (`alevIlkKezMi`); cihazda "hareketi azalt"
- * aciksa (`ReduceMotion.System`) alev dogrudan yerinde baslar.
+ * Alevin tirmanisi uygulama SURECI basina bir kez oynar (`alevIlkKezMi`); tirmanirken cubugun dibinden
+ * kivilcimlar firlar. Cihazda "hareketi azalt" aciksa (`ReduceMotion.System`) alev dogrudan yerinde
+ * baslar, kivilcimlar hic gorunmez.
  *
  * Cizim SVG'de: ince cizgiler ve gradyan NativeWind siniflariyla kaba kaliyordu; yukseklik
  * `onLayout`tan gelir (sayac kartin boyunca uzanir).
@@ -92,7 +159,7 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
   const isaretStili = useAnimatedStyle(() => {
     const y = rayAlt - (oran ?? 0) * ilerleme.value * (rayAlt - rayUst);
     return alev
-      ? { top: y - ALEV * ALEV_TABANI, transform: [{ scaleX: titreme.value }] }
+      ? { top: y - ALEV_YUKSEKLIK * ALEV_TABANI, transform: [{ scaleX: titreme.value }] }
       : { top: y - HALKA / 2 };
   }, [oran, rayAlt, rayUst, alev]);
 
@@ -126,6 +193,14 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
           )}
         </Svg>
       )}
+      {/* Tirmanis sirasinda dipten firlayan kivilcimlar; yalnizca surecin ilk tirmanisinda. */}
+      {oynat && (
+        <View testID="alev-kivilcimlari" pointerEvents="none" className="absolute inset-0">
+          {KIVILCIMLAR.map((ayar, sira) => (
+            <Kivilcim key={sira} ayar={ayar} rayAlt={rayAlt} rayUst={rayUst} />
+          ))}
+        </View>
+      )}
       {oran !== null && (
         <Animated.View
           testID={`${testID}-dolu`}
@@ -133,7 +208,12 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
           className="absolute"
           style={[
             alev
-              ? { width: ALEV, height: ALEV, left: (GENISLIK - ALEV) / 2, transformOrigin: 'bottom' }
+              ? {
+                  width: ALEV_GENISLIK,
+                  height: ALEV_YUKSEKLIK,
+                  left: (GENISLIK - ALEV_GENISLIK) / 2,
+                  transformOrigin: 'bottom',
+                }
               : { width: HALKA, height: HALKA, left: (GENISLIK - HALKA) / 2 },
             isaretStili,
           ]}
@@ -141,7 +221,7 @@ export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props)
           {alev ? (
             <View testID={`${testID}-alev`}>
               <View testID={oynat ? 'alev-oynuyor' : 'alev-sabit'}>
-                <AlevCizimi boyut={ALEV} />
+                <AlevCizimi genislik={ALEV_GENISLIK} />
               </View>
             </View>
           ) : (
