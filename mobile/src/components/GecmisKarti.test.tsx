@@ -155,3 +155,21 @@ test('acik antrenmanda paylas ikonu cizilmez', async () => {
 
   expect(screen.queryByLabelText('Antrenmanı paylaş')).toBeNull();
 });
+
+/** #491 Gorev 2 (gorsel tasarim spec'i Karar 9): gecmis karti duz `bg-surface-*` degil cam kart. */
+test('kart, salt-okunur kart ve silme onayi cam yuzeydedir', async () => {
+  const { unmount } = await render(<GecmisKarti oturum={ornekOturum()} onSil={jest.fn()} />);
+  const camMi = (id: string) => {
+    const sinif: string = screen.getByTestId(id).props.className;
+    return sinif.includes('rounded-3xl') && !/bg-surface/.test(sinif);
+  };
+  expect(camMi('gecmis-karti')).toBe(true);
+
+  await fireEvent.press(screen.getByText('Push Day'));
+  await fireEvent.press(within(screen.getByTestId('gecmis-detay-paneli')).getByText('Antrenmanı sil'));
+  expect(camMi('gecmis-silme-karti')).toBe(true);
+  await unmount();
+
+  await render(<GecmisKarti oturum={ornekOturum()} />);
+  expect(camMi('gecmis-karti')).toBe(true);
+});

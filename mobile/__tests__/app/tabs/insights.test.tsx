@@ -356,3 +356,28 @@ test('tek yorum acik gelir', async () => {
 
   expect(screen.getByText('Bench Press hacminde son iki haftada artış var.')).toBeTruthy();
 });
+
+/** #491 Gorev 2 (gorsel tasarim spec'i Karar 9): yorum kartlari duz `bg-surface-*` degil cam kart (`CamKart`). */
+test('kapali ve acik yorum kartlari cam yuzeydedir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  for (const id of ['yorum-karti-1', 'yorum-karti-2']) {
+    const sinif: string = screen.getByTestId(id).props.className;
+    expect(sinif).toContain('rounded-3xl');
+    expect(sinif).not.toMatch(/bg-surface/);
+  }
+});
+
+/** Silme onayi ayni kart yuvasinda acilir; duz yuzeye ziplamamali. */
+test('silme onayi da cam yuzeydedir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+  await ekraniOlustur();
+
+  await act(async () => fireEvent.press(screen.getByLabelText('Yorumu sil')));
+
+  const sinif: string = screen.getByTestId('yorum-silme-karti-1').props.className;
+  expect(sinif).toContain('rounded-3xl');
+  expect(sinif).not.toMatch(/bg-surface/);
+});

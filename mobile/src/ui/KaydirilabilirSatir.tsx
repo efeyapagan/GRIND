@@ -25,6 +25,8 @@ interface Props {
   kaydirmaEtiketi: string;
   /** Kisayollar acilip kapandikca cagrilir -- ust bilesen acik satirda dokunusu baska yorumlayabilsin. */
   onAcikDegisti?: (acik: boolean) => void;
+  /** Satirin kose sinifi; kart cam ise (`rounded-3xl`) kirpma koseleri kartinkiyle ayni olmali (#491). */
+  koseSinifi?: string;
   children: React.ReactNode;
 }
 
@@ -46,7 +48,7 @@ interface Props {
  * thread'inde calisirlar.
  */
 const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function KaydirilabilirSatir(
-  { onSil, onDuzenle, kaydirmaEtiketi, onAcikDegisti, children },
+  { onSil, onDuzenle, kaydirmaEtiketi, onAcikDegisti, koseSinifi = 'rounded-xl', children },
   ref,
 ) {
   const ikonRenk = useIkonRenk();
@@ -96,6 +98,12 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
     transform: [{ translateX: translateX.value }],
   }));
 
+  // #491: cam kart yari saydam; kirmizi zemin kartin altinda bulunursa gorunur. Katman yalnizca kartin
+  // actigi bosluk kadar genis (sagdan sola), dugmeler icerde sabit genislikte sagda durur.
+  const kisayolStili = useAnimatedStyle(() => ({
+    width: Math.max(0, -translateX.value),
+  }));
+
   function icerigeDokunuldu() {
     if (translateX.value !== 0) {
       kapat();
@@ -108,31 +116,34 @@ const KaydirilabilirSatir = forwardRef<KaydirilabilirSatirRef, Props>(function K
   }
 
   return (
-    <View className="relative overflow-hidden rounded-xl">
+    <View testID="kaydirilabilir-satir" className={`relative overflow-hidden ${koseSinifi}`}>
       {/* Kisayollar ekran okuyucudan gizli: satirin KENDISI `kaydirmaEtiketi`ni tasir (#46 deseni). */}
-      <View
+      <Animated.View
+        testID="kaydir-kisayollar"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        className="absolute inset-y-0 right-0 flex-row"
-        style={{ width: acilmaGenisligi }}
+        className={`absolute inset-y-0 right-0 overflow-hidden ${koseSinifi}`}
+        style={kisayolStili}
       >
-        <Pressable
-          testID="kaydir-sil"
-          onPress={() => kisayol(onSil)}
-          className="h-full w-24 items-center justify-center bg-danger-bg"
-        >
-          <Trash2 color={ikonRenk.onDanger} size={20} />
-        </Pressable>
-        {onDuzenle && (
+        <View className="absolute inset-y-0 right-0 flex-row" style={{ width: acilmaGenisligi }}>
           <Pressable
-            testID="kaydir-duzenle"
-            onPress={() => kisayol(onDuzenle)}
-            className="h-full w-24 items-center justify-center bg-accent"
+            testID="kaydir-sil"
+            onPress={() => kisayol(onSil)}
+            className="h-full w-24 items-center justify-center bg-danger-bg"
           >
-            <Pencil color={ikonRenk.onAccent} size={20} />
+            <Trash2 color={ikonRenk.onDanger} size={20} />
           </Pressable>
-        )}
-      </View>
+          {onDuzenle && (
+            <Pressable
+              testID="kaydir-duzenle"
+              onPress={() => kisayol(onDuzenle)}
+              className="h-full w-24 items-center justify-center bg-accent"
+            >
+              <Pencil color={ikonRenk.onAccent} size={20} />
+            </Pressable>
+          )}
+        </View>
+      </Animated.View>
       <GestureDetector gesture={panHareketi}>
         <Animated.View style={satirStili}>
           <Pressable onPress={icerigeDokunuldu} accessibilityLabel={kaydirmaEtiketi}>
