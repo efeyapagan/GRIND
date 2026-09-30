@@ -33,10 +33,17 @@ export default function BirTekrarKarti() {
   const [seciyor, setSeciyor] = useState(false);
 
   const kilolular = (egzersizler ?? []).filter((e) => (e.measurement ?? 'WeightReps') === 'WeightReps');
-  const varsayilan = egzersizler && hacimler ? varsayilanBirTekrarHareketi(hacimler, egzersizler) : null;
+  const sonDonemVarsayilani = egzersizler && hacimler ? varsayilanBirTekrarHareketi(hacimler, egzersizler) : null;
+  // Son 90 gunde kilolu set yoksa (uzun aradan donen kullanici) tum zamanlara bakilir; aciklama yalnizca hic
+  // kilolu set yoksa gorunur (spec Karar 5).
+  const tumZamanGerekli = egzersizler !== undefined && hacimler !== undefined && sonDonemVarsayilani === null;
+  const { data: tumHacimler } = useVolumeByExercise(null, tumZamanGerekli);
+  const varsayilan =
+    sonDonemVarsayilani ?? (egzersizler && tumHacimler ? varsayilanBirTekrarHareketi(tumHacimler, egzersizler) : null);
   const hareketId = secilenId ?? varsayilan;
   const hareket = kilolular.find((e) => e.id === hareketId);
-  const yuklendi = egzersizler !== undefined && hacimler !== undefined;
+  const yuklendi =
+    egzersizler !== undefined && hacimler !== undefined && (!tumZamanGerekli || tumHacimler !== undefined);
 
   return (
     <CamKart className="flex-col gap-3 p-4">

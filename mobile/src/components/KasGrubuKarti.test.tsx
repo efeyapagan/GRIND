@@ -40,3 +40,19 @@ test('setsiz haftada antrenman yok yazar', async () => {
   expect(screen.queryByLabelText('Push: 0 set')).toBeNull();
   expect(screen.getByRole('button', { name: 'Önceki hafta' }).props.accessibilityState).toMatchObject({ disabled: true });
 });
+
+/**
+ * #184 inceleme bulgusu: kart acikken hafta listesi degisebilir (en eski oturum silinince kisalir, yeni hafta
+ * baslayinca uzar). Secim dizi indeksiyle tutulursa kisalan listede ekran coker; secili "bu hafta" kalmali.
+ */
+test('hafta listesi kisalip uzasa da cokmez ve bu haftada kalir', async () => {
+  const { rerender } = await render(<KasGrubuKarti haftalar={HAFTALAR} />);
+
+  await rerender(<KasGrubuKarti haftalar={HAFTALAR.slice(1)} />);
+  expect(screen.getByText('Bu hafta')).toBeTruthy();
+  expect(screen.getByLabelText('Push: 8 set')).toBeTruthy();
+
+  await rerender(<KasGrubuKarti haftalar={[...HAFTALAR, hafta('2026-03-16', [1, 0, 0, 0])]} />);
+  expect(screen.getByText('Bu hafta')).toBeTruthy();
+  expect(screen.getByLabelText('Push: 1 set')).toBeTruthy();
+});

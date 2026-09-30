@@ -26,8 +26,13 @@ export default function KasGrubuKarti({ haftalar }: { haftalar: readonly Haftali
   const dil = useDil();
   const ikonRenk = useIkonRenk();
   const sonSira = haftalar.length - 1;
-  const [sira, setSira] = useState(sonSira);
+  // Secim indeks degil haftanin kendisi (`null` = bu hafta): kart acikken liste kisalip uzayabilir (en eski
+  // oturum silinir, yeni hafta baslar) -- indeks tutulsaydi kisalan listede tasar ve ekran cokerdi.
+  const [seciliHafta, setSeciliHafta] = useState<string | null>(null);
+  const bulunan = seciliHafta === null ? -1 : haftalar.findIndex((h) => h.weekStart === seciliHafta);
+  const sira = bulunan === -1 ? sonSira : bulunan;
   const hafta = haftalar[sira];
+  const secSira = (yeni: number) => setSeciliHafta(yeni === sonSira ? null : haftalar[yeni].weekStart);
   const satirlar = kasGrubuSatirlari(haftalar, sira);
   const enCok = Math.max(...satirlar.map((s) => s.set));
   const baslik =
@@ -44,7 +49,7 @@ export default function KasGrubuKarti({ haftalar }: { haftalar: readonly Haftali
           accessibilityLabel={t('ilerleme.oncekiHafta')}
           accessibilityState={{ disabled: sira === 0 }}
           disabled={sira === 0}
-          onPress={() => setSira(sira - 1)}
+          onPress={() => secSira(sira - 1)}
           className={`size-11 items-center justify-center ${sira === 0 ? 'opacity-40' : ''}`}
         >
           <ChevronLeft color={ikonRenk.fg} size={20} />
@@ -55,7 +60,7 @@ export default function KasGrubuKarti({ haftalar }: { haftalar: readonly Haftali
           accessibilityLabel={t('ilerleme.sonrakiHafta')}
           accessibilityState={{ disabled: sira === sonSira }}
           disabled={sira === sonSira}
-          onPress={() => setSira(sira + 1)}
+          onPress={() => secSira(sira + 1)}
           className={`size-11 items-center justify-center ${sira === sonSira ? 'opacity-40' : ''}`}
         >
           <ChevronRight color={ikonRenk.fg} size={20} />

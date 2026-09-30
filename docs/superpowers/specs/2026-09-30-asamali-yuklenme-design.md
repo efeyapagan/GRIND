@@ -67,8 +67,9 @@ Yeni tablo yok.
 - Başlıkta hareket adı; dokununca `HareketSecici` açılır, yalnızca `WeightReps` hareketler listelenir
   (ağırlıksız/süreli harekette 1RM yok).
 - Varsayılan hareket: **son 90 günde en çok set atılan kilolu hareket** — `GET
-  /api/stats/volume/by-exercise?From=` yanıtındaki set sayısından. Hiç kilolu hareket yoksa kart kısa bir
-  açıklama gösterir.
+  /api/stats/volume/by-exercise?From=` yanıtındaki set sayısından. Son 90 günde kilolu set yoksa (uzun aradan
+  dönen kullanıcı) tüm zamanlarda en çok set atılan kilolu hareket seçilir; kart kısa bir açıklamayı yalnızca
+  hiç kilolu set yoksa gösterir.
 - Veri mevcut `GET /api/stats/exercises/{id}/progress` — **antrenman başına** nokta, hareket kartındaki
   1RM grafiğinin çizimi ve 1A · 3A · Tüm seçicisi. Yeni backend yok.
 

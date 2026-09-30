@@ -78,7 +78,7 @@ export const queryKeys = {
   // #184: Ilerleme sekmesi. Set eklenince/silinince tazelenir (bkz. setDegistiTazele).
   weeklyStats: ['weeklyStats'] as const,
   volumeByExerciseAll: ['volumeByExercise'] as const,
-  volumeByExercise: (from: string) => [...queryKeys.volumeByExerciseAll, from] as const,
+  volumeByExercise: (from: string | null) => [...queryKeys.volumeByExerciseAll, from ?? 'tum'] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
   // Issue #138: web'in sonsuz kaydirmasi -- TUM biriktirilmis sayfalar TEK bir query key altinda
@@ -840,14 +840,20 @@ function dogrulanmisEgzersizHacmi(yanit: ExerciseVolumeResponse): EgzersizHacmi 
   };
 }
 
-/** #184: `from` ("YYYY-MM-DD", TR gunu) ile bugun arasinda hareket basina hacim ve set sayisi. */
-export function useVolumeByExercise(from: string) {
+/**
+ * #184: `from` ("YYYY-MM-DD", TR gunu) ile bugun arasinda hareket basina hacim ve set sayisi; `null` = tum
+ * zamanlar. `enabled` false iken istek atilmaz (1RM kartinin geri dusus sorgusu).
+ */
+export function useVolumeByExercise(from: string | null, enabled = true) {
   return useQuery({
     queryKey: queryKeys.volumeByExercise(from),
+    enabled,
     queryFn: async (): Promise<EgzersizHacmi[]> =>
-      ((await request<ExerciseVolumeResponseVolumeSummaryResponse>(`/stats/volume/by-exercise?From=${from}`)).items ?? []).map(
-        dogrulanmisEgzersizHacmi,
-      ),
+      (
+        (await request<ExerciseVolumeResponseVolumeSummaryResponse>(
+          from === null ? '/stats/volume/by-exercise' : `/stats/volume/by-exercise?From=${from}`,
+        )).items ?? []
+      ).map(dogrulanmisEgzersizHacmi),
   });
 }
 
@@ -1084,6 +1090,9 @@ export function oturumSilindiTazele(queryClient: QueryClient, sessionId: number)
   void queryClient.invalidateQueries({ queryKey: queryKeys.records });
   void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressRoot });
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
+  // #184: Ilerleme sekmesi silinen oturumun setlerini gostermeye devam etmesin.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
   // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
   // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
   queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
