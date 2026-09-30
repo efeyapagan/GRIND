@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
+import AlevCizimi, { alevIlkKezMi } from './AlevCizimi';
 import { useRenkPaleti } from './renkler';
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 interface Props {
   testID: string;
@@ -9,8 +22,11 @@ interface Props {
   oran: number | null;
   /** Erisilebilirlik agacindaki deger (ekran okuyucu "3 / 8" okur). */
   deger?: { min: number; max: number; now: number };
-  /** Rayin USTUNE, halkanin altina cizilen katman (#547: rekordaki serinin alevi). */
-  children?: React.ReactNode;
+  /**
+   * #547: halkanin yerine ALEV (rekordaki seri). Uygulamanin ilk acilisinda alev cubugun dibinden
+   * yerine tirmanir, dolgu da onunla birlikte yukselir; sonra orada sabit kalir.
+   */
+  alev?: boolean;
 }
 
 const GENISLIK = 16;
@@ -18,6 +34,10 @@ const GENISLIK = 16;
 const UC_PAYI = 8;
 const RAY_KALINLIGI = 2.5;
 const HALKA = 10;
+const ALEV = 24;
+/** Alevin kutusunun bu orani dolgunun ucunun USTUNDE kalir: alev dolgunun ucunda "yanar". */
+const ALEV_TABANI = 0.72;
+const HAREKET = { reduceMotion: ReduceMotion.System } as const;
 
 /**
  * Ozet kartlarinin sagindaki dikey sayac (#544; #547'de Liquid Glass diliyle yeniden).
@@ -27,19 +47,54 @@ const HALKA = 10;
  * ve sik"; Apple'in birebir kopyasi olmak zorunda degil) -- yuva ve uclardaki isaretler KALKTI:
  * - yalnizca ince (2.5 pt), soluk bir ray (`fg` %12);
  * - alttan yukari parlayan gradyan dolgu (`accent`, altta %35 -> ustte tam);
- * - 10 pt'lik ince kenarli halka, `accent` ile hafif parlar.
+ * - 10 pt'lik ince kenarli halka, `accent` ile hafif parlar -- ya da rekordaysa halkanin yerinde ALEV.
+ *
+ * Alevin tirmanisi uygulama SURECI basina bir kez oynar (`alevIlkKezMi`); cihazda "hareketi azalt"
+ * aciksa (`ReduceMotion.System`) alev dogrudan yerinde baslar.
  *
  * Cizim SVG'de: ince cizgiler ve gradyan NativeWind siniflariyla kaba kaliyordu; yukseklik
- * `onLayout`tan gelir (yuva kartin boyunca uzanir).
+ * `onLayout`tan gelir (sayac kartin boyunca uzanir).
  */
-export default function DikeyCubuk({ testID, oran, deger, children }: Props) {
+export default function DikeyCubuk({ testID, oran, deger, alev = false }: Props) {
   const palet = useRenkPaleti();
   const [yukseklik, setYukseklik] = useState(0);
+  // Bayrak yalnizca alevli sayacta ve TEK bir baslaticida tuketilir (uygulama StrictMode kullanmiyor).
+  const [oynat] = useState(() => alev && alevIlkKezMi());
+  // Isaretin (halka/alev) hedefe dogru ne kadar yol aldigi: 0 = rayin dibi, 1 = yerinde.
+  const ilerleme = useSharedValue(oynat ? 0 : 1);
+  const titreme = useSharedValue(1);
+
+  useEffect(() => {
+    if (!oynat) {
+      return;
+    }
+    ilerleme.value = withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic), ...HAREKET });
+    // Tirmanirken hafif titreme; yerine oturunca durur.
+    titreme.value = withSequence(
+      withRepeat(
+        withSequence(withTiming(0.88, { duration: 100, ...HAREKET }), withTiming(1.08, { duration: 100, ...HAREKET })),
+        7,
+        true,
+      ),
+      withTiming(1, { duration: 150, ...HAREKET }),
+    );
+  }, [oynat, ilerleme, titreme]);
 
   const orta = GENISLIK / 2;
   const rayUst = UC_PAYI;
   const rayAlt = yukseklik - UC_PAYI;
-  const halkaY = oran === null ? null : rayAlt - oran * (rayAlt - rayUst);
+
+  const dolguProps = useAnimatedProps(() => {
+    const y = rayAlt - (oran ?? 0) * ilerleme.value * (rayAlt - rayUst);
+    return { y, height: Math.max(0, rayAlt - y) };
+  }, [oran, rayAlt, rayUst]);
+
+  const isaretStili = useAnimatedStyle(() => {
+    const y = rayAlt - (oran ?? 0) * ilerleme.value * (rayAlt - rayUst);
+    return alev
+      ? { top: y - ALEV * ALEV_TABANI, transform: [{ scaleX: titreme.value }] }
+      : { top: y - HALKA / 2 };
+  }, [oran, rayAlt, rayUst, alev]);
 
   return (
     <View
@@ -60,36 +115,49 @@ export default function DikeyCubuk({ testID, oran, deger, children }: Props) {
             </LinearGradient>
           </Defs>
           <Line x1={orta} y1={rayUst} x2={orta} y2={rayAlt} stroke={palet.fg} strokeOpacity={0.12} strokeWidth={RAY_KALINLIGI} strokeLinecap="round" />
-          {halkaY !== null && halkaY < rayAlt && (
-            <Rect
+          {oran !== null && (
+            <AnimatedRect
               x={orta - RAY_KALINLIGI / 2}
-              y={halkaY}
               width={RAY_KALINLIGI}
-              height={rayAlt - halkaY}
               rx={RAY_KALINLIGI / 2}
               fill={`url(#${testID}-gradyan)`}
+              animatedProps={dolguProps}
             />
           )}
         </Svg>
       )}
-      {children}
-      {halkaY !== null && (
-        <View
+      {oran !== null && (
+        <Animated.View
           testID={`${testID}-dolu`}
           pointerEvents="none"
-          className="absolute rounded-full border-fg bg-surface-2"
-          style={{
-            width: HALKA,
-            height: HALKA,
-            borderWidth: 1.5,
-            left: (GENISLIK - HALKA) / 2,
-            top: halkaY - HALKA / 2,
-            shadowColor: palet.accent,
-            shadowOpacity: 0.8,
-            shadowRadius: 5,
-            shadowOffset: { width: 0, height: 0 },
-          }}
-        />
+          className="absolute"
+          style={[
+            alev
+              ? { width: ALEV, height: ALEV, left: (GENISLIK - ALEV) / 2, transformOrigin: 'bottom' }
+              : { width: HALKA, height: HALKA, left: (GENISLIK - HALKA) / 2 },
+            isaretStili,
+          ]}
+        >
+          {alev ? (
+            <View testID={`${testID}-alev`}>
+              <View testID={oynat ? 'alev-oynuyor' : 'alev-sabit'}>
+                <AlevCizimi boyut={ALEV} />
+              </View>
+            </View>
+          ) : (
+            <View
+              testID={`${testID}-halka`}
+              className="flex-1 rounded-full border-fg bg-surface-2"
+              style={{
+                borderWidth: 1.5,
+                shadowColor: palet.accent,
+                shadowOpacity: 0.8,
+                shadowRadius: 5,
+                shadowOffset: { width: 0, height: 0 },
+              }}
+            />
+          )}
+        </Animated.View>
       )}
     </View>
   );

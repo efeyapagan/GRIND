@@ -1,130 +1,66 @@
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import Animated, {
-  Easing,
-  ReduceMotion,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useId } from 'react';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useEtkinTema, useRenkPaleti } from './renkler';
 
 /**
- * Alevin yukselecegi en ust nokta ve oturacagi yer: cubugun yuksekliginin orani (kullanici karari).
- * Ilk hali %35 / %20 idi; kullanici "kivilcim cok kucuk kalmis" dedi, %60 / %40'a cikti.
+ * "Bu surecte alev zaten tirmandi mi" -- uygulama SURECI basina bir kez (#547, kullanici karari:
+ * "uygulama ilk acildiginda alevler yukselerek en uste cikacak", sonra kapatilip acilana kadar tepede
+ * kalacak). Modul seviyesinde tutulur: ekrandan cikip donmek bileseni yeniden takar ama bu degeri
+ * sifirlamaz; uygulama kapatilip acilinca modul yeniden yuklenir ve animasyon tekrar oynar.
  */
-const TEPE = 0.6;
-const SABIT = 0.4;
-/**
- * Cizimin kutusu cubuktan genis: alev rayin iki yanina tasar. %60'ta alevin boyu kutunun genisligine
- * takilmasin diye cizimin en-boy oranina (24:32) yetecek kadar genis.
- */
-const GENISLIK = 32;
-const HAREKET = { reduceMotion: ReduceMotion.System } as const;
+let tirmandi = false;
 
-/**
- * "Bu surecte alev zaten oynadi mi" -- uygulama SURECI basina bir kez (#547, kullanici karari:
- * "uygulama ilk acildiginda animasyon oynasin, sonra kapatilip acilana kadar cizim kalsin"). Modul
- * seviyesinde tutulur: ekrandan cikip donmek bileseni yeniden takar ama bu degeri sifirlamaz;
- * uygulama kapatilip acilinca modul yeniden yuklenir ve animasyon tekrar oynar.
- */
-let oynadi = false;
-
-function ilkKezMi(): boolean {
-  if (oynadi) {
+/** Bayragi tuketir: surecin ilk cagrisi `true`, sonrakiler `false`. */
+export function alevIlkKezMi(): boolean {
+  if (tirmandi) {
     return false;
   }
-  oynadi = true;
+  tirmandi = true;
   return true;
 }
 
 /** Yalnizca testler icin: bir sonraki takilisi "uygulamanin ilk acilisi" yapar. */
 export function alevOturumunuSifirla() {
-  oynadi = false;
+  tirmandi = false;
 }
 
 /**
- * Seri cubugunun altindaki alev (#547): kullanici rekorunu her hafta tazeliyorken cizilir (bkz.
- * `rekordaMi`). Uygulamanin ilk acilisinda alttan cubugun %60'ina titreyerek yukselir, sonra %40'a
- * inip orada SABIT kalir. Cihazda "hareketi azalt" aciksa (`ReduceMotion.System`) dogrudan son
- * haliyle cizilir.
+ * Rekordaki serinin alevi (#547) -- cubugun tepesinde halkanin yerini alir (bkz. `DikeyCubuk`).
  *
- * Cubugu saran katmanin tamamini kaplar ve kendi yuksekligini olcer: alevin boyu cubugun boyuna
- * oranlidir. Renkler token'dan: dis govde `accent`, parlak cekirdek iki temada da ACIK kalsin diye
- * temanin en acik token'i (koyuda `fg`, acikta `inset`).
+ * Kullanici ilk cizimi "dogal degil, dar" buldu: artik genis tabanli, ortada uzun bir dil ve iki
+ * yanda kisa dillerle bir alev; icinde dipte en parlak olan bir cekirdek. Kare bir kutuya cizilir.
+ * Renkler token'dan: govde `accent`, cekirdek iki temada da ACIK kalsin diye temanin en acik
+ * token'i (koyuda `fg`, acikta `inset`).
  */
-export default function AlevCizimi({ testID }: { testID: string }) {
+export default function AlevCizimi({ boyut }: { boyut: number }) {
   const palet = useRenkPaleti();
   const tema = useEtkinTema();
-  // Bayrak TEK bir baslaticida tuketilir (uygulama StrictMode kullanmiyor; baslatici bir kez calisir).
-  const [oynat] = useState(ilkKezMi);
-  const [yukseklik, setYukseklik] = useState(0);
-  const boy = useSharedValue(oynat ? 0 : SABIT);
-  const titreme = useSharedValue(1);
-
-  useEffect(() => {
-    if (!oynat) {
-      return;
-    }
-    boy.value = withSequence(
-      withTiming(TEPE, { duration: 900, easing: Easing.out(Easing.cubic), ...HAREKET }),
-      withTiming(SABIT, { duration: 600, easing: Easing.inOut(Easing.quad), ...HAREKET }),
-    );
-    // Yukselirken hafif titreme; oturunca durur ("sabit kalsin").
-    titreme.value = withSequence(
-      withRepeat(
-        withSequence(withTiming(0.9, { duration: 110, ...HAREKET }), withTiming(1.06, { duration: 110, ...HAREKET })),
-        6,
-        true,
-      ),
-      withTiming(1, { duration: 150, ...HAREKET }),
-    );
-  }, [oynat, boy, titreme]);
-
-  const alevStili = useAnimatedStyle(
-    () => ({ height: yukseklik * boy.value, transform: [{ scaleX: titreme.value }] }),
-    [yukseklik],
-  );
+  // SVG `url(#...)` referansinda `:` sorun cikarir; useId'nin urettigi kimlik temizlenir.
+  const kimlik = useId().replace(/[^a-zA-Z0-9]/g, '');
   const cekirdek = tema === 'acik' ? palet.inset : palet.fg;
 
   return (
-    <View
-      testID={testID}
-      pointerEvents="none"
-      onLayout={(olay) => setYukseklik(olay.nativeEvent.layout.height)}
-      className="absolute inset-0 items-center"
-    >
-      <Animated.View
-        testID={oynat ? 'alev-oynuyor' : 'alev-sabit'}
-        className="absolute bottom-0"
-        style={[{ width: GENISLIK, transformOrigin: 'bottom' }, alevStili]}
-      >
-        <Svg width="100%" height="100%" viewBox="0 0 24 32" preserveAspectRatio="xMidYMax meet">
-          <Defs>
-            <LinearGradient id={`${testID}-govde`} x1="0" y1="1" x2="0" y2="0">
-              <Stop offset="0" stopColor={palet.accent} stopOpacity={1} />
-              <Stop offset="1" stopColor={palet.accent} stopOpacity={0.75} />
-            </LinearGradient>
-            <LinearGradient id={`${testID}-cekirdek`} x1="0" y1="1" x2="0" y2="0">
-              <Stop offset="0" stopColor={cekirdek} stopOpacity={0.95} />
-              <Stop offset="1" stopColor={cekirdek} stopOpacity={0.25} />
-            </LinearGradient>
-          </Defs>
-          {/* Dis govde: ortasi yukari kivrilan bir dil ve soldan kucuk bir yan alev. */}
-          <Path
-            d="M12 0.8 C14.2 5.2 20 9.6 20 18.4 C20 25 16.6 30.4 12 31.2 C7.4 30.4 4 25 4 18.4 C4 14 6.2 11 8.2 8.8 C8.4 11.8 9.6 13.6 11.2 14.4 C10.6 9.8 10.8 5.2 12 0.8 Z"
-            fill={`url(#${testID}-govde)`}
-          />
-          {/* Parlak cekirdek: alevin en sicak yeri dipte. */}
-          <Path
-            d="M12 13 C13.4 16.2 16 18.4 16 22.6 C16 26.4 14.2 29 12 29.6 C9.8 29 8 26.4 8 22.6 C8 20.2 9.2 18.6 10.4 17.4 C10.6 19 11.2 20 12 20.4 C11.6 18 11.6 15.4 12 13 Z"
-            fill={`url(#${testID}-cekirdek)`}
-          />
-        </Svg>
-      </Animated.View>
-    </View>
+    <Svg width={boyut} height={boyut} viewBox="0 0 32 32">
+      <Defs>
+        <LinearGradient id={`govde${kimlik}`} x1="0" y1="1" x2="0" y2="0">
+          <Stop offset="0" stopColor={palet.accent} stopOpacity={1} />
+          <Stop offset="1" stopColor={palet.accent} stopOpacity={0.8} />
+        </LinearGradient>
+        <LinearGradient id={`cekirdek${kimlik}`} x1="0" y1="1" x2="0" y2="0">
+          <Stop offset="0" stopColor={cekirdek} stopOpacity={0.95} />
+          <Stop offset="1" stopColor={cekirdek} stopOpacity={0.2} />
+        </LinearGradient>
+      </Defs>
+      {/* Genis govde: ortada uzun dil, sagda ve solda kisa diller. */}
+      <Path
+        d="M16 1.5 C17.2 5.5 20.4 7.4 22.6 10.6 C24.2 8.6 24.6 6.6 24.4 4.8 C28.2 8.4 30 13.2 30 18.2 C30 25.8 23.8 31 16 31 C8.2 31 2 25.8 2 18.4 C2 13.6 4.4 9.8 7.4 7.4 C7.4 10 8.4 12 10 13.2 C10.6 8.6 12.8 4.6 16 1.5 Z"
+        fill={`url(#govde${kimlik})`}
+      />
+      {/* Cekirdek: alevin en sicak yeri dipte. */}
+      <Path
+        d="M16 12.5 C17.6 15.6 21.6 17.6 21.6 22.4 C21.6 26.4 19.2 29 16 29 C12.8 29 10.4 26.6 10.4 23 C10.4 20.8 11.6 19 13.2 17.8 C13.4 19.6 14.2 20.8 15.4 21.4 C15 18.4 15.2 15.4 16 12.5 Z"
+        fill={`url(#cekirdek${kimlik})`}
+      />
+    </Svg>
   );
 }

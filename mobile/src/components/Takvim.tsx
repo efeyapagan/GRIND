@@ -19,7 +19,6 @@ import {
   kaydir,
 } from '@grind/shared/lib/takvim';
 import { hedefCubugu, hedefKalan, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
-import AlevCizimi from '../ui/AlevCizimi';
 import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -169,11 +168,10 @@ export default function Takvim() {
                   testID="seri-cubugu"
                   oran={seriCubugu(ozet.currentWeekStreak, ozet.longestWeekStreak)}
                   deger={{ min: 0, max: ozet.longestWeekStreak, now: ozet.currentWeekStreak }}
-                >
-                  {/* #547: rekorunu her hafta tazeleyen kullanicinin alevi -- YALNIZ seri kartinda ve
-                      haftalik hedeften bagimsiz (kullanici karari). */}
-                  {rekordaMi(ozet.currentWeekStreak, ozet.longestWeekStreak) && <AlevCizimi testID="seri-alevi" />}
-                </DikeyCubuk>
+                  // #547: rekorunu her hafta tazeleyen kullanicinin alevi halkanin yerini alir -- YALNIZ
+                  // seri kartinda ve haftalik hedeften bagimsiz (kullanici karari).
+                  alev={rekordaMi(ozet.currentWeekStreak, ozet.longestWeekStreak)}
+                />
               }
             >
               <View
