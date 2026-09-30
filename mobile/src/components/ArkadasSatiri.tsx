@@ -1,4 +1,5 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { Crown, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,9 @@ import { useDil } from '@grind/shared/i18n';
 import { formatWeight } from '@grind/shared/lib/format';
 import { donemHedefi, hedefOrani, type ArkadasDonemi } from '@grind/shared/lib/arkadasSiralamasi';
 import type { TakvimGorunumu } from '@grind/shared/lib/takvim';
+import HedefCubugu from './HedefCubugu';
 import ProfilFotografi from './ProfilFotografi';
+import CamKart from '../ui/CamKart';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -36,13 +39,19 @@ export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
   const oran = hedefOrani(arkadas, gorunum);
 
   return (
-    <Pressable
-      accessibilityRole="button"
+    <CamKart
       accessibilityLabel={t('arkadaslar.satirEtiketi', { ad })}
       onPress={() => router.push(`/profile/u/${arkadas.username}`)}
-      // #425: kendi satiri bir ton acik zeminde -- kullanici kendini listede hemen bulsun.
-      className={`min-h-16 w-full flex-row items-center gap-3 rounded-xl p-3 ${kendisi ? 'bg-surface-4' : 'bg-surface-2'}`}
+      disClassName="w-full"
+      className="min-h-16 w-full flex-row items-center gap-3 p-3"
     >
+      {/* #425: kendi satiri hemen bulunsun. Cam uzerinde hafif `fg` dolgusu, opaklik SVG ozelliginde
+          (spec Karar 9): `bg-fg opacity-5` sinifi uygulanmayip satiri tam acik gri dolduruyordu. */}
+      {kendisi && (
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Rect testID="kendi-satir-vurgusu" width="100%" height="100%" fill={ikonRenk.fg} fillOpacity={0.06} />
+        </Svg>
+      )}
       <ProfilFotografi
         profil={{
           username: arkadas.username ?? '',
@@ -78,11 +87,7 @@ export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
           <View className="flex-row items-center gap-2">
             {/* Cubuk bir ilerleme GOSTERGESI, dokunulabilir degil -- erisilebilirlik agacinda
                 degeri satirin metninde zaten var. */}
-            {/* #512: kanal `inset` -- kendi satirinin zemini (`surface-4`, #425) kanalla AYNI renkti ve
-                kanal kayboluyordu. `inset` iki satir zemininden de, iki temada da ayrisir. */}
-            <View testID="hedef-kanali" className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-inset">
-              <View className="h-full rounded-full bg-accent" style={{ width: `${Math.round(oran * 100)}%` }} />
-            </View>
+            <HedefCubugu oran={oran} />
             <Text className="shrink-0 text-label text-muted">
               {t('arkadaslar.hedefliGun', { gun, hedef: donemHedefi(arkadas, gorunum) })}
             </Text>
@@ -92,6 +97,6 @@ export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
       <Text className="shrink-0 text-label text-muted">
         {t('arkadaslar.haftalikHacim', { kg: formatWeight(arkadas.volume ?? 0, dil) })}
       </Text>
-    </Pressable>
+    </CamKart>
   );
 }
