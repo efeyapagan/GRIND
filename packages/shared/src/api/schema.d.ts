@@ -3015,6 +3015,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WeeklyStatsResponse"];
+                        "application/json": components["schemas"]["WeeklyStatsResponse"];
+                        "text/json": components["schemas"]["WeeklyStatsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/exercises/{exerciseId}/progress": {
         parameters: {
             query?: never;
@@ -4883,6 +4920,23 @@ export interface components {
         };
         UsernameAvailabilityResponse: {
             available?: boolean;
+        };
+        WeeklyStatsResponse: {
+            weeks?: components["schemas"]["WeeklyStatsRow"][] | null;
+        };
+        WeeklyStatsRow: {
+            /** Format: date */
+            weekStart?: string;
+            /** Format: double */
+            volume?: number;
+            /** Format: int32 */
+            pushSets?: number;
+            /** Format: int32 */
+            pullSets?: number;
+            /** Format: int32 */
+            legsSets?: number;
+            /** Format: int32 */
+            otherSets?: number;
         };
     };
     responses: never;

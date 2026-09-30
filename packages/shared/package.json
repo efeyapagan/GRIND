@@ -29,6 +29,7 @@
     "./lib/egzersizler": "./src/lib/egzersizler.ts",
     "./lib/format": "./src/lib/format.ts",
     "./lib/ilerleme": "./src/lib/ilerleme.ts",
+    "./lib/haftalikIlerleme": "./src/lib/haftalikIlerleme.ts",
     "./lib/setGirdisi": "./src/lib/setGirdisi.ts",
     "./lib/setDegeri": "./src/lib/setDegeri.ts",
     "./lib/siralama": "./src/lib/siralama.ts",

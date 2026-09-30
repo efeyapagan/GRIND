@@ -98,12 +98,20 @@ export default function HareketGecmisi({ exerciseId, exerciseName }: Props) {
   );
 }
 
-function HareketGrafigi({ exerciseId, exerciseName }: Props) {
+/**
+ * #184: `sabitSekme` verilirse sekme satiri cizilmez ve grafik yalnizca o sekmeyi gosterir (Ilerleme
+ * sekmesindeki 1RM karti).
+ */
+export function HareketGrafigi({
+  exerciseId,
+  exerciseName,
+  sabitSekme,
+}: Props & { sabitSekme?: 'birTekrar' }) {
   const { t } = useTranslation();
   const dil = useDil();
   const olcum = useHareketOlcumu(exerciseId);
   const sekmeler = OLCUM_SEKMELERI[olcum];
-  const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>('agirlik');
+  const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>(sabitSekme ?? 'agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
   const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
   const sekme = sekmeler.find((aday) => aday.anahtar === sekmeAnahtari) ?? sekmeler[0];
@@ -185,17 +193,19 @@ function HareketGrafigi({ exerciseId, exerciseName }: Props) {
 
   return (
     <View className="flex-col gap-3 pt-1">
-      <View className="flex-row border-b border-surface-3">
-        {sekmeler.map((aday) => (
-          <SekmeDugmesi
-            key={aday.anahtar}
-            secili={aday.anahtar === sekmeAnahtari}
-            onPress={() => setSekmeAnahtari(aday.anahtar)}
-          >
-            {t(aday.etiket)}
-          </SekmeDugmesi>
-        ))}
-      </View>
+      {!sabitSekme && (
+        <View className="flex-row border-b border-surface-3">
+          {sekmeler.map((aday) => (
+            <SekmeDugmesi
+              key={aday.anahtar}
+              secili={aday.anahtar === sekmeAnahtari}
+              onPress={() => setSekmeAnahtari(aday.anahtar)}
+            >
+              {t(aday.etiket)}
+            </SekmeDugmesi>
+          ))}
+        </View>
+      )}
       <View className="flex-col gap-2">{icerik}</View>
       <View className="flex-row gap-1 rounded-lg bg-surface-2 p-1">
         {ARALIKLAR.map((aday) => {

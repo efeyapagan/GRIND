@@ -128,7 +128,7 @@ test('Profil acilinca baslik ve Gecmis sekmesi secili gelir; Hesap sekmesi yok',
   expect(screen.getByLabelText('Takip edilenler: 7')).toBeTruthy();
 
   const sekmeler = within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab');
-  expect(sekmeler.map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler']);
+  expect(sekmeler.map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Ölçüler', 'İlerleme']);
   expect(screen.getByRole('tab', { name: 'Geçmiş' }).props.accessibilityState).toEqual({ selected: true });
 }, 60_000);
 
