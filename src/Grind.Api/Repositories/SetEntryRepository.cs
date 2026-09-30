@@ -44,6 +44,13 @@ public class SetEntryRepository(AppDbContext context)
             .Where(s => s.WorkoutSession.UserId == userId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<WeeklySetRow>> GetWeeklySetRowsAsync(
+        long userId, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(s => s.WorkoutSession.UserId == userId)
+            .Select(s => new WeeklySetRow(s.WorkoutSession.StartedAt, s.Weight, s.Reps, s.Exercise.Category))
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<long>> GetDistinctExerciseIdsForSessionAsync(
         long sessionId, CancellationToken cancellationToken = default)
         => await Set

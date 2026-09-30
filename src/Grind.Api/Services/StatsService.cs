@@ -166,6 +166,13 @@ public class StatsService(
             .ToList();
     }
 
+    public async Task<WeeklyStatsResponse> GetWeeklyAsync(CancellationToken cancellationToken = default)
+    {
+        var sets = await setEntryRepository.GetWeeklySetRowsAsync(currentUser.UserId, cancellationToken);
+        var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
+        return new WeeklyStatsResponse(WeeklyStatsCalculator.Build(sets, today));
+    }
+
     /// <summary>
     /// Oturum toplamlarını TR günlerine yerleştirir. Gruplama BELLEKTE: gün sınırı politikası
     /// <see cref="TurkeyDay"/>'de yaşıyor ve SQL'de <c>AT TIME ZONE</c> ile ikinci bir kopyası

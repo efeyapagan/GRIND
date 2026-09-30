@@ -70,6 +70,15 @@ public class StatsController(IStatsService statsService, IExerciseProgressServic
         => Ok(await statsService.GetPlateausAsync(cancellationToken));
 
     /// <summary>
+    /// #184: haftalık hacim ve kas grubuna göre set sayısı (İlerleme sekmesi). Aralıktan bağımsız; son satır
+    /// içinde bulunulan haftadır.
+    /// </summary>
+    [HttpGet("weekly")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<WeeklyStatsResponse>> GetWeekly(CancellationToken cancellationToken)
+        => Ok(await statsService.GetWeeklyAsync(cancellationToken));
+
+    /// <summary>
     /// Bir hareketin oturum başına en ağır seti, hacmi ve tahmini 1RM'i, eskiden yeniye (dilim 3).
     /// Egzersiz görünmüyorsa nötr 404.
     /// </summary>
