@@ -681,4 +681,31 @@ public class StatsServiceTests
             Assert.Empty(await service.GetPlateausAsync());
         }
     }
+
+    // ---- Haftalık (#184) ----
+
+    /// <summary>
+    /// #184: uç yalnızca çağıranın setlerini sayar ve son satırı bu haftadır (Bugun = 2026-03-12 → 2026-03-09).
+    /// </summary>
+    [Fact]
+    public async Task Haftalik_istatistik_yalnizca_kendi_setlerini_sayar()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            Seed(context, user, exercise, Bugun, (100m, 5), (100m, 5));
+
+            var baskasi = TestDatabase.NewUser();
+            context.Add(baskasi);
+            Seed(context, baskasi, exercise, Bugun, (200m, 10));
+            await context.SaveChangesAsync();
+
+            var yanit = await service.GetWeeklyAsync();
+
+            var hafta = Assert.Single(yanit.Weeks);
+            Assert.Equal(new DateOnly(2026, 3, 9), hafta.WeekStart);
+            Assert.Equal(1000m, hafta.Volume);
+            Assert.Equal(2, hafta.OtherSets); // TestDatabase.NewExercise → Category.Other
+        }
+    }
 }

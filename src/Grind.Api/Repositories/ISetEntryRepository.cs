@@ -55,6 +55,13 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         long userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #184: kullanıcının tüm setleri, haftalık istatistiğin ihtiyacı kadar alanla (oturum başlangıcı,
+    /// kilo, tekrar, kas grubu). Gruplama bellekte — TR günü kuralının SQL'de ikinci kopyası yazılmaz.
+    /// </summary>
+    Task<IReadOnlyList<WeeklySetRow>> GetWeeklySetRowsAsync(
+        long userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Bu oturumda egzersiz başına kaç set girilmiş. İlerleme hesabı bunu şablonun
     /// <c>PlannedSets</c> değeriyle karşılaştırır — önceden boş SetEntry satırı
     /// oluşturulmaz (CLAUDE.md).
