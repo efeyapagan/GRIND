@@ -19,6 +19,7 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import IkincilDugme from '../../src/ui/IkincilDugme';
 import IkonDugmesi from '../../src/ui/IkonDugmesi';
+import IkonKapsulu from '../../src/ui/IkonKapsulu';
 import BosDurum from '../../src/ui/BosDurum';
 import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
@@ -291,7 +292,7 @@ function MaddeGrubu({ baslik, maddeler, ikon }: { baslik: string; maddeler: stri
       <Text className="text-label-xs text-muted uppercase">{baslik}</Text>
       {maddeler.map((madde) => (
         <View key={madde} className="flex-row items-start gap-2">
-          <View className="mt-1 shrink-0">{ikon}</View>
+          <IkonKapsulu boyut={28}>{ikon}</IkonKapsulu>
           <Text className="flex-1 text-body text-fg">{madde}</Text>
         </View>
       ))}
