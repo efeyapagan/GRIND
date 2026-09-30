@@ -20,6 +20,10 @@ type PatchSetRequest = components['schemas']['PatchSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type WeeklyStatsResponse = components['schemas']['WeeklyStatsResponse'];
+type WeeklyStatsRow = components['schemas']['WeeklyStatsRow'];
+type ExerciseVolumeResponseVolumeSummaryResponse = components['schemas']['ExerciseVolumeResponseVolumeSummaryResponse'];
+type ExerciseVolumeResponse = components['schemas']['ExerciseVolumeResponse'];
 type PlateauResponse = components['schemas']['PlateauResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
@@ -71,6 +75,10 @@ export const queryKeys = {
   // #72: `records` ONEKI altinda -- rekorlari tazeleyen her akis (set ekle/duzelt/sil, oturum sil)
   // platoyu da tazeler, ayri bir invalidate satiri gerekmez.
   plateaus: ['records', 'plateaus'] as const,
+  // #184: Ilerleme sekmesi. Set eklenince/silinince tazelenir (bkz. setDegistiTazele).
+  weeklyStats: ['weeklyStats'] as const,
+  volumeByExerciseAll: ['volumeByExercise'] as const,
+  volumeByExercise: (from: string) => [...queryKeys.volumeByExerciseAll, from] as const,
   historyAll: ['history'] as const,
   history: (page: number) => [...queryKeys.historyAll, page] as const,
   // Issue #138: web'in sonsuz kaydirmasi -- TUM biriktirilmis sayfalar TEK bir query key altinda
@@ -769,6 +777,80 @@ export function usePlatolar() {
   });
 }
 
+/** #184: bir hafta (Pazartesi–Pazar, TR). `weekStart` "YYYY-MM-DD". */
+export interface HaftalikIstatistik {
+  weekStart: string;
+  volume: number;
+  pushSets: number;
+  pullSets: number;
+  legsSets: number;
+  otherSets: number;
+}
+
+/** `0` gecerli: kontroller `=== undefined` ile. */
+function dogrulanmisHafta(yanit: WeeklyStatsRow): HaftalikIstatistik {
+  if (
+    !yanit.weekStart ||
+    yanit.volume === undefined ||
+    yanit.pushSets === undefined ||
+    yanit.pullSets === undefined ||
+    yanit.legsSets === undefined ||
+    yanit.otherSets === undefined
+  ) {
+    throw new Error('Sunucudan eksik haftalik istatistik alindi.');
+  }
+  return {
+    weekStart: yanit.weekStart,
+    volume: yanit.volume,
+    pushSets: yanit.pushSets,
+    pullSets: yanit.pullSets,
+    legsSets: yanit.legsSets,
+    otherSets: yanit.otherSets,
+  };
+}
+
+/**
+ * #184: `GET /api/stats/weekly` -- ilk antrenman haftasindan bu haftaya, eskiden yeniye; son satir icinde
+ * bulunulan hafta. Tek istek: hacim karti ve kas grubu karti ayni veriyi keser.
+ */
+export function useWeeklyStats() {
+  return useQuery({
+    queryKey: queryKeys.weeklyStats,
+    queryFn: async (): Promise<HaftalikIstatistik[]> =>
+      ((await request<WeeklyStatsResponse>('/stats/weekly')).weeks ?? []).map(dogrulanmisHafta),
+  });
+}
+
+export interface EgzersizHacmi {
+  exerciseId: number;
+  exerciseName: string;
+  volume: number;
+  setCount: number;
+}
+
+function dogrulanmisEgzersizHacmi(yanit: ExerciseVolumeResponse): EgzersizHacmi {
+  if (yanit.exerciseId === undefined || !yanit.exerciseName || yanit.volume === undefined || yanit.setCount === undefined) {
+    throw new Error('Sunucudan eksik egzersiz hacmi alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    volume: yanit.volume,
+    setCount: yanit.setCount,
+  };
+}
+
+/** #184: `from` ("YYYY-MM-DD", TR gunu) ile bugun arasinda hareket basina hacim ve set sayisi. */
+export function useVolumeByExercise(from: string) {
+  return useQuery({
+    queryKey: queryKeys.volumeByExercise(from),
+    queryFn: async (): Promise<EgzersizHacmi[]> =>
+      ((await request<ExerciseVolumeResponseVolumeSummaryResponse>(`/stats/volume/by-exercise?From=${from}`)).items ?? []).map(
+        dogrulanmisEgzersizHacmi,
+      ),
+  });
+}
+
 /** #346: hangi alanlarin dolu oldugu hareketin olcum tipine bagli (`lib/setGirdisi`); `null` = gonderilmedi. */
 export interface YeniSetGirdisi {
   exerciseId: number;
@@ -825,6 +907,9 @@ export function setDegistiTazele(
   void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(set.exerciseId) });
   // Takvim yalnizca seti olan gunleri sayar: ilk set gunu takvime sokar, son setin silinmesi cikarir (#81).
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
+  // #184: Ilerleme sekmesinin haftalik satirlari ve 1RM kartinin varsayilan hareketi setlerden turer.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
 }
 
 export interface SetDuzeltmesi {
