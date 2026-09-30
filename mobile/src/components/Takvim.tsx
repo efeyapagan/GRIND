@@ -19,6 +19,7 @@ import {
   kaydir,
 } from '@grind/shared/lib/takvim';
 import { hedefCubugu, hedefKalan, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
@@ -298,18 +299,14 @@ function OzetKarti({
   ikon: LucideIcon;
   etiket: string;
   onPress?: () => void;
-  /** #544: kartin saginda, kartin boyunca uzanan dikey cubuk. */
+  /** #544: kartin saginda, kartin boyunca uzanan dikey sayac. */
   cubuk: React.ReactNode;
   children: React.ReactNode;
 }) {
   const ikonRenk = useIkonRenk();
+  // #547: kart Liquid Glass yuzeyi (CamKart) -- #544'teki duz, kenarli yuzey kaba bulundu.
   return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      disabled={!onPress}
-      onPress={onPress}
-      className="flex-1 flex-row gap-3 rounded-3xl border border-surface-3 bg-surface-2 p-4"
-    >
+    <CamKart onPress={onPress} className="flex-row gap-3 p-4">
       <View className="min-w-0 flex-1 flex-col gap-1">
         <View className="flex-row items-center gap-1.5">
           <Ikon color={ikonRenk.muted} size={16} />
@@ -318,6 +315,6 @@ function OzetKarti({
         {children}
       </View>
       {cubuk}
-    </Pressable>
+    </CamKart>
   );
 }
