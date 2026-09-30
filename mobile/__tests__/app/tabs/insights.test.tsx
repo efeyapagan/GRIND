@@ -381,3 +381,25 @@ test('silme onayi da cam yuzeydedir', async () => {
   expect(sinif).toContain('rounded-3xl');
   expect(sinif).not.toMatch(/bg-surface/);
 });
+
+/** #491: acik kartin cop kutusu duz `bg-surface-3` kare degil, cam ikon dugmesi (`CamIkonDugmesi`). */
+test('yorumu sil dugmesi cam ikon dugmesidir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  const sinif: string = screen.getByLabelText('Yorumu sil').props.className;
+  expect(sinif).toContain('rounded-3xl');
+  expect(sinif).not.toMatch(/bg-surface/);
+});
+
+/** #491: ustteki "Yorum iste" kutusu da bir AI karti -- duz `bg-surface-1` degil cam. */
+test('yorum iste kutusu cam yuzeydedir', async () => {
+  useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa(ikiYorum())]));
+
+  await ekraniOlustur();
+
+  const sinif: string = screen.getByTestId('yorum-iste-karti').props.className;
+  expect(sinif).toContain('rounded-3xl');
+  expect(sinif).not.toMatch(/bg-surface/);
+});
