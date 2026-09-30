@@ -5,6 +5,7 @@ import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import { formatGoreliTarih, formatWeight } from '@grind/shared/lib/format';
 import AntrenmanSuresi from './AntrenmanSuresi';
+import IkonKapsulu from '../ui/IkonKapsulu';
 import TurEtiketi from '../ui/TurEtiketi';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -22,7 +23,9 @@ export default function GecmisOzeti({ oturum }: { oturum: GecmisOturum }) {
     <View className="min-w-0 flex-1 flex-col gap-1">
       <View className="flex-row flex-wrap items-center gap-2">
         <View className="flex-row items-center gap-1">
-          <CalendarDays color={ikonRenk.muted} size={18} />
+          <IkonKapsulu boyut={28}>
+            <CalendarDays color={ikonRenk.muted} size={16} />
+          </IkonKapsulu>
           <Text className="text-label text-fg">{formatGoreliTarih(oturum.startedAt, dil)}</Text>
         </View>
         <TurEtiketi>{oturum.templateName ?? t('gecmis.serbest')}</TurEtiketi>
