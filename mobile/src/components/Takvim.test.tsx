@@ -218,6 +218,69 @@ test('hedef kartinin durum satiri kalan gunu ya da tamamlandigini soyler', async
   expect(screen.getByText('Hedef tamam')).toBeTruthy();
 });
 
+/**
+ * #547 (kullanici karari): kullanici rekorunu her hafta tazeliyorsa (mevcut seri = en uzun seri) seri
+ * cubugunun altinda alev cizilir. Rekorun gerisindeyken yok; hedef kartinda hic yok.
+ */
+/** Kullanici karari: rekordayken alev, cubugun tepesindeki HALKANIN YERINI alir. */
+test('seri rekordayken halkanin yerinde alev durur', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 4, longestWeekStreak: 4 }));
+  await cizTakvim();
+
+  expect(screen.getByTestId('seri-cubugu-alev')).toBeTruthy();
+  expect(screen.queryByTestId('seri-cubugu-halka')).toBeNull();
+});
+
+/** Alev haftalik hedeften BAGIMSIZ (kullanici karari): hedef tutulmamisken de cizilir, yalniz seri kartinda. */
+test('alev haftalik hedeften bagimsizdir ve yalnizca seri kartindadir', async () => {
+  useCalendarMock.mockReturnValue(
+    ozet([], { currentWeekStreak: 4, longestWeekStreak: 4, thisWeekTrainedDays: 0, weeklyTargetDays: 4 }),
+  );
+  await cizTakvim();
+
+  expect(screen.getAllByTestId('seri-cubugu-alev')).toHaveLength(1);
+  expect(screen.queryByTestId('hedef-cubugu-alev')).toBeNull();
+});
+
+test('seri rekorun gerisindeyken alev yok, halka durur', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 2, longestWeekStreak: 5 }));
+  await cizTakvim();
+
+  expect(screen.queryByTestId('seri-cubugu-alev')).toBeNull();
+  expect(screen.getByTestId('seri-cubugu-halka')).toBeTruthy();
+});
+
+/**
+ * #547 (kullanici karari): haftalik hedef tuttuysa hedef cubugunun tepesinde halkanin yerini dart
+ * tahtasi alir. Tutmadiysa halka; seri kartinda hic dart yok.
+ */
+test('hedef tuttuysa halkanin yerinde dart tahtasi durur', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 4, weeklyTargetDays: 4 }));
+  await cizTakvim();
+
+  expect(screen.getByTestId('hedef-cubugu-dart')).toBeTruthy();
+  expect(screen.queryByTestId('hedef-cubugu-halka')).toBeNull();
+});
+
+test('hedef tutmadiysa dart tahtasi yok, halka durur', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
+  await cizTakvim();
+
+  expect(screen.queryByTestId('hedef-cubugu-dart')).toBeNull();
+  expect(screen.getByTestId('hedef-cubugu-halka')).toBeTruthy();
+});
+
+/** Dart tahtasi seriden bagimsiz ve yalniz hedef kartinda (alevin ayna goruntusu). */
+test('dart tahtasi seriden bagimsizdir ve yalnizca hedef kartindadir', async () => {
+  useCalendarMock.mockReturnValue(
+    ozet([], { currentWeekStreak: 1, longestWeekStreak: 5, thisWeekTrainedDays: 3, weeklyTargetDays: 3 }),
+  );
+  await cizTakvim();
+
+  expect(screen.getAllByTestId('hedef-cubugu-dart')).toHaveLength(1);
+  expect(screen.queryByTestId('seri-cubugu-dart')).toBeNull();
+});
+
 /** Paylasilan donemi ekrana yazan sonda: takvimin YAZDIGINI baska bir tuketici goruyor mu? */
 function DonemSondasi() {
   const { gorunum, gosterilen } = useTakvimDonemi();

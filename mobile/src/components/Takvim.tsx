@@ -18,9 +18,10 @@ import {
   haftaGunleri,
   kaydir,
 } from '@grind/shared/lib/takvim';
-import { hedefCubugu, hedefKalan, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import CamIkonDugmesi from '../ui/CamIkonDugmesi';
+import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
-import IkonDugmesi from '../ui/IkonDugmesi';
 import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -89,12 +90,13 @@ export default function Takvim() {
         {/* #315: donem basligi ve SAG kosesinde gorunum ikonu -- ikon gun kartlarinin DISINDA. */}
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-body-lg text-fg">{donemBasligi}</Text>
-          <IkonDugmesi
+          {/* #547: ozet kartlariyla ayni cam dil (spec Karar 9). */}
+          <CamIkonDugmesi
             etiket={t(gorunum === 'ay' ? 'takvim.haftalikGorunumeGec' : 'takvim.aylikGorunumeGec')}
             onPress={gorunumDegistir}
           >
-            <CalendarDays color={ikonRenk.muted} size={20} />
-          </IkonDugmesi>
+            <CalendarDays color={ikonRenk.fg} size={20} />
+          </CamIkonDugmesi>
         </View>
 
         {/* #332: giris animasyonu YALNIZCA donem degisince calisir, takvimin ilk montajinda degil.
@@ -167,6 +169,9 @@ export default function Takvim() {
                   testID="seri-cubugu"
                   oran={seriCubugu(ozet.currentWeekStreak, ozet.longestWeekStreak)}
                   deger={{ min: 0, max: ozet.longestWeekStreak, now: ozet.currentWeekStreak }}
+                  // #547: rekorunu her hafta tazeleyen kullanicinin alevi halkanin yerini alir -- YALNIZ
+                  // seri kartinda ve haftalik hedeften bagimsiz (kullanici karari).
+                  isaret={rekordaMi(ozet.currentWeekStreak, ozet.longestWeekStreak) ? 'alev' : 'halka'}
                 />
               }
             >
@@ -192,6 +197,9 @@ export default function Takvim() {
                 <DikeyCubuk
                   testID="hedef-cubugu"
                   oran={hedefCubugu(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays)}
+                  // #547: haftalik hedef tuttuysa halkanin yerini dart tahtasi alir -- YALNIZ hedef
+                  // kartinda ve seriden bagimsiz (kullanici karari).
+                  isaret={hedefTuttuMu(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays) ? 'dart' : 'halka'}
                   deger={
                     ozet.weeklyTargetDays === null
                       ? undefined
@@ -298,18 +306,14 @@ function OzetKarti({
   ikon: LucideIcon;
   etiket: string;
   onPress?: () => void;
-  /** #544: kartin saginda, kartin boyunca uzanan dikey cubuk. */
+  /** #544: kartin saginda, kartin boyunca uzanan dikey sayac. */
   cubuk: React.ReactNode;
   children: React.ReactNode;
 }) {
   const ikonRenk = useIkonRenk();
+  // #547: kart Liquid Glass yuzeyi (CamKart) -- #544'teki duz, kenarli yuzey kaba bulundu.
   return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      disabled={!onPress}
-      onPress={onPress}
-      className="flex-1 flex-row gap-3 rounded-3xl border border-surface-3 bg-surface-2 p-4"
-    >
+    <CamKart onPress={onPress} disClassName="flex-1" className="flex-row gap-3 p-4">
       <View className="min-w-0 flex-1 flex-col gap-1">
         <View className="flex-row items-center gap-1.5">
           <Ikon color={ikonRenk.muted} size={16} />
@@ -318,6 +322,6 @@ function OzetKarti({
         {children}
       </View>
       {cubuk}
-    </Pressable>
+    </CamKart>
   );
 }

@@ -22,6 +22,12 @@ export const renklerKoyu = {
   'on-danger-bg': '#ffdad6',
   success: '#6fdc8c',
   'on-success': '#00391b',
+  // #547: rekordaki serinin alevi -- ates iki temada da ates gibi gorunsun diye IKI TEMADA AYNI
+  // (accent gibi). Koyu kizil dip, kehribar govde, acik kehribar cekirdek; beyaz YOK (kullanici
+  // "icinin o kadar beyaz olmasina gerek var mi" dedi).
+  'alev-dip': '#c2280f',
+  'alev-sicak': '#ff9a4d',
+  'alev-acik': '#ffd9a8',
 } as const;
 
 /**
@@ -52,7 +58,7 @@ export const renklerAcik = {
 } as const;
 
 /** Iki temada da AYNI kalan token'lar; palet testi bunlarin ezilmesini beklemez. */
-export const IKI_TEMADA_AYNI = ['accent', 'on-accent'] as const;
+export const IKI_TEMADA_AYNI = ['accent', 'on-accent', 'alev-dip', 'alev-sicak', 'alev-acik'] as const;
 
 /** Iki paletin ortak sekli: anahtarlar sabit, degerler serbest hex (literal tip DEGIL). */
 export type RenkPaleti = { readonly [K in keyof typeof renklerKoyu]: string };

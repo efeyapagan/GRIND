@@ -174,6 +174,12 @@ Bu karar #211'deki "Web + Mobil aynı işte" kuralının yerini alır.
   `takvim`/`zorlukKadrani` gibi yardımcılar) testleri `packages/shared/src/**/*.test.ts`'tedir
   (vitest, `npm run test --workspace @grind/shared`) ve Mobile CI'da ortak paketin tip kontrolüyle
   birlikte koşar. Ortak koda yeni test buraya yazılır, `web/`'e değil.
+- **Cam yüzey dili (Liquid Glass, #547, 2026-09-30) — yeni kartların varsayılanı (kullanıcı kararı).**
+  Yeni kart yüzeyleri düz `bg-surface-*` değil `mobile/src/ui/CamKart.tsx` ile yapılır (gerçek blur +
+  üstten sönen parıltı + saç teli kenar); ince çizimler SVG'de. Yarı saydamlık `border-fg/10` gibi
+  eklerle VERİLMEZ (renkler `var(--color-*)`, kenar siyah çıkar) — token'ın tam opak rengi + katmanın
+  `opacity-*`'si. Ayrıntı ve kurallar: görsel tasarım spec'i
+  [Karar 9](docs/superpowers/specs/2026-09-12-frontend-gorsel-tasarim-design.md).
 - **Mobil iki temalıdır (#271, 2026-09-26).** Renk paleti tek kaynaktan gelir:
   `packages/shared/src/designTokens.ts` (`renklerKoyu` + `renklerAcik`). Tailwind sınıfları
   `mobile/global.css`teki değişkenleri (`:root` açık, `.dark:root` koyu) okur, JS tarafı (lucide

@@ -266,6 +266,50 @@ content="#121316">`, manifest'te `theme_color` ve `background_color` `#121316`.
 - **Giriş ve Kayıt ekranlarında kabuk YOK** — ne başlık ne sekme çubuğu; oturum yokken gidilecek yer
   yok.
 
+## Karar 9 — Cam yüzey dili (Liquid Glass) — mobil, #491 / #547
+
+Kullanıcı kararı (2026-09-30): ana sayfanın "Haftalık seri" / "Haftalık hedef" kartlarındaki yaklaşım
+**bundan sonra tasarlanacak kartların varsayılan dilidir.** Yeni bir kart yüzeyi düz `bg-surface-*` ile
+değil bu dille yapılır; farklı bir yüzey gerekiyorsa gerekçesiyle kullanıcıya sorulur.
+
+**Kart: `mobile/src/ui/CamKart.tsx`** — tekrar yazılmaz, bu bileşen kullanılır. Üç katman, alttan üste:
+
+1. **Gerçek blur** — `CamYuzey` (`expo-blur` + temaya göre perde). Android'de blur yok, neredeyse opak
+   perde çizilir: bilinen ve kabul edilmiş fark (#338, #491).
+2. **Üstten sönen parıltı** — tam kartı kaplayan SVG `LinearGradient`: üstte `fg` %8 opaklık, kartın
+   ortasında (%55) sıfıra iner. Camın üstüne düşen ışık hissi.
+3. **Saç teli kenar** — `absolute inset-0 rounded-3xl border border-fg opacity-10` katmanı.
+
+Köşe `rounded-3xl`, iç düzen çağırandan (`className`, ör. `flex-row gap-3 p-4`).
+
+**Yarı saydamlık kuralı — ÖNEMLİ.** Renkler Tailwind'e `var(--color-*)` olarak bağlı; `border-fg/10`,
+`bg-fg/5` gibi **opaklık ekleri değişkene uygulanamaz ve kenarı SİYAH çizer** (#547'de simülatörde
+görüldü). Yarı saydamlık yeni bir token ile de verilmez (token'lar `#rrggbb`). Doğru yol: token'ın **tam
+opak** rengi + **katmanın** opaklığı (`opacity-10`), ya da SVG'de `stopOpacity`/`strokeOpacity`. `fg`
+koyu temada açık, açık temada koyu olduğu için bu katmanlar iki temada da kendiliğinden doğru tonu
+alır.
+
+**İnce çizim dili (aynı kartların içi):**
+
+- Çizgiler, gradyanlar ve ölçü çubukları **SVG'de** çizilir — NativeWind sınıflarıyla (`w-2`, `bg-*`)
+  kaba kalıyordu ("Apple'ınki çok daha naif"). Yükseklik `onLayout`tan.
+- Sade: gereksiz yuva/çerçeve ve uç işaretleri YOK (kullanıcı: "sade ve şık"). Ray 2.5 pt, `fg` %12.
+- Dolgu `accent` gradyanı (dipte %35 → uçta tam). İşaret 10 pt ince kenarlı halka, `accent` gölgesiyle
+  hafif parlar.
+- Başarı anları çizimle kutlanır, ikonla değil: rekordaki seride halkanın yerini **alev**, tutulan
+  hedefte **dart tahtası** alır. Ateş tonları üç yeni token'dır (`alev-dip`, `alev-sicak`,
+  `alev-acik`) ve `accent` gibi **iki temada aynıdır** — ateş her temada ateş gibi görünür; beyaz
+  çekirdek kullanılmaz (tonlar geçişle verilir).
+- Kutlama animasyonları uygulama SÜRECİ başına **bir kez** oynar (`mobile/src/ui/acilisAnimasyonu.ts`,
+  her animasyon kendi anahtarıyla) ve `ReduceMotion.System`'a uyar (hareket azaltılmışsa doğrudan son
+  hâl).
+
+**Bitti sayılmadan:** iki temada gözle denenir; iOS'ta blur, Android'de düz perde beklenir.
+
+Uygulanan yerler: ana sayfanın özet kartları, arkadaş karşılaştırması ve takvimin görünüm tuşu
+(`CamIkonDugmesi` — `IkonDugmesi`'nin cam hâli; cam dile geçen ikon düğmeleri bunu kullanır) (#547). Diğer kartlara yayılması
+#491'in görevleri (geçmiş ve AI yorum kartlarında önce kaydırma performansı ölçülür).
+
 ---
 
 ## Ekranlar
