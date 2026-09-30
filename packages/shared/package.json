@@ -34,6 +34,7 @@
     "./lib/siralama": "./src/lib/siralama.ts",
     "./lib/takip": "./src/lib/takip.ts",
     "./lib/takvim": "./src/lib/takvim.ts",
+    "./lib/ozetKartlari": "./src/lib/ozetKartlari.ts",
     "./lib/yorumIcerigi": "./src/lib/yorumIcerigi.ts",
     "./lib/zorlukKadrani": "./src/lib/zorlukKadrani.ts",
     "./i18n": "./src/i18n/i18n.ts",

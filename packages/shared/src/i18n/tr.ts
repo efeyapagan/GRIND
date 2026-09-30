@@ -365,6 +365,13 @@ export const tr = {
     haftalikHedefDegeri_one: 'Bu hafta {{count}} gün, hedef {{hedef}}',
     haftalikHedefDegeri_other: 'Bu hafta {{count}} gün, hedef {{hedef}}',
     hedefBelirle: 'Hedef belirle',
+    haftaBirimi_one: 'hafta',
+    haftaBirimi_other: 'hafta',
+    gunBirimi_one: 'gün',
+    gunBirimi_other: 'gün',
+    hedefKalan_one: '{{count}} gün kaldı',
+    hedefKalan_other: '{{count}} gün kaldı',
+    hedefTamam: 'Hedef tamam',
   },
   sablonlar: {
     baslik: 'Şablonlar',
