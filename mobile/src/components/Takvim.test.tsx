@@ -167,6 +167,57 @@ test('haftalik seri karti seriyi ve en uzun seriyi gosterir', async () => {
   expect(screen.getByText('Rekorun: 8 hafta')).toBeTruthy();
 });
 
+// ---- Ozet kartlarinin dikey cubugu (#544) ----
+
+/**
+ * #544 (kullanici karari): iki ozet karti Apple Saglik'in olcum kartlari gibi -- solda ikonlu etiket,
+ * deger ve durum satiri, sagda dikey bir cubuk. Seri cubugu mevcut seriyi SIMDIYE KADARKI EN UZUN
+ * seriyle karsilastirir; cubugun degeri erisilebilirlik agacinda da okunur (min/max/now).
+ */
+test('seri cubugu mevcut seriyi en uzun seriyle karsilastirir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 3, longestWeekStreak: 8 }));
+  await cizTakvim();
+
+  expect(screen.getByTestId('seri-cubugu').props.accessibilityValue).toEqual({ min: 0, max: 8, now: 3 });
+});
+
+test('hedef cubugu bu haftaki gunu haftalik hedefle karsilastirir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
+  await cizTakvim();
+
+  expect(screen.getByTestId('hedef-cubugu').props.accessibilityValue).toEqual({ min: 0, max: 4, now: 2 });
+});
+
+/**
+ * Hedef yokken karsilastirilacak bir sey yok: cubugun kanali durur (iki kart ayni bicimde kalsin)
+ * ama dolmaz.
+ */
+test('hedef yokken hedef cubugu dolmaz', async () => {
+  await cizTakvim();
+
+  expect(screen.getByTestId('hedef-cubugu')).toBeTruthy();
+  expect(screen.queryByTestId('hedef-cubugu-dolu')).toBeNull();
+});
+
+/** Gorseldeki durum satirinin hedef kartindaki karsiligi: kalan gun ya da hedefin tamamlandigi. */
+test('hedef kartinin durum satiri kalan gunu ya da tamamlandigini soyler', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
+  const { rerender } = await render(
+    <TakvimDonemiProvider bugun={BUGUN}>
+      <Takvim />
+    </TakvimDonemiProvider>,
+  );
+  expect(screen.getByText('2 gün kaldı')).toBeTruthy();
+
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 4, weeklyTargetDays: 4 }));
+  await rerender(
+    <TakvimDonemiProvider bugun={BUGUN}>
+      <Takvim />
+    </TakvimDonemiProvider>,
+  );
+  expect(screen.getByText('Hedef tamam')).toBeTruthy();
+});
+
 /** Paylasilan donemi ekrana yazan sonda: takvimin YAZDIGINI baska bir tuketici goruyor mu? */
 function DonemSondasi() {
   const { gorunum, gosterilen } = useTakvimDonemi();

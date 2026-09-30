@@ -358,6 +358,13 @@ export const en: Katalog = {
     haftalikHedefDegeri_one: 'This week {{count}} day, goal {{hedef}}',
     haftalikHedefDegeri_other: 'This week {{count}} days, goal {{hedef}}',
     hedefBelirle: 'Set a goal',
+    haftaBirimi_one: 'week',
+    haftaBirimi_other: 'weeks',
+    gunBirimi_one: 'day',
+    gunBirimi_other: 'days',
+    hedefKalan_one: '{{count}} day left',
+    hedefKalan_other: '{{count}} days left',
+    hedefTamam: 'Goal reached',
   },
   sablonlar: {
     baslik: 'Templates',
