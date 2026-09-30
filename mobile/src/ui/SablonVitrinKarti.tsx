@@ -4,6 +4,7 @@ import { Dumbbell } from 'lucide-react-native';
 import Svg, { Line } from 'react-native-svg';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import CamYuzey from './CamYuzey';
+import IkonKapsulu from './IkonKapsulu';
 import SablonFiguru from './SablonFiguru';
 import { useAccentParlama, useIkonRenk, useRenkPaleti } from './renkler';
 
@@ -94,9 +95,9 @@ export default function SablonVitrinKarti({
           <Text numberOfLines={1} className="min-w-0 flex-1 text-heading font-bold text-fg">
             {ad}
           </Text>
-          <View className="size-10 items-center justify-center rounded-xl bg-accent/20">
+          <IkonKapsulu boyut={40}>
             <Dumbbell color={ikonRenk.accentSoft} size={20} />
-          </View>
+          </IkonKapsulu>
         </View>
         <Text numberOfLines={2} className="mt-1 pr-12 text-body text-muted">
           {ozet.hareketAdlari.join(', ')}

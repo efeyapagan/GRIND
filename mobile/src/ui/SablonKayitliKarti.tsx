@@ -2,6 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
+import IkonKapsulu from './IkonKapsulu';
 import SablonFiguru from './SablonFiguru';
 import { KART_YUKSEKLIGI } from './SablonVitrinKarti';
 import { useIkonRenk } from './renkler';
@@ -60,9 +61,9 @@ export default function SablonKayitliKarti({
           </Text>
         )}
       </View>
-      <View className="size-10 shrink-0 items-center justify-center rounded-xl bg-accent/20">
+      <IkonKapsulu boyut={40}>
         <Dumbbell color={ikonRenk.accentSoft} size={20} />
-      </View>
+      </IkonKapsulu>
     </Pressable>
   );
 }
