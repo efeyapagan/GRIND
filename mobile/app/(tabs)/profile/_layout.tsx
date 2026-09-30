@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { History, Pencil, Ruler, Trophy } from 'lucide-react-native';
+import { History, Pencil, Ruler, TrendingUp, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, useProfilim } from '@grind/shared/api/queries';
 import { useAuth } from '../../../src/auth/AuthContext';
 import HataKutusu from '../../../src/ui/HataKutusu';
@@ -13,6 +13,8 @@ const SEKMELER: readonly ProfilSekmesi[] = [
   { to: '/profile/history', etiketAnahtari: 'kabuk.sekmeGecmis', ikon: History },
   { to: '/profile/records', etiketAnahtari: 'kabuk.sekmeRekorlar', ikon: Trophy },
   { to: '/profile/measurements', etiketAnahtari: 'kabuk.sekmeOlcumler', ikon: Ruler },
+  // #184: yalnizca kendi profilinde; arkadas profilinin sekmeleri ayri (`u/[username]/_layout`).
+  { to: '/profile/progress', etiketAnahtari: 'kabuk.sekmeIlerleme', ikon: TrendingUp },
 ];
 
 /**
