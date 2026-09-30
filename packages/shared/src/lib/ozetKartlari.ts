@@ -26,3 +26,19 @@ export function hedefCubugu(gun: number, hedef: number | null): number | null {
 export function hedefKalan(gun: number, hedef: number): number {
   return Math.max(0, hedef - gun);
 }
+
+/**
+ * Seri REKORDA mi (#547): mevcut seri en uzun seriye esit -- kullanici her hafta rekorunu tazeliyor.
+ * Hic seri yokken (0 = 0) rekor yoktur. Haftalik hedeften bagimsizdir (kullanici karari).
+ */
+export function rekordaMi(mevcut: number, enUzun: number): boolean {
+  return mevcut > 0 && mevcut === enUzun;
+}
+
+/**
+ * Haftalik hedef TUTTU mu (#547): bu haftaki gun hedefe ulasti ya da gecti. Hedef yoksa tutulacak bir
+ * sey yoktur. Seriden bagimsizdir (kullanici karari).
+ */
+export function hedefTuttuMu(gun: number, hedef: number | null): boolean {
+  return hedef !== null && hedef > 0 && gun >= hedef;
+}

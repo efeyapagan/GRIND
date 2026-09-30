@@ -32,6 +32,9 @@
     --color-on-danger-bg: #410002;
     --color-success: #1b7a36;
     --color-on-success: #ffffff;
+    --color-alev-dip: #c2280f;
+    --color-alev-sicak: #ff9a4d;
+    --color-alev-acik: #ffd9a8;
   }
 
   .dark:root {
@@ -52,5 +55,8 @@
     --color-on-danger-bg: #ffdad6;
     --color-success: #6fdc8c;
     --color-on-success: #00391b;
+    --color-alev-dip: #c2280f;
+    --color-alev-sicak: #ff9a4d;
+    --color-alev-acik: #ffd9a8;
   }
 }

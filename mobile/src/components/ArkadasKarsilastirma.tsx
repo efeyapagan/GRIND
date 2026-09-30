@@ -5,6 +5,7 @@ import { useArkadasDonemi } from '@grind/shared/api/queries';
 import { arkadaslariSirala, liderKullaniciAdi } from '@grind/shared/lib/arkadasSiralamasi';
 import { gorunumAraligi } from '@grind/shared/lib/takvim';
 import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
+import CamKart from '../ui/CamKart';
 import ArkadasSatiri from './ArkadasSatiri';
 
 /**
@@ -36,12 +37,12 @@ export default function ArkadasKarsilastirma() {
 
   if (isError) {
     return (
-      <View className="flex-col gap-2 rounded-xl bg-surface-1 p-4">
+      <CamKart className="flex-col gap-2 p-4">
         <Text className="text-heading text-fg">{t('arkadaslar.baslik')}</Text>
         <Text accessibilityRole="alert" className="text-body text-danger">
           {t('arkadaslar.alinamadi')}
         </Text>
-      </View>
+      </CamKart>
     );
   }
 
@@ -50,7 +51,8 @@ export default function ArkadasKarsilastirma() {
   const yalnizKendisi = sirali.length <= 1;
 
   return (
-    <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+    // #547 (kullanici karari): ozet kartlariyla ayni cam yuzey (CamKart, spec Karar 9).
+    <CamKart className="flex-col gap-3 p-4">
       <Text className="text-heading text-fg">{t('arkadaslar.baslik')}</Text>
 
       <View className="flex-col gap-2">
@@ -75,6 +77,6 @@ export default function ArkadasKarsilastirma() {
           <Text className="text-label text-muted underline">{t('arkadaslar.tumArkadaslariGor')}</Text>
         </Pressable>
       )}
-    </View>
+    </CamKart>
   );
 }
