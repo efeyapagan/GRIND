@@ -8,6 +8,7 @@ import { formatTarih } from '@grind/shared/lib/format';
 import GecmisOzeti from './GecmisOzeti';
 import GecmisDetayPaneli from './GecmisDetayPaneli';
 import PaylasimPenceresi from './PaylasimPenceresi';
+import CamKart from '../ui/CamKart';
 import IkincilDugme from '../ui/IkincilDugme';
 import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
 import { useIkonRenk } from '../ui/renkler';
@@ -43,7 +44,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
 
   if (onayAcik) {
     return (
-      <View className="overflow-hidden rounded-xl bg-surface-2 p-4">
+      <CamKart testID="gecmis-silme-karti" className="p-4">
         <View className="flex-col gap-3">
           <Text className="text-body text-fg">
             {t('gecmis.silmeOnayi', { tarih: formatTarih(oturum.startedAt, dil), count: oturum.setCount })}
@@ -57,12 +58,12 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
             </View>
           </View>
         </View>
-      </View>
+      </CamKart>
     );
   }
 
   const kart = (
-    <View className="bg-surface-2">
+    <CamKart testID="gecmis-karti">
       <Pressable onPress={() => setAcik(true)} className="flex-row items-center justify-between gap-2 p-4">
         <GecmisOzeti oturum={oturum} />
         {/* #433 (kullanici karari): ikonlar KUTUSUZ -- paylas ikonu ve ok yalnizca ikon olarak durur.
@@ -95,14 +96,19 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
           onSil={silinebilir ? onayiAc : undefined}
         />
       )}
-    </View>
+    </CamKart>
   );
 
   if (!silinebilir) {
-    return <View className="overflow-hidden rounded-xl">{kart}</View>;
+    return kart;
   }
   return (
-    <KaydirilabilirSatir ref={kaydirmaRef} onSil={onayiAc} kaydirmaEtiketi={t('gecmis.antrenmaniSil')}>
+    <KaydirilabilirSatir
+      ref={kaydirmaRef}
+      onSil={onayiAc}
+      kaydirmaEtiketi={t('gecmis.antrenmaniSil')}
+      koseSinifi="rounded-3xl"
+    >
       {kart}
     </KaydirilabilirSatir>
   );

@@ -55,3 +55,36 @@ test('onDuzenle verilince duzenle kisayolu cizilir ve yalnizca onDuzenle cagrili
   expect(onDuzenle).toHaveBeenCalledTimes(1);
   expect(onSil).not.toHaveBeenCalled();
 });
+
+/**
+ * #491 Gorev 2: kart cam (yari saydam) olunca arkadaki kirmizi "Sil" zemini kartin ALTINDAN gorunur
+ * (opaklikla gizlemek yetmedi: kaydirmanin ilk pikselinde tamami aciliyordu). Katman yalnizca kartin
+ * actigi bosluk kadar genis olmali -- kirmizi kartin altinda hic bulunmaz.
+ */
+test('kaydirilmamis satirda kisayol katmaninin genisligi sifirdir', async () => {
+  await render(
+    <KaydirilabilirSatir onSil={jest.fn()} kaydirmaEtiketi="sil">
+      <Text>satir</Text>
+    </KaydirilabilirSatir>,
+  );
+
+  expect(screen.getByTestId('kaydir-kisayollar', GIZLI)).toHaveStyle({ width: 0 });
+});
+
+test('koseSinifi verilmezse satir rounded-xl kalir, verilirse o uygulanir', async () => {
+  const { rerender } = await render(
+    <KaydirilabilirSatir onSil={jest.fn()} kaydirmaEtiketi="sil">
+      <Text>satir</Text>
+    </KaydirilabilirSatir>,
+  );
+  expect(screen.getByTestId('kaydirilabilir-satir').props.className).toContain('rounded-xl');
+
+  await rerender(
+    <KaydirilabilirSatir onSil={jest.fn()} kaydirmaEtiketi="sil" koseSinifi="rounded-3xl">
+      <Text>satir</Text>
+    </KaydirilabilirSatir>,
+  );
+  const sinif: string = screen.getByTestId('kaydirilabilir-satir').props.className;
+  expect(sinif).toContain('rounded-3xl');
+  expect(sinif).not.toContain('rounded-xl');
+});
