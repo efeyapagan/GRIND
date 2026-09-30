@@ -9,6 +9,8 @@ interface Props {
   oran: number | null;
   /** Erisilebilirlik agacindaki deger (ekran okuyucu "3 / 8" okur). */
   deger?: { min: number; max: number; now: number };
+  /** Rayin USTUNE, halkanin altina cizilen katman (#547: rekordaki serinin alevi). */
+  children?: React.ReactNode;
 }
 
 const GENISLIK = 16;
@@ -30,7 +32,7 @@ const HALKA = 10;
  * Cizim SVG'de: ince cizgiler ve gradyan NativeWind siniflariyla kaba kaliyordu; yukseklik
  * `onLayout`tan gelir (yuva kartin boyunca uzanir).
  */
-export default function DikeyCubuk({ testID, oran, deger }: Props) {
+export default function DikeyCubuk({ testID, oran, deger, children }: Props) {
   const palet = useRenkPaleti();
   const [yukseklik, setYukseklik] = useState(0);
 
@@ -70,6 +72,7 @@ export default function DikeyCubuk({ testID, oran, deger }: Props) {
           )}
         </Svg>
       )}
+      {children}
       {halkaY !== null && (
         <View
           testID={`${testID}-dolu`}

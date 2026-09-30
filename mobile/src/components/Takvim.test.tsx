@@ -218,6 +218,35 @@ test('hedef kartinin durum satiri kalan gunu ya da tamamlandigini soyler', async
   expect(screen.getByText('Hedef tamam')).toBeTruthy();
 });
 
+/**
+ * #547 (kullanici karari): kullanici rekorunu her hafta tazeliyorsa (mevcut seri = en uzun seri) seri
+ * cubugunun altinda alev cizilir. Rekorun gerisindeyken yok; hedef kartinda hic yok.
+ */
+test('seri rekordayken seri cubugunda alev cizilir', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 4, longestWeekStreak: 4 }));
+  await cizTakvim();
+
+  expect(screen.getByTestId('seri-alevi')).toBeTruthy();
+});
+
+/** Alev haftalik hedeften BAGIMSIZ (kullanici karari): hedef tutulmamisken de cizilir, yalniz seri kartinda. */
+test('alev haftalik hedeften bagimsizdir ve yalnizca seri kartindadir', async () => {
+  useCalendarMock.mockReturnValue(
+    ozet([], { currentWeekStreak: 4, longestWeekStreak: 4, thisWeekTrainedDays: 0, weeklyTargetDays: 4 }),
+  );
+  await cizTakvim();
+
+  expect(screen.getAllByTestId('seri-alevi')).toHaveLength(1);
+  expect(screen.queryByTestId('hedef-alevi')).toBeNull();
+});
+
+test('seri rekorun gerisindeyken alev cizilmez', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { currentWeekStreak: 2, longestWeekStreak: 5 }));
+  await cizTakvim();
+
+  expect(screen.queryByTestId('seri-alevi')).toBeNull();
+});
+
 /** Paylasilan donemi ekrana yazan sonda: takvimin YAZDIGINI baska bir tuketici goruyor mu? */
 function DonemSondasi() {
   const { gorunum, gosterilen } = useTakvimDonemi();
