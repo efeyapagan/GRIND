@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { LayoutAnimationConfig, SlideInLeft, SlideInRight } from 'react-native-reanimated';
-import { CalendarDays, Check, Flame } from 'lucide-react-native';
+import { CalendarDays, Check, CircleCheck, Flame, Target, type LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useDil } from '@grind/shared/i18n';
@@ -18,6 +18,8 @@ import {
   haftaGunleri,
   kaydir,
 } from '@grind/shared/lib/takvim';
+import { hedefCubugu, hedefKalan, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import DikeyCubuk from '../ui/DikeyCubuk';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { useTakvimDonemi } from '../ui/TakvimDonemiContext';
 import { useIkonRenk } from '../ui/renkler';
@@ -152,36 +154,85 @@ export default function Takvim() {
         )}
 
         {ozet && (
-          // #324: solda haftalik seri (ates + en uzun seri), sagda bu haftanin hedef ilerlemesi (x/hedef).
-          // Hedef kartina dokununca hedef ekrani acilir; hedef yokken (#97) kart "Hedef belirle"ye cagirir.
+          // #324: solda haftalik seri, sagda bu haftanin hedef ilerlemesi (x/hedef). Hedef kartina
+          // dokununca hedef ekrani acilir; hedef yokken (#97) kart "Hedef belirle"ye cagirir.
+          // #544: kartlar Apple Saglik'in olcum kartlari gibi -- sagda dikey cubuk. Seri cubugu mevcut
+          // seriyi EN UZUN seriyle, hedef cubugu bu haftaki gunu HEDEFLE karsilastirir (kullanici karari).
           <View className="flex-row gap-2">
-            <OzetKarti etiket={t('takvim.haftalikSeri')}>
+            <OzetKarti
+              ikon={Flame}
+              etiket={t('takvim.haftalikSeri')}
+              cubuk={
+                <DikeyCubuk
+                  testID="seri-cubugu"
+                  oran={seriCubugu(ozet.currentWeekStreak, ozet.longestWeekStreak)}
+                  deger={{ min: 0, max: ozet.longestWeekStreak, now: ozet.currentWeekStreak }}
+                />
+              }
+            >
               <View
                 accessible
                 accessibilityLabel={t('takvim.haftaSayisi', { count: ozet.currentWeekStreak })}
-                className="flex-row items-center gap-1"
+                className="flex-row items-baseline gap-1"
               >
                 <Text className="text-metric text-accent">{ozet.currentWeekStreak}</Text>
-                <Flame color={ikonRenk.accent} fill={ikonRenk.accent} size={24} />
+                <Text className="text-body-lg text-muted">
+                  {t('takvim.haftaBirimi', { count: ozet.currentWeekStreak })}
+                </Text>
               </View>
               <Text className="text-label text-muted">
                 {t('takvim.rekorun', { count: ozet.longestWeekStreak })}
               </Text>
             </OzetKarti>
-            <OzetKarti etiket={t('takvim.haftalikHedef')} onPress={() => router.push('/haftalik-hedef')}>
+            <OzetKarti
+              ikon={Target}
+              etiket={t('takvim.haftalikHedef')}
+              onPress={() => router.push('/haftalik-hedef')}
+              cubuk={
+                <DikeyCubuk
+                  testID="hedef-cubugu"
+                  oran={hedefCubugu(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays)}
+                  deger={
+                    ozet.weeklyTargetDays === null
+                      ? undefined
+                      : { min: 0, max: ozet.weeklyTargetDays, now: ozet.thisWeekTrainedDays }
+                  }
+                />
+              }
+            >
               {ozet.weeklyTargetDays === null ? (
                 <Text className="text-body-lg text-muted">{t('takvim.hedefBelirle')}</Text>
               ) : (
-                <Text
-                  accessibilityLabel={t('takvim.haftalikHedefDegeri', {
-                    count: ozet.thisWeekTrainedDays,
-                    hedef: ozet.weeklyTargetDays,
-                  })}
-                  className="text-metric"
-                >
-                  <Text className="text-accent">{ozet.thisWeekTrainedDays}</Text>
-                  <Text className="text-muted">/{ozet.weeklyTargetDays}</Text>
-                </Text>
+                <>
+                  <View className="flex-row items-baseline gap-1">
+                    <Text
+                      accessibilityLabel={t('takvim.haftalikHedefDegeri', {
+                        count: ozet.thisWeekTrainedDays,
+                        hedef: ozet.weeklyTargetDays,
+                      })}
+                      className="text-metric"
+                    >
+                      <Text className="text-accent">{ozet.thisWeekTrainedDays}</Text>
+                      <Text className="text-muted">/{ozet.weeklyTargetDays}</Text>
+                    </Text>
+                    <Text className="text-body-lg text-muted">
+                      {t('takvim.gunBirimi', { count: ozet.weeklyTargetDays })}
+                    </Text>
+                  </View>
+                  {/* Gorseldeki durum satirinin karsiligi: kalan gun ya da hedefin tamamlandigi. */}
+                  {hedefKalan(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays) > 0 ? (
+                    <Text className="text-label text-muted">
+                      {t('takvim.hedefKalan', {
+                        count: hedefKalan(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays),
+                      })}
+                    </Text>
+                  ) : (
+                    <View className="flex-row items-center gap-1">
+                      <CircleCheck color={ikonRenk.success} size={16} />
+                      <Text className="text-label text-success">{t('takvim.hedefTamam')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </OzetKarti>
           </View>
@@ -238,23 +289,35 @@ function GunHucresi({
 
 /** Ozet karti; `onPress` verilirse kartin tamami dokunulabilir (hedef karti hedef ekranini acar). */
 function OzetKarti({
+  ikon: Ikon,
   etiket,
   onPress,
+  cubuk,
   children,
 }: {
+  ikon: LucideIcon;
   etiket: string;
   onPress?: () => void;
+  /** #544: kartin saginda, kartin boyunca uzanan dikey cubuk. */
+  cubuk: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const ikonRenk = useIkonRenk();
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={onPress}
-      className="flex-1 flex-col gap-1 rounded-xl bg-surface-1 p-4"
+      className="flex-1 flex-row gap-3 rounded-3xl border border-surface-3 bg-surface-2 p-4"
     >
-      <Text className="text-label text-muted">{etiket}</Text>
-      {children}
+      <View className="min-w-0 flex-1 flex-col gap-1">
+        <View className="flex-row items-center gap-1.5">
+          <Ikon color={ikonRenk.muted} size={16} />
+          <Text className="text-label text-muted">{etiket}</Text>
+        </View>
+        {children}
+      </View>
+      {cubuk}
     </Pressable>
   );
 }
