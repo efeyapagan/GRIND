@@ -447,6 +447,64 @@ public class WorkoutSessionRepositoryTests
         Assert.Empty(await repository.GetTrainedSessionStartsAsync(user.Id));
     }
 
+    /// <summary>
+    /// #558: kullanıcı bulgusu -- "antrenman yaparken ... daha kaydetmeden" sayaç artıyordu. Oturum
+    /// HENÜZ BİTMEMİŞKEN (`EndedAt == null`) girilen bir set, takvim/seri toplamlarına GİRMEMELİ --
+    /// yalnızca `SetEntries.Any()` kontrolü yetersizdi, `EndedAt != null` de gerekiyordu.
+    /// </summary>
+    [Fact]
+    public async Task Acik_oturumdaki_set_toplamlara_girmez()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var acikOturum = TestDatabase.NewSession(user);
+        acikOturum.StartedAt = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        // EndedAt BİLEREK null bırakılır: antrenman henüz bitirilmedi/kaydedilmedi.
+        context.Add(acikOturum);
+        await context.SaveChangesAsync();
+        context.Add(new SetEntry
+        {
+            WorkoutSession = acikOturum, Exercise = exercise,
+            Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = acikOturum.StartedAt,
+        });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        Assert.Empty(await repository.GetSessionAggregatesAsync(user.Id, null, null));
+        Assert.Empty(await repository.GetTrainedSessionStartsAsync(user.Id));
+    }
+
+    /// <summary>Oturum bitirilince (EndedAt dolunca) aynı set normal şekilde toplamlara girer.</summary>
+    [Fact]
+    public async Task Bitirilen_oturumdaki_set_toplamlara_girer()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var user = TestDatabase.NewUser();
+        var exercise = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+        context.AddRange(user, exercise);
+        await context.SaveChangesAsync();
+
+        var an = new DateTime(2026, 3, 10, 17, 0, 0, DateTimeKind.Utc);
+        SeedSession(context, user, exercise, an, (100m, 8));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var repository = new WorkoutSessionRepository(context);
+
+        Assert.Single(await repository.GetSessionAggregatesAsync(user.Id, null, null));
+        Assert.Single(await repository.GetTrainedSessionStartsAsync(user.Id));
+    }
+
     [Fact]
     public async Task Antrenman_baslangiclari_tum_gecmisten_doner()
     {
