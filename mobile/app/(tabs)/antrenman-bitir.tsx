@@ -70,7 +70,11 @@ export default function AntrenmanBitirScreen() {
     null,
   );
   // #433: biten antrenmanin paylasim karti. Bitirme YANITINDAN gelir -- sure sunucunun hesabi.
-  const [paylasim, setPaylasim] = useState<{ setCount: number; durationSeconds: number } | null>(null);
+  const [paylasim, setPaylasim] = useState<{
+    templateName: string | null;
+    setCount: number;
+    durationSeconds: number;
+  } | null>(null);
   const [dinlenme, setDinlenme] = useRestTimer();
   // Temizleyici kapanisinin BAYAT bir sayac gormemesi icin: odak birakilirken gecerli deger.
   const dinlenmeRef = useRef(dinlenme);
@@ -139,6 +143,7 @@ export default function AntrenmanBitirScreen() {
   if (paylasim) {
     return (
       <PaylasimPenceresi
+        templateName={paylasim.templateName}
         setCount={paylasim.setCount}
         durationSeconds={paylasim.durationSeconds}
         acik
@@ -197,7 +202,11 @@ export default function AntrenmanBitirScreen() {
           // #433: seti ve suresi olan bir antrenman paylasilabilir; once kart sunulur, sonra
           // sablon sorusu / ana sayfa. Suresiz ya da setsiz antrenmanin karti anlamsizdir.
           if (biten.durationSeconds !== null && setSayisi > 0) {
-            setPaylasim({ setCount: setSayisi, durationSeconds: biten.durationSeconds });
+            setPaylasim({
+              templateName: oturum?.templateName ?? null,
+              setCount: setSayisi,
+              durationSeconds: biten.durationSeconds,
+            });
           } else if (taslak) {
             setKaydetSorusu(taslak);
           } else {
