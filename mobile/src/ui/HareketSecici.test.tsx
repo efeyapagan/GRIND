@@ -110,3 +110,37 @@ test('sonSatirMi verilmezse liste acilinca asagi kaydirma istenmez', async () =>
 
   expect(asagiKaydir).not.toHaveBeenCalled();
 });
+
+/**
+ * #559 (kullanici bildirdi, uc'uncu bulgu): sanal bosluk HareketSecici'nin KENDI icine
+ * eklenince dropdown'un `top-full` (%100) anchor'i o kapsayicinin toplam yuksekligine gore
+ * hesaplandigi icin dropdown'u da asagi itiyor, "yine klavyenin altinda kalmis" sorununu
+ * YENIDEN yaratiyordu. Bosluk artik BURADA render edilmez -- yalnizca `onAcikDegisti` ile
+ * acilip kapandigi bildirilir, cagiran taraf (SablonFormu) boslugu KENDI disinda ekler.
+ */
+test('onAcikDegisti acilinca true, kapaninca false bildirir; bilesen kendi icinde sanal bosluk render etmez', async () => {
+  const onSec = jest.fn();
+  const onAcikDegisti = jest.fn();
+  await render(
+    <HareketSecici
+      id="secici"
+      egzersizler={EGZERSIZLER}
+      secilenId={1}
+      secilenAd="Bench Press"
+      onSec={onSec}
+      sonSatirMi
+      onAcikDegisti={onAcikDegisti}
+    />,
+  );
+
+  expect(onAcikDegisti).toHaveBeenCalledWith(false);
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+  expect(onAcikDegisti).toHaveBeenCalledWith(true);
+  // Liste acikken bile LISTE_YUKSEKLIGI kadar baska bir View bu bilesenin disinda -- bu
+  // bilesen artik boylesi bir sanal bosluk EKLEMEZ (cagirana birakilir).
+  expect(screen.queryByTestId('sanal-bosluk')).toBeNull();
+
+  await fireEvent(screen.getByTestId('secici'), 'blur');
+  expect(onAcikDegisti).toHaveBeenCalledWith(false);
+});

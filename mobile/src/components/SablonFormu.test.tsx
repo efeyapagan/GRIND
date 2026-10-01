@@ -116,3 +116,41 @@ test('her iki satirin hareket secicisi de asagi acar, yalnizca en son satir acil
   // max-h-64 (256) + mt-1 (4) = 260 (HareketSecici'deki LISTE_YUKSEKLIGI).
   expect(asagiKaydir).toHaveBeenCalledWith(260);
 });
+
+/**
+ * #559 (kullanici bildirdi, ucuncu bulgu: "yine klavyenin altinda kalmis... hareket kartlarinin
+ * uzamasini istemiyorum"): sanal bosluk HareketSecici'nin KENDI icine eklenirse dropdown'un
+ * anchor'ini da asagi itiyordu (BIR USTTEKI test dosyasindaki not) VE kartin gorunurde
+ * uzamasina yol aciyordu. Bosluk artik yalnizca FORMUN EN SONUNDA, ilk satirin DEGIL sadece
+ * EN SON satirin listesi acikken belirir.
+ */
+test('sanal bosluk yalnizca en son satirin listesi acikken formun sonunda belirir', async () => {
+  (useExercises as jest.Mock).mockReturnValue({
+    data: [
+      { id: 1, name: 'Bench Press', category: 'Push' },
+      { id: 2, name: 'Squat', category: 'Legs' },
+    ],
+  });
+  const ikiHareketliSablon = {
+    ...sablon,
+    exercises: [
+      { exerciseId: 1, exerciseName: 'Bench Press', category: 'Push' as const, isArchived: false, plannedSets: 3, restSeconds: 90 },
+      { exerciseId: 2, exerciseName: 'Squat', category: 'Legs' as const, isArchived: false, plannedSets: 3, restSeconds: 90 },
+    ],
+  };
+  await render(<SablonFormu sablon={ikiHareketliSablon} donusYolu="/templates" />);
+
+  expect(screen.queryByTestId('sanal-bosluk')).toBeNull();
+
+  // Ilk (son OLMAYAN) satir acilinca bosluk BELIRMEZ.
+  await fireEvent(screen.getByTestId('hareket-0-egzersiz'), 'focus');
+  expect(screen.queryByTestId('sanal-bosluk')).toBeNull();
+
+  // En son satir acilinca bosluk belirir...
+  await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'focus');
+  expect(screen.getByTestId('sanal-bosluk')).toBeTruthy();
+
+  // ...kapaninca kaybolur.
+  await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'blur');
+  expect(screen.queryByTestId('sanal-bosluk')).toBeNull();
+});

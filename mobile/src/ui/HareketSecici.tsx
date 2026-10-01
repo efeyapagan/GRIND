@@ -13,8 +13,12 @@ import { useIkonRenk } from './renkler';
  */
 const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
 
-/** Oneri listesinin ustten gelen `max-h-64` (256) + `mt-1` (4) kadar yer kapladigi varsayim. */
-const LISTE_YUKSEKLIGI = 260;
+/**
+ * Oneri listesinin ustten gelen `max-h-64` (256) + `mt-1` (4) kadar yer kapladigi varsayim.
+ * Disari verilir: cagiran taraf (`sonSatirMi` + `onAcikDegisti`) DENK bir sanal bosluk eklerken
+ * kullanir -- iki yerde ayri sayi yazmak (DRY ihlali) kolayca birbirinden kopabilirdi.
+ */
+export const LISTE_YUKSEKLIGI = 260;
 
 interface Props {
   id: string;
@@ -29,10 +33,18 @@ interface Props {
    * #559 (kullanici karari): liste ASAGI acar (listeYukari ile KARISTIRILMAZ) ama bu alan
    * ekranin en altina yakinsa oneriler klavyenin altinda kalabilir. true ise acilinca
    * `EkranKaydiriciBaglami` araciligiyla ScrollView gecici olarak LISTE_YUKSEKLIGI kadar
-   * asagi kaydirilir ve ayni miktarda "sanal" bos bir alan eklenir (ihtiyac anında ortaya
-   * cikar, kapaninca kaybolur) -- liste boylece klavyenin ustunde tam gorunur.
+   * asagi kaydirilir -- liste boylece klavyenin ustunde tam gorunur. Kaydirmanin gercekten
+   * bir yere gidebilmesi icin cagiran tarafin (bkz. `onAcikDegisti`) DENKLEME GOTURMEDEN,
+   * dropdown'un ANCHOR noktasini ETKILEMEYECEK bir yerde (kendi relative kapsayicisinin
+   * DISINDA) esdeger bir sanal bosluk sağlaması GEREKIR -- bu bilesen boyle bir boslugu
+   * KENDI icinde render ETMEZ: `top-full` (%100) dropdown'un ANCHOR'i olan BU bilesenin
+   * KOK `relative` View'ina gore hesaplanir, o View'in icine EKLENEN herhangi bir sanal
+   * bosluk anchor'u da asagi kaydirip ayni sorunu (kullanici bulgusu: "yine klavyenin
+   * altinda kalmis") yeniden yaratir.
    */
   sonSatirMi?: boolean;
+  /** #559: `sonSatirMi` ile birlikte -- liste acilip kapandikca cagiran tarafa bildirir. */
+  onAcikDegisti?: (acik: boolean) => void;
   /**
    * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
    * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
@@ -56,6 +68,7 @@ export default function HareketSecici({
   otomatikOdak = false,
   listeYukari = false,
   sonSatirMi = false,
+  onAcikDegisti,
   onKapat,
 }: Props) {
   const ikonRenk = useIkonRenk();
@@ -67,8 +80,13 @@ export default function HareketSecici({
   const alanRef = useRef<TextInput>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
 
-  // #559: liste acilinca ScrollView'e gecici yer acilir (asagi kayar + sanal bosluk belirir);
-  // kapaninca/ekrandan ayrilirken geri alinir.
+  // #559: liste acilinca ScrollView'e gecici yer acilir (asagi kayar); cagiran taraf
+  // `onAcikDegisti` ile haberdar edilip DENK bir sanal bosluk ekler (bkz. yukaridaki not --
+  // bosluk BURADA degil, dropdown'un anchor'ini etkilemeyecek bir yerde olmali).
+  useEffect(() => {
+    onAcikDegisti?.(acik);
+  }, [acik, onAcikDegisti]);
+
   useEffect(() => {
     if (!sonSatirMi || !acik) {
       return;
@@ -190,10 +208,6 @@ export default function HareketSecici({
           </ScrollView>
         </View>
       )}
-
-      {/* #559: sanal bosluk -- yalnizca liste ACIKKEN var, ScrollView'in o kadar asagi
-          kayabilmesi icin gereken alani saglar; liste kapaninca kaybolur. */}
-      {acik && sonSatirMi && <View style={{ height: LISTE_YUKSEKLIGI }} />}
     </View>
   );
 }
