@@ -82,6 +82,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
       </Pressable>
       {paylasimAcik && (
         <PaylasimPenceresi
+          templateName={oturum.templateName}
           setCount={oturum.setCount}
           durationSeconds={oturum.durationSeconds ?? 0}
           acik

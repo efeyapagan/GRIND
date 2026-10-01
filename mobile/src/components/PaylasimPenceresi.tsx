@@ -10,6 +10,8 @@ import IkincilDugme from '../ui/IkincilDugme';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
+  /** #470: kartin en ustundeki isim; null ise PaylasimKarti "Serbest" gosterir. */
+  templateName: string | null;
   setCount: number;
   durationSeconds: number;
   acik: boolean;
@@ -23,7 +25,7 @@ interface Props {
  * Kart GIZLI degil GORUNUR cizilir: kullanici ne paylasacagini gorur ve yakalama gercekten
  * ekranda olan bir gorunumu alir (ekran disina tasinan gorunumler bazi cihazlarda bos yakalanir).
  */
-export default function PaylasimPenceresi({ setCount, durationSeconds, acik, onKapat }: Props) {
+export default function PaylasimPenceresi({ templateName, setCount, durationSeconds, acik, onKapat }: Props) {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const kartRef = useRef<View>(null);
@@ -47,7 +49,7 @@ export default function PaylasimPenceresi({ setCount, durationSeconds, acik, onK
   return (
     <Modal acik={acik} onKapat={onKapat} baslik={t('paylasim.baslik')}>
       <View className="items-center rounded-xl bg-inset py-2">
-        <PaylasimKarti ref={kartRef} setCount={setCount} durationSeconds={durationSeconds} />
+        <PaylasimKarti ref={kartRef} templateName={templateName} setCount={setCount} durationSeconds={durationSeconds} />
       </View>
 
       <BirincilDugme yukseklik="normal" onPress={() => void calistir(galeriyeKaydet)} disabled={calisiyor}>

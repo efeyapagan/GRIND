@@ -18,8 +18,10 @@ beforeEach(() => {
   onKapat.mockReset();
 });
 
-async function pencereyiAc() {
-  return render(<PaylasimPenceresi setCount={12} durationSeconds={2880} acik onKapat={onKapat} />);
+async function pencereyiAc(templateName: string | null = 'Push Day') {
+  return render(
+    <PaylasimPenceresi templateName={templateName} setCount={12} durationSeconds={2880} acik onKapat={onKapat} />,
+  );
 }
 
 /** Kullanici kararı: dokununca galeriye mi kaydedilecek yoksa kopyalanacak mi SORULUR. */
@@ -70,11 +72,36 @@ test('beklenmeyen hatada da kullanici bilgilendirilir', async () => {
   expect(screen.getByRole('alert')).toBeTruthy();
 });
 
-/** Kartin kendisi: set sayisi ustte, sure altinda, en altta GRIND (kullanici karari). */
-test('kart set sayisini, sureyi ve GRIND yazisini tasir', async () => {
-  await pencereyiAc();
+/**
+ * #470 (kullanici karari): kart en ustte isim, altinda set, ayni puntoyla altinda sure, en altta
+ * (daha kucuk) dumbbell + GRIND tasir.
+ */
+test('kart ismi, set sayisini, sureyi ve GRIND yazisini tasir', async () => {
+  await pencereyiAc('Push Day');
 
-  expect(screen.getByText('12')).toBeTruthy();
-  expect(screen.getByText('48')).toBeTruthy(); // 2880 sn = 48 dk
+  expect(screen.getByText('Push Day')).toBeTruthy();
+  expect(screen.getByText('12 set')).toBeTruthy();
+  expect(screen.getByText('48 dk')).toBeTruthy(); // 2880 sn = 48 dk
   expect(screen.getByText('GRIND')).toBeTruthy();
+});
+
+/** Sablonsuz antrenmanda (#470) isim yerine "Serbest" gosterilir -- GecmisOzeti ile ayni desen. */
+test('sablon adi yoksa kartta "Serbest" gosterilir', async () => {
+  await pencereyiAc(null);
+
+  expect(screen.getByText('Serbest')).toBeTruthy();
+});
+
+/** #470: set ve sure AYNI puntoda -- ismin kucugu, GRIND'in buyugu olmali. */
+test('set ve sure satirlari ayni punto, isimden kucuk, GRIND satirindan buyuk', async () => {
+  await pencereyiAc('Push Day');
+
+  const isimStili = screen.getByText('Push Day').props.style;
+  const setStili = screen.getByText('12 set').props.style;
+  const sureStili = screen.getByText('48 dk').props.style;
+  const markaStili = screen.getByText('GRIND').props.style;
+
+  expect(setStili.fontSize).toBe(sureStili.fontSize);
+  expect(setStili.fontSize).toBeLessThan(isimStili.fontSize);
+  expect(markaStili.fontSize).toBeLessThan(setStili.fontSize);
 });
