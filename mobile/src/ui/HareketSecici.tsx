@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Check, Search, X } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
+import { useEkranKaydiriciBaglami } from './EkranKaydirici';
 import { useIkonRenk } from './renkler';
 
 /**
@@ -11,6 +12,13 @@ import { useIkonRenk } from './renkler';
  * kategori adlaridir ve iki dilde de ayni, "Diğer" ve "Tümü" cevrilir.
  */
 const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
+
+/**
+ * Oneri listesinin ustten gelen `max-h-64` (256) + `mt-1` (4) kadar yer kapladigi varsayim.
+ * Disari verilir: cagiran taraf (`sonSatirMi` + `onAcikDegisti`) DENK bir sanal bosluk eklerken
+ * kullanir -- iki yerde ayri sayi yazmak (DRY ihlali) kolayca birbirinden kopabilirdi.
+ */
+export const LISTE_YUKSEKLIGI = 260;
 
 interface Props {
   id: string;
@@ -21,6 +29,22 @@ interface Props {
   onSec: (exerciseId: number) => void;
   otomatikOdak?: boolean;
   listeYukari?: boolean;
+  /**
+   * #559 (kullanici karari): liste ASAGI acar (listeYukari ile KARISTIRILMAZ) ama bu alan
+   * ekranin en altina yakinsa oneriler klavyenin altinda kalabilir. true ise acilinca
+   * `EkranKaydiriciBaglami` araciligiyla ScrollView gecici olarak LISTE_YUKSEKLIGI kadar
+   * asagi kaydirilir -- liste boylece klavyenin ustunde tam gorunur. Kaydirmanin gercekten
+   * bir yere gidebilmesi icin cagiran tarafin (bkz. `onAcikDegisti`) DENKLEME GOTURMEDEN,
+   * dropdown'un ANCHOR noktasini ETKILEMEYECEK bir yerde (kendi relative kapsayicisinin
+   * DISINDA) esdeger bir sanal bosluk sağlaması GEREKIR -- bu bilesen boyle bir boslugu
+   * KENDI icinde render ETMEZ: `top-full` (%100) dropdown'un ANCHOR'i olan BU bilesenin
+   * KOK `relative` View'ina gore hesaplanir, o View'in icine EKLENEN herhangi bir sanal
+   * bosluk anchor'u da asagi kaydirip ayni sorunu (kullanici bulgusu: "yine klavyenin
+   * altinda kalmis") yeniden yaratir.
+   */
+  sonSatirMi?: boolean;
+  /** #559: `sonSatirMi` ile birlikte -- liste acilip kapandikca cagiran tarafa bildirir. */
+  onAcikDegisti?: (acik: boolean) => void;
   /**
    * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
    * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
@@ -43,15 +67,33 @@ export default function HareketSecici({
   onSec,
   otomatikOdak = false,
   listeYukari = false,
+  sonSatirMi = false,
+  onAcikDegisti,
   onKapat,
 }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
+  const { asagiKaydir } = useEkranKaydiriciBaglami();
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
   const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
   const alanRef = useRef<TextInput>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
+
+  // #559: liste acilinca ScrollView'e gecici yer acilir (asagi kayar); cagiran taraf
+  // `onAcikDegisti` ile haberdar edilip DENK bir sanal bosluk ekler (bkz. yukaridaki not --
+  // bosluk BURADA degil, dropdown'un anchor'ini etkilemeyecek bir yerde olmali).
+  useEffect(() => {
+    onAcikDegisti?.(acik);
+  }, [acik, onAcikDegisti]);
+
+  useEffect(() => {
+    if (!sonSatirMi || !acik) {
+      return;
+    }
+    asagiKaydir(LISTE_YUKSEKLIGI);
+    return () => asagiKaydir(-LISTE_YUKSEKLIGI);
+  }, [acik, sonSatirMi, asagiKaydir]);
 
   const eslesenler = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
   // Eslesme yoksa yazim hatasi olabilir: benzeyenler "Bunu mu demek istediniz?" altinda sunulur (#231).
@@ -122,6 +164,7 @@ export default function HareketSecici({
 
       {acik && (
         <View
+          testID={`${id}-liste`}
           // `mb-4`: yukari acilan liste, arama kutusunu saran KARTIN (p-3 = 12px dolgu) da ustunden
           // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
           className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'}`}

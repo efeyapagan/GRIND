@@ -23,7 +23,7 @@ import Hap from '../ui/Hap';
 import HataKutusu from '../ui/HataKutusu';
 import IkincilDugme from '../ui/IkincilDugme';
 import IkonDugmesi from '../ui/IkonDugmesi';
-import HareketSecici from '../ui/HareketSecici';
+import HareketSecici, { LISTE_YUKSEKLIGI } from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
 import SurukleSiraliListe from '../ui/SurukleSiraliListe';
 import { useIkonRenk } from '../ui/renkler';
@@ -95,6 +95,17 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [silmeOnayi, setSilmeOnayi] = useState(false);
   const [silmeHatasi, setSilmeHatasi] = useState<string | null>(null);
+  /**
+   * #559 (kullanici karari): en son satirin hareket secicisi acikken ScrollView'e gecici bir
+   * sanal bosluk eklenir -- oneri listesinin klavyenin ustunde sigmasi icin. Bosluk BURADA, formun
+   * EN SONUNDA (hicbir kartin icinde DEGIL) render edilir: HareketSecici'nin kendi `relative`
+   * kapsayicisinin icine konsaydi, dropdown'un `top-full` (%100) anchor'i o kapsayicinin TOPLAM
+   * yuksekligine gore hesaplandigi icin dropdown'un kendisini de asagi iter, aynen klavyenin
+   * altinda kalma sorununu YENIDEN yaratirdi (kullanici bulgusu: "yine klavyenin altinda kalmis").
+   * Boslugun BURADA olmasi ayrica hicbir hareket KARTININ gorunurde uzamamasini saglar (kullanici
+   * karari: "hareket kartlarinin uzamasini istemiyorum").
+   */
+  const [sonSatirAcik, setSonSatirAcik] = useState(false);
 
   const secilenIdler = new Set(satirlar.map((satir) => satir.exerciseId));
   const eklenebilirEgzersiz = siraliEgzersizler.find((eg) => !secilenIdler.has(eg.id));
@@ -256,6 +267,13 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
             <HareketSatiri
               satir={satir}
               sira={satirlar.indexOf(satir) + 1}
+              // #559 (kullanici bildirdi, ikinci bulgu): en sondaki satirin hareket adi girilirken
+              // asagi acilan oneri listesinin son 1-2 secenegi klavyenin altinda/disinda kaliyordu --
+              // asagida yeterli yer yoktu. Yalnizca EN SON satir acilinca ScrollView'e gecici yer
+              // acilir (HareketSecici/EkranKaydiriciBaglami, kullanici karari: liste yine asagi
+              // acar, ekran ihtiyac aninda -- yani liste acikken -- kayar).
+              sonSatirMi={satirlar.indexOf(satir) === satirlar.length - 1}
+              onSonSatirAcikDegisti={setSonSatirAcik}
               suruklenen={suruklenen}
               egzersizler={siraliEgzersizler}
               baskaSatirdaSecilenler={
@@ -312,6 +330,10 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
           )}
         </View>
       )}
+
+      {/* #559: sanal bosluk -- yalnizca EN SON satirin hareket secicisi acikken var, formun
+          TAMAMEN disinda/sonunda durur (hicbir kart gorunurde uzamaz, kullanici karari). */}
+      {sonSatirAcik && <View testID="sanal-bosluk" style={{ height: LISTE_YUKSEKLIGI }} />}
     </View>
   );
 }
@@ -321,6 +343,10 @@ interface HareketSatiriProps {
   sira: number;
   /** #407: parmagin altindaki satir -- kenarligi vurgulanir. */
   suruklenen: boolean;
+  /** #559: bu satirda asagida yeterli yer olmayabilir -- hareket secici acilinca ScrollView'e gecici yer acar. */
+  sonSatirMi: boolean;
+  /** #559: yalnizca `sonSatirMi` satira iletilir -- SablonFormu'daki sanal boslugu acip kapatir. */
+  onSonSatirAcikDegisti: (acik: boolean) => void;
   egzersizler: Egzersiz[];
   baskaSatirdaSecilenler: Set<number>;
   setHatasi?: string;
@@ -334,6 +360,8 @@ function HareketSatiri({
   satir,
   sira,
   suruklenen,
+  sonSatirMi,
+  onSonSatirAcikDegisti,
   egzersizler,
   baskaSatirdaSecilenler,
   setHatasi,
@@ -378,6 +406,8 @@ function HareketSatiri({
           secilenAd={satir.exerciseName}
           devreDisiIdler={baskaSatirdaSecilenler}
           onSec={onEgzersiz}
+          sonSatirMi={sonSatirMi}
+          onAcikDegisti={sonSatirMi ? onSonSatirAcikDegisti : undefined}
         />
       </View>
 
