@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, FlatList } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Brain, ChevronDown, ChevronRight, Lightbulb, Sparkles, Trash2, TriangleAlert, Trophy } from 'lucide-react-native';
-import { useDil } from '@grind/shared/i18n';
+import { useDil, type Dil } from '@grind/shared/i18n';
 import {
   useDeleteInsight,
   useGenerateInsight,
@@ -233,7 +233,9 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
         )}
       </View>
       {/* #463: tercih cozulmeden cizmeyiz -- yoksa ilk kare arayuz diliyle cizilip degisiyor. */}
-      {acik && hazir && <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} />}
+      {acik && hazir && (
+        <YorumGovdesi icerik={yorumuCozumle(yorumMetni(yorum, yorumDili))} yorumDili={yorumDili} />
+      )}
     </CamKart>
   );
 }
@@ -241,9 +243,16 @@ function YorumKarti({ yorum, acik, onAcKapat, onayAcik, onSilmeyeBasla, onVazgec
 /**
  * Yorumun govdesi (#454). Yapisal yanit ozet + uc gruba ayrilir; cozumlenemeyen her sey (eski
  * markdown kayitlar, bozuk JSON) DUZ METIN olarak cizilir -- yorum asla kaybolmaz.
+ *
+ * #543 (kullanici bildirdi): bolum basliklari ("İyi gidenler"/"Dikkat"/"Öneriler") ve "okunamadi"
+ * yer tutucusu yorumun bir PARCASI sayilir ve YORUM dilini izlemeli -- arayuz dilini DEGIL. Once
+ * `useTranslation()`in global `t`'si kullaniliyordu: arayuz Ingilizce, yorum Turkce secilince govde
+ * (AI'nin urettigi) dogru dilde geliyor ama basliklar Ingilizce kaliyordu. `i18n.getFixedT(yorumDili)`
+ * iki dilin de kaynagi zaten bellekte oldugu icin (bkz. i18n.ts) ek bir sey gerektirmez.
  */
-function YorumGovdesi({ icerik }: { icerik: YorumIcerigi }) {
-  const { t } = useTranslation();
+function YorumGovdesi({ icerik, yorumDili }: { icerik: YorumIcerigi; yorumDili: Dil }) {
+  const { i18n } = useTranslation();
+  const t = i18n.getFixedT(yorumDili);
   const ikonRenk = useIkonRenk();
 
   if (icerik.bicim === 'duz') {
