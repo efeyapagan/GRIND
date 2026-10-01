@@ -14,11 +14,21 @@ import { useIkonRenk } from './renkler';
 const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
 
 /**
- * Oneri listesinin ustten gelen `max-h-64` (256) + `mt-1` (4) kadar yer kapladigi varsayim.
- * Disari verilir: cagiran taraf (`sonSatirMi` + `onAcikDegisti`) DENK bir sanal bosluk eklerken
- * kullanir -- iki yerde ayri sayi yazmak (DRY ihlali) kolayca birbirinden kopabilirdi.
+ * Oneri listesinin yuksekligi: kullanici ilk acilista TAM 4 sonuc satiri gormek istedi (daha
+ * once `max-h-64`=256 ile ~4.5 satir gorunup son satir yarim kesiliyordu). Kategori satiri
+ * (p-1 dolgu + min-h-11 hap + border-b) 53, her sonuc satiri (min-h-11) 44 -- 53 + 4*44 = 229.
  */
-export const LISTE_YUKSEKLIGI = 260;
+const KATEGORI_SATIRI_YUKSEKLIGI = 53;
+const SONUC_SATIRI_YUKSEKLIGI = 44;
+const GORUNUR_SONUC_SAYISI = 4;
+const LISTE_ICERIK_YUKSEKLIGI = KATEGORI_SATIRI_YUKSEKLIGI + GORUNUR_SONUC_SAYISI * SONUC_SATIRI_YUKSEKLIGI;
+
+/**
+ * Oneri listesinin ustten gelen `LISTE_ICERIK_YUKSEKLIGI` + `mt-1` (4) kadar yer kapladigi
+ * varsayim. Disari verilir: cagiran taraf (`sonSatirMi` + `onAcikDegisti`) DENK bir sanal bosluk
+ * eklerken kullanir -- iki yerde ayri sayi yazmak (DRY ihlali) kolayca birbirinden kopabilirdi.
+ */
+export const LISTE_YUKSEKLIGI = LISTE_ICERIK_YUKSEKLIGI + 4;
 
 interface Props {
   id: string;
@@ -79,6 +89,14 @@ export default function HareketSecici({
   const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
   const alanRef = useRef<TextInput>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
+  /**
+   * Henuz hic hareket secilmemis satir (#559, kullanici bildirdi): "45 Back Focused..." gibi
+   * GERCEK bir ad degil, silik renkte genel bir yer tutucu gorunmeli -- `secilenAd` boşsa hem
+   * KAPALIYKEN (yer tutucu `value` bos oldugu icin kendiliginden gorunur) hem de ARARKEN
+   * (henuz sorgu yazilmamissa) ayni genel metin kullanilir. `secilenAd` DOLUYSA ararken onu
+   * yer tutucu yapma davranisi (mevcut, degismedi) -- kullanici o anki secimini hatirlar.
+   */
+  const yerTutucu = secilenAd || t('antrenman.hareketAra');
 
   // #559: liste acilinca ScrollView'e gecici yer acilir (asagi kayar); cagiran taraf
   // `onAcikDegisti` ile haberdar edilip DENK bir sanal bosluk ekler (bkz. yukaridaki not --
@@ -134,7 +152,7 @@ export default function HareketSecici({
           autoCorrect={false}
           autoFocus={otomatikOdak}
           value={acik ? sorgu : secilenAd}
-          placeholder={acik ? secilenAd : undefined}
+          placeholder={yerTutucu}
           placeholderTextColor={ikonRenk.muted}
           onFocus={ac}
           // Disariya (bu bilesenin DISINDA herhangi bir yere) dokununca acilir-liste kapanir --
@@ -169,7 +187,11 @@ export default function HareketSecici({
           // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
           className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'}`}
         >
-          <ScrollView keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} className="max-h-64">
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            stickyHeaderIndices={[0]}
+            style={{ maxHeight: LISTE_ICERIK_YUKSEKLIGI }}
+          >
             <View className="flex-row flex-wrap gap-1 rounded-t-lg border-b border-surface-4 bg-surface-3 p-1">
               {KATEGORILER.map((deger) => (
                 <Pressable

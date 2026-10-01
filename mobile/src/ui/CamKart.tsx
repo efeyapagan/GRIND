@@ -15,6 +15,12 @@ interface Props {
    * kartin boyunu cokertebilir, bu yuzden karar cagiranin.
    */
   disClassName?: string;
+  /**
+   * #559 (sablon formu liquid glass donusumu): surukleme/odak gibi durumlarda varsayilan soluk
+   * (`fg` opacity-10) sac teli kenarligin yerine belirgin, TAM opak `accent` kenarlik cizilir --
+   * `SablonKarti`/`HareketKartlari`daki `border-accent` vurgusuyla ayni fikir, cam yuzeyde de.
+   */
+  vurguluKenar?: boolean;
   children: React.ReactNode;
 }
 

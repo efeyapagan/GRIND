@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
-import HareketSecici from './HareketSecici';
+import HareketSecici, { LISTE_YUKSEKLIGI } from './HareketSecici';
 import { EkranKaydiriciBaglami } from './EkranKaydirici';
 import type { Egzersiz } from '@grind/shared/api/queries';
 
@@ -23,6 +23,65 @@ test('yazim hatasinda Bunu mu demek istediniz? onerisi gosterilir ve dokununca s
   await fireEvent.press(screen.getByText('Squat'));
 
   expect(onSec).toHaveBeenCalledWith(3);
+});
+
+// ---- Secilmemis satirda silik yer tutucu (#559 ucuncu bulgu) ----
+
+/**
+ * #559 (kullanici bildirdi): yeni eklenen bir hareket satiri sanki GERCEK bir ad yaziliymis gibi
+ * goruluyordu (otomatik secilen ilk hareketin adi). `secilenAd` bos ise (henuz secim yok) alan
+ * artik genel, silik bir yer tutucu gosterir -- hem kapaliyken hem ararken (henuz yazilmadiysa).
+ */
+test('secilenAd bosken kapali alanda silik "Hareket ara" yer tutucusu gorunur', async () => {
+  const onSec = jest.fn();
+  await render(<HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={0} secilenAd="" onSec={onSec} />);
+
+  expect(screen.getByTestId('secici').props.placeholder).toBe('Hareket ara');
+  expect(screen.getByTestId('secici').props.value).toBe('');
+});
+
+test('secilenAd bosken ararken de ayni yer tutucu gorunur, yazilinca sorguya gecer', async () => {
+  const onSec = jest.fn();
+  await render(<HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={0} secilenAd="" onSec={onSec} />);
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+  expect(screen.getByTestId('secici').props.placeholder).toBe('Hareket ara');
+
+  await fireEvent.changeText(screen.getByTestId('secici'), 'ben');
+  expect(screen.getByTestId('secici').props.value).toBe('ben');
+});
+
+/** Mevcut bir secim varsa (eski davranis AYNEN kalir): ararken yer tutucu o secimi hatirlatir. */
+test('secilenAd doluyken ararken yer tutucu mevcut secimi gosterir', async () => {
+  const onSec = jest.fn();
+  await render(
+    <HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={1} secilenAd="Bench Press" onSec={onSec} />,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  expect(screen.getByTestId('secici').props.placeholder).toBe('Bench Press');
+});
+
+// ---- Oneri listesi tam 4 satir gosterir (#559 dorduncu bulgu) ----
+
+/**
+ * #559 (kullanici bildirdi: "4.5 gözüküyor"): `max-h-64` (256) kategori satirinin ustune ~4.5
+ * sonuc satiri sigdiriyordu, son satir yarim kesiliyordu. Liste artik TAM 4 sonuc satirina gore
+ * olculenmis bir yukseklik kullanir; `LISTE_YUKSEKLIGI` (disari verilen sabit, mt-1 dahil) ile
+ * ScrollView'in kendi ic yuksekligi (mt-1 HARIC) ayni kaynaktan gelir -- iki sayi birbirinden
+ * kopamaz.
+ */
+test('oneri listesinin ic ScrollView yuksekligi LISTE_YUKSEKLIGI eksi mt-1 kadardir', async () => {
+  const onSec = jest.fn();
+  await render(
+    <HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={1} secilenAd="Bench Press" onSec={onSec} />,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  const ic = screen.getByTestId('secici-liste').props.children.props;
+  expect(ic.style.maxHeight).toBe(LISTE_YUKSEKLIGI - 4);
 });
 
 // ---- Oneri listesinin acilma yonu (#559) ----
@@ -90,11 +149,11 @@ test('sonSatirMi ile liste acilinca asagi kaydirma istenir, kapaninca geri alini
   await fireEvent(screen.getByTestId('secici'), 'focus');
 
   expect(screen.getByTestId('secici-liste').props.className).toContain('top-full');
-  expect(asagiKaydir).toHaveBeenCalledWith(260);
+  expect(asagiKaydir).toHaveBeenCalledWith(233);
 
   await fireEvent(screen.getByTestId('secici'), 'blur');
 
-  expect(asagiKaydir).toHaveBeenCalledWith(-260);
+  expect(asagiKaydir).toHaveBeenCalledWith(-233);
 });
 
 test('sonSatirMi verilmezse liste acilinca asagi kaydirma istenmez', async () => {

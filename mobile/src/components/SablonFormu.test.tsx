@@ -113,8 +113,8 @@ test('her iki satirin hareket secicisi de asagi acar, yalnizca en son satir acil
 
   await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'focus');
   expect(screen.getByTestId('hareket-1-egzersiz-liste').props.className).toContain('top-full');
-  // max-h-64 (256) + mt-1 (4) = 260 (HareketSecici'deki LISTE_YUKSEKLIGI).
-  expect(asagiKaydir).toHaveBeenCalledWith(260);
+  // kategori satiri (53) + 4 sonuc satiri (4*44=176) + mt-1 (4) = 233 (HareketSecici'deki LISTE_YUKSEKLIGI).
+  expect(asagiKaydir).toHaveBeenCalledWith(233);
 });
 
 /**
@@ -153,4 +153,44 @@ test('sanal bosluk yalnizca en son satirin listesi acikken formun sonunda beliri
   // ...kapaninca kaybolur.
   await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'blur');
   expect(screen.queryByTestId('sanal-bosluk')).toBeNull();
+});
+
+// ---- Yeni satir SECILMEMIS baslar (#559 ucuncu bulgu) ----
+
+/**
+ * #559 (kullanici bildirdi): "Hareket ekle"ye basinca ILK UYGUN hareket otomatik SECILIYORDU --
+ * kullanici bunu "sanki ... yaziyormus gibi" gercek bir secim sandi. Yeni satir artik tamamen
+ * SECILMEMIS baslar: silik "Hareket ara" yer tutucusu gorunur, gercek bir hareket adi DEGIL.
+ */
+test('Hareket ekle basilinca yeni satir secilmemis baslar, gercek bir ad otomatik gorunmez', async () => {
+  (useExercises as jest.Mock).mockReturnValue({
+    data: [
+      { id: 1, name: 'Bench Press', category: 'Push' },
+      { id: 2, name: 'Squat', category: 'Legs' },
+    ],
+  });
+  await render(<SablonFormu sablon={{ ...sablon, exercises: [] }} donusYolu="/templates" />);
+
+  await fireEvent.press(screen.getByText('Hareket ekle'));
+
+  expect(screen.getByTestId('hareket-0-egzersiz').props.value).toBe('');
+  expect(screen.getByTestId('hareket-0-egzersiz').props.placeholder).toBe('Hareket ara');
+  expect(screen.queryByText('Bench Press')).toBeNull();
+});
+
+/** Secilmemis bir satirla Kaydet'e basinca hata gosterilir, kaydetme GONDERILMEZ. */
+test('hareket secilmeden kaydedilmeye calisilirsa hata gosterilir, API cagrilmaz', async () => {
+  (useExercises as jest.Mock).mockReturnValue({
+    data: [{ id: 1, name: 'Bench Press', category: 'Push' }],
+  });
+  const olustur = jest.fn();
+  (useCreateTemplate as jest.Mock).mockReturnValue({ mutateAsync: olustur, isPending: false });
+  await render(<SablonFormu sablon={null} donusYolu="/templates" />);
+
+  await fireEvent.changeText(screen.getByLabelText('Şablon adı'), 'Push Day');
+  await fireEvent.press(screen.getByText('Hareket ekle'));
+  await fireEvent.press(screen.getByText('Kaydet'));
+
+  expect(screen.getByText('Bir hareket seç.')).toBeTruthy();
+  expect(olustur).not.toHaveBeenCalled();
 });
