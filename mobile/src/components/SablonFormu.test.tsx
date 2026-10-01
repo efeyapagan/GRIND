@@ -73,3 +73,32 @@ test('yeni sablon olustururken (sablon null) paylasim kontrolu gorunmez', async 
 
   expect(screen.queryByText('Bu şablonu paylaş')).toBeNull();
 });
+
+/**
+ * #559 (kullanici bildirdi, ikinci bulgu): en sondaki hareketin adini girerken asagi acilan oneri
+ * listesinin son 1-2 secenegi klavyenin altinda kaliyordu -- asagida yeterli yer yoktu. Yalnizca
+ * EN SON satir yukari acmali (HareketEklePaneli'ndeki ayni cozum, #62); digerleri eskisi gibi asagi.
+ */
+test('yalnizca en son satirin hareket secicisi yukari acar', async () => {
+  (useExercises as jest.Mock).mockReturnValue({
+    data: [
+      { id: 1, name: 'Bench Press', category: 'Push' },
+      { id: 2, name: 'Squat', category: 'Legs' },
+      { id: 3, name: 'Pull Up', category: 'Pull' },
+    ],
+  });
+  const ikiHareketliSablon = {
+    ...sablon,
+    exercises: [
+      { exerciseId: 1, exerciseName: 'Bench Press', category: 'Push' as const, isArchived: false, plannedSets: 3, restSeconds: 90 },
+      { exerciseId: 2, exerciseName: 'Squat', category: 'Legs' as const, isArchived: false, plannedSets: 3, restSeconds: 90 },
+    ],
+  };
+  await render(<SablonFormu sablon={ikiHareketliSablon} donusYolu="/templates" />);
+
+  await fireEvent(screen.getByTestId('hareket-0-egzersiz'), 'focus');
+  expect(screen.getByTestId('hareket-0-egzersiz-liste').props.className).toContain('top-full');
+
+  await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'focus');
+  expect(screen.getByTestId('hareket-1-egzersiz-liste').props.className).toContain('bottom-full');
+});

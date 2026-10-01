@@ -23,3 +23,41 @@ test('yazim hatasinda Bunu mu demek istediniz? onerisi gosterilir ve dokununca s
 
   expect(onSec).toHaveBeenCalledWith(3);
 });
+
+// ---- Oneri listesinin acilma yonu (#559) ----
+
+/**
+ * #559 (kullanici bildirdi, ikinci bulgu): sablon formunda en sondaki hareketin adini girerken
+ * asagi acilan oneri listesinin son 1-2 secenegi klavyenin altinda kaliyordu -- asagida yeterli
+ * yer yoktu. `listeYukari` verilmezse varsayilan asagi acar (mevcut davranis, cogu satir icin dogru).
+ */
+test('listeYukari verilmezse oneri listesi asagi acar', async () => {
+  const onSec = jest.fn();
+  await render(
+    <HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={1} secilenAd="Bench Press" onSec={onSec} />,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  expect(screen.getByTestId('secici-liste').props.className).toContain('top-full');
+  expect(screen.getByTestId('secici-liste').props.className).not.toContain('bottom-full');
+});
+
+test('listeYukari verilince oneri listesi yukari acar', async () => {
+  const onSec = jest.fn();
+  await render(
+    <HareketSecici
+      id="secici"
+      egzersizler={EGZERSIZLER}
+      secilenId={1}
+      secilenAd="Bench Press"
+      onSec={onSec}
+      listeYukari
+    />,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  expect(screen.getByTestId('secici-liste').props.className).toContain('bottom-full');
+  expect(screen.getByTestId('secici-liste').props.className).not.toContain('top-full');
+});

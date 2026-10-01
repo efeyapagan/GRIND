@@ -122,6 +122,7 @@ export default function HareketSecici({
 
       {acik && (
         <View
+          testID={`${id}-liste`}
           // `mb-4`: yukari acilan liste, arama kutusunu saran KARTIN (p-3 = 12px dolgu) da ustunden
           // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
           className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'}`}
