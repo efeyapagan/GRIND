@@ -6,6 +6,7 @@ import {
   useDeleteTemplate,
   useUpdateTemplateSharing,
 } from '@grind/shared/api/queries';
+import { EkranKaydiriciBaglami } from '../ui/EkranKaydirici';
 import SablonFormu from './SablonFormu';
 
 jest.mock('@grind/shared/api/queries', () => ({
@@ -79,7 +80,12 @@ test('yeni sablon olustururken (sablon null) paylasim kontrolu gorunmez', async 
  * listesinin son 1-2 secenegi klavyenin altinda kaliyordu -- asagida yeterli yer yoktu. Yalnizca
  * EN SON satir yukari acmali (HareketEklePaneli'ndeki ayni cozum, #62); digerleri eskisi gibi asagi.
  */
-test('yalnizca en son satirin hareket secicisi yukari acar', async () => {
+/**
+ * #559 (kullanici karari, ikinci duzeltme): liste TUM satirlarda asagi acar (tutarli gorunum) --
+ * yalnizca EN SON satir acilinca, onun oneri listesinin klavyenin altinda kalmamasi icin
+ * ScrollView'e `asagiKaydir` ile gecici yer acilmasi ISTENIR (ihtiyac aninda, yani liste acikken).
+ */
+test('her iki satirin hareket secicisi de asagi acar, yalnizca en son satir acilinca scroll istenir', async () => {
   (useExercises as jest.Mock).mockReturnValue({
     data: [
       { id: 1, name: 'Bench Press', category: 'Push' },
@@ -94,11 +100,19 @@ test('yalnizca en son satirin hareket secicisi yukari acar', async () => {
       { exerciseId: 2, exerciseName: 'Squat', category: 'Legs' as const, isArchived: false, plannedSets: 3, restSeconds: 90 },
     ],
   };
-  await render(<SablonFormu sablon={ikiHareketliSablon} donusYolu="/templates" />);
+  const asagiKaydir = jest.fn();
+  await render(
+    <EkranKaydiriciBaglami.Provider value={{ asagiKaydir }}>
+      <SablonFormu sablon={ikiHareketliSablon} donusYolu="/templates" />
+    </EkranKaydiriciBaglami.Provider>,
+  );
 
   await fireEvent(screen.getByTestId('hareket-0-egzersiz'), 'focus');
   expect(screen.getByTestId('hareket-0-egzersiz-liste').props.className).toContain('top-full');
+  expect(asagiKaydir).not.toHaveBeenCalled();
 
   await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'focus');
-  expect(screen.getByTestId('hareket-1-egzersiz-liste').props.className).toContain('bottom-full');
+  expect(screen.getByTestId('hareket-1-egzersiz-liste').props.className).toContain('top-full');
+  // max-h-64 (256) + mt-1 (4) = 260 (HareketSecici'deki LISTE_YUKSEKLIGI).
+  expect(asagiKaydir).toHaveBeenCalledWith(260);
 });

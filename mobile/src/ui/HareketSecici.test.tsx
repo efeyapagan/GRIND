@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import HareketSecici from './HareketSecici';
+import { EkranKaydiriciBaglami } from './EkranKaydirici';
 import type { Egzersiz } from '@grind/shared/api/queries';
 
 const EGZERSIZLER: Egzersiz[] = [
@@ -60,4 +61,52 @@ test('listeYukari verilince oneri listesi yukari acar', async () => {
 
   expect(screen.getByTestId('secici-liste').props.className).toContain('bottom-full');
   expect(screen.getByTestId('secici-liste').props.className).not.toContain('top-full');
+});
+
+// ---- Son satirda gecici kaydirma payi (#559 ikinci duzeltme) ----
+
+/**
+ * #559 (kullanici karari): `sonSatirMi` ile liste yine ASAGI acar (yon degismez) ama acilinca
+ * `EkranKaydiriciBaglami.asagiKaydir` cagrilir -- ScrollView'e, listenin klavyenin ustunde tam
+ * gorunmesi icin gecici yer acilir. Kapaninca (blur) ayni miktar GERI alinir -- sanal bosluk
+ * yalnizca ihtiyac aninda var olur.
+ */
+test('sonSatirMi ile liste acilinca asagi kaydirma istenir, kapaninca geri alinir', async () => {
+  const onSec = jest.fn();
+  const asagiKaydir = jest.fn();
+  await render(
+    <EkranKaydiriciBaglami.Provider value={{ asagiKaydir }}>
+      <HareketSecici
+        id="secici"
+        egzersizler={EGZERSIZLER}
+        secilenId={1}
+        secilenAd="Bench Press"
+        onSec={onSec}
+        sonSatirMi
+      />
+    </EkranKaydiriciBaglami.Provider>,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  expect(screen.getByTestId('secici-liste').props.className).toContain('top-full');
+  expect(asagiKaydir).toHaveBeenCalledWith(260);
+
+  await fireEvent(screen.getByTestId('secici'), 'blur');
+
+  expect(asagiKaydir).toHaveBeenCalledWith(-260);
+});
+
+test('sonSatirMi verilmezse liste acilinca asagi kaydirma istenmez', async () => {
+  const onSec = jest.fn();
+  const asagiKaydir = jest.fn();
+  await render(
+    <EkranKaydiriciBaglami.Provider value={{ asagiKaydir }}>
+      <HareketSecici id="secici" egzersizler={EGZERSIZLER} secilenId={1} secilenAd="Bench Press" onSec={onSec} />
+    </EkranKaydiriciBaglami.Provider>,
+  );
+
+  await fireEvent(screen.getByTestId('secici'), 'focus');
+
+  expect(asagiKaydir).not.toHaveBeenCalled();
 });
