@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { ScrollView, useWindowDimensions } from 'react-native';
+import { FlatList, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -84,6 +84,11 @@ interface Durum {
  *
  * Jest callback'leri `runOnJS(true)` ile JS thread'inde calisir; surukleme durumu bir ref'te durur
  * ki onceki cizimden kalmis bir jest de guncel durumu gorsun.
+ *
+ * #556 (kullanici bildirdi: cok sayida sablonla kasma): konteyner duz bir `ScrollView`+`.map()`
+ * DEGIL `FlatList` -- ekran disindaki kartlar hic mount edilmez, her kartin surekli calisan figur
+ * animasyonu (`SablonFiguru`) boylece sablon sayisindan BAGIMSIZ sabit kalir. Surukleme/kenar
+ * kaydirma mantigi DEGISMEDI, yalnizca konteyner ve `scrollTo` -> `scrollToOffset` degisti.
  */
 export default function SablonKaruseli({
   sablonlar,
@@ -101,7 +106,7 @@ export default function SablonKaruseli({
     hedef: useSharedValue(-1),
     oteleme: useSharedValue(0),
   };
-  const kaydirici = useRef<ScrollView>(null);
+  const kaydirici = useRef<FlatList<Sablon>>(null);
   const surukleme = useRef<Surukleme | null>(null);
   const kaydirma = useRef(0);
   const enFazlaKaydirma = useRef(0);
@@ -190,7 +195,7 @@ export default function SablonKaruseli({
         return;
       }
       kaydirma.current = yeni;
-      kaydirici.current?.scrollTo({ x: yeni, animated: false });
+      kaydirici.current?.scrollToOffset({ offset: yeni, animated: false });
       otelemeyiGuncelle();
     }, KARE_MS);
   }
@@ -250,7 +255,7 @@ export default function SablonKaruseli({
     const oturan = Math.min(enFazlaKaydirma.current, Math.round(kaydirma.current / sira) * sira);
     if (oturan !== kaydirma.current) {
       kaydirma.current = oturan;
-      kaydirici.current?.scrollTo({ x: oturan, animated: true });
+      kaydirici.current?.scrollToOffset({ offset: oturan, animated: true });
     }
     durum.oteleme.value = withTiming((hedefIndeks - indeks) * sira, { duration: KAYMA_SURESI_MS }, () => {
       runOnJS(yerlesti)(indeks, hedefIndeks);
@@ -267,8 +272,12 @@ export default function SablonKaruseli({
 
   return (
     // Kartlar ekran kenarina kadar kayar: ebeveynin 16'lik yan boslugu burada geri alinip icerige verilir.
-    <ScrollView
+    // #556: ekran disindaki kartlar FlatList'in pencerelemesiyle hic mount edilmez (bkz. yukaridaki not).
+    <FlatList
       ref={kaydirici}
+      data={sablonlar}
+      keyExtractor={(sablon) => String(sablon.id)}
+      extraData={suruklenen}
       horizontal
       showsHorizontalScrollIndicator={false}
       snapToInterval={sira}
@@ -291,10 +300,8 @@ export default function SablonKaruseli({
       contentContainerClassName="px-4"
       contentContainerStyle={{ gap: aralik, paddingTop: UST_PAY, paddingBottom: ALT_PAY }}
       style={{ marginTop: -UST_PAY, marginBottom: -ALT_PAY }}
-    >
-      {sablonlar.map((sablon, indeks) => (
+      renderItem={({ item: sablon, index: indeks }) => (
         <Kart
-          key={sablon.id}
           indeks={indeks}
           sira={sira}
           durum={durum}
@@ -305,8 +312,8 @@ export default function SablonKaruseli({
         >
           {kartCiz(sablon, () => dokunus(sablon))}
         </Kart>
-      ))}
-    </ScrollView>
+      )}
+    />
   );
 }
 
