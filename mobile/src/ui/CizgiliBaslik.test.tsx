@@ -154,31 +154,29 @@ test('dalga bicimi secilince dalgali cizgi cizilir, genislik yine basliktan geli
   expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(150);
 });
 
-// ---- Sag uc solukluk gradyani (#548) ----
+// ---- Surekli incelme, sicramasiz kalinlik (#548) ----
 
 /**
- * #548 (kullanici bildirdi): cizgi sagda kalinlasarak inceliyordu ama hep TAM opaklikta ani
- * bitiyordu. Govde artik duz renk (hex) degil, bir SVG gradyanina referans veriyor --
- * react-native-svg `url(#id)` stringini `{ brushRef: id, type: 1 }` seklinde cozumler, bu yuzden
- * dogrulama brushRef uzerinden yapilir (duz bir string DEGIL).
+ * #548 (kullanici karari): sondaki soluklasma/seffaflik DENENDI ama kullanici "ben siliklik
+ * istemiyorum sonunda" dedi -- govde her iki bicimde de hep DUZ `accent` rengindedir, bir gradyana
+ * referans vermez. react-native-svg duz renkleri `{ type: 0, payload }` olarak cozumler; bir
+ * gradyan/brush referansi (#548'in ilk denemesindeki gibi) `type: 1` olurdu -- kontrol `type`
+ * uzerinden yapilir (paketlenmis renk int'i uygulama detayi, kirilgan bir birebir esleme degil).
+ * Asil istenen (ayni issue) govde icindeki kalinlik sicramalarinin giderilmesiydi (alttaki testler).
  */
-test('kavis govdesi duz renk degil solukluk gradyanina referans verir', async () => {
+test('kavis govdesi duz renktedir, gradyan ya da seffaflik referansi tasimaz', async () => {
   await render(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
   await olc(200);
 
-  const stroke = screen.getByTestId('cizgi-kavis', gizliDahil).props.stroke;
-  expect(stroke.brushRef).toMatch(/^cizgiSolukluk/);
+  expect(screen.getByTestId('cizgi-kavis', gizliDahil).props.stroke.type).toBe(0);
 });
 
-test('dalga govdesi de ayni bicimde solukluk gradyanina referans verir', async () => {
+test('dalga govdesi de duz renktedir, gradyan ya da seffaflik referansi tasimaz', async () => {
   await render(<CizgiliBaslik cizgi="dalga">Ana sayfa</CizgiliBaslik>);
   await olc(200);
 
-  const stroke = screen.getByTestId('cizgi-dalga', gizliDahil).props.stroke;
-  expect(stroke.brushRef).toMatch(/^cizgiSolukluk/);
+  expect(screen.getByTestId('cizgi-dalga', gizliDahil).props.stroke.type).toBe(0);
 });
-
-// ---- Surekli incelme, sicramasiz kalinlik (#548 ikinci bulgu) ----
 
 /**
  * #548 (kullanici bildirdi, ilk duzeltme YETERSIZDI): "resmen kalemin ucunu degistirir gibi 2 tane
