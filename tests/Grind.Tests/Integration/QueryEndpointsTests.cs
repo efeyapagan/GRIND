@@ -155,6 +155,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         var client = await AuthenticatedClientAsync();
         var exerciseId = await CreateExerciseAsync(client);
         await PostSetAsync(client, exerciseId, 100m, 8);
+        await AcikOturumuBitirAsync(client);
 
         var ozet = await client.GetFromJsonAsync<VolumeSummaryResponse<DailyVolumeResponse>>(
             "/api/stats/volume/daily", Json);
@@ -187,6 +188,7 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         var client = await AuthenticatedClientAsync();
         var exerciseId = await CreateExerciseAsync(client);
         await PostSetAsync(client, exerciseId, 100m, 8);
+        await AcikOturumuBitirAsync(client);
 
         var takvim = await client.GetFromJsonAsync<CalendarResponse>("/api/stats/calendar", Json);
 
@@ -194,6 +196,27 @@ public class QueryEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindA
         Assert.Equal(1, takvim.CurrentWeekStreak);
         Assert.Equal(1, takvim.LongestWeekStreak);
         Assert.Single(takvim.Days);
+    }
+
+    /// <summary>
+    /// #558: kullanıcı bulgusu -- antrenman yaparken (bitirmeden/kaydetmeden) takvim/seri sayısı
+    /// hemen artıyordu. Kök sebep `GetSessionAggregatesAsync`/`GetTrainedSessionStartsAsync`'in
+    /// yalnızca set var mı diye bakması, oturumun BİTİP BİTMEDİĞİNE hiç bakmamasıydı.
+    /// </summary>
+    [Fact]
+    public async Task Takvim_acik_oturumdaki_seti_saymaz()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        await PostSetAsync(client, exerciseId, 100m, 8);
+        // Oturum BİLEREK bitirilmiyor: kullanıcının "daha kaydetmeden" dediği an bu.
+
+        var takvim = await client.GetFromJsonAsync<CalendarResponse>("/api/stats/calendar", Json);
+
+        Assert.Equal(0, takvim!.TrainedDayCount);
+        Assert.Equal(0, takvim.CurrentWeekStreak);
+        Assert.Equal(0, takvim.LongestWeekStreak);
+        Assert.Empty(takvim.Days);
     }
 
     /// <summary>Issue #73: kapanmış oturumun süresi hem /sessions/open hem stats/duration'da tutarlı.</summary>

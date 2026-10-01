@@ -218,4 +218,42 @@ public class FriendWeeklyEndpointsTests(GrindApiFactory factory) : IClassFixture
         Assert.Equal(0, satir.TrainedDays);
         Assert.False(satir.TrainedToday);
     }
+
+    // ---- Açık (bitmemiş) oturum sayılmaz (#558) ----
+
+    /// <summary>
+    /// Kullanıcı bulgusu: "antrenman yaparken arkadaş sayacında yaptığım antrenman artmıştı bile,
+    /// daha kaydetmeden". Kök sebep: oturum HENÜZ BİTMEMİŞKEN (`EndedAt == null`) bir set girilmesi
+    /// yetiyordu -- yalnızca `SetEntries.Any()` kontrol ediliyordu, `EndedAt` hiç bakılmıyordu.
+    /// </summary>
+    [Fact]
+    public async Task Acik_oturumdaki_set_arkadasi_bugun_antrenman_yapti_diye_isaretlemez()
+    {
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
+        await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
+        await AcikOturumSetliYazAsync(arkadasId, Bugun());
+
+        var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
+
+        Assert.Equal(0, satir.TrainedDays);
+        Assert.False(satir.TrainedToday);
+        Assert.Equal(0, satir.SetCount);
+        Assert.Equal(0m, satir.Volume);
+    }
+
+    /// <summary>Oturum bitirilince (EndedAt dolunca) aynı set normal şekilde sayılır.</summary>
+    [Fact]
+    public async Task Bitirilen_oturumdaki_set_normal_sekilde_sayilir()
+    {
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
+        await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
+        await AntrenmanYazAsync(arkadasId, Bugun());
+
+        var satir = (await ListeleAsync(ben)).Single(s => s.Username == arkadasAd);
+
+        Assert.Equal(1, satir.TrainedDays);
+        Assert.True(satir.TrainedToday);
+    }
 }
