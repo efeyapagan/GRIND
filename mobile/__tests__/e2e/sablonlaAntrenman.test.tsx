@@ -40,6 +40,10 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
   await fireEvent.changeText(await screen.findByLabelText('Şablon adı'), 'Push Day E2E');
   await fireEvent.press(screen.getByRole('button', { name: 'Hareket ekle' }));
   await waitFor(() => expect(screen.getByText('Egzersiz')).toBeTruthy());
+  // #559 (kullanici karari): yeni satir artik SECILMEMIS baslar (silik "Hareket ara" yer
+  // tutucusu) -- eskiden oldugu gibi ilk uygun hareket otomatik secilmiyor, kullanici KENDI secer.
+  await fireEvent(screen.getByTestId('hareket-0-egzersiz'), 'focus');
+  await fireEvent.press(await screen.findByText('Bench Press'));
   await fireEvent.press(screen.getByRole('button', { name: 'Kaydet' }));
 
   // Kayıt sonrası sunucuda şablon gerçekten oluşmuş olmalı.

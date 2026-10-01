@@ -19,6 +19,7 @@ import { VARSAYILAN_DINLENME_SN } from '@grind/shared/lib/dinlenme';
 import { VARSAYILAN_HEDEF_SET, type SablonTaslakHareketi } from '@grind/shared/lib/sablonTaslagi';
 import Alan from '../ui/Alan';
 import BirincilDugme from '../ui/BirincilDugme';
+import CamKart from '../ui/CamKart';
 import Hap from '../ui/Hap';
 import HataKutusu from '../ui/HataKutusu';
 import IkincilDugme from '../ui/IkincilDugme';
@@ -92,6 +93,8 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
 
   const [adHatasi, setAdHatasi] = useState<string | null>(null);
   const [setHatalari, setSetHatalari] = useState<Record<number, string>>({});
+  /** #559: yeni satirlar artik SECILMEMIS baslar -- kaydetmeden once bir hareket secilmis olmali. */
+  const [hareketHatalari, setHareketHatalari] = useState<Record<number, string>>({});
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [silmeOnayi, setSilmeOnayi] = useState(false);
   const [silmeHatasi, setSilmeHatasi] = useState<string | null>(null);
@@ -111,6 +114,10 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
   const eklenebilirEgzersiz = siraliEgzersizler.find((eg) => !secilenIdler.has(eg.id));
 
   function hareketEkle() {
+    // #559 (kullanici bildirdi): daha once ILK UYGUN hareket otomatik SECILIYORDU -- kullanici
+    // bunu gercek bir secim sanabiliyordu ("sanki ... yaziyormus gibi"). Yeni satir artik
+    // SECILMEMIS baslar (exerciseId=0, HareketEklePaneli'ndeki #62 ile ayni sentinel); alan
+    // silik "Hareket ara" yer tutucusunu gosterir, kullanici KENDI secene kadar.
     if (!eklenebilirEgzersiz) {
       return;
     }
@@ -120,8 +127,8 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
       ...onceki,
       {
         anahtar,
-        exerciseId: eklenebilirEgzersiz.id,
-        exerciseName: eklenebilirEgzersiz.name,
+        exerciseId: 0,
+        exerciseName: '',
         isArchived: false,
         plannedSets: String(VARSAYILAN_HEDEF_SET),
         restSeconds: VARSAYILAN_DINLENME_SN,
@@ -145,16 +152,22 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
     const yeniAdHatasi =
       kirpilmisAd.length < 2 || kirpilmisAd.length > 100 ? t('sablonlar.adiGecersiz') : null;
     const yeniSetHatalari: Record<number, string> = {};
+    const yeniHareketHatalari: Record<number, string> = {};
     for (const satir of satirlar) {
       const metin = satir.plannedSets.trim();
       const sayi = Number(metin);
       if (metin === '' || !Number.isInteger(sayi) || sayi < 1 || sayi > 50) {
         yeniSetHatalari[satir.anahtar] = t('sablonlar.hedefSetGecersiz');
       }
+      // #559: exerciseId=0 -- satir eklendi ama henuz bir hareket SECILMEDI.
+      if (satir.exerciseId === 0) {
+        yeniHareketHatalari[satir.anahtar] = t('sablonlar.hareketSecilmedi');
+      }
     }
     setAdHatasi(yeniAdHatasi);
     setSetHatalari(yeniSetHatalari);
-    return yeniAdHatasi === null && Object.keys(yeniSetHatalari).length === 0;
+    setHareketHatalari(yeniHareketHatalari);
+    return yeniAdHatasi === null && Object.keys(yeniSetHatalari).length === 0 && Object.keys(yeniHareketHatalari).length === 0;
   }
 
   async function kaydet() {
@@ -280,6 +293,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
                 new Set(satirlar.filter((diger) => diger.anahtar !== satir.anahtar).map((diger) => diger.exerciseId))
               }
               setHatasi={setHatalari[satir.anahtar]}
+              hareketHatasi={hareketHatalari[satir.anahtar]}
               onEgzersiz={(exerciseId) => egzersizSec(satir.anahtar, exerciseId)}
               onHedefSet={(deger) => satiriGuncelle(satir.anahtar, { plannedSets: deger })}
               onDinlenme={(saniye) => satiriGuncelle(satir.anahtar, { restSeconds: saniye })}
@@ -305,7 +319,8 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
             </Text>
           )}
           {silmeOnayi ? (
-            <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
+            // #559 (liquid glass donusumu): duz bg-surface-2 yerine CamKart.
+            <CamKart className="flex-col gap-3 p-4">
               <Text className="text-body text-fg">
                 {t('sablonlar.silOnayMesaji')}
               </Text>
@@ -321,7 +336,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
                   <IkincilDugme onPress={() => setSilmeOnayi(false)}>{t('ortak.vazgec')}</IkincilDugme>
                 </View>
               </View>
-            </View>
+            </CamKart>
           ) : (
             <Pressable onPress={() => setSilmeOnayi(true)} className="h-12 flex-row items-center justify-center gap-2 rounded-xl">
               <Trash2 color={ikonRenk.danger} size={18} />
@@ -350,6 +365,8 @@ interface HareketSatiriProps {
   egzersizler: Egzersiz[];
   baskaSatirdaSecilenler: Set<number>;
   setHatasi?: string;
+  /** #559: bir hareket secilmemisse (exerciseId=0) gosterilen hata. */
+  hareketHatasi?: string;
   onEgzersiz: (exerciseId: number) => void;
   onHedefSet: (deger: string) => void;
   onDinlenme: (saniye: number) => void;
@@ -365,6 +382,7 @@ function HareketSatiri({
   egzersizler,
   baskaSatirdaSecilenler,
   setHatasi,
+  hareketHatasi,
   onEgzersiz,
   onHedefSet,
   onDinlenme,
@@ -379,10 +397,11 @@ function HareketSatiri({
         (a, b) => a.deger - b.deger,
       );
 
-  // Kenarlik hep cizilir, yalnizca rengi degisir (SablonKarti'ndaki #261 tuzagi).
-  const kenarlik = suruklenen ? 'border-accent' : 'border-transparent';
   return (
-    <View className={`flex-col gap-3 rounded-xl border bg-surface-2 p-4 ${kenarlik}`}>
+    // #559 (liquid glass donusumu, kullanici karari): duz bg-surface-2 yerine CamKart; surukleme
+    // vurgusu artik `vurguluKenar` ile (CamKart'in kendi soluk sac teli kenarinin YERINE belirgin
+    // accent kenarlik).
+    <CamKart className="flex-col gap-3 p-4" vurguluKenar={suruklenen}>
       <View className="flex-row items-center justify-between gap-2">
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           <View className="size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
@@ -409,6 +428,11 @@ function HareketSatiri({
           sonSatirMi={sonSatirMi}
           onAcikDegisti={sonSatirMi ? onSonSatirAcikDegisti : undefined}
         />
+        {hareketHatasi && (
+          <Text accessibilityRole="alert" className="text-label text-danger">
+            {hareketHatasi}
+          </Text>
+        )}
       </View>
 
       <View className="flex-row gap-3">
@@ -437,6 +461,6 @@ function HareketSatiri({
           />
         </View>
       </View>
-    </View>
+    </CamKart>
   );
 }
