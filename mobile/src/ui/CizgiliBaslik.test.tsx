@@ -1,6 +1,13 @@
 import { act, render, screen } from '@testing-library/react-native';
 import CizgiliBaslik from './CizgiliBaslik';
 
+/** `Path` bilesenin host karsiligi -- RNTL agaci yalnizca host dugumlerini gezer (#548 testleri). */
+function cizgiDilimleri() {
+  return screen
+    .getByTestId('baslik-cizgisi', { includeHiddenElements: true })
+    .queryAll((dugum) => dugum.type === 'RNSVGPath');
+}
+
 jest.mock('expo-router', () => ({ useFocusEffect: (geriCagri: () => void) => geriCagri() }));
 
 /**
@@ -169,4 +176,42 @@ test('dalga govdesi de ayni bicimde solukluk gradyanina referans verir', async (
 
   const stroke = screen.getByTestId('cizgi-dalga', gizliDahil).props.stroke;
   expect(stroke.brushRef).toMatch(/^cizgiSolukluk/);
+});
+
+// ---- Surekli incelme, sicramasiz kalinlik (#548 ikinci bulgu) ----
+
+/**
+ * #548 (kullanici bildirdi, ilk duzeltme YETERSIZDI): "resmen kalemin ucunu degistirir gibi 2 tane
+ * gecis noktasi" -- eski 3 sabit parca (3.6 -> 2.4 -> 1.3) arasinda ~1.1-1.2 birimlik ani sicrama
+ * vardi. Govde artik COK sayida ince dilime bolunur; ardisik dilimler arasindaki kalinlik farki
+ * kucuk olmali (eski sicramadan belirgin derecede kucuk) ki goze surekli bir incelme gibi gorunsun.
+ */
+test('kavis govdesi cok sayida dilime boler, ardisik dilimler arasinda ani kalinlik sicramasi olmaz', async () => {
+  await render(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  await olc(200);
+
+  const dilimler = cizgiDilimleri();
+  expect(dilimler.length).toBeGreaterThan(10);
+
+  const kalinliklar = dilimler.map((d) => d.props.strokeWidth as number);
+  for (let i = 1; i < kalinliklar.length; i++) {
+    // Eski 3 parcali tasarimda ardisik fark ~1.1-1.2'ydi; yeni tasarimda cok daha kucuk olmali.
+    expect(Math.abs(kalinliklar[i] - kalinliklar[i - 1])).toBeLessThan(0.5);
+  }
+  // Govde baslangictan sona dogru INCELIR (kalinlasmaz).
+  expect(kalinliklar[0]).toBeGreaterThan(kalinliklar[kalinliklar.length - 1]);
+});
+
+test('dalga govdesi de ayni sekilde cok sayida dilime boler, sicramasiz incelir', async () => {
+  await render(<CizgiliBaslik cizgi="dalga">Ana sayfa</CizgiliBaslik>);
+  await olc(200);
+
+  const dilimler = cizgiDilimleri();
+  expect(dilimler.length).toBeGreaterThan(10);
+
+  const kalinliklar = dilimler.map((d) => d.props.strokeWidth as number);
+  for (let i = 1; i < kalinliklar.length; i++) {
+    expect(Math.abs(kalinliklar[i] - kalinliklar[i - 1])).toBeLessThan(0.5);
+  }
+  expect(kalinliklar[0]).toBeGreaterThan(kalinliklar[kalinliklar.length - 1]);
 });
