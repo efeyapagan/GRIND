@@ -199,6 +199,54 @@ test('kaydedilen sablon yoksa Kaydedilenler basligi gorunmez', async () => {
   expect(screen.queryByText('Kaydedilenler')).toBeNull();
 });
 
+// ---- Son kullanim tarihi (#440) ----
+
+/** #440: 2026-10-23 TR gununde bir Cuma -- formatKisaTarihHaftaGunuyle ile ayni fixture. */
+test('en son kullanilan sablonda "Son: ..." tarihi gosterilir', async () => {
+  useTemplatesMock.mockReturnValue({
+    data: [{ id: 7, name: 'Push Day', exercises: [], lastUsedAt: '2026-10-23T08:00:00Z' }],
+    isLoading: false,
+    isError: false,
+  });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getByText('Son: Cum, 23 Eki')).toBeTruthy();
+});
+
+test('hic kullanilmamis sablonda "Henuz kullanilmadi" gosterilir', async () => {
+  useTemplatesMock.mockReturnValue({
+    data: [{ id: 7, name: 'Push Day', exercises: [], lastUsedAt: null }],
+    isLoading: false,
+    isError: false,
+  });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getByText('Henüz kullanılmadı')).toBeTruthy();
+});
+
+// ---- Karusel virtualization (#556) ----
+
+/**
+ * #556 (kullanici bildirdi): karusel duz bir ScrollView+.map() ile TUM kartlari sablon sayisindan
+ * BAGIMSIZ olarak ayni anda mount ediyordu -- her kartin surekli calisan figur animasyonu birlikte
+ * kasmaya yol aciyordu. FlatList'e gecince ekran disindaki kartlar ilk cizimde hic mount edilmez;
+ * bu test `.map()`e geri donulmesinin regresyonunu yakalar.
+ */
+test('cok sayida sablon varken karusel hepsini aninda mount etmez', async () => {
+  const cokSablon = Array.from({ length: 15 }, (_, i) => ({
+    id: i + 1,
+    name: `Sablon ${i + 1}`,
+    exercises: [],
+  }));
+  useTemplatesMock.mockReturnValue({ data: cokSablon, isLoading: false, isError: false });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getAllByRole('button', { name: 'Başla' }).length).toBeLessThan(cokSablon.length);
+});
+
 /**
  * #467 final review: backend ReorderAsync kullanicinin TUM sablonlarinin (kendi + kaydedilen) id
  * kumesini birebir bekler. Karuseldeki surukleme yalnizca kendi sablonlarini gonderirse, kullanicinin

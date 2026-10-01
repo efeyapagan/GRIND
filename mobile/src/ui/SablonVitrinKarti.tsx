@@ -2,6 +2,8 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
 import Svg, { Line } from 'react-native-svg';
+import { useDil } from '@grind/shared/i18n';
+import { formatKisaTarihHaftaGunuyle } from '@grind/shared/lib/format';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import BirincilDugme from './BirincilDugme';
 import CamYuzey from './CamYuzey';
@@ -26,6 +28,8 @@ interface Props {
   ref?: React.Ref<View>;
   /** Menu acikken karuseldeki kart saklanir: onizleme onun yerinden kalkar. */
   gizli?: boolean;
+  /** #440: bu sablonla en son baslatilan antrenmanin zamani; hic yoksa null. */
+  lastUsedAt: string | null;
 }
 
 /** Kartin ortasinda figurun arkasinda duran silik kare izgara. */
@@ -63,8 +67,10 @@ export default function SablonVitrinKarti({
   disabled,
   ref,
   gizli = false,
+  lastUsedAt,
 }: Props) {
   const { t } = useTranslation();
+  const dil = useDil();
   const ikonRenk = useIkonRenk();
   const parlama = useAccentParlama();
 
@@ -111,9 +117,14 @@ export default function SablonVitrinKarti({
           <View className="h-4 w-px bg-surface-4" />
           <Text className="text-body text-fg">{t('setler.setSayisi', { count: ozet.toplamSet })}</Text>
         </View>
-        {/* Son kullanim tarihinin yeri: veri backend'e gelince (#440) bu satira yazilir.
-            Yukseklik simdiden ayrildi ki satir eklenince kart ve karusel kaymasin. */}
-        <View className="mb-3 mt-1 h-5" />
+        {/* #440: yukseklik sabit (h-5) -- hangi satir cizilirse cizilsin kart ve karusel kaymasin. */}
+        <View className="mb-3 mt-1 h-5">
+          <Text numberOfLines={1} className="text-label text-muted">
+            {lastUsedAt
+              ? t('sablonlar.sonKullanim', { tarih: formatKisaTarihHaftaGunuyle(lastUsedAt, dil) })
+              : t('sablonlar.henuzKullanilmadi')}
+          </Text>
+        </View>
 
         <BirincilDugme
           yukseklik="kompakt"

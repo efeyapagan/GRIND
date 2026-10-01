@@ -95,6 +95,17 @@ export function formatKisaTarih(iso: string, dil: Dil): string {
   return `${bul('day')} ${bul('month')}`;
 }
 
+/**
+ * #440: sablon kartindaki "Son: Cum, 23 Eki" satiri icin -- kisa haftagunu + `formatKisaTarih`.
+ * Cihazin yerel gunune gore (`formatKisaTarih` ile ayni).
+ */
+export function formatKisaTarihHaftaGunuyle(iso: string, dil: Dil): string {
+  const haftaGunu = new Intl.DateTimeFormat(dil === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short' }).format(
+    new Date(iso),
+  );
+  return `${haftaGunu}, ${formatKisaTarih(iso, dil)}`;
+}
+
 export function formatWeight(kg: number, dil: Dil): string {
   // TR ondalik ayraci virgul; gereksiz ",0" eklenmez (80 -> "80"), ama 0 gecerli bir
   // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil). Backend Weight'i

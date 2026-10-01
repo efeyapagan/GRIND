@@ -425,6 +425,8 @@ export const tr = {
     sablonKaydedilemedi: 'Şablon kaydedilemedi.',
     arkadasSablonuYok: 'Bu kullanıcının paylaşılan şablonu yok.',
     arkadasSablonlariAlinamadi: 'Şablonlar alınamadı.',
+    sonKullanim: 'Son: {{tarih}}',
+    henuzKullanilmadi: 'Henüz kullanılmadı',
   },
   gecmis: {
     hata: 'Geçmiş alınamadı. Lütfen sayfayı yenileyin.',

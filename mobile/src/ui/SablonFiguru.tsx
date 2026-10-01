@@ -98,20 +98,33 @@ function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<n
  * #474: figur durmaksizin kendi hareketini yapar (Push overhead press, Pull barfiks, Legs squat, Other
  * sirayla curl); pozlar `figurPozu`nda. Cihazda "hareketi azalt" aciksa baslangic karesinde -- #439'daki
  * sabit cizimde -- durur.
+ *
+ * #556 (kullanici bildirdi: cok sayida sablonla kasma): `canli=false` ayni sekilde baslangic
+ * karesinde durur -- cagiran taraf, bu figurun ekranda gorunmedigini/gorunmeyecegini bildigi zaman
+ * (ornegin Kaydedilenler listesinde gorunum disina dusmesi beklenen kartlar) animasyonu hic
+ * baslatmaz. Sablon sayisi arttikca eszamanli calisan animasyon sayisi boylece sabit kalir.
  */
-export default function SablonFiguru({ kategori, boyut }: { kategori: EgzersizKategorisi; boyut: number }) {
+export default function SablonFiguru({
+  kategori,
+  boyut,
+  canli = true,
+}: {
+  kategori: EgzersizKategorisi;
+  boyut: number;
+  canli?: boolean;
+}) {
   const palet = useRenkPaleti();
   const hareketiAzalt = useReducedMotion();
   const p = useSharedValue(0);
 
   useEffect(() => {
-    if (hareketiAzalt) {
+    if (hareketiAzalt || !canli) {
       p.value = 0;
       return;
     }
     p.value = withRepeat(withTiming(1, { duration: YARIM_TUR_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
     return () => cancelAnimation(p);
-  }, [hareketiAzalt, p]);
+  }, [hareketiAzalt, canli, p]);
 
   // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir (Parilti ile ayni).
   const filtreId = `figur${useId().replace(/[^a-zA-Z0-9]/g, '')}`;

@@ -163,6 +163,7 @@ export default function SablonMenusu({ sablon, ozet, kartGenisligi, kaynak, onKa
           onBasla={() => {}}
           onMenu={() => {}}
           disabled={false}
+          lastUsedAt={sablon.lastUsedAt}
         />
       </Animated.View>
 

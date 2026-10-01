@@ -5,6 +5,7 @@ import {
   formatFark,
   formatGoreliTarih,
   formatKisaTarih,
+  formatKisaTarihHaftaGunuyle,
   formatSaat,
   formatTarih,
   formatWeight,
@@ -51,6 +52,12 @@ test('formatKisaTarih gun ve kisa ay adini TR gunune gore verir', () => {
   expect(formatKisaTarih('2026-09-12T08:00:00Z', 'tr')).toBe('12 Eyl');
   // UTC 22:30 -> TR 01:30, ERTESI GUN.
   expect(formatKisaTarih('2026-09-12T22:30:00Z', 'tr')).toBe('13 Eyl');
+});
+
+/** #440: sablon kartindaki "Son: ..." satiri icin -- 2026-10-23 TR gununde bir Cuma. */
+test('formatKisaTarihHaftaGunuyle haftagununu kisa tarihin basina ekler', () => {
+  expect(formatKisaTarihHaftaGunuyle('2026-10-23T08:00:00Z', 'tr')).toBe('Cum, 23 Eki');
+  expect(formatKisaTarihHaftaGunuyle('2026-10-23T08:00:00Z', 'en')).toBe('Fri, 23 Oct');
 });
 
 test('trBugundenOnce TR gununden geriye sayar ve gun sinirini TR saatine gore gecer', () => {
