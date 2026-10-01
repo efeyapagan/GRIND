@@ -418,6 +418,8 @@ export const en: Katalog = {
     sablonKaydedilemedi: 'Could not save the template.',
     arkadasSablonuYok: 'This user has no shared templates.',
     arkadasSablonlariAlinamadi: 'Could not load templates.',
+    sonKullanim: 'Last: {{tarih}}',
+    henuzKullanilmadi: 'Not used yet',
   },
   gecmis: {
     hata: 'Could not load the history. Please refresh the page.',

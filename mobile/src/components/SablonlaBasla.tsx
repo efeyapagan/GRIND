@@ -18,6 +18,13 @@ const KART_ARALIGI = 12;
 const EN_GENIS_KART = 300;
 /** Kart ekranin bu kadarini kaplar; saginda bir sonrakinin ucu gorunur ki kaydirilabildigi belli olsun. */
 const KART_ORANI = 0.72;
+/**
+ * #556: Kaydedilenler listesi dikey bir ScrollView'in (`EkranKaydirici`) icinde kayar --
+ * virtualization orada anti-pattern (iki ic ice ayni yonde VirtualizedList). Bunun yerine ilk
+ * birkac kartin OTESINDEKI figur animasyonu hic baslatilmaz; eszamanli animasyon sayisi boylece
+ * sablon sayisindan BAGIMSIZ sabit kalir.
+ */
+const CANLI_FIGUR_SINIRI = 6;
 
 /**
  * Web donduruldugu icin (#326) artik yalnizca mobil: web/src/components/SablonlaBasla.tsx eski
@@ -108,6 +115,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
                 onMenu={() => menuyuAc(sablon)}
                 disabled={bekliyor}
                 gizli={menu?.sablon.id === sablon.id}
+                lastUsedAt={sablon.lastUsedAt}
               />
             )}
           />
@@ -117,7 +125,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
       {kaydedilenSablonlar.length > 0 && (
         <View className="flex-col gap-3">
           <Text className="text-heading text-fg">{t('sablonlar.kaydedilenlerBasligi')}</Text>
-          {kaydedilenSablonlar.map((sablon) => (
+          {kaydedilenSablonlar.map((sablon, indeks) => (
             <SablonKayitliKarti
               key={sablon.id}
               ref={(kart) => {
@@ -129,6 +137,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
               onBasla={() => onBasla(sablon.id)}
               onMenu={() => menuyuAc(sablon)}
               disabled={bekliyor}
+              canliFigur={indeks < CANLI_FIGUR_SINIRI}
             />
           ))}
         </View>

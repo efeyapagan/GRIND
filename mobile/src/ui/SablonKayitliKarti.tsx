@@ -18,6 +18,12 @@ interface Props {
   onMenu: () => void;
   disabled: boolean;
   ref?: React.Ref<View>;
+  /**
+   * #556: bu liste dikey bir ScrollView'in icinde kayar (virtualization uygulanmiyor), bu yuzden
+   * gorunum disina dusmesi beklenen kartlar icin figur animasyonu burdan durdurulur. Varsayilan
+   * `true` -- cagiran taraf bildirmezse figur her zamanki gibi animasyonlu kalir.
+   */
+  canliFigur?: boolean;
 }
 
 /**
@@ -34,6 +40,7 @@ export default function SablonKayitliKarti({
   onMenu,
   disabled,
   ref,
+  canliFigur = true,
 }: Props) {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
@@ -52,7 +59,7 @@ export default function SablonKayitliKarti({
       className="flex-row items-center gap-3 overflow-hidden rounded-2xl border border-surface-4 bg-surface-2 p-3"
       style={{ height: KAYITLI_KART_YUKSEKLIGI, width: genislik, opacity: disabled ? 0.6 : 1 }}
     >
-      <SablonFiguru kategori={ozet.kategori} boyut={56} />
+      <SablonFiguru kategori={ozet.kategori} boyut={56} canli={canliFigur} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-lg font-bold text-fg">{ad}</Text>
         {kaynakKullaniciAdi && (
