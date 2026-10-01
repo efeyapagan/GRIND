@@ -73,8 +73,10 @@ public class WorkoutSessionRepository(AppDbContext context)
         // Önce anonim tipe projekte edip sonra record'a çevirmek bilinçli: aggregate'li bir
         // GroupBy/Select ifadesinde doğrudan record kurucusu kullanmak, EF'in sorguyu
         // çeviremediği durumda sessizce istemci tarafı değerlendirmeye kayma riski taşır.
+        // #558: oturum HENÜZ BİTMEMİŞKEN (EndedAt == null) girilen bir set, kullanıcı antrenmanı
+        // kaydetmeden önce takvim/seri sayısını şişiriyordu -- yalnızca SetEntries.Any() yetersizdi.
         var rows = await FilterByRange(userId, fromUtcInclusive, toUtcExclusive)
-            .Where(s => s.SetEntries.Any())
+            .Where(s => s.EndedAt != null && s.SetEntries.Any())
             .Select(s => new
             {
                 s.Id,
@@ -91,8 +93,9 @@ public class WorkoutSessionRepository(AppDbContext context)
 
     public async Task<IReadOnlyList<DateTime>> GetTrainedSessionStartsAsync(
         long userId, CancellationToken cancellationToken = default)
+        // #558: aynı gerekçe -- açık bir oturumun seti seriyi/takvim gününü şişirmemeli.
         => await Set
-            .Where(s => s.UserId == userId && s.SetEntries.Any())
+            .Where(s => s.UserId == userId && s.EndedAt != null && s.SetEntries.Any())
             .Select(s => s.StartedAt)
             .ToListAsync(cancellationToken);
 
@@ -170,10 +173,12 @@ public class WorkoutSessionRepository(AppDbContext context)
         }
 
         // Anonim tipe projekte edip sonra record'a çevirmek bilinçli: bkz. GetSessionAggregatesAsync.
+        // #558: aynı gerekçe -- açık bir oturumun seti arkadaş karşılaştırmasını şişirmemeli.
         var rows = await Set
             .Where(s => userIds.Contains(s.UserId)
                         && s.StartedAt >= fromUtcInclusive
                         && s.StartedAt < toUtcExclusive
+                        && s.EndedAt != null
                         && s.SetEntries.Any())
             .Select(s => new
             {

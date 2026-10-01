@@ -48,7 +48,35 @@ internal static class ArkadasTestVerisi
     }
 
     /// <summary>Verilen TR gününde, seti olan bir antrenman yazar (seti olmayan oturum sayılmaz).</summary>
+    /// <summary>
+    /// Verilen TR gününde, seti olan BİTMİŞ bir antrenman yazar (#558'den beri `EndedAt` dolu --
+    /// bitmemiş/açık bir oturumun sayılmaması gerekir, bkz. <see cref="AcikOturumSetliYazAsync"/>).
+    /// </summary>
     public static async Task AntrenmanYazAsync(long userId, DateOnly gun, decimal agirlik = 100m, int tekrar = 5)
+    {
+        await using var db = TestDatabase.CreateContext();
+        var (baslangic, _) = TurkeyDay.RangeForLocalDate(gun);
+        var oturum = new WorkoutSession { UserId = userId, StartedAt = baslangic.AddHours(10), EndedAt = baslangic.AddHours(10).AddMinutes(45) };
+        db.Add(oturum);
+        await db.SaveChangesAsync();
+        db.Add(new SetEntry
+        {
+            WorkoutSessionId = oturum.Id,
+            ExerciseId = 1,
+            Weight = agirlik,
+            Reps = tekrar,
+            RecordType = RecordType.None,
+            CreatedAt = oturum.StartedAt,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// #558: verilen TR gününde, seti olan ama HENÜZ BİTMEMİŞ (açık, `EndedAt == null`) bir antrenman
+    /// yazar -- kullanıcı antrenmanı bitirmeden/kaydetmeden önceki anı simüle eder. Bu, hiçbir
+    /// istatistiğe (takvim, seri, arkadaş karşılaştırması) yansımamalıdır.
+    /// </summary>
+    public static async Task AcikOturumSetliYazAsync(long userId, DateOnly gun, decimal agirlik = 100m, int tekrar = 5)
     {
         await using var db = TestDatabase.CreateContext();
         var (baslangic, _) = TurkeyDay.RangeForLocalDate(gun);

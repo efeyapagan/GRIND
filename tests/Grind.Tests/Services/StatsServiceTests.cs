@@ -46,12 +46,18 @@ public class StatsServiceTests
         return (context, user, exercise, service, saat, transaction);
     }
 
+    /// <summary>
+    /// #558: oturum BİLEREK bitmiş kurulur (süre özetindeki #73 Karar 1 ile aynı ilke -- açık bir
+    /// oturumun seti hiçbir özete girmemeli). Açık oturum senaryosu ayrı testlerde (bkz. aşağıdaki
+    /// `Acik_oturumdaki_set_*` testleri).
+    /// </summary>
     private static WorkoutSession Seed(
         AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc,
         params (decimal Weight, int Reps)[] sets)
     {
         var session = TestDatabase.NewSession(user);
         session.StartedAt = startedAtUtc;
+        session.EndedAt = startedAtUtc.AddMinutes(45);
         context.Add(session);
 
         foreach (var (weight, reps) in sets)
@@ -67,6 +73,60 @@ public class StatsServiceTests
     }
 
     // ---- Günlük hacim ----
+
+    /// <summary>
+    /// #558: kullanıcı bulgusu -- "antrenman yaparken ... daha kaydetmeden" sayaç artıyordu. Açık
+    /// (henüz bitmemiş) bir oturuma girilen set, günlük hacme ve takvime hiç girmemeli -- aynı
+    /// ilke süre özetindeki #73 Karar 1 ile (`Acik_oturum_sure_ozetine_girmez`).
+    /// </summary>
+    [Fact]
+    public async Task Acik_oturumdaki_set_gunluk_hacme_girmez()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var acikOturum = TestDatabase.NewSession(user);
+            acikOturum.StartedAt = Bugun;
+            context.Add(acikOturum);
+            await context.SaveChangesAsync();
+            context.Add(new SetEntry
+            {
+                WorkoutSession = acikOturum, Exercise = exercise,
+                Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = Bugun,
+            });
+            await context.SaveChangesAsync();
+
+            var ozet = await service.GetDailyVolumeAsync(new StatsRangeQuery());
+
+            Assert.Empty(ozet.Items);
+            Assert.Equal(0m, ozet.TotalVolume);
+        }
+    }
+
+    /// <summary>Aynı senaryo takvimde: açık oturum antrenman günü/seri saymaz.</summary>
+    [Fact]
+    public async Task Acik_oturumdaki_set_takvimde_antrenman_gunu_saymaz()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var acikOturum = TestDatabase.NewSession(user);
+            acikOturum.StartedAt = Bugun;
+            context.Add(acikOturum);
+            await context.SaveChangesAsync();
+            context.Add(new SetEntry
+            {
+                WorkoutSession = acikOturum, Exercise = exercise,
+                Weight = 100m, Reps = 8, RecordType = RecordType.None, CreatedAt = Bugun,
+            });
+            await context.SaveChangesAsync();
+
+            var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
+
+            Assert.Empty(takvim.Days);
+            Assert.Equal(0, takvim.CurrentWeekStreak);
+        }
+    }
 
     [Fact]
     public async Task Gunluk_hacim_gun_bazinda_toplanir()

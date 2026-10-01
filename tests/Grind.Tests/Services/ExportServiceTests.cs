@@ -68,8 +68,9 @@ public class ExportServiceTests
         new SahteSaat(Simdi));
 
     /// <summary>
-    /// Verilen UTC anında başlayan bir oturum. Setlerin CreatedAt'i dakika dakika artar: sıra
-    /// eklemeye (id atamasına) değil zamana dayansın.
+    /// Verilen UTC anında başlayan BİTMİŞ bir oturum (#558: export özeti de yalnızca bitmiş
+    /// oturumları sayar, `StatsService` ile aynı alt yapıyı paylaşır). Setlerin CreatedAt'i dakika
+    /// dakika artar: sıra eklemeye (id atamasına) değil zamana dayansın.
     /// </summary>
     private static WorkoutSession Seed(
         AppDbContext context, User user, Exercise exercise, DateTime startedAtUtc,
@@ -77,6 +78,7 @@ public class ExportServiceTests
     {
         var session = TestDatabase.NewSession(user);
         session.StartedAt = startedAtUtc;
+        session.EndedAt = startedAtUtc.AddMinutes(45);
         context.Add(session);
 
         for (var i = 0; i < sets.Length; i++)

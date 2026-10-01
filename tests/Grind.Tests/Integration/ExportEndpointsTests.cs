@@ -7,6 +7,7 @@ using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.Exercise;
 using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.Set;
+using Grind.Api.Models.Dtos.Session;
 using Grind.Api.Models.Enums;
 
 namespace Grind.Tests.Integration;
@@ -48,6 +49,13 @@ public class ExportEndpointsTests(GrindApiFactory factory) : IClassFixture<Grind
         return (await response.Content.ReadFromJsonAsync<ExerciseResponse>(Json))!;
     }
 
+    /// <summary>Set eklemek oturumu açar ama kapatmaz; özet (#558) yalnızca bitmiş oturumları sayar.</summary>
+    private static async Task AcikOturumuBitirAsync(HttpClient client)
+    {
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+        (await client.PostAsync($"/api/sessions/{acik!.Id}/finish", null)).EnsureSuccessStatusCode();
+    }
+
     private static async Task PostSetAsync(HttpClient client, long exerciseId, decimal weight, int reps)
     {
         var response = await client.PostAsJsonAsync("/api/sets",
@@ -72,6 +80,7 @@ public class ExportEndpointsTests(GrindApiFactory factory) : IClassFixture<Grind
         var exercise = await CreateExerciseAsync(client);
         await PostSetAsync(client, exercise.Id, 100m, 8);
         await PostSetAsync(client, exercise.Id, 60m, 10);
+        await AcikOturumuBitirAsync(client);
 
         var export = await client.GetFromJsonAsync<ExportResponse>("/api/export/json", Json);
 

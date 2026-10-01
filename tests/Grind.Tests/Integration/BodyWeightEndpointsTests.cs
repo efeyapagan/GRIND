@@ -7,6 +7,7 @@ using Grind.Api.Models.Dtos.Auth;
 using Grind.Api.Models.Dtos.BodyWeight;
 using Grind.Api.Models.Dtos.Common;
 using Grind.Api.Models.Dtos.Exercise;
+using Grind.Api.Models.Dtos.Session;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Dtos.Stats;
 using Grind.Api.Models.Enums;
@@ -261,6 +262,9 @@ public class BodyWeightEndpointsTests(GrindApiFactory factory) : IClassFixture<G
         (await client.PostAsJsonAsync("/api/sets",
             new CreateSetRequest { ExerciseId = exerciseId, Weight = 100m, Reps = 8 }, Json))
             .EnsureSuccessStatusCode();
+        // Set eklemek oturumu acar ama kapatmaz; hacim serisi (#558) yalnizca bitmis oturumlari sayar.
+        var acik = await client.GetFromJsonAsync<SessionResponse>("/api/sessions/open", Json);
+        (await client.PostAsync($"/api/sessions/{acik!.Id}/finish", null)).EnsureSuccessStatusCode();
 
         var trend = await client.GetFromJsonAsync<BodyWeightTrendResponse>(
             "/api/stats/body-weight-trend", Json);
