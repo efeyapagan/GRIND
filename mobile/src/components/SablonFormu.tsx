@@ -256,6 +256,12 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
             <HareketSatiri
               satir={satir}
               sira={satirlar.indexOf(satir) + 1}
+              // #559 (kullanici bildirdi, ikinci bulgu): en sondaki satirin hareket adi girilirken
+              // asagi acilan oneri listesinin son 1-2 secenegi klavyenin altinda/disinda kaliyordu --
+              // asagida yeterli yer yoktu. Yalnizca EN SON satir acilinca ScrollView'e gecici yer
+              // acilir (HareketSecici/EkranKaydiriciBaglami, kullanici karari: liste yine asagi
+              // acar, ekran ihtiyac aninda -- yani liste acikken -- kayar).
+              sonSatirMi={satirlar.indexOf(satir) === satirlar.length - 1}
               suruklenen={suruklenen}
               egzersizler={siraliEgzersizler}
               baskaSatirdaSecilenler={
@@ -321,6 +327,8 @@ interface HareketSatiriProps {
   sira: number;
   /** #407: parmagin altindaki satir -- kenarligi vurgulanir. */
   suruklenen: boolean;
+  /** #559: bu satirda asagida yeterli yer olmayabilir -- hareket secici acilinca ScrollView'e gecici yer acar. */
+  sonSatirMi: boolean;
   egzersizler: Egzersiz[];
   baskaSatirdaSecilenler: Set<number>;
   setHatasi?: string;
@@ -334,6 +342,7 @@ function HareketSatiri({
   satir,
   sira,
   suruklenen,
+  sonSatirMi,
   egzersizler,
   baskaSatirdaSecilenler,
   setHatasi,
@@ -378,6 +387,7 @@ function HareketSatiri({
           secilenAd={satir.exerciseName}
           devreDisiIdler={baskaSatirdaSecilenler}
           onSec={onEgzersiz}
+          sonSatirMi={sonSatirMi}
         />
       </View>
 

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Check, Search, X } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
+import { useEkranKaydiriciBaglami } from './EkranKaydirici';
 import { useIkonRenk } from './renkler';
 
 /**
@@ -11,6 +12,9 @@ import { useIkonRenk } from './renkler';
  * kategori adlaridir ve iki dilde de ayni, "Diğer" ve "Tümü" cevrilir.
  */
 const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
+
+/** Oneri listesinin ustten gelen `max-h-64` (256) + `mt-1` (4) kadar yer kapladigi varsayim. */
+const LISTE_YUKSEKLIGI = 260;
 
 interface Props {
   id: string;
@@ -21,6 +25,14 @@ interface Props {
   onSec: (exerciseId: number) => void;
   otomatikOdak?: boolean;
   listeYukari?: boolean;
+  /**
+   * #559 (kullanici karari): liste ASAGI acar (listeYukari ile KARISTIRILMAZ) ama bu alan
+   * ekranin en altina yakinsa oneriler klavyenin altinda kalabilir. true ise acilinca
+   * `EkranKaydiriciBaglami` araciligiyla ScrollView gecici olarak LISTE_YUKSEKLIGI kadar
+   * asagi kaydirilir ve ayni miktarda "sanal" bos bir alan eklenir (ihtiyac anında ortaya
+   * cikar, kapaninca kaybolur) -- liste boylece klavyenin ustunde tam gorunur.
+   */
+  sonSatirMi?: boolean;
   /**
    * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
    * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
@@ -43,15 +55,27 @@ export default function HareketSecici({
   onSec,
   otomatikOdak = false,
   listeYukari = false,
+  sonSatirMi = false,
   onKapat,
 }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
+  const { asagiKaydir } = useEkranKaydiriciBaglami();
   const [acik, setAcik] = useState(false);
   const [sorgu, setSorgu] = useState('');
   const [kategori, setKategori] = useState<EgzersizKategorisi | null>(null);
   const alanRef = useRef<TextInput>(null);
   const devreDisi = devreDisiIdler ?? new Set<number>();
+
+  // #559: liste acilinca ScrollView'e gecici yer acilir (asagi kayar + sanal bosluk belirir);
+  // kapaninca/ekrandan ayrilirken geri alinir.
+  useEffect(() => {
+    if (!sonSatirMi || !acik) {
+      return;
+    }
+    asagiKaydir(LISTE_YUKSEKLIGI);
+    return () => asagiKaydir(-LISTE_YUKSEKLIGI);
+  }, [acik, sonSatirMi, asagiKaydir]);
 
   const eslesenler = acik ? egzersizAra(egzersizler, sorgu, kategori) : [];
   // Eslesme yoksa yazim hatasi olabilir: benzeyenler "Bunu mu demek istediniz?" altinda sunulur (#231).
@@ -122,6 +146,7 @@ export default function HareketSecici({
 
       {acik && (
         <View
+          testID={`${id}-liste`}
           // `mb-4`: yukari acilan liste, arama kutusunu saran KARTIN (p-3 = 12px dolgu) da ustunden
           // baslasin -- 4px'lik pay iki karti gorsel olarak ayirir (kullanici karari).
           className={`absolute inset-x-0 z-30 rounded-lg bg-surface-3 ${listeYukari ? 'bottom-full mb-4' : 'top-full mt-1'}`}
@@ -165,6 +190,10 @@ export default function HareketSecici({
           </ScrollView>
         </View>
       )}
+
+      {/* #559: sanal bosluk -- yalnizca liste ACIKKEN var, ScrollView'in o kadar asagi
+          kayabilmesi icin gereken alani saglar; liste kapaninca kaybolur. */}
+      {acik && sonSatirMi && <View style={{ height: LISTE_YUKSEKLIGI }} />}
     </View>
   );
 }
