@@ -146,3 +146,27 @@ test('dalga bicimi secilince dalgali cizgi cizilir, genislik yine basliktan geli
   expect(screen.queryByTestId('cizgi-kavis', gizliDahil)).toBeNull();
   expect(screen.getByTestId('baslik-cizgisi', gizliDahil).props.width).toBe(150);
 });
+
+// ---- Sag uc solukluk gradyani (#548) ----
+
+/**
+ * #548 (kullanici bildirdi): cizgi sagda kalinlasarak inceliyordu ama hep TAM opaklikta ani
+ * bitiyordu. Govde artik duz renk (hex) degil, bir SVG gradyanina referans veriyor --
+ * react-native-svg `url(#id)` stringini `{ brushRef: id, type: 1 }` seklinde cozumler, bu yuzden
+ * dogrulama brushRef uzerinden yapilir (duz bir string DEGIL).
+ */
+test('kavis govdesi duz renk degil solukluk gradyanina referans verir', async () => {
+  await render(<CizgiliBaslik>Antrenman</CizgiliBaslik>);
+  await olc(200);
+
+  const stroke = screen.getByTestId('cizgi-kavis', gizliDahil).props.stroke;
+  expect(stroke.brushRef).toMatch(/^cizgiSolukluk/);
+});
+
+test('dalga govdesi de ayni bicimde solukluk gradyanina referans verir', async () => {
+  await render(<CizgiliBaslik cizgi="dalga">Ana sayfa</CizgiliBaslik>);
+  await olc(200);
+
+  const stroke = screen.getByTestId('cizgi-dalga', gizliDahil).props.stroke;
+  expect(stroke.brushRef).toMatch(/^cizgiSolukluk/);
+});

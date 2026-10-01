@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { View, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useRenkPaleti } from './renkler';
 
 const CIZGI_YUKSEKLIGI = 10;
@@ -12,6 +12,12 @@ const CIZGI_YUKSEKLIGI = 10;
  */
 const CIZGI_BOSLUGU = 5;
 const CIZIM_SURESI_MS = 1200;
+/**
+ * #548 (kullanici bildirdi): cizgi sagda kalinlik parca parca inceliyordu ama hep TAM opaklikta
+ * bitiyordu -- ince de olsa ani bir kesim gibi goruluyordu. Son %22'lik dilimde opaklik 1'den 0'a
+ * iner; govdenin kalani (0 - SOLUKLUK_BASLANGICI) degismez, yalnizca son uc yumusar.
+ */
+const SOLUKLUK_BASLANGICI = 0.78;
 
 /** Kavis uc parcada cizilir; kalinlik parca parca azalir (#524). */
 const KAVIS_PARCALARI = [
@@ -72,6 +78,8 @@ export default function CizgiliBaslik({
   cizgi?: 'kavis' | 'dalga';
 }) {
   const palet = useRenkPaleti();
+  // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir (SablonFiguru ile ayni).
+  const gradyanId = `cizgiSolukluk${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [olcum, setOlcum] = useState<{ metin: string; genislik: number; yukseklik: number } | null>(null);
   const ilerleme = useSharedValue(0);
   const gecerli = olcum?.metin === children ? olcum : null;
@@ -112,6 +120,15 @@ export default function CizgiliBaslik({
       >
         {genislik > 0 && (
           <Svg testID="baslik-cizgisi" width={genislik} height={CIZGI_YUKSEKLIGI}>
+            <Defs>
+              {/* #548: userSpaceOnUse ile TUM parcalar ayni mutlak eksende -- her Path kendi
+                  bounding box'ina gore degil, cizginin tam genisligine gore soluyor. */}
+              <LinearGradient id={gradyanId} x1={0} y1={0} x2={genislik} y2={0} gradientUnits="userSpaceOnUse">
+                <Stop offset={0} stopColor={palet.accent} stopOpacity={1} />
+                <Stop offset={SOLUKLUK_BASLANGICI} stopColor={palet.accent} stopOpacity={1} />
+                <Stop offset={1} stopColor={palet.accent} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
             {cizgi === 'dalga' ? (
               // Eskiz tarzi: duzensiz inip cikan el cizimi dalga; kalem basinci gibi UC parcada
               // kalinliktan inceye iner (parcalar ayni yerde bitip baslar, yuvarlak uclar birlestirir).
@@ -119,21 +136,21 @@ export default function CizgiliBaslik({
                 <Path
                   testID="cizgi-dalga"
                   d={`M2 6 C ${genislik * 0.05} 1.5 ${genislik * 0.11} 0.5 ${genislik * 0.18} 3.5 S ${genislik * 0.27} 9.5 ${genislik * 0.35} 6.5`}
-                  stroke={palet.accent}
+                  stroke={`url(#${gradyanId})`}
                   strokeWidth={3.6}
                   strokeLinecap="round"
                   fill="none"
                 />
                 <Path
                   d={`M${genislik * 0.35} 6.5 C ${genislik * 0.42} 3 ${genislik * 0.47} 0.5 ${genislik * 0.55} 3 S ${genislik * 0.63} 8.5 ${genislik * 0.7} 6`}
-                  stroke={palet.accent}
+                  stroke={`url(#${gradyanId})`}
                   strokeWidth={2.4}
                   strokeLinecap="round"
                   fill="none"
                 />
                 <Path
                   d={`M${genislik * 0.7} 6 C ${genislik * 0.75} 4 ${genislik * 0.8} 2 ${genislik * 0.86} 3.5 S ${genislik * 0.93} 5.5 ${genislik - 2} 4.5`}
-                  stroke={palet.accent}
+                  stroke={`url(#${gradyanId})`}
                   strokeWidth={1.3}
                   strokeLinecap="round"
                   fill="none"
@@ -147,7 +164,7 @@ export default function CizgiliBaslik({
                     key={sira}
                     testID={sira === 0 ? 'cizgi-kavis' : undefined}
                     d={kavisParcasi(genislik, parca.t0, parca.t1)}
-                    stroke={palet.accent}
+                    stroke={`url(#${gradyanId})`}
                     strokeWidth={parca.kalinlik}
                     strokeLinecap="round"
                     fill="none"
