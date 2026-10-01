@@ -8,6 +8,7 @@ import {
   type YorumSayfasi,
 } from '@grind/shared/api/queries';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
+import { i18n } from '@grind/shared/i18n';
 import InsightsScreen from '../../../app/(tabs)/insights';
 
 let mockYorumDili = 'tr';
@@ -242,6 +243,75 @@ test('yapisal yorumun ozeti ve maddeleri ayri ayri cizilir', async () => {
   expect(screen.getByText('Bench Press rekoru')).toBeTruthy();
   expect(screen.getByText('Çekiş hacmi düşük')).toBeTruthy();
   expect(screen.getByText('Haftaya bir kürek günü ekle')).toBeTruthy();
+});
+
+/**
+ * #543 (kullanici bildirdi): arayuz dili Ingilizce iken yorum dili Turkce secilmisse, "Going well" /
+ * "Watch out" / "Suggestions" gibi bolum basliklari INGILIZCE kaliyordu -- govde metni (AI'nin
+ * urettigi) dogru dildeydi ama basliklar `useTranslation()`un ARAYUZ diline bagliydi, YORUM diline
+ * degil. Basliklar artik yorumDili'ne gore cizilir.
+ */
+describe('bolum basliklari arayuz dilinden bagimsiz yorum dilini izler (#543)', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('tr');
+  });
+
+  test('arayuz Ingilizce, yorum Turkce seciliyken basliklar Turkce gorunur', async () => {
+    await i18n.changeLanguage('en');
+    mockYorumDili = 'tr';
+    useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([yapisalYorum()])]));
+
+    await ekraniOlustur();
+
+    expect(screen.getByText('İyi gidenler')).toBeTruthy();
+    expect(screen.getByText('Dikkat')).toBeTruthy();
+    expect(screen.getByText('Öneriler')).toBeTruthy();
+    expect(screen.queryByText('Going well')).toBeNull();
+  });
+
+  test('arayuz Turkce, yorum Ingilizce seciliyken basliklar Ingilizce gorunur', async () => {
+    await i18n.changeLanguage('tr');
+    mockYorumDili = 'en';
+    useInfiniteInsightsMock.mockReturnValue(
+      sonsuzSorguSonucu([
+        sayfa([
+          ornekYorum({
+            translations: [
+              {
+                language: 'en',
+                content: JSON.stringify({
+                  ozet: 'Going steady.',
+                  basarilar: ['Bench Press PR'],
+                  uyarilar: ['Pull volume is low'],
+                  tavsiyeler: ['Add a row day next week'],
+                }),
+              },
+            ],
+          }),
+        ]),
+      ]),
+    );
+
+    await ekraniOlustur();
+
+    expect(screen.getByText('Going well')).toBeTruthy();
+    expect(screen.getByText('Watch out')).toBeTruthy();
+    expect(screen.getByText('Suggestions')).toBeTruthy();
+    expect(screen.queryByText('İyi gidenler')).toBeNull();
+  });
+
+  /** Okunamayan icerigin yerini tutan metin de yorum diline gore degismeli. */
+  test('okunamadi mesaji da yorum dilini izler', async () => {
+    await i18n.changeLanguage('en');
+    mockYorumDili = 'tr';
+    useInfiniteInsightsMock.mockReturnValue(
+      sonsuzSorguSonucu([sayfa([ornekYorum({ translations: [{ language: 'tr', content: '{bozuk' }] })])]),
+    );
+
+    await ekraniOlustur();
+
+    expect(screen.getByText('Bu yorum okunamadı. Yeni bir yorum istemeyi deneyebilirsin.')).toBeTruthy();
+  });
 });
 
 /** Basliklar katalogdan gelir; ham JSON anahtarlari ("basarilar") ekranda gorunmez. */
