@@ -35,6 +35,14 @@ interface Props {
  * temada acik, acik temada koyu oldugu icin parilti ve kenar iki temada da kendiliginden dogru tonu alir.
  * Tailwind'in hazir paleti (`white/10` gibi) kullanilmaz; `border-fg/10` gibi ekler de kullanilmaz
  * (degiskene bagli renkte calismiyor, kenar siyah cikiyordu).
+ *
+ * #559 (kullanici bildirdi -- sablon formunda hareket seciminin asagi acilan listesi "cok kucuk,
+ * hicbir sey gozukmuyor" hale geldi): `overflow-hidden` DAHA ONCE EN DISTAKI Pressable'daydi, yani
+ * TUM `children` agacini kirpiyordu -- `HareketSecici`nin kartin ALTINA tasmasi gereken acilir listesi
+ * de dahil (o liste `position: absolute` ile kartin disina cizilmek UZERE tasarlanir). Kirpma artik
+ * yalnizca cam GORUNTU katmanlarini (blur + parilti + kenar) saran AYRI, mutlak konumlu bir sarmalayicida;
+ * disaridaki Pressable ve `children` artik kirpilmiyor, kartin disina tasan icerik (acilir listeler,
+ * rozetler) serbestce gorunur. Gorsel sonuc AYNI (cam katmanlari yine ayni yuvarlak kosede kirpiliyor).
  */
 export default function CamKart({
   onPress,
@@ -42,6 +50,7 @@ export default function CamKart({
   testID,
   className = '',
   disClassName = '',
+  vurguluKenar = false,
   children,
 }: Props) {
   const palet = useRenkPaleti();
@@ -52,21 +61,26 @@ export default function CamKart({
       testID={testID}
       disabled={!onPress}
       onPress={onPress}
-      className={`overflow-hidden rounded-3xl ${disClassName}`}
+      className={`rounded-3xl ${disClassName}`}
     >
-      <CamYuzey />
-      <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Defs>
-          <LinearGradient id="cam-parilti" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={palet.fg} stopOpacity={0.08} />
-            <Stop offset="0.55" stopColor={palet.fg} stopOpacity={0} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#cam-parilti)" />
-      </Svg>
-      {/* Opaklik KATMANIN kendisinde: renkler Tailwind'e `var(--color-*)` olarak bagli ve `border-fg/10`
-          gibi bir opaklik eki degiskene uygulanamayip kenari SIYAH ciziyordu (#547'de simulatorde goruldu). */}
-      <View pointerEvents="none" className="absolute inset-0 rounded-3xl border border-fg opacity-10" />
+      {/* Cam GORUNTU katmanlari: bunlar yuvarlak koseye kirpilmeli, `children` KIRPILMAMALI. */}
+      <View pointerEvents="none" className="absolute inset-0 overflow-hidden rounded-3xl">
+        <CamYuzey />
+        <Svg style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="cam-parilti" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={palet.fg} stopOpacity={0.08} />
+              <Stop offset="0.55" stopColor={palet.fg} stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#cam-parilti)" />
+        </Svg>
+        {/* Opaklik KATMANIN kendisinde: renkler Tailwind'e `var(--color-*)` olarak bagli ve `border-fg/10`
+            gibi bir opaklik eki degiskene uygulanamayip kenari SIYAH ciziyordu (#547'de simulatorde goruldu). */}
+        <View
+          className={`absolute inset-0 rounded-3xl border ${vurguluKenar ? 'border-2 border-accent' : 'border-fg opacity-10'}`}
+        />
+      </View>
       <View className={className}>{children}</View>
     </Pressable>
   );
