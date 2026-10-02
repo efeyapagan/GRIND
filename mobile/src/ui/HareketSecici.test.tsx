@@ -149,11 +149,11 @@ test('sonSatirMi ile liste acilinca asagi kaydirma istenir, kapaninca geri alini
   await fireEvent(screen.getByTestId('secici'), 'focus');
 
   expect(screen.getByTestId('secici-liste').props.className).toContain('top-full');
-  expect(asagiKaydir).toHaveBeenCalledWith(233);
+  expect(asagiKaydir).toHaveBeenCalledWith(168);
 
   await fireEvent(screen.getByTestId('secici'), 'blur');
 
-  expect(asagiKaydir).toHaveBeenCalledWith(-233);
+  expect(asagiKaydir).toHaveBeenCalledWith(-168);
 });
 
 test('sonSatirMi verilmezse liste acilinca asagi kaydirma istenmez', async () => {

@@ -14,13 +14,17 @@ import { useIkonRenk } from './renkler';
 const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
 
 /**
- * Oneri listesinin yuksekligi: kullanici ilk acilista TAM 4 sonuc satiri gormek istedi (daha
- * once `max-h-64`=256 ile ~4.5 satir gorunup son satir yarim kesiliyordu). Kategori satiri
- * (p-1 dolgu + min-h-11 hap + border-b) 53, her sonuc satiri (min-h-11) 44 -- 53 + 4*44 = 229.
+ * Oneri listesinin yuksekligi: kullanici ilk acilista TAM 3 sonuc satiri gormek istedi (once 4
+ * istenmisti, ama CamKart'in `overflow-hidden`i listeyi kirpinca -- ayri bir hata, #559 -- "cok
+ * kucuk, hicbir sey gozukmuyor" bulgusuyla birlikte 3'e dusuruldu). Degerler `min-h-11`in NAIF
+ * 44'u DEGIL, cihazda `onLayout` ile olculmus GERCEK yukseklikler -- bu projenin Tailwind rem
+ * tabani 16 degil (web'in rem'inden farkli, NativeWind icin ayarli), bu yuzden `min-h-11` ~38.5
+ * cozumleniyor, 44 degil. Kategori satiri (p-1 dolgu + min-h-11 hap + border-b) olculen ~46.3,
+ * her sonuc satiri (min-h-11) olculen ~38.5 -- hafif pay icin yukari yuvarlandi: 47 + 3*39 = 164.
  */
-const KATEGORI_SATIRI_YUKSEKLIGI = 53;
-const SONUC_SATIRI_YUKSEKLIGI = 44;
-const GORUNUR_SONUC_SAYISI = 4;
+const KATEGORI_SATIRI_YUKSEKLIGI = 47;
+const SONUC_SATIRI_YUKSEKLIGI = 39;
+const GORUNUR_SONUC_SAYISI = 3;
 const LISTE_ICERIK_YUKSEKLIGI = KATEGORI_SATIRI_YUKSEKLIGI + GORUNUR_SONUC_SAYISI * SONUC_SATIRI_YUKSEKLIGI;
 
 /**
@@ -219,7 +223,15 @@ export default function HareketSecici({
                   onPress={() => sec(egzersiz)}
                   className="min-h-11 flex-row items-center justify-between gap-2 px-4"
                 >
-                  <Text className={`text-body ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}>{egzersiz.name}</Text>
+                  {/* #559 (kullanici bildirdi): uzun adlar iki satira sarip satir yuksekligini
+                      (LISTE_ICERIK_YUKSEKLIGI hesabinin dayandigi varsayim) bozuyordu -- tek satira
+                      sabitlenir, flex-1 Check ikonuyla yer paylasimini garanti eder. */}
+                  <Text
+                    numberOfLines={1}
+                    className={`min-w-0 flex-1 text-body ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}
+                  >
+                    {egzersiz.name}
+                  </Text>
                   {secili && <Check color={ikonRenk.accent} size={18} />}
                 </Pressable>
               );
