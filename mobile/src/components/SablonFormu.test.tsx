@@ -113,8 +113,8 @@ test('her iki satirin hareket secicisi de asagi acar, yalnizca en son satir acil
 
   await fireEvent(screen.getByTestId('hareket-1-egzersiz'), 'focus');
   expect(screen.getByTestId('hareket-1-egzersiz-liste').props.className).toContain('top-full');
-  // kategori satiri (53) + 4 sonuc satiri (4*44=176) + mt-1 (4) = 233 (HareketSecici'deki LISTE_YUKSEKLIGI).
-  expect(asagiKaydir).toHaveBeenCalledWith(233);
+  // kategori satiri (47) + 3 sonuc satiri (3*39=117) + mt-1 (4) = 168 (HareketSecici'deki LISTE_YUKSEKLIGI).
+  expect(asagiKaydir).toHaveBeenCalledWith(168);
 });
 
 /**
