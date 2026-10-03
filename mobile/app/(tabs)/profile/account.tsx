@@ -12,6 +12,7 @@ import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSeci
 import TemaSecici from '../../../src/components/TemaSecici';
 import DilSecici from '../../../src/components/DilSecici';
 import SifreDegistirPenceresi from '../../../src/components/SifreDegistirPenceresi';
+import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
 import { useIkonRenk } from '../../../src/ui/renkler';
 
 /**
@@ -61,12 +62,14 @@ function SifreDegistirDugmesi() {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const { updateProfile } = useAuth();
+  // #174: sifre degistirme cevrimdisi calismaz, uyari cikar.
+  const cevrimici = useCevrimiciEylem();
   const [acik, setAcik] = useState(false);
 
   return (
     <>
       <CamKart
-        onPress={() => setAcik(true)}
+        onPress={cevrimici(() => setAcik(true))}
         accessibilityLabel={t('profil.sifreDegistir')}
         koseSinifi="rounded-xl"
         className="min-h-12 flex-row items-center justify-center gap-2 p-4"

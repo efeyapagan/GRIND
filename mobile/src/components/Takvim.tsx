@@ -146,7 +146,7 @@ export default function Takvim() {
         </LayoutAnimationConfig>
 
         {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-        {isError && (
+        {isError && !ozet && (
           <Text accessibilityRole="alert" className="text-body text-danger">
             {t('takvim.hata')}
           </Text>

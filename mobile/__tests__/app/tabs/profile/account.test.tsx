@@ -1,9 +1,11 @@
+import { Alert } from 'react-native';
 import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { ApiError } from '@grind/shared/api/problem';
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { useAuth } from '../../../../src/auth/AuthContext';
 import { TemaProvider } from '../../../../src/ui/TemaContext';
 import { DilProvider } from '../../../../src/ui/DilContext';
+import { BaglantiBaglami } from '../../../../src/baglanti/BaglantiSaglayici';
 import AccountScreen from '../../../../app/(tabs)/profile/account';
 
 jest.mock('../../../../src/auth/AuthContext', () => ({ useAuth: jest.fn() }));
@@ -90,4 +92,26 @@ test('hesabin ayarlari yerinde kalir', async () => {
   expect(screen.getByText('Antrenman hedefi')).toBeTruthy();
   expect(screen.getByText('Tema')).toBeTruthy();
   expect(screen.getByText('Çıkış yap')).toBeTruthy();
+});
+
+/** #174 (kullanici karari): hesap ayarlari onbellekten gorunur ama sifre degistirme cevrimdisi uyari verir. */
+test('cevrimdisiyken sifre degistir pencere acmaz, internete baglan uyarisi verir', async () => {
+  const uyari = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  await render(
+    <PageTitleProvider>
+      <TemaProvider>
+        <DilProvider>
+          <BaglantiBaglami.Provider value>
+            <AccountScreen />
+          </BaglantiBaglami.Provider>
+        </DilProvider>
+      </TemaProvider>
+    </PageTitleProvider>,
+  );
+
+  await act(async () => fireEvent.press(screen.getByText('Şifre değiştir')));
+
+  expect(screen.queryByTestId('profil-yeni-sifre')).toBeNull();
+  expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
+  uyari.mockRestore();
 });

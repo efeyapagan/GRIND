@@ -76,7 +76,7 @@ export default function HistoryScreen() {
 
           {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
-          {isError && (
+          {isError && !data && (
             <Text accessibilityRole="alert" className="text-body text-danger">
               {t('gecmis.hata')}
             </Text>
@@ -84,7 +84,7 @@ export default function HistoryScreen() {
         </View>
       }
       ListEmptyComponent={
-        !isLoading && !isError && data ? (
+        !isLoading && data ? (
           <BosDurum ikon={CalendarDays} baslik={t('gecmis.bosBaslik')} />
         ) : null
       }

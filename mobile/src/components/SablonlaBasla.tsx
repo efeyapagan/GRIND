@@ -1,13 +1,14 @@
 import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
-import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
+import { useTemplates, useDeleteTemplate, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import SablonVitrinKarti, { KART_ARALIGI, useVitrinKartGenisligi } from '../ui/SablonVitrinKarti';
 import SablonMenusu from './SablonMenusu';
 import SablonKaruseli from './SablonKaruseli';
 import KaydedilenSablonKaruseli from './KaydedilenSablonKaruseli';
+import { useCevrimiciEylem } from '../baglanti/useCevrimiciEylem';
 import { useSablonMenusu } from './useSablonMenusu';
 
 interface Props {
@@ -37,6 +38,8 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const silme = useDeleteTemplate();
   const siralama = useSablonlariSirala();
+  // #174: sablon duzenleme, silme ve siralama cevrimdisi calismaz, uyari cikar.
+  const cevrimici = useCevrimiciEylem();
   const { menu, menuyuAc, menuyuKapat, kartRef } = useSablonMenusu();
 
   const { kendi: kendiSablonlari, kaydedilen: kaydedilenSablonlar } = sablonlariAyir(sablonlar ?? []);
@@ -55,7 +58,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
         </View>
 
         {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-        {isError && (
+        {isError && !sablonlar && (
           <Text accessibilityRole="alert" className="text-body text-danger">
             {t('sablonlar.hata')}
           </Text>
@@ -70,14 +73,14 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             onBasla={(sablon) => onBasla(sablon.id)}
             onMenuAc={menuyuAc}
             onMenuKapat={menuyuKapat}
-            onSirala={(yeniSira) =>
+            onSirala={cevrimici((yeniSira: Sablon[]) =>
               // #467: backend `ReorderAsync` kullanicinin TUM sablonlarinin (kendi + kaydedilen) id
               // kumesini birebir bekler; yalnizca karuseldeki kendi sablonlari gonderilirse 400 doner.
               siralama.mutate([
                 ...yeniSira.map((sablon) => sablon.id),
                 ...kaydedilenSablonlar.map((sablon) => sablon.id),
-              ])
-            }
+              ]),
+            )}
             kartCiz={(sablon, dokunus, figurCanli) => (
               <SablonVitrinKarti
                 ref={kartRef(sablon.id)}
@@ -124,14 +127,14 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
           kartGenisligi={kartGenisligi}
           kaynak={menu.kaynak}
           onKapat={menuyuKapat}
-          onDuzenle={() => {
+          onDuzenle={cevrimici(() => {
             menuyuKapat();
             router.push(`/templates/${menu.sablon.id}`);
-          }}
-          onSil={() => {
+          })}
+          onSil={cevrimici(() => {
             silme.mutate(menu.sablon.id);
             menuyuKapat();
-          }}
+          })}
         />
       )}
     </View>

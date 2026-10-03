@@ -11,6 +11,8 @@ import PaylasimPenceresi from './PaylasimPenceresi';
 import CamKart from '../ui/CamKart';
 import IkincilDugme from '../ui/IkincilDugme';
 import KaydirilabilirSatir, { type KaydirilabilirSatirRef } from '../ui/KaydirilabilirSatir';
+import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
+import { useCevrimiciEylem } from '../baglanti/useCevrimiciEylem';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -34,13 +36,17 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
   const [onayAcik, setOnayAcik] = useState(false);
   const kaydirmaRef = useRef<KaydirilabilirSatirRef>(null);
   const silinebilir = onSil !== undefined;
-  const paylasilabilir = oturum.durationSeconds !== null && oturum.durationSeconds !== undefined;
+  const cevrimdisi = useCevrimdisi();
+  const cevrimici = useCevrimiciEylem();
+  // #174 (kullanici karari): paylasim penceresi internet yokken hic acilmaz -- ikon da gosterilmez.
+  const paylasilabilir = oturum.durationSeconds !== null && oturum.durationSeconds !== undefined && !cevrimdisi;
 
-  function onayiAc() {
+  // #174: antrenman silme cevrimdisi calismaz (hem panelden hem kaydirarak), uyari cikar.
+  const onayiAc = cevrimici(() => {
     kaydirmaRef.current?.kapat();
     setAcik(false);
     setOnayAcik(true);
-  }
+  });
 
   if (onayAcik) {
     return (

@@ -8,10 +8,22 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import Alan from '../../../src/ui/Alan';
 import BosDurum from '../../../src/ui/BosDurum';
 import KullaniciSatiri from '../../../src/components/KullaniciSatiri';
+import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /** web/src/pages/KullaniciAraPage.tsx ile ayni (#284): yazma durunca sunucuda aranir, satir profile goturur. */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function KullaniciAraScreen() {
+  const { t } = useTranslation();
+  usePageTitle(t('takip.kullaniciAra'));
+  return (
+    <CevrimdisiKapisi>
+      <KullaniciAraIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function KullaniciAraIcerigi() {
   const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
   usePageTitle(t('takip.kullaniciAra'));

@@ -8,13 +8,25 @@ import BosDurum from '../../../src/ui/BosDurum';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 import HaftalikHacimKarti from '../../../src/components/HaftalikHacimKarti';
 import KasGrubuKarti from '../../../src/components/KasGrubuKarti';
+import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import BirTekrarKarti from '../../../src/components/BirTekrarKarti';
 
 /**
  * #184: asamali yuklenme analizi -- haftalik hacim, kas grubuna gore setler, tahmini 1RM. Veri tek istekte
  * (`/stats/weekly`); hic seti olmayan kullaniciya kartlar yerine tek bir bos durum.
  */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function ProgressScreen() {
+  const { t } = useTranslation();
+  usePageTitle(t('kabuk.sekmeIlerleme'));
+  return (
+    <CevrimdisiKapisi>
+      <ProgressIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function ProgressIcerigi() {
   const { t } = useTranslation();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle(t('kabuk.sekmeIlerleme'));

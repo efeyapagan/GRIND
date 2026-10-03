@@ -1,7 +1,7 @@
 import { ScrollView, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { useDeleteTemplate, useSablonuSabitle, useTemplates } from '@grind/shared/api/queries';
+import { useDeleteTemplate, useSablonuSabitle, useTemplates, type Sablon } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
@@ -9,6 +9,7 @@ import KaydedilenSablonKaruseli from '../../../src/components/KaydedilenSablonKa
 import SablonMenusu from '../../../src/components/SablonMenusu';
 import { useSablonMenusu } from '../../../src/components/useSablonMenusu';
 import { KART_ARALIGI, useVitrinKartGenisligi } from '../../../src/ui/SablonVitrinKarti';
+import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -27,6 +28,8 @@ export default function KaydedilenSablonlarScreen() {
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const silme = useDeleteTemplate();
   const sabitleme = useSablonuSabitle();
+  // #174: sablon duzenleme, silme ve sabitleme cevrimdisi calismaz, uyari cikar.
+  const cevrimici = useCevrimiciEylem();
   const { menu, menuyuAc, menuyuKapat, kartRef } = useSablonMenusu();
 
   const { kaydedilen } = sablonlariAyir(sablonlar ?? []);
@@ -34,7 +37,7 @@ export default function KaydedilenSablonlarScreen() {
   return (
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-      {isError && (
+      {isError && !sablonlar && (
         <Text accessibilityRole="alert" className="text-body text-danger">
           {t('sablonlar.hataYenile')}
         </Text>
@@ -46,11 +49,11 @@ export default function KaydedilenSablonlarScreen() {
           sablonlar={kaydedilen}
           kartGenisligi={kartGenisligi}
           aralik={KART_ARALIGI}
-          onKart={(sablon) => router.push(`/templates/${sablon.id}`)}
+          onKart={cevrimici((sablon: Sablon) => router.push(`/templates/${sablon.id}`))}
           onMenu={menuyuAc}
           kartRef={kartRef}
           disabled={false}
-          onSabitle={(sablon) => sabitleme.mutate({ id: sablon.id, isPinned: !sablon.isPinned })}
+          onSabitle={cevrimici((sablon: Sablon) => sabitleme.mutate({ id: sablon.id, isPinned: !sablon.isPinned }))}
         />
       )}
 
@@ -61,14 +64,14 @@ export default function KaydedilenSablonlarScreen() {
           kartGenisligi={kartGenisligi}
           kaynak={menu.kaynak}
           onKapat={menuyuKapat}
-          onDuzenle={() => {
+          onDuzenle={cevrimici(() => {
             menuyuKapat();
             router.push(`/templates/${menu.sablon.id}`);
-          }}
-          onSil={() => {
+          })}
+          onSil={cevrimici(() => {
             silme.mutate(menu.sablon.id);
             menuyuKapat();
-          }}
+          })}
         />
       )}
     </ScrollView>

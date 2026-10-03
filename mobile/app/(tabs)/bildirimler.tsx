@@ -32,7 +32,7 @@ export default function BildirimlerScreen() {
     <ScrollView contentContainerClassName="gap-3 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
-      {isError && (
+      {isError && !data && (
         <View className="flex-col items-start gap-2">
           <Text accessibilityRole="alert" className="text-body text-danger">
             {t('bildirimler.alinamadi')}

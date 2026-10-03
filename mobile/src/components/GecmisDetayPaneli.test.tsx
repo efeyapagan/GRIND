@@ -2,6 +2,8 @@ import { render, screen, fireEvent, within } from '@testing-library/react-native
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
+import { Alert } from 'react-native';
+import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import GecmisDetayPaneli from './GecmisDetayPaneli';
 
 jest.mock('@grind/shared/api/client', () => ({
@@ -208,4 +210,23 @@ test('duzenleme modu kapaliyken sete dokunmak duzenleyici acmaz', async () => {
   await fireEvent.press(screen.getByTestId('gecmis-set-7'));
 
   expect(screen.queryByTestId('set-duzenleyici')).toBeNull();
+});
+
+/** #174: gecmiste set ekleme/duzenleme cevrimdisi calismaz -- kalem duzenleme modunu acmaz, uyari verir. */
+test('cevrimdisiyken kalem duzenleme modunu acmaz, uyari verir', async () => {
+  const uyari = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  await render(
+    <QueryClientProvider client={queryClient}>
+      <BaglantiBaglami.Provider value>
+        <GecmisDetayPaneli oturum={OTURUM} onKapat={jest.fn()} onSil={jest.fn()} />
+      </BaglantiBaglami.Provider>
+    </QueryClientProvider>,
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı düzenle' }));
+
+  expect(screen.queryByLabelText('Bench Press için set ekle')).toBeNull();
+  expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
+  uyari.mockRestore();
 });

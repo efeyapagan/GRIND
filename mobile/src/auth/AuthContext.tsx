@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { request, setUnauthorizedHandler } from '@grind/shared/api/client';
 import { session } from '../session';
+import { kaliciOnbellegiSil } from '../onbellek/kaliciOnbellek';
 import type { components } from '@grind/shared/api/schema';
 
 type AuthResponse = components['schemas']['AuthResponse'];
@@ -72,9 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     void session.clear();
+    // #174: diskteki kalici onbellek de silinir -- paylasilan cihazda baska hesap gormesin.
+    if (username) {
+      void kaliciOnbellegiSil(username);
+    }
     setUsername(null);
     queryClient.clear();
-  }, [queryClient]);
+  }, [queryClient, username]);
 
   useEffect(() => {
     setUnauthorizedHandler(logout);
