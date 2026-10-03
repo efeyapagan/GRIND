@@ -30,14 +30,18 @@ function set(id: number, weight: number): SetKaydi {
 
 /**
  * #590 (#589'daki kullanici bulgusu: "liquid'in icinde kutu kalmis"): kart camken icindeki set satiri
- * opak `surface-2` kutu cizmez; zemini camin ustune serilen hafif `fg` dolgusudur (`CamDolgu`).
+ * opak `surface-2` kutu cizmez. #615: hafif dolgu da kutu gibi okunuyordu -- satir dolgusuzdur, satirlar
+ * sac teli cizgiyle ayrilir. Tek dolgu basliktaki sira karosununkidir.
  */
-test('set satiri camin icinde opak kutu cizmez', async () => {
-  await render(<HareketKartiGovdesi hareket={hareket} sira={0} setler={[set(1, 80)]} onSetDuzenle={jest.fn()} />);
+test('set satiri camin icinde kutu cizmez, satirlar cizgiyle ayrilir', async () => {
+  await render(
+    <HareketKartiGovdesi hareket={hareket} sira={0} setler={[set(1, 80), set(2, 85)]} onSetDuzenle={jest.fn()} />,
+  );
 
   const satir = screen.getByLabelText(/^1\. set, /);
   expect(satir.props.className).not.toMatch(/bg-surface/);
-  expect(screen.getAllByTestId('cam-dolgu').length).toBeGreaterThan(0);
+  expect(screen.getAllByTestId('cam-dolgu')).toHaveLength(1);
+  expect(screen.getAllByTestId('cam-ayirici')).toHaveLength(1);
 });
 
 /** #590: basliktaki sira numarasi karosu da opak `surface-3` kutu degil. */

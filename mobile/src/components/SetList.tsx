@@ -13,6 +13,7 @@ import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
 import CamKart from '../ui/CamKart';
 import CamDolgu from '../ui/CamDolgu';
+import AyiricliListe from '../ui/AyiricliListe';
 import SetDegeriYazisi from './SetDegeriYazisi';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -85,16 +86,15 @@ export default function SetList(props: Props) {
                 <Text className="text-label-xs text-muted uppercase">{t('setler.setSayisi', { count: grup.sets.length })}</Text>
               </View>
             </View>
-            <View className="flex-col gap-1">
+            <AyiricliListe>
               {grup.sets.map((kayit, setSirasi) => {
                 const rozet = rekorRozetiMetni(kayit);
                 const sira = setSirasi + 1;
                 const onSetMenu = props.onSetMenu;
-                const satirSinifi = 'min-h-12 flex-col justify-center gap-1.5 rounded-lg px-4 py-2';
+                const satirSinifi = 'min-h-12 flex-col justify-center gap-1.5 px-1 py-2.5';
                 const icerik = (
                   <>
-                    {/* #591: satir zemini opak `surface-1` degil camin ustunde hafif dolgu. */}
-                    <CamDolgu opaklik={0.06} yaricap={8} />
+                    {/* #615: satir kutu degil (ne opak `surface-1` ne hafif dolgu); `AyiricliListe` cizgiyle ayirir. */}
                     <View className="flex-row items-center justify-between gap-2">
                       <View className="flex-row items-center gap-4">
                         <Text className="w-5 text-label text-muted">{sira}</Text>
@@ -145,7 +145,7 @@ export default function SetList(props: Props) {
                   </Pressable>
                 );
               })}
-            </View>
+            </AyiricliListe>
             {props.onSetEkle && (
               <Pressable
                 accessibilityRole="button"
@@ -180,11 +180,11 @@ export default function SetList(props: Props) {
             </View>
             <Text className="shrink-0 text-label-xs text-muted uppercase">{t('setler.setSayisi', { count: grup.sets.length })}</Text>
           </View>
-          <View className="flex-col gap-1">
+          <AyiricliListe>
             {grup.sets.map((kayit, setSirasi) => (
               <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onDuzenle={props.onSetDuzenle} />
             ))}
-          </View>
+          </AyiricliListe>
         </CamKart>
       ))}
     </View>
