@@ -1,4 +1,5 @@
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import PaylasimPenceresi from './PaylasimPenceresi';
 
 const mockGaleriyeKaydet = jest.fn();
@@ -74,27 +75,26 @@ test('beklenmeyen hatada da kullanici bilgilendirilir', async () => {
 
 /**
  * #470 (kullanici karari): kart en ustte isim, altinda set, ayni puntoyla altinda sure, en altta
- * (daha kucuk) dumbbell + GRIND tasir.
+ * (daha kucuk) dumbbell + GRIND tasir. #598: rakamlar birimlerinden ayri cizilir.
  */
 test('kart ismi, set sayisini, sureyi ve GRIND yazisini tasir', async () => {
   await pencereyiAc('Push Day');
 
-  expect(screen.getByText('Push Day')).toBeTruthy();
-  expect(screen.getByText('12 set')).toBeTruthy();
-  expect(screen.getByText('48 dk')).toBeTruthy(); // 2880 sn = 48 dk
-  expect(screen.getByText('GRIND')).toBeTruthy();
+  expect(screen.getByTestId('paylasim-baslik').props.children).toBe('Push Day');
+  expect(screen.getByTestId('paylasim-set-sayisi').props.children).toBe(12);
+  expect(screen.getByText('set')).toBeTruthy();
+  expect(screen.getByTestId('paylasim-dakika').props.children).toBe(48); // 2880 sn = 48 dk
+  expect(screen.getByText('dk')).toBeTruthy();
+  expect(screen.getByTestId('paylasim-marka').props.children).toBe('GRIND');
 });
 
 /** #470: set ve sure AYNI puntoda -- ismin kucugu, GRIND'in buyugu olmali. */
 test('set ve sure satirlari ayni punto, isimden kucuk, GRIND satirindan buyuk', async () => {
   await pencereyiAc('Push Day');
 
-  const isimStili = screen.getByText('Push Day').props.style;
-  const setStili = screen.getByText('12 set').props.style;
-  const sureStili = screen.getByText('48 dk').props.style;
-  const markaStili = screen.getByText('GRIND').props.style;
+  const punto = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style).fontSize;
 
-  expect(setStili.fontSize).toBe(sureStili.fontSize);
-  expect(setStili.fontSize).toBeLessThan(isimStili.fontSize);
-  expect(markaStili.fontSize).toBeLessThan(setStili.fontSize);
+  expect(punto('paylasim-set-sayisi')).toBe(punto('paylasim-dakika'));
+  expect(punto('paylasim-set-sayisi')).toBeLessThan(punto('paylasim-baslik'));
+  expect(punto('paylasim-marka')).toBeLessThan(punto('paylasim-set-sayisi'));
 });
