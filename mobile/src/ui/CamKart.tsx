@@ -19,6 +19,13 @@ interface Props {
    * `SablonKarti`/`HareketKartlari`daki `border-accent` vurgusuyla ayni fikir, cam yuzeyde de.
    */
   vurguluKenar?: boolean;
+  /**
+   * #589: kare kart disindaki bicimler (cam dugme, satir) icin kose. Dis kap ve cam katmanlari AYNI
+   * koseyi tasir; varsayilan kartin kendi `rounded-3xl`'i.
+   */
+  koseSinifi?: string;
+  /** #589: dokunulabilir kart gecici olarak basilamaz ve soluk (ör. acik antrenman varken "Bos antrenman baslat"). */
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -49,6 +56,8 @@ export default function CamKart({
   className = '',
   disClassName = '',
   vurguluKenar = false,
+  koseSinifi = 'rounded-3xl',
+  disabled = false,
   children,
 }: Props) {
   return (
@@ -56,12 +65,12 @@ export default function CamKart({
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
-      disabled={!onPress}
+      disabled={disabled || !onPress}
       onPress={onPress}
-      className={`rounded-3xl ${disClassName}`}
+      className={`${koseSinifi} ${disabled ? 'opacity-60' : ''} ${disClassName}`}
     >
       {/* Cam GORUNTU katmanlari: bunlar yuvarlak koseye kirpilmeli, `children` KIRPILMAMALI. */}
-      <CamKatmanlari vurguluKenar={vurguluKenar} />
+      <CamKatmanlari koseSinifi={koseSinifi} vurguluKenar={vurguluKenar} />
       <View className={className}>{children}</View>
     </Pressable>
   );
