@@ -23,4 +23,7 @@ public class StartSessionRequest
     /// düşülür; <c>BodyWeightLog</c>'daki (#119) AYNI tolerans kullanılır (<c>ClientTimestamp</c>).
     /// </summary>
     public DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>#174: kuyruktan tekrar denenen başlatma yeni antrenman açmasın diye cihazda üretilen anahtar.</summary>
+    public Guid? ClientRequestId { get; set; }
 }

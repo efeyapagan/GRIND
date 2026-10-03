@@ -30,6 +30,8 @@ public class WorkoutSessionService(
 
     /// <summary>İstemci zaman damgası gelecekte olduğunda gösterilen mesaj (#262, tolerans BodyWeightLog'la paylaşılır).</summary>
     private const string FutureStart = "Antrenman başlangıcı gelecekte olamaz.";
+    private const string FutureEnd = "Antrenman bitişi gelecekte olamaz.";
+    private const string EndBeforeStart = "Antrenman bitişi başlangıcından önce olamaz.";
 
     /// <summary>
     /// "Açık oturum" olarak sayılmanın süre sınırı (issue #191). Issue'nun kendi önerdiği örnek
@@ -226,6 +228,17 @@ public class WorkoutSessionService(
     public async Task<StartSessionResult> StartAsync(
         StartSessionRequest request, CancellationToken cancellationToken = default)
     {
+        // #174: kuyruktan tekrar gelen başlatma (yanıtı kaybolmuş) ilk antrenmanı döner. Açık oturum
+        // penceresine bakılmaz: çevrimdışı antrenman saatler sonra gönderilebilir.
+        if (request.ClientRequestId is { } anahtar
+            && await sessionRepository.GetByClientRequestIdAsync(currentUser.UserId, anahtar, cancellationToken)
+                is { } onceki)
+        {
+            var mevcut = await OwnedOrThrowAsync(onceki.Id, cancellationToken);
+            return new StartSessionResult(
+                ToResponse(mevcut, await ProgressAsync(mevcut, cancellationToken)), Created: false);
+        }
+
         var (session, created) = await GetOrOpenTodayAsync(
             request.TemplateId, request.Notes, request.StartedAt, cancellationToken);
 
@@ -241,6 +254,7 @@ public class WorkoutSessionService(
                 ToResponse(reloaded, await ProgressAsync(reloaded, cancellationToken)), Created: false);
         }
 
+        session.ClientRequestId = request.ClientRequestId;
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StartSessionResult(
@@ -258,7 +272,14 @@ public class WorkoutSessionService(
             throw new ConflictException("Bu oturum zaten bitirilmiş.");
         }
 
-        session.EndedAt = timeProvider.GetUtcNow().UtcDateTime;
+        // #174: çevrimdışı bitirilen antrenman geç gönderilir -- bitiş cihazın gerçek zamanıdır.
+        var endedAt = ClientTimestamp.Resolve(request.ClientEndedAt, timeProvider, FutureEnd);
+        if (endedAt < session.StartedAt)
+        {
+            throw new ValidationException(EndBeforeStart);
+        }
+
+        session.EndedAt = endedAt;
         // Zorluk YALNIZCA burada yazılır — ayrı bir güncelleme ucu yok, bu yüzden bitmiş bir
         // oturumun zorluğu bir daha asla değişmez.
         session.Difficulty = request.Difficulty;

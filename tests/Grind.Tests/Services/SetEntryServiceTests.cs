@@ -1,6 +1,7 @@
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
+using Grind.Api.Models.Dtos.Session;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Entities;
 using Grind.Api.Models.Enums;
@@ -525,6 +526,70 @@ public class SetEntryServiceTests
             Assert.Equal(RecordType.Duration, duzeltilen.RecordType);
             await Assert.ThrowsAsync<ValidationException>(
                 () => service.PatchAsync(ikinci.Id, new PatchSetRequest { Reps = 10 }));
+        }
+    }
+
+    // ---- #174 dilim 2: çevrimdışı yapılan setin kuyruktan gönderilmesi ----
+
+    /// <summary>
+    /// Kuyruktaki set antrenmanın kimliğiyle gönderilir (açık oturum penceresi saatler sonra kapanmış olabilir).
+    /// Antrenman AÇIKSA canlı ekleme gibi davranır: hareket listede yoksa eklenir, zaman cihazın gerçek zamanıdır.
+    /// </summary>
+    [Fact]
+    public async Task Acik_antrenmana_kimligiyle_eklenen_set_istemci_zamanini_alir_ve_hareketi_listeye_ekler()
+    {
+        var (context, _, exercise, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await sessionService.StartAsync(new StartSessionRequest { StartedAt = saat.UtcNow });
+            var setZamani = saat.UtcNow.AddMinutes(10);
+            saat.UtcNow = saat.UtcNow.AddHours(8);
+
+            var eklenen = await service.CreateInSessionAsync(oturum.Session.Id, new CreateSetRequest
+            {
+                ExerciseId = exercise.Id, Weight = 80m, Reps = 8, ClientCreatedAt = new DateTimeOffset(setZamani),
+            });
+
+            Assert.Equal(oturum.Session.Id, eklenen.SessionId);
+            Assert.Equal(setZamani, eklenen.CreatedAt);
+            Assert.True(await context.Set<SessionExercise>()
+                .AnyAsync(se => se.WorkoutSessionId == oturum.Session.Id && se.ExerciseId == exercise.Id));
+        }
+    }
+
+    [Fact]
+    public async Task Kuyruktan_gelen_setin_gelecekteki_istemci_zamani_reddedilir()
+    {
+        var (_, _, exercise, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await sessionService.StartAsync(new StartSessionRequest());
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.CreateInSessionAsync(oturum.Session.Id,
+                new CreateSetRequest
+                {
+                    ExerciseId = exercise.Id, Weight = 80m, Reps = 8,
+                    ClientCreatedAt = new DateTimeOffset(saat.UtcNow.AddHours(1)),
+                }));
+        }
+    }
+
+    /// <summary>Yanıtı kaybolan isteğin tekrar denenmesi seti iki kez yazmaz: aynı anahtar ilk seti döner.</summary>
+    [Fact]
+    public async Task Ayni_istemci_anahtariyla_ikinci_set_yeni_set_acmaz()
+    {
+        var (context, _, exercise, service, sessionService, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await sessionService.StartAsync(new StartSessionRequest());
+            var anahtar = Guid.NewGuid();
+            CreateSetRequest Istek() => new() { ExerciseId = exercise.Id, Weight = 80m, Reps = 8, ClientRequestId = anahtar };
+
+            var ilk = await service.CreateInSessionAsync(oturum.Session.Id, Istek());
+            var ikinci = await service.CreateInSessionAsync(oturum.Session.Id, Istek());
+
+            Assert.Equal(ilk.Id, ikinci.Id);
+            Assert.Equal(1, await context.Set<SetEntry>().CountAsync(s => s.WorkoutSessionId == oturum.Session.Id));
         }
     }
 

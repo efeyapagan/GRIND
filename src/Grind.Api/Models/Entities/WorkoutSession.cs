@@ -24,6 +24,12 @@ public class WorkoutSession
     /// </summary>
     public SessionDifficulty? Difficulty { get; set; }
 
+    /// <summary>
+    /// #174: çevrimdışı başlatılan antrenmanın cihazda üretilen tekil anahtarı -- tekrar denenen başlatma yeni
+    /// antrenman açmasın (kullanıcı başına benzersiz). Anahtarsız (çevrimiçi) başlatmalarda null.
+    /// </summary>
+    public Guid? ClientRequestId { get; set; }
+
     public User User { get; set; } = null!;
     public WorkoutTemplate? Template { get; set; }
     public ICollection<SessionExercise> SessionExercises { get; set; } = [];

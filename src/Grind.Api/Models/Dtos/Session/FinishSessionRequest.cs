@@ -13,4 +13,10 @@ public class FinishSessionRequest
 {
     /// <summary>null ise kullanıcı zorluk seçmedi/atladı.</summary>
     public SessionDifficulty? Difficulty { get; set; }
+
+    /// <summary>
+    /// #174: antrenmanın cihazda bitirildiği an (çevrimdışı kuyruk geç gönderir). Başlangıçtan önce ya da
+    /// gelecekte olamaz. Verilmezse sunucu saati.
+    /// </summary>
+    public DateTimeOffset? ClientEndedAt { get; set; }
 }

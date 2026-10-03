@@ -31,4 +31,14 @@ public class CreateSetRequest
     /// <summary>Süreli harekette (#346) setin süresi, saniye.</summary>
     [Range(1, 3600, ErrorMessage = "Süre 1 ile 3600 saniye arasında olmalı.")]
     public int? DurationSeconds { get; set; }
+
+    /// <summary>
+    /// #174: setin cihazda girildiği an (çevrimdışı kuyruk geç gönderir). Yalnızca açık antrenmana kimliğiyle
+    /// eklemede (<c>POST /api/sessions/{id}/sets</c>) kullanılır; gelecekteki zaman reddedilir
+    /// (<c>ClientTimestamp</c>). Verilmezse sunucu saati.
+    /// </summary>
+    public DateTimeOffset? ClientCreatedAt { get; set; }
+
+    /// <summary>#174: kuyruktan tekrar denenen istek seti iki kez yazmasın diye cihazda üretilen anahtar.</summary>
+    public Guid? ClientRequestId { get; set; }
 }

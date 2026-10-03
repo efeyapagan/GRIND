@@ -3,7 +3,8 @@ import { Keyboard, View, Text } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react-native';
-import { queryKeys, useAddSet, useOpenSession } from '@grind/shared/api/queries';
+import { queryKeys, useOpenSession } from '@grind/shared/api/queries';
+import { useKuyrukluAddSet } from '../kuyruk/kuyrukluMutasyonlar';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { ApiError } from '@grind/shared/api/problem';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
@@ -45,7 +46,8 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi, oturu
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: acikOturum } = useOpenSession();
-  const eklemeMutasyonu = useAddSet();
+  // #174 dilim 2: cevrimdisiyken set kuyruga girer, listede hemen gorunur.
+  const eklemeMutasyonu = useKuyrukluAddSet();
   const agirlikIbaresi = useAgirlikIbaresi(egzersizId);
   const olcum = useHareketOlcumu(egzersizId);
 

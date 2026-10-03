@@ -18,6 +18,7 @@ import { renkler } from '@grind/shared/designTokens';
 import BaglantiSaglayici from '../src/baglanti/BaglantiSaglayici';
 import CevrimdisiSeridi from '../src/baglanti/CevrimdisiSeridi';
 import OnbellekKaliciligi from '../src/onbellek/OnbellekKaliciligi';
+import KuyrukSaglayici from '../src/kuyruk/KuyrukSaglayici';
 import { ONBELLEK_OMRU_MS } from '../src/onbellek/kaliciOnbellek';
 
 // #174: sorgular diske kalici yazilir; bellekten erken dusen sorgu diske de yazilmazdi -- `gcTime` kalicilik
@@ -68,9 +69,12 @@ export default function RootLayout() {
               <YorumDiliProvider>
                 <AuthProvider>
                   <OnbellekKaliciligi />
-                  <CevrimdisiSeridi>
-                    <Slot />
-                  </CevrimdisiSeridi>
+                  {/* #174 dilim 2: cevrimdisi antrenman islemlerinin kuyrugu. */}
+                  <KuyrukSaglayici>
+                    <CevrimdisiSeridi>
+                      <Slot />
+                    </CevrimdisiSeridi>
+                  </KuyrukSaglayici>
                 </AuthProvider>
               </YorumDiliProvider>
             </DilProvider>
