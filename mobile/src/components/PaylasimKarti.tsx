@@ -121,8 +121,9 @@ const PaylasimKarti = forwardRef<View, Props>(function PaylasimKarti(
 
 export default PaylasimKarti;
 
-/** #598: Volume PR, GRIND'den 3 punto kucuk (kullanici karari: "2-3 punto"). */
+/** #598 (kullanici karari): Volume PR GRIND'den 5 punto, birimler rakamdan 4 punto kucuk. */
 const MARKA_PUNTOSU = 16;
+const DETAY_PUNTOSU = 20;
 
 const stil = StyleSheet.create({
   // backgroundColor YOK: seffafligin kaynagi bu.
@@ -134,10 +135,11 @@ const stil = StyleSheet.create({
     maxWidth: PAYLASIM_BASLIK_AZAMI_GENISLIK,
   },
   detaySatiri: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  detay: { fontSize: 20, fontWeight: '700' },
-  birim: { color: renkler.accent, fontSize: 20, fontWeight: '700', textTransform: 'uppercase' },
+  detay: { fontSize: DETAY_PUNTOSU, fontWeight: '700' },
+  // #598: birimler rakamin yaninda bir ton geride kalsin diye soluk turuncu.
+  birim: { color: renkler['accent-soft'], fontSize: DETAY_PUNTOSU - 4, fontWeight: '700', textTransform: 'uppercase' },
   saatBirimi: { marginRight: 4 },
   markaSatiri: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   marka: { fontSize: MARKA_PUNTOSU, fontWeight: '900', letterSpacing: 2 },
-  hacimRekoru: { fontSize: MARKA_PUNTOSU - 3, fontWeight: '800', letterSpacing: 1, textAlign: 'center' },
+  hacimRekoru: { fontSize: MARKA_PUNTOSU - 5, fontWeight: '800', letterSpacing: 1, textAlign: 'center' },
 });

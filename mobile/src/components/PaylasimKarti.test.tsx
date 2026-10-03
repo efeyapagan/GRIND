@@ -57,20 +57,30 @@ test.each(['paylasim-baslik', 'paylasim-set-sayisi', 'paylasim-saat', 'paylasim-
   },
 );
 
-/** #598: birimler (SET / SA / DK) ve dumbbell turuncu kalir. */
-test('birimler turuncu kalir', async () => {
+/** #598 (kullanici karari): birimler (SET / SA / DK) soluk turuncu (`accent-soft`); dumbbell turuncu kalir. */
+test('birimler soluk turuncudur', async () => {
   await render(<PaylasimKarti templateName="Push Day" setCount={6} durationSeconds={4500} />);
 
   for (const birim of ['set', 'sa', 'dk']) {
-    expect(renk(screen.getByText(birim))).toBe(renkler.accent);
+    expect(renk(screen.getByText(birim))).toBe(renkler['accent-soft']);
   }
 });
 
-/** #598: Volume PR yazisi GRIND'den 3 punto kucuktur. */
-test('Volume PR GRIND yazisindan 3 punto kucuktur', async () => {
+/** #598: Volume PR yazisi GRIND'den 5 punto kucuktur (once 3, sonra kullanici 2 punto daha istedi). */
+test('Volume PR GRIND yazisindan 5 punto kucuktur', async () => {
   await render(<PaylasimKarti templateName="Push Day" setCount={6} durationSeconds={2700} volumePr />);
 
   const punto = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style).fontSize;
-  expect(punto('paylasim-hacim-rekoru')).toBe(punto('paylasim-marka') - 3);
+  expect(punto('paylasim-hacim-rekoru')).toBe(punto('paylasim-marka') - 5);
   expect(renk(screen.getByTestId('paylasim-hacim-rekoru'))).toBe('#FFFFFF');
+});
+
+/** #598: birimler (SETS / MIN) rakamdan 4 punto kucuktur (kullanici iki kez 2'ser punto istedi). */
+test('birimler rakamlardan 4 punto kucuktur', async () => {
+  await render(<PaylasimKarti templateName="Push Day" setCount={6} durationSeconds={2700} />);
+
+  const rakam = StyleSheet.flatten(screen.getByTestId('paylasim-set-sayisi').props.style).fontSize;
+  for (const birim of ['set', 'dk']) {
+    expect(StyleSheet.flatten(screen.getByText(birim).props.style).fontSize).toBe(rakam - 4);
+  }
 });
