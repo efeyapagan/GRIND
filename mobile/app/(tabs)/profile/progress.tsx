@@ -10,10 +10,12 @@ import HaftalikHacimKarti from '../../../src/components/HaftalikHacimKarti';
 import KasGrubuKarti from '../../../src/components/KasGrubuKarti';
 import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import BirTekrarKarti from '../../../src/components/BirTekrarKarti';
+import AsiriYuklenmeKarti from '../../../src/components/AsiriYuklenmeKarti';
 
 /**
  * #184: asamali yuklenme analizi -- haftalik hacim, kas grubuna gore setler, tahmini 1RM. Veri tek istekte
  * (`/stats/weekly`); hic seti olmayan kullaniciya kartlar yerine tek bir bos durum.
+ * #176: en ustte asiri yuklenme karti, yalnizca sinyal yanarken.
  */
 /** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function ProgressScreen() {
@@ -49,6 +51,7 @@ function ProgressIcerigi() {
   return (
     // Rekorlar sekmesiyle ayni kaydirma kabi (`records.tsx`).
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
+      <AsiriYuklenmeKarti />
       <HaftalikHacimKarti haftalar={haftalar} />
       <KasGrubuKarti haftalar={haftalar} />
       <BirTekrarKarti />
