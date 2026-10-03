@@ -40,6 +40,8 @@ interface Props {
   gizli?: boolean;
   /** #440: bu sablonla en son baslatilan antrenmanin zamani; hic yoksa null. */
   lastUsedAt: string | null;
+  /** #606: figur yalnizca karuselin ondeki kartinda oynar; digerleri ilk karesinde durur. */
+  figurCanli?: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export default function SablonVitrinKarti({
   ref,
   gizli = false,
   lastUsedAt,
+  figurCanli = true,
 }: Props) {
   const { t } = useTranslation();
   const dil = useDil();
@@ -87,7 +90,7 @@ export default function SablonVitrinKarti({
         <Izgara genislik={genislik} yukseklik={IZGARA_YUKSEKLIGI} />
       </View>
       <View pointerEvents="none" className="absolute right-3" style={{ top: 80 }}>
-        <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} />
+        <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} canli={figurCanli} />
       </View>
 
       <View className="flex-1 flex-col p-4">

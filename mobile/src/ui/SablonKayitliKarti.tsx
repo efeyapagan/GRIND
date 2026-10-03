@@ -32,6 +32,8 @@ interface Props {
   /** #538: verilirse sag ustte dambil yerine sabitleme dugmesi durur (kaydedilenler ekrani). */
   onSabitle?: () => void;
   sabitli?: boolean;
+  /** #606: figur yalnizca karuselin ondeki kartinda oynar; digerleri ilk karesinde durur. */
+  figurCanli?: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ export default function SablonKayitliKarti({
   ref,
   onSabitle,
   sabitli = false,
+  figurCanli = true,
 }: Props) {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
@@ -87,7 +90,7 @@ export default function SablonKayitliKarti({
           top: (KAYITLI_KART_YUKSEKLIGI - FIGUR_BOYUTU) / 2,
         }}
       >
-        <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} />
+        <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} canli={figurCanli} />
       </View>
 
       <View className="flex-1 justify-center p-4" style={{ width: genislik * YAZI_ORANI }}>
