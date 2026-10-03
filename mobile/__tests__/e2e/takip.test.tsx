@@ -186,3 +186,16 @@ test('arama ikonundan kullanici aranir ve sonuca dokununca profili acilir', asyn
 
   expect(await screen.findByText('Bu hesap gizli — yalnızca rekorlar görünür')).toBeTruthy();
 }, 20_000);
+
+// #622: takip listesindeki kisiye dokununca Gecmis'e degil baslikli profile gidilir.
+test('takipci listesinden kisiye dokununca profil basligi gorunur', async () => {
+  takipBackendiKur();
+
+  await renderRouterAsync('./app', { initialUrl: '/profile' });
+
+  await fireEvent.press(await screen.findByLabelText('Takipçiler: 2'));
+  await fireEvent.press(within(await screen.findByTestId('kullanici-satiri-ayse')).getByRole('link'));
+
+  expect(await screen.findByText('24 yaş')).toBeTruthy();
+  expect(screen.getByTestId('profil-sekmeleri')).toBeTruthy();
+}, 30_000);

@@ -1,5 +1,5 @@
 import { View, Text } from 'react-native';
-import { Slot, useLocalSearchParams, usePathname } from 'expo-router';
+import { Slot, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell, History, Trophy } from 'lucide-react-native';
 import { useKullaniciProfili, type KullaniciProfili } from '@grind/shared/api/queries';
@@ -95,7 +95,10 @@ export default function KullaniciProfiliLayout() {
 
 function KullaniciProfiliIcerigi() {
   const pathname = usePathname();
-  const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
+  // #622: ad `useLocalSearchParams`'tan DEGIL yoldan okunur -- bir takip listesinden baska bir kisiye
+  // gecince bu duzen yeniden kurulmuyor, parametre eski kisinin adinda kaliyordu (kendi listende
+  // "kendi profilim" sanip basligi cizmiyordu). `/profile/u/{ad}/...` -> 4. parca.
+  const ad = decodeURIComponent(pathname.split('/')[3] ?? '');
   const { username: ben } = useAuth();
   const kendisi = ben !== null && ad.toLowerCase() === ben.toLowerCase();
   const listeEkrani = LISTE_EKRANLARI.some((liste) => pathname.endsWith(`/${liste}`));
