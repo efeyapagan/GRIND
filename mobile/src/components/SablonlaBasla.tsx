@@ -78,7 +78,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
                 ...kaydedilenSablonlar.map((sablon) => sablon.id),
               ])
             }
-            kartCiz={(sablon, dokunus) => (
+            kartCiz={(sablon, dokunus, figurCanli) => (
               <SablonVitrinKarti
                 ref={kartRef(sablon.id)}
                 ad={sablon.name}
@@ -90,6 +90,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
                 disabled={bekliyor}
                 gizli={menu?.sablon.id === sablon.id}
                 lastUsedAt={sablon.lastUsedAt}
+                figurCanli={figurCanli}
               />
             )}
           />
