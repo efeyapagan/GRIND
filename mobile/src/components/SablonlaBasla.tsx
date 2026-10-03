@@ -1,30 +1,19 @@
-import { useRef, useState } from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
+import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
-import { useTemplates, useDeleteTemplate, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
+import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
-import SablonVitrinKarti from '../ui/SablonVitrinKarti';
-import SablonKayitliKarti from '../ui/SablonKayitliKarti';
-import SablonMenusu, { type Kutu } from './SablonMenusu';
+import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
+import SablonVitrinKarti, { KART_ARALIGI, useVitrinKartGenisligi } from '../ui/SablonVitrinKarti';
+import SablonMenusu from './SablonMenusu';
 import SablonKaruseli from './SablonKaruseli';
+import KaydedilenSablonKaruseli from './KaydedilenSablonKaruseli';
+import { useSablonMenusu } from './useSablonMenusu';
 
 interface Props {
   onBasla: (templateId: number) => void;
   bekliyor: boolean;
 }
-
-const KART_ARALIGI = 12;
-const EN_GENIS_KART = 300;
-/** Kart ekranin bu kadarini kaplar; saginda bir sonrakinin ucu gorunur ki kaydirilabildigi belli olsun. */
-const KART_ORANI = 0.72;
-/**
- * #556: Kaydedilenler listesi dikey bir ScrollView'in (`EkranKaydirici`) icinde kayar --
- * virtualization orada anti-pattern (iki ic ice ayni yonde VirtualizedList). Bunun yerine ilk
- * birkac kartin OTESINDEKI figur animasyonu hic baslatilmaz; eszamanli animasyon sayisi boylece
- * sablon sayisindan BAGIMSIZ sabit kalir.
- */
-const CANLI_FIGUR_SINIRI = 6;
 
 /**
  * Web donduruldugu icin (#326) artik yalnizca mobil: web/src/components/SablonlaBasla.tsx eski
@@ -35,35 +24,22 @@ const CANLI_FIGUR_SINIRI = 6;
  * menude; basili tutmaya devam edip yana surukleyince kart yer degistirir (`SablonKaruseli`). Sira
  * sunucuda durur, "Tümünü gör" (`/templates`) ekranindaki dikey siralamayla ayni veridir.
  *
+ * #538: kaydedilenler de yana kayan, yarim yukseklikte kartlardir; "Duzenle"leri kendi ekranlarina
+ * (`/templates/saved`) gider, sira sabitleme + son kullanimdir (`sablonlariAyir`).
+ *
  * Basili tutunca kart yerinden kalkip buyur (`SablonMenusu`): acilisin nereden baslayacagi icin
  * kartin ekrandaki yeri olculur; olcum gelmezse menu yine acilir, onizleme ortadan belirir.
  */
 export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { width: ekranGenisligi } = useWindowDimensions();
+  const kartGenisligi = useVitrinKartGenisligi();
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const silme = useDeleteTemplate();
   const siralama = useSablonlariSirala();
-  const kartlar = useRef(new Map<number, View | null>());
-  const [menu, setMenu] = useState<{ sablon: Sablon; kaynak: Kutu | null } | null>(null);
+  const { menu, menuyuAc, menuyuKapat, kartRef } = useSablonMenusu();
 
-  const kartGenisligi = Math.min(Math.round(ekranGenisligi * KART_ORANI), EN_GENIS_KART);
-
-  // #467: kendi sablonlari (karusel) ile baskasindan kaydedilenler (dikey liste) ayri gosterilir.
-  // `!s.savedFromUsername` (strict `=== null` DEGIL): eski/mock sablon nesnelerinde alan hic yoksa
-  // (undefined) da kendi sablonu sayilmali.
-  const kendiSablonlari = (sablonlar ?? []).filter((s) => !s.savedFromUsername);
-  const kaydedilenSablonlar = [...(sablonlar ?? []).filter((s) => s.savedFromUsername)].sort(
-    (a, b) => new Date(b.lastUsedAt ?? 0).getTime() - new Date(a.lastUsedAt ?? 0).getTime(),
-  );
-
-  function menuyuAc(sablon: Sablon) {
-    setMenu({ sablon, kaynak: null });
-    kartlar.current.get(sablon.id)?.measureInWindow((x, y, genislik) => {
-      setMenu((acik) => (acik?.sablon.id === sablon.id ? { ...acik, kaynak: { x, y, genislik } } : acik));
-    });
-  }
+  const { kendi: kendiSablonlari, kaydedilen: kaydedilenSablonlar } = sablonlariAyir(sablonlar ?? []);
 
   return (
     <View className="flex-col gap-5">
@@ -93,7 +69,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             aralik={KART_ARALIGI}
             onBasla={(sablon) => onBasla(sablon.id)}
             onMenuAc={menuyuAc}
-            onMenuKapat={() => setMenu(null)}
+            onMenuKapat={menuyuKapat}
             onSirala={(yeniSira) =>
               // #467: backend `ReorderAsync` kullanicinin TUM sablonlarinin (kendi + kaydedilen) id
               // kumesini birebir bekler; yalnizca karuseldeki kendi sablonlari gonderilirse 400 doner.
@@ -104,9 +80,7 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
             }
             kartCiz={(sablon, dokunus) => (
               <SablonVitrinKarti
-                ref={(kart) => {
-                  kartlar.current.set(sablon.id, kart);
-                }}
+                ref={kartRef(sablon.id)}
                 ad={sablon.name}
                 ozet={sablonOzeti(sablon)}
                 hareketSayisi={sablon.exercises.length}
@@ -124,22 +98,21 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
 
       {kaydedilenSablonlar.length > 0 && (
         <View className="flex-col gap-3">
-          <Text className="text-heading text-fg">{t('sablonlar.kaydedilenlerBasligi')}</Text>
-          {kaydedilenSablonlar.map((sablon, indeks) => (
-            <SablonKayitliKarti
-              key={sablon.id}
-              ref={(kart) => {
-                kartlar.current.set(sablon.id, kart);
-              }}
-              ad={sablon.name}
-              kaynakKullaniciAdi={sablon.savedFromUsername}
-              ozet={sablonOzeti(sablon)}
-              onBasla={() => onBasla(sablon.id)}
-              onMenu={() => menuyuAc(sablon)}
-              disabled={bekliyor}
-              canliFigur={indeks < CANLI_FIGUR_SINIRI}
-            />
-          ))}
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="text-heading text-fg">{t('sablonlar.kaydedilenlerBasligi')}</Text>
+            <Link href="/templates/saved" className="min-h-11 justify-center">
+              <Text className="text-label text-accent-soft">{t('sablonlar.duzenleListe')}</Text>
+            </Link>
+          </View>
+          <KaydedilenSablonKaruseli
+            sablonlar={kaydedilenSablonlar}
+            kartGenisligi={kartGenisligi}
+            aralik={KART_ARALIGI}
+            onKart={(sablon) => onBasla(sablon.id)}
+            onMenu={menuyuAc}
+            kartRef={kartRef}
+            disabled={bekliyor}
+          />
         </View>
       )}
 
@@ -149,14 +122,14 @@ export default function SablonlaBasla({ onBasla, bekliyor }: Props) {
           ozet={sablonOzeti(menu.sablon)}
           kartGenisligi={kartGenisligi}
           kaynak={menu.kaynak}
-          onKapat={() => setMenu(null)}
+          onKapat={menuyuKapat}
           onDuzenle={() => {
-            setMenu(null);
+            menuyuKapat();
             router.push(`/templates/${menu.sablon.id}`);
           }}
           onSil={() => {
             silme.mutate(menu.sablon.id);
-            setMenu(null);
+            menuyuKapat();
           }}
         />
       )}

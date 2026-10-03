@@ -1,19 +1,29 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
-import Svg, { Line } from 'react-native-svg';
 import { useDil } from '@grind/shared/i18n';
 import { formatKisaTarihHaftaGunuyle } from '@grind/shared/lib/format';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import BirincilDugme from './BirincilDugme';
 import CamYuzey from './CamYuzey';
 import IkonKapsulu from './IkonKapsulu';
+import Izgara from './Izgara';
 import SablonFiguru from './SablonFiguru';
-import { useAccentParlama, useIkonRenk, useRenkPaleti } from './renkler';
+import { useAccentParlama, useIkonRenk } from './renkler';
 
 export const KART_YUKSEKLIGI = 272;
+/** Karuseldeki kartlarin arasi. */
+export const KART_ARALIGI = 12;
+const EN_GENIS_KART = 300;
+/** Kart ekranin bu kadarini kaplar; saginda bir sonrakinin ucu gorunur ki kaydirilabildigi belli olsun. */
+const KART_ORANI = 0.72;
+
+/** Karusel kartinin genisligi -- #538'den beri kaydedilen sablon kartlari da ayni genislikte. */
+export function useVitrinKartGenisligi(): number {
+  const { width } = useWindowDimensions();
+  return Math.min(Math.round(width * KART_ORANI), EN_GENIS_KART);
+}
 const FIGUR_BOYUTU = 112;
-const IZGARA_ARALIGI = 18;
 const IZGARA_YUKSEKLIGI = 108;
 
 interface Props {
@@ -30,23 +40,6 @@ interface Props {
   gizli?: boolean;
   /** #440: bu sablonla en son baslatilan antrenmanin zamani; hic yoksa null. */
   lastUsedAt: string | null;
-}
-
-/** Kartin ortasinda figurun arkasinda duran silik kare izgara. */
-function Izgara({ genislik }: { genislik: number }) {
-  const palet = useRenkPaleti();
-  const dikeyler = Array.from({ length: Math.floor(genislik / IZGARA_ARALIGI) + 1 }, (_, i) => i * IZGARA_ARALIGI);
-  const yataylar = Array.from({ length: Math.floor(IZGARA_YUKSEKLIGI / IZGARA_ARALIGI) + 1 }, (_, i) => i * IZGARA_ARALIGI);
-  return (
-    <Svg width={genislik} height={IZGARA_YUKSEKLIGI}>
-      {dikeyler.map((x) => (
-        <Line key={`d${x}`} x1={x} y1={0} x2={x} y2={IZGARA_YUKSEKLIGI} stroke={palet.fg} strokeOpacity={0.05} />
-      ))}
-      {yataylar.map((y) => (
-        <Line key={`y${y}`} x1={0} y1={y} x2={genislik} y2={y} stroke={palet.fg} strokeOpacity={0.05} />
-      ))}
-    </Svg>
-  );
 }
 
 /**
@@ -91,7 +84,7 @@ export default function SablonVitrinKarti({
       <CamYuzey />
 
       <View pointerEvents="none" className="absolute inset-x-0" style={{ top: 88 }}>
-        <Izgara genislik={genislik} />
+        <Izgara genislik={genislik} yukseklik={IZGARA_YUKSEKLIGI} />
       </View>
       <View pointerEvents="none" className="absolute right-3" style={{ top: 80 }}>
         <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} />

@@ -32,6 +32,13 @@ public class WorkoutTemplate
     /// </summary>
     public long? SavedFromUserId { get; set; }
 
+    /// <summary>
+    /// Kaydedilen kopyayı listenin başına sabitler (#538). Yalnızca kaydedilen kopyalarda anlamlıdır:
+    /// onlar son kullanıma göre dizilir, pin bu sıranın önüne geçer. Kendi şablonlarının sırası
+    /// <see cref="OrderIndex"/>'tir, bu yüzden onlarda sabitleme reddedilir.
+    /// </summary>
+    public bool IsPinned { get; set; }
+
     public User User { get; set; } = null!;
     public User? SavedFromUser { get; set; }
     public ICollection<TemplateExercise> TemplateExercises { get; set; } = [];

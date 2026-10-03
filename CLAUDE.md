@@ -313,7 +313,9 @@ Object Reference) açığıdır.
   `true` → `Friends`, `false` → `Hidden` olarak taşındı), `SavedFromUserId`
   (nullable, FK → `User`, RESTRICT, #467 — `null` = kendi şablonun, doluysa bir arkadaştan kaydedilmiş
   kopya; kullanıcı adı değişebildiği için "kimden kaydedildi" ayrı bir string alanda değil canlı join
-  ile çözülür)
+  ile çözülür), `IsPinned` (#538 — yalnızca kaydedilen kopyada; kopyalar "pinliler önce, sonra son
+  kullanım" sırasıyla dizilir, sıralama istemcide `sablonlariAyir`. Kendi şablonunda
+  `PUT /api/templates/{id}/pin` 400 döner: onların sırası `OrderIndex`)
 - **TemplateExercise**: `Id`, `WorkoutTemplateId` (FK), `ExerciseId` (FK), `OrderIndex`,
   `PlannedSets` — o egzersiz için hedeflenen set sayısı (ağırlık/tekrar burada YOK, onlar
   gerçek performans anında `SetEntry`'ye girilir), `RestSeconds` — setler arası dinlenme (0–900 sn,

@@ -235,6 +235,20 @@ public class WorkoutTemplateService(
         return await ToResponseAsync(template, cancellationToken);
     }
 
+    public async Task<TemplateResponse> PinAsync(
+        long id, bool isPinned, CancellationToken cancellationToken = default)
+    {
+        var template = await OwnedOrThrowAsync(id, cancellationToken);
+        if (template.SavedFromUserId is null)
+        {
+            throw new ValidationException("Yalnızca kaydedilen şablonlar sabitlenebilir.");
+        }
+
+        template.IsPinned = isPinned;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ToResponseAsync(template, cancellationToken);
+    }
+
     private async Task<WorkoutTemplate> OwnedOrThrowAsync(long id, CancellationToken cancellationToken)
         => await templateRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
            ?? throw new NotFoundException(TemplateNotFound);
