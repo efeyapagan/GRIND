@@ -226,7 +226,8 @@ public class ExportTextFormatterTests
         Assert.Contains("## Aşırı yüklenme sinyali (bugüne göre, aralıktan bağımsız)\n", metin);
         Assert.Contains("- Bench Press: tahmini 1RM 112.5 → 104.06 kg (−7.5%)\n", metin);
         Assert.Contains("- Ortalama RIR: 2.5 → 1\n", metin);
-        Assert.Contains("- Zorluğu işaretli 4 antrenmandan 3'ü Zor/Maksimal\n", metin);
+        // Ek yok: "{N}'ü" sayıya göre yanlış çekimlenirdi ("2'ü", "1'ü").
+        Assert.Contains("- Zorluğu işaretli antrenman: 4, Zor/Maksimal: 3\n", metin);
         Assert.DoesNotContain("Aşırı yüklenme", ExportTextFormatter.Format(Bos()));
     }
 

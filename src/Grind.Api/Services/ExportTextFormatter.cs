@@ -172,7 +172,8 @@ public static class ExportTextFormatter
 
         if (signal.RatedSessions > 0)
         {
-            Line(text, Inv($"- Zorluğu işaretli {signal.RatedSessions} antrenmandan {signal.HardSessions}'ü Zor/Maksimal"));
+            // Ek yok: "{N}'ü" sayıya göre yanlış çekimlenirdi ("2'ü", "1'ü").
+            Line(text, Inv($"- Zorluğu işaretli antrenman: {signal.RatedSessions}, Zor/Maksimal: {signal.HardSessions}"));
         }
     }
 
