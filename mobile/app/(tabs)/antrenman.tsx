@@ -12,19 +12,11 @@ import Animated, {
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
-import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ClipboardList, Plus } from 'lucide-react-native';
 import {
-  hareketiKaldir,
-  setDegistiTazele,
-  setiSil,
-  useAddSessionExercise,
-  useDeleteSession,
   useExercises,
   useOpenSession,
-  useReorderSessionExercises,
   useSessionSets,
-  useStartSession,
   useTemplate,
   type SetKaydi,
 } from '@grind/shared/api/queries';
@@ -51,6 +43,14 @@ import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
 import CamIkincilDugme from '../../src/ui/CamIkincilDugme';
 import TurEtiketi from '../../src/ui/TurEtiketi';
+import {
+  useKuyrukluAddSessionExercise,
+  useKuyrukluDeleteSession,
+  useKuyrukluHareketKaldir,
+  useKuyrukluReorderSessionExercises,
+  useKuyrukluSetSil,
+  useKuyrukluStartSession,
+} from '../../src/kuyruk/kuyrukluMutasyonlar';
 import { useEtkinTema, useIkonRenk } from '../../src/ui/renkler';
 
 /** Klavye acikken yuzer set panelinin klavyenin ustunde biraktigi bosluk (#350). */
@@ -117,10 +117,11 @@ export default function AntrenmanScreen() {
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
   const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
-  const baslatMutasyonu = useStartSession();
-  const iptalMutasyonu = useDeleteSession();
-  const hareketEkleMutasyonu = useAddSessionExercise();
-  const siraMutasyonu = useReorderSessionExercises();
+  // #174 dilim 2: yazmalar kuyruklu -- cevrimdisiyken kuyruga girer, ekran hemen guncellenir.
+  const baslatMutasyonu = useKuyrukluStartSession();
+  const iptalMutasyonu = useKuyrukluDeleteSession();
+  const hareketEkleMutasyonu = useKuyrukluAddSessionExercise();
+  const siraMutasyonu = useKuyrukluReorderSessionExercises();
   const router = useRouter();
   const [baslatmaBilgisi, setBaslatmaBilgisi] = useState<string | null>(null);
   /**
@@ -162,28 +163,11 @@ export default function AntrenmanScreen() {
   // AntrenmanAltAlani degil burasi tutar -- ust baslikla alt alan AYNI paneli acabilsin diye.
   const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
 
-  const queryClient = useQueryClient();
-  const setSilmeyiTamamla = useCallback(
-    (kayit: SetKaydi) => {
-      void setiSil(kayit.id).then(
-        () => setDegistiTazele(queryClient, kayit),
-        () => undefined,
-      );
-    },
-    [queryClient],
-  );
+  const setSilmeyiTamamla = useKuyrukluSetSil();
   const setSilme = useGecikmeliSilme(setSilmeyiTamamla);
 
-  const hareketKaldirmayiTamamla = useCallback(
-    ({ sessionId, exerciseId }: BekleyenHareket) => {
-      void hareketiKaldir(sessionId, exerciseId).then(
-        () => setDegistiTazele(queryClient, { sessionId, exerciseId }),
-        () => undefined,
-      );
-    },
-    [queryClient],
-  );
-  const hareketKaldirma = useGecikmeliSilme(hareketKaldirmayiTamamla);
+  const hareketKaldirmayiTamamla = useKuyrukluHareketKaldir();
+  const hareketKaldirma = useGecikmeliSilme<BekleyenHareket>(hareketKaldirmayiTamamla);
   const kaldirilanHareketId = hareketKaldirma.bekleyen?.exerciseId;
 
   const gorunenSetler = (setler ?? []).filter(
