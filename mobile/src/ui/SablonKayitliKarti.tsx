@@ -17,6 +17,8 @@ const IZGARA_BASLANGICI = 0.34;
 const FIGUR_MERKEZI = 0.62;
 /** Ad ve "paylasti" satiri kartin bu kadarini kaplar; figurun ustune tasmaz. */
 const YAZI_ORANI = 0.42;
+/** Sag ustteki ikonun (dambil / sabitleme) karttan uzakligi; kose yuvarlakligindan uzak dursun. */
+const IKON_UST = 12;
 
 interface Props {
   ad: string;
@@ -99,7 +101,10 @@ export default function SablonKayitliKarti({
         )}
       </View>
 
-      <View className="absolute right-3 top-3">
+      {/* Sag ustteki ikon: top-3 ile kapsul kartin yuvarlak kosesine degiyordu (kullanici, #538). Konum
+          sinifla degil sayiyla -- `top-5`/`top-8` gibi projede baska yerde gecmeyen siniflar canli
+          yenilemede uygulanmadi. */}
+      <View className="absolute" style={{ top: IKON_UST, right: 12 }}>
         {onSabitle ? (
           <Pressable
             accessibilityRole="button"
