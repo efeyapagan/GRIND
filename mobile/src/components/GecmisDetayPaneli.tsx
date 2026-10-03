@@ -18,7 +18,7 @@ import GecmisKatmani from './GecmisKatmani';
 import GecmisSetMenusu from './GecmisSetMenusu';
 import SetPaneli from './SetPaneli';
 import SetList from './SetList';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import { ACILIS_YAYI, ALT_MENU_YUKSEKLIGI, altMenuAltKenari } from '../ui/KabukTabBar';
 import { useEtkinTema, useIkonRenk } from '../ui/renkler';
@@ -44,7 +44,7 @@ interface Props {
 
 /**
  * #382: gecmis antrenmanin ayrintisi -- listedeki kart yerinde acilmak yerine bu cam panelde
- * (`CamYuzey`, antrenman ekranindaki set paneli/odak kartiyla ayni yuzey) gosterilir.
+ * (`CamKatmanlari`, antrenman ekranindaki set paneli/odak kartiyla ayni yuzey) gosterilir.
  *
  * Acilis "genisleyen alt menu": panel alt menu hapinin TAM yerinde ve boyunda (`ALT_MENU_YUKSEKLIGI`,
  * tam yuvarlak) dogar, alt menu balonunun yayiyla (`ACILIS_YAYI`) yukari dogru ekrani kaplar, koseleri
@@ -77,15 +77,18 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
     }
   }, [olculdu, ilerleme]);
 
-  const panelStili = useAnimatedStyle(() => ({
-    // Yay 1'i biraz asar: panel ust kenarda hafifce esneyip yerine oturur.
-    height: interpolate(ilerleme.value, [0, 1], [ALT_MENU_YUKSEKLIGI, tamYukseklik]),
+  // #590: kose hem paneli (kirpma) hem camin sac teli kenarini surer -- ikisi ayni yaricapi izler.
+  const koseStili = useAnimatedStyle(() => ({
     borderRadius: interpolate(
       ilerleme.value,
       [0, 1],
       [ALT_MENU_YUKSEKLIGI / 2, KART_YARICAPI],
       Extrapolation.CLAMP,
     ),
+  }));
+  const panelStili = useAnimatedStyle(() => ({
+    // Yay 1'i biraz asar: panel ust kenarda hafifce esneyip yerine oturur.
+    height: interpolate(ilerleme.value, [0, 1], [ALT_MENU_YUKSEKLIGI, tamYukseklik]),
   }));
   const icerikStili = useAnimatedStyle(() => ({
     opacity: interpolate(ilerleme.value, [0.6, 1], [0, 1], Extrapolation.CLAMP),
@@ -125,10 +128,10 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
         </Animated.View>
         <Animated.View
           testID="gecmis-detay-paneli"
-          className="overflow-hidden border border-surface-4"
-          style={[{ position: 'absolute', left: YATAY_BOSLUK, right: YATAY_BOSLUK, bottom: altKenar }, panelStili]}
+          className="overflow-hidden"
+          style={[{ position: 'absolute', left: YATAY_BOSLUK, right: YATAY_BOSLUK, bottom: altKenar }, panelStili, koseStili]}
         >
-          <CamYuzey />
+          <CamKatmanlari koseSinifi="" kenarStili={koseStili} />
           {/* Icerik tam boy yuksekligindedir, buyuyen panel onu kirpar: buyume sirasinda satirlar
               yeniden dizilip ziplamaz. */}
           <Animated.View style={[{ height: tamYukseklik }, icerikStili]}>

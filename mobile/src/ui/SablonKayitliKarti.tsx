@@ -2,7 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell, Pin } from 'lucide-react-native';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
-import CamYuzey from './CamYuzey';
+import CamKatmanlari from './CamKatmanlari';
 import IkonKapsulu from './IkonKapsulu';
 import Izgara from './Izgara';
 import SablonFiguru from './SablonFiguru';
@@ -70,11 +70,11 @@ export default function SablonKayitliKarti({
       onPress={onBasla}
       onLongPress={onMenu}
       disabled={disabled}
-      className="overflow-hidden rounded-2xl border border-surface-4"
+      className="overflow-hidden rounded-2xl"
       // Opaklik sinifla degil stille: ilk cizimden sonra sinif eklemek NativeWind tuzagi (#261).
       style={{ width: genislik, height: KAYITLI_KART_YUKSEKLIGI, opacity: disabled ? 0.6 : 1 }}
     >
-      <CamYuzey />
+      <CamKatmanlari koseSinifi="rounded-2xl" />
 
       <View pointerEvents="none" className="absolute inset-y-0" style={{ left: izgaraSolu }}>
         <Izgara genislik={genislik - izgaraSolu} yukseklik={KAYITLI_KART_YUKSEKLIGI} solan />

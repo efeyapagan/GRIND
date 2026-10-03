@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import type { Sablon } from '@grind/shared/api/queries';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import SablonVitrinKarti, { KART_YUKSEKLIGI } from '../ui/SablonVitrinKarti';
 import { ACILIS_YAYI } from '../ui/KabukTabBar';
 import { useEtkinTema } from '../ui/renkler';
@@ -51,7 +51,7 @@ const OLCUM_BEKLEME_MS = 80;
 /**
  * #439: sablon kartina basili tutunca acilan menu -- iOS baglam menusu gibi. Kart karuseldeki
  * YERINDEN kalkip ekranin ortasina dogru buyur (`ACILIS_YAYI`, alt menu balonu ve gecmis paneliyle
- * ayni yay), arka plan kararir ama gorunur kalir, kartin altinda cam (`CamYuzey`) bir panelde
+ * ayni yay), arka plan kararir ama gorunur kalir, kartin altinda cam (#590 ile uc katmanli `CamKatmanlari`) bir panelde
  * Duzenle / Sil belirir. Sil geri alinamaz: panel yerinde onay sorar. Kapanis ayni yolu geri sarar.
  *
  * Onizleme kartin buyutulmus halidir (ayni genislikte cizilip `scale` edilir): icerik yeniden
@@ -171,13 +171,13 @@ export default function SablonMenusu({ sablon, ozet, kartGenisligi, kaynak, onKa
           const yukseklik = olay.nativeEvent.layout.height;
           setPanelYuksekligi((onceki) => onceki ?? yukseklik);
         }}
-        className="overflow-hidden rounded-2xl border border-surface-4"
+        className="overflow-hidden rounded-2xl"
         style={[
           { position: 'absolute', left: (ekranG - buyukG) / 2, width: buyukG, top: hedefUst + buyukY + PANEL_ARALIGI },
           panelStili,
         ]}
       >
-        <CamYuzey />
+        <CamKatmanlari koseSinifi="rounded-2xl" />
         <DuzenleSilSecenekleri
           duzenleEtiketi={t('sablonlar.duzenleBaslik')}
           silEtiketi={t('sablonlar.sil')}

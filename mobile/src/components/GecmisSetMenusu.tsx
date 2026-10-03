@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { setDegistiTazele, setiSil, type SetKaydi } from '@grind/shared/api/queries';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import DuzenleSilSecenekleri from './DuzenleSilSecenekleri';
 import GecmisKatmani from './GecmisKatmani';
 import SetDegeriYazisi from './SetDegeriYazisi';
@@ -49,8 +49,8 @@ export default function GecmisSetMenusu({ kayit, sira, onKapat }: Props) {
       {duzenleniyor ? (
         <SetDuzenleyici kayit={kayit} sira={sira} onKapat={onKapat} />
       ) : (
-        <View testID="set-menusu" className="overflow-hidden rounded-2xl border border-surface-4">
-          <CamYuzey />
+        <View testID="set-menusu" className="overflow-hidden rounded-2xl">
+          <CamKatmanlari koseSinifi="rounded-2xl" />
           <View className="flex-col gap-1 px-5 pt-4">
             <Text numberOfLines={1} className="text-label text-muted uppercase">
               {kayit.exerciseName} · {t('setler.setSirasi', { sira })}

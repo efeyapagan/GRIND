@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useGuncelTakvimOzeti, useSetWeeklyTarget } from '@grind/shared/api/queries';
 import EkranKaydirici from '../ui/EkranKaydirici';
 import BirincilDugme from '../ui/BirincilDugme';
+import CamKatmanlari from '../ui/CamKatmanlari';
+import CamDolgu from '../ui/CamDolgu';
 
 const HEDEF_GUNLERI = [1, 2, 3, 4, 5, 6, 7];
 
@@ -73,10 +75,12 @@ function HedefSecenegi({ etiket, secili, onPress }: { etiket: string; secili: bo
       accessibilityRole="radio"
       accessibilityState={{ checked: secili }}
       onPress={onPress}
-      className={`h-14 flex-row items-center justify-between rounded-full border-2 bg-surface-1 px-6 ${
-        secili ? 'border-fg' : 'border-surface-3'
-      }`}
+      // #590: duz `surface-1` hap degil cam (spec Karar 9). Secili olan kalin yazi + dolu radyo + hafif
+      // dolguyla belli olur; kalin `border-fg` cerceve kalkti (camin kendi sac teli kenari var).
+      className="h-14 flex-row items-center justify-between rounded-full px-6"
     >
+      <CamKatmanlari koseSinifi="rounded-full" />
+      {secili && <CamDolgu opaklik={0.08} yaricap={28} />}
       <Text className={`text-body-lg ${secili ? 'font-bold text-fg' : 'text-muted'}`}>{etiket}</Text>
       <View
         className={`size-6 items-center justify-center rounded-full border-2 ${secili ? 'border-fg' : 'border-muted'}`}
