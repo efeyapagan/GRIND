@@ -28,12 +28,12 @@ export default function GunDetayScreen() {
   return (
     <EkranKaydirici contentContainerClassName="flex-grow gap-3 px-4 pt-2 pb-4">
       {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-      {isError && (
+      {isError && !oturumlar && (
         <Text accessibilityRole="alert" className="text-body text-danger">
           {t('takvim.gunAlinamadi')}
         </Text>
       )}
-      {!isLoading && !isError && (oturumlar ?? []).length === 0 && (
+      {!isLoading && oturumlar && oturumlar.length === 0 && (
         <Text className="text-body text-muted">{t('takvim.gunBosDurum')}</Text>
       )}
       {(oturumlar ?? []).map((oturum) => (

@@ -6,6 +6,7 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import RekorKarti from '../../../src/components/RekorKarti';
 import CamKart from '../../../src/ui/CamKart';
+import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -13,7 +14,17 @@ import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
  * #293: Profil'in kendi sekmelerinde ust basliktaki metin tamamen kalkti -- `usePageTitle('')`
  * onceki basligi temizler.
  */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function RecordsScreen() {
+  usePageTitle('');
+  return (
+    <CevrimdisiKapisi>
+      <RecordsIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function RecordsIcerigi() {
   const { t } = useTranslation();
   const altMenuPayi = useAltMenuPayi();
   usePageTitle('');

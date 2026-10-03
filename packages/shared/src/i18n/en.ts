@@ -2,6 +2,9 @@ import type { Katalog } from './tr';
 
 export const en: Katalog = {
   ortak: {
+    cevrimdisi: 'Offline',
+    internetBaglan: 'Connect to the internet',
+    internetGerekiyor: 'This section needs an internet connection.',
     yukleniyor: 'Loading...',
     kaydet: 'Save',
     kapat: 'Close',

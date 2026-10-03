@@ -6,6 +6,7 @@ import DevamEdenAntrenman from '../../src/components/DevamEdenAntrenman';
 import Takvim from '../../src/components/Takvim';
 import ArkadasKarsilastirma from '../../src/components/ArkadasKarsilastirma';
 import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
+import CevrimdisiKapisi from '../../src/baglanti/CevrimdisiKapisi';
 
 /** web/src/pages/AnaSayfaPage.tsx ile ayni (issue #119/#120). */
 export default function AnaSayfaScreen() {
@@ -28,7 +29,10 @@ export default function AnaSayfaScreen() {
       {!oturumYukleniyor && (
         <>
           <Takvim />
-          <ArkadasKarsilastirma />
+          {/* #174: arkadaslar onbellekten gosterilmez -- cevrimdisiyken uyari. */}
+          <CevrimdisiKapisi className="">
+            <ArkadasKarsilastirma />
+          </CevrimdisiKapisi>
         </>
       )}
     </ScrollView>

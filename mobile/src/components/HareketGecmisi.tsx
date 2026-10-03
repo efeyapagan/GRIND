@@ -113,7 +113,7 @@ export function HareketGrafigi({
   const sekmeler = OLCUM_SEKMELERI[olcum];
   const [sekmeAnahtari, setSekmeAnahtari] = useState<SekmeAnahtari>(sabitSekme ?? 'agirlik');
   const [aralik, setAralik] = useState<IlerlemeAraligi>('1a');
-  const { data: noktalar, isLoading, isError } = useExerciseProgress(exerciseId, aralik);
+  const { data: noktalar, isLoading } = useExerciseProgress(exerciseId, aralik);
   const sekme = sekmeler.find((aday) => aday.anahtar === sekmeAnahtari) ?? sekmeler[0];
   // #346: sureli harekette degerler saniyedir, "1:15" diye yazilir.
   const bicim = (deger: number) =>
@@ -126,7 +126,7 @@ export function HareketGrafigi({
   let icerik: React.ReactNode;
   if (isLoading) {
     icerik = <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>;
-  } else if (isError || !noktalar) {
+  } else if (!noktalar) {
     icerik = (
       <Text accessibilityRole="alert" className="text-body text-danger">
         {t('hareketGecmisi.hata')}

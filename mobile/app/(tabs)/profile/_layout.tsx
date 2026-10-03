@@ -7,6 +7,7 @@ import { useAuth } from '../../../src/auth/AuthContext';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import { useIkonRenk } from '../../../src/ui/renkler';
 import ProfilBasligi from '../../../src/components/ProfilBasligi';
+import { useCevrimdisi } from '../../../src/baglanti/BaglantiSaglayici';
 import ProfilSekmeleri, { type ProfilSekmesi } from '../../../src/components/ProfilSekmeleri';
 
 const SEKMELER: readonly ProfilSekmesi[] = [
@@ -27,11 +28,12 @@ function KendiProfilBasligi() {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const router = useRouter();
+  const cevrimdisi = useCevrimdisi();
   const { username } = useAuth();
   const profil = useProfilim();
   const sayaclar = useKullaniciProfili(username);
 
-  if (profil.isError) {
+  if (profil.isError && !profil.data) {
     return (
       <View className="px-4 pt-2">
         <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={t('profil.profilAlinamadi')} />
@@ -46,7 +48,9 @@ function KendiProfilBasligi() {
     <ProfilBasligi
       kisi={profil.data}
       sayaclar={sayaclar.data}
+      // #174 (kullanici karari): cevrimdisiyken profil duzenleme kalemi gosterilmez.
       duzenle={
+        cevrimdisi ? undefined : (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('ortak.profiliDuzenle')}
@@ -55,6 +59,7 @@ function KendiProfilBasligi() {
         >
           <Pencil color={ikonRenk.muted} size={16} />
         </Pressable>
+        )
       }
     />
   );

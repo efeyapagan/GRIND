@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { EgzersizKategorisi } from '@grind/shared/api/queries';
 import { figurPozu } from './figurPozu';
+import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useRenkPaleti } from './renkler';
 
 const CIZGI = 8;
@@ -103,6 +104,8 @@ function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<n
  * karesinde durur -- cagiran taraf, bu figurun ekranda gorunmedigini/gorunmeyecegini bildigi zaman
  * (ornegin Kaydedilenler listesinde gorunum disina dusmesi beklenen kartlar) animasyonu hic
  * baslatmaz. Sablon sayisi arttikca eszamanli calisan animasyon sayisi boylece sabit kalir.
+ *
+ * #174 (kullanici karari): cevrimdisiyken de ayni sekilde baslangic karesinde durur.
  */
 export default function SablonFiguru({
   kategori,
@@ -115,16 +118,18 @@ export default function SablonFiguru({
 }) {
   const palet = useRenkPaleti();
   const hareketiAzalt = useReducedMotion();
+  // #174 (kullanici karari): cevrimdisiyken figurler oynamaz, baslangic karesinde durur.
+  const cevrimdisi = useCevrimdisi();
   const p = useSharedValue(0);
 
   useEffect(() => {
-    if (hareketiAzalt || !canli) {
+    if (hareketiAzalt || !canli || cevrimdisi) {
       p.value = 0;
       return;
     }
     p.value = withRepeat(withTiming(1, { duration: YARIM_TUR_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
     return () => cancelAnimation(p);
-  }, [hareketiAzalt, canli, p]);
+  }, [hareketiAzalt, canli, cevrimdisi, p]);
 
   // useId ':' gibi karakterler uretir; `url(#...)` icinde gecersiz oldugu icin temizlenir (Parilti ile ayni).
   const filtreId = `figur${useId().replace(/[^a-zA-Z0-9]/g, '')}`;

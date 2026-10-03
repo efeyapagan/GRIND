@@ -29,3 +29,9 @@ jest.mock('expo-media-library', () => ({
 jest.mock('expo-clipboard', () => ({ setImageAsync: jest.fn() }));
 
 require('@grind/shared/i18n').i18nBaslat('tr');
+
+// #174: kalici sorgu onbellegi AsyncStorage'a yazilir; yerel modul testte yok, paketin kendi mock'u
+// bellekte calisir.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

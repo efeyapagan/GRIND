@@ -1,5 +1,6 @@
 import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import type { GecmisOturum } from '@grind/shared/api/queries';
+import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import GecmisKarti from './GecmisKarti';
 
 function ornekOturum(gecersizler: Partial<GecmisOturum> = {}): GecmisOturum {
@@ -174,4 +175,15 @@ test('kart, salt-okunur kart ve silme onayi cam yuzeydedir', async () => {
 
   await render(<GecmisKarti oturum={ornekOturum()} />);
   expect(camMi('gecmis-karti')).toBe(true);
+});
+
+/** #174 (kullanici karari): paylasim penceresi internet yokken hic acilmaz -- paylas ikonu gosterilmez. */
+test('cevrimdisiyken paylas ikonu gosterilmez', async () => {
+  await render(
+    <BaglantiBaglami.Provider value>
+      <GecmisKarti oturum={ornekOturum({ durationSeconds: 4320 })} onSil={jest.fn()} />
+    </BaglantiBaglami.Provider>,
+  );
+
+  expect(screen.queryByLabelText('Antrenmanı paylaş')).toBeNull();
 });

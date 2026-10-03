@@ -20,6 +20,8 @@ import SetPaneli from './SetPaneli';
 import SetList from './SetList';
 import CamKatmanlari from '../ui/CamKatmanlari';
 import { ACILIS_YAYI, ALT_MENU_YUKSEKLIGI, altMenuAltKenari } from '../ui/KabukTabBar';
+import { useCevrimiciEylem } from '../baglanti/useCevrimiciEylem';
+import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useEtkinTema, useIkonRenk } from '../ui/renkler';
 
 /** Panel tam boyken ust kenarinin guvenli alanin altinda biraktigi bosluk. */
@@ -63,6 +65,11 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
   const [setMenusu, setSetMenusu] = useState<{ kayit: SetKaydi; sira: number; dogrudan?: boolean } | null>(null);
   // #598: "Set ekle" ve dokunarak duzenleme yalnizca kalemle acilan bu modda -- yanlislikla set eklenmesin.
   const [duzenlemeModu, setDuzenlemeModu] = useState(false);
+  // #174: gecmiste set duzenleme/silme ve set ekleme cevrimdisi calismaz, uyari cikar.
+  const cevrimici = useCevrimiciEylem();
+  // Duzenleme modu acikken baglanti koparsa "Set ekle" ve dokunarak duzenleme de kapanir.
+  const cevrimdisi = useCevrimdisi();
+  const duzenlemeAcik = duzenlemeModu && !cevrimdisi;
   // #564: set eklenen hareket -- yalnizca antrenmanda zaten olan hareket (grubun altindaki dugme).
   const [ekleme, setEkleme] = useState<{ exerciseId: number; exerciseName: string } | null>(null);
   const ilerleme = useSharedValue(0);
@@ -142,11 +149,11 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
               {onSil && (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={t(duzenlemeModu ? 'gecmis.duzenlemeyiBitir' : 'gecmis.antrenmaniDuzenle')}
-                  onPress={() => setDuzenlemeModu((acik) => !acik)}
+                  accessibilityLabel={t(duzenlemeAcik ? 'gecmis.duzenlemeyiBitir' : 'gecmis.antrenmaniDuzenle')}
+                  onPress={cevrimici(() => setDuzenlemeModu((acik) => !acik))}
                   className="size-11 shrink-0 items-center justify-center"
                 >
-                  <Pencil color={duzenlemeModu ? ikonRenk.accent : ikonRenk.muted} size={20} />
+                  <Pencil color={duzenlemeAcik ? ikonRenk.accent : ikonRenk.muted} size={20} />
                 </Pressable>
               )}
               <Pressable
@@ -163,11 +170,11 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
                 varyant="gecmis"
                 sets={oturum.sets}
                 bosDurumMetni={t('gecmis.bosDurumMetni')}
-                onSetMenu={onSil ? (kayit, sira) => setSetMenusu({ kayit, sira }) : undefined}
+                onSetMenu={onSil ? cevrimici((kayit: SetKaydi, sira: number) => setSetMenusu({ kayit, sira })) : undefined}
                 onSetEkle={
-                  onSil && duzenlemeModu ? (exerciseId, exerciseName) => setEkleme({ exerciseId, exerciseName }) : undefined
+                  onSil && duzenlemeAcik ? (exerciseId, exerciseName) => setEkleme({ exerciseId, exerciseName }) : undefined
                 }
-                onSetDokun={onSil && duzenlemeModu ? (kayit, sira) => setSetMenusu({ kayit, sira, dogrudan: true }) : undefined}
+                onSetDokun={onSil && duzenlemeAcik ? (kayit, sira) => setSetMenusu({ kayit, sira, dogrudan: true }) : undefined}
               />
               {onSil && (
                 <Pressable

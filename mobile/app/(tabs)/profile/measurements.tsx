@@ -22,6 +22,7 @@ import BosDurum from '../../../src/ui/BosDurum';
 import CamKart from '../../../src/ui/CamKart';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import { useIkonRenk } from '../../../src/ui/renkler';
+import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
@@ -48,7 +49,17 @@ interface OlcumGovdesi {
  * yorum). TAM AYNI boy+kiloyla ikinci giris (issue #119) bu sorunun DISINDA kalir, sunucu hala sert
  * 409 doner.
  */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function MeasurementsScreen() {
+  usePageTitle('');
+  return (
+    <CevrimdisiKapisi>
+      <MeasurementsIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function MeasurementsIcerigi() {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
