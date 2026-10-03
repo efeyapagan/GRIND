@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
 
@@ -56,53 +56,4 @@ test('sonradan gecilen kilo rekorunun satiri "geçildi" diye okunur, son rekor o
 
   expect(screen.getByLabelText(/^1\. set, .*geçildi/)).toBeTruthy();
   expect(screen.getByLabelText(/^2\. set, /).props.accessibilityLabel).not.toMatch(/geçildi/);
-});
-
-/**
- * #598: kalem dugmesi kapatma (carpi) dugmesinin SOLUNDA durur ve set giris formunu acar/kapatir.
- * Yanlislikla set eklenmesin diye form varsayilan olarak kapali gelir; kalem onu gorunur yapar.
- */
-test('onFormDegistir verilince kalem dugmesi carpinin solunda durur ve basilinca cagrilir', async () => {
-  const onFormDegistir = jest.fn();
-  await render(
-    <HareketKartiGovdesi
-      hareket={hareket}
-      sira={0}
-      setler={[]}
-      onSetDuzenle={jest.fn()}
-      onKapat={jest.fn()}
-      onFormDegistir={onFormDegistir}
-      formAcik={false}
-    />,
-  );
-
-  const etiketler = screen.getAllByRole('button').map((dugme) => dugme.props.accessibilityLabel);
-  expect(etiketler.indexOf('Set girişini aç')).toBeLessThan(etiketler.indexOf('Paneli kapat'));
-
-  await fireEvent.press(screen.getByRole('button', { name: 'Set girişini aç' }));
-  expect(onFormDegistir).toHaveBeenCalledTimes(1);
-});
-
-test('form acikken kalem dugmesi formu kapatacagini soyler', async () => {
-  await render(
-    <HareketKartiGovdesi
-      hareket={hareket}
-      sira={0}
-      setler={[]}
-      onSetDuzenle={jest.fn()}
-      onKapat={jest.fn()}
-      onFormDegistir={jest.fn()}
-      formAcik
-    />,
-  );
-
-  expect(screen.getByRole('button', { name: 'Set girişini kapat' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Set girişini aç' })).toBeNull();
-});
-
-test('onFormDegistir verilmezse (liste karti) kalem dugmesi hic cizilmez', async () => {
-  await render(<HareketKartiGovdesi hareket={hareket} sira={0} setler={[]} onSetDuzenle={jest.fn()} />);
-
-  expect(screen.queryByRole('button', { name: 'Set girişini aç' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Set girişini kapat' })).toBeNull();
 });

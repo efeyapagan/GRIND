@@ -330,8 +330,6 @@ export const tr = {
     yeniSet: 'Yeni set',
     yeniSetIcin: 'Yeni set: {{ad}}',
     paneliKapat: 'Paneli kapat',
-    formuAc: 'Set girişini aç',
-    formuKapat: 'Set girişini kapat',
     egzersizEtiket: 'Egzersiz',
     eklendi: 'Eklendi: {{agirlik}} kg × {{tekrar}}',
     baglantiHatasi:
@@ -458,6 +456,8 @@ export const tr = {
     // #564: geçmişteki sete basılı tutunca açılan menü (şablon menüsüyle aynı desen).
     setMenusuIpucu: 'Düzenlemek ya da silmek için basılı tut',
     setiDuzenle: 'Seti düzenle',
+    antrenmaniDuzenle: 'Antrenmanı düzenle',
+    duzenlemeyiBitir: 'Düzenlemeyi bitir',
     setSilOnayi: 'Bu set silinecek. Bu hareketin rekorları yeniden hesaplanır.',
     setKatmaniniKapat: 'Set penceresini kapat',
     setEkleEtiketi: '{{hareket}} için set ekle',

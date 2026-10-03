@@ -323,8 +323,6 @@ export const en: Katalog = {
     yeniSet: 'New set',
     yeniSetIcin: 'New set: {{ad}}',
     paneliKapat: 'Close panel',
-    formuAc: 'Open set entry',
-    formuKapat: 'Close set entry',
     egzersizEtiket: 'Exercise',
     eklendi: 'Added: {{agirlik}} kg × {{tekrar}}',
     baglantiHatasi:
@@ -449,6 +447,8 @@ export const en: Katalog = {
     detayiKapat: 'Close workout details',
     setMenusuIpucu: 'Long press to edit or delete',
     setiDuzenle: 'Edit set',
+    antrenmaniDuzenle: 'Edit workout',
+    duzenlemeyiBitir: 'Done editing',
     setSilOnayi: 'This set will be deleted. Records for this exercise will be recalculated.',
     setKatmaniniKapat: 'Close set window',
     setEkleEtiketi: 'Add set to {{hareket}}',

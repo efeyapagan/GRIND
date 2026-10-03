@@ -14,6 +14,8 @@ interface Props {
   kayit: SetKaydi;
   sira: number;
   onKapat: () => void;
+  /** #598: duzenleme modunda sete dokunulunca menu atlanir, dogrudan duzenleyici acilir. */
+  dogrudanDuzenle?: boolean;
 }
 
 /**
@@ -25,10 +27,10 @@ interface Props {
  * menudeki onayli Sil). Sunucu bitmis antrenmanin setini de duzeltir/siler ve rekorlari yeniden
  * hesaplar; gecmis ve rekorlar `setDegistiTazele` ile tazelenir, panel guncel oturumu listeden alir.
  */
-export default function GecmisSetMenusu({ kayit, sira, onKapat }: Props) {
+export default function GecmisSetMenusu({ kayit, sira, onKapat, dogrudanDuzenle = false }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [duzenleniyor, setDuzenleniyor] = useState(false);
+  const [duzenleniyor, setDuzenleniyor] = useState(dogrudanDuzenle);
 
   useEffect(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

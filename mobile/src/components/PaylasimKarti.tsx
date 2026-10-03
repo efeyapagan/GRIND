@@ -5,8 +5,14 @@ import { Dumbbell } from 'lucide-react-native';
 import { renkler } from '@grind/shared/designTokens';
 import { saatDakika } from '@grind/shared/lib/format';
 
+/**
+ * #598 (kullanici karari): uzun sablon adi bu genislikten sonra alt satira gecer -- 32 punto kalin
+ * yazida yaklasik 14-16 karakter. Satir sayisi kisitlanmaz, ad hic kesilmez.
+ */
+export const PAYLASIM_BASLIK_AZAMI_GENISLIK = 280;
+
 interface Props {
-  /** #470 (kullanici karari): isim yoksa (sablonsuz antrenman) "Serbest" gosterilir. */
+  /** #598 (kullanici karari): sablonsuz antrenmanda (null) ustte hicbir baslik yazmaz. */
   templateName: string | null;
   setCount: number;
   durationSeconds: number;
@@ -42,7 +48,11 @@ const PaylasimKarti = forwardRef<View, Props>(function PaylasimKarti(
 
   return (
     <View ref={ref} collapsable={false} style={stil.kart}>
-      <Text style={stil.isim}>{templateName ?? t('gecmis.serbest')}</Text>
+      {templateName !== null && (
+        <Text testID="paylasim-baslik" style={stil.isim}>
+          {templateName}
+        </Text>
+      )}
 
       <Text style={stil.detay}>
         {setCount} {t('gecmis.setBirimi')}
@@ -79,7 +89,13 @@ export default PaylasimKarti;
 const stil = StyleSheet.create({
   // backgroundColor YOK: seffafligin kaynagi bu.
   kart: { alignItems: 'center', gap: 8, paddingHorizontal: 32, paddingVertical: 24 },
-  isim: { color: renkler.accent, fontSize: 32, fontWeight: '800', textAlign: 'center' },
+  isim: {
+    color: renkler.accent,
+    fontSize: 32,
+    fontWeight: '800',
+    textAlign: 'center',
+    maxWidth: PAYLASIM_BASLIK_AZAMI_GENISLIK,
+  },
   detay: { color: renkler.accent, fontSize: 20, fontWeight: '700', textTransform: 'uppercase' },
   markaSatiri: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   marka: { color: renkler.accent, fontSize: 16, fontWeight: '900', letterSpacing: 2 },

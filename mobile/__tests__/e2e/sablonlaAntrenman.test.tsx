@@ -6,11 +6,6 @@ import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
 import { renderRouterAsync } from '../../src/testUtils/renderRouterAsync';
 
-/** #598: set giris formu varsayilan kapali; kalem dugmesiyle acilir. */
-async function formuAc() {
-  await fireEvent.press(await screen.findByRole('button', { name: 'Set girişini aç' }));
-}
-
 jest.mock('@grind/shared/api/client', () => {
   const actual = jest.requireActual('@grind/shared/api/client');
   return { ...actual, request: jest.fn() };
@@ -67,7 +62,6 @@ test('kullanıcı yeni şablon oluşturup o şablonla antrenman başlatır ve se
 
   // Hareket kartına dokununca set paneli açılır.
   await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
-  await formuAc();
   await fireEvent.changeText(await screen.findByLabelText('Ağırlık'), '60');
   await fireEvent.changeText(screen.getByLabelText('Tekrar'), '8');
   // #266: RIR alanına dokununca kaydırıcı açılır; ara durak "2–3" sunucuya 2.5 gider.
@@ -131,7 +125,6 @@ test('set paneli acikken antrenman iptal edilince panel ekranda kalmaz', async (
 
   // Karta dokunmak set panelini acar.
   await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
-  await formuAc();
   expect(await screen.findByLabelText('Ağırlık')).toBeTruthy();
 
   // Set girilmedigi icin alt alanda "Antrenmani iptal et" durur (setler sorgusu yuklenince).
@@ -174,7 +167,6 @@ test('klavye acilinca set paneli klavyenin ustune cikar, kapaninca geri iner', a
   await renderRouterAsync('./app', { initialUrl: '/antrenman' });
   await fireEvent.press(await screen.findByText('Push Day E2E'));
   await fireEvent.press(await screen.findByLabelText(/Bench Press, 0 \/ 3 set/));
-  await formuAc();
   await screen.findByLabelText('Ağırlık');
   const panelAlti = () => StyleSheet.flatten(screen.getByTestId('set-paneli').props.style).bottom;
   expect(panelAlti()).toBe(altMenuPayi(0));

@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Check, CirclePlay, Pencil, Plus, X } from 'lucide-react-native';
+import { Check, CirclePlay, Plus, X } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import { hedefTamamlandi } from '@grind/shared/lib/ilerleme';
 import { gecilmisRekorIdleri } from '@grind/shared/lib/rekor';
 import SetSatiri from './SetSatiri';
+import IkonDugmesi from '../ui/IkonDugmesi';
 import CamDolgu from '../ui/CamDolgu';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -19,24 +20,6 @@ interface Props {
   onSec?: () => void;
   /** #357: odak kartinda basligin en solundaki kapatma dugmesi -- karti ve set panelini birlikte kapatir. */
   onKapat?: () => void;
-  /** #598: odak kartinda kalem dugmesi -- set giris formunu acar/kapatir (yanlislikla set eklenmesin diye). */
-  onFormDegistir?: () => void;
-  formAcik?: boolean;
-}
-
-/** #598: kutusuz, yalnizca ikon dugme (cerceve yok); dokunma alani 44 px kalir. */
-function DuzIkonDugmesi({ etiket, onPress, children }: { etiket: string; onPress: () => void; children: React.ReactNode }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={etiket}
-      onPress={onPress}
-      hitSlop={8}
-      className="size-8 shrink-0 items-center justify-center"
-    >
-      {children}
-    </Pressable>
-  );
 }
 
 function setSayaci(hareket: HareketIlerlemesi): string {
@@ -49,16 +32,7 @@ function setSayaci(hareket: HareketIlerlemesi): string {
  * Hareket kartinin baslik + set satirlari (#354): liste karti (`HareketKartlari`) ile set paneliyle
  * birlikte acilan odak karti (`OdakKarti`) ayni govdeyi cizer; yuzeyi ve ek ayrintilari cagiran verir.
  */
-export default function HareketKartiGovdesi({
-  hareket,
-  sira,
-  setler,
-  onSetDuzenle,
-  onSec,
-  onKapat,
-  onFormDegistir,
-  formAcik = false,
-}: Props) {
+export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenle, onSec, onKapat }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const tamamlandi = hedefTamamlandi(hareket);
@@ -67,18 +41,10 @@ export default function HareketKartiGovdesi({
   const baslik = (
     <>
       <View className="min-w-0 flex-1 flex-row items-center gap-2">
-        {onFormDegistir && (
-          <DuzIkonDugmesi
-            etiket={t(formAcik ? 'setler.formuKapat' : 'setler.formuAc')}
-            onPress={onFormDegistir}
-          >
-            <Pencil color={formAcik ? ikonRenk.accent : ikonRenk.muted} size={18} />
-          </DuzIkonDugmesi>
-        )}
         {onKapat && (
-          <DuzIkonDugmesi etiket={t('setler.paneliKapat')} onPress={onKapat}>
+          <IkonDugmesi etiket={t('setler.paneliKapat')} onPress={onKapat}>
             <X color={ikonRenk.muted} size={20} />
-          </DuzIkonDugmesi>
+          </IkonDugmesi>
         )}
         {/* #590: cam kartin icinde opak `surface-3` karo degil, hafif dolgu. */}
         <View testID="hareket-sira-karosu" className="size-8 shrink-0 items-center justify-center rounded-lg">

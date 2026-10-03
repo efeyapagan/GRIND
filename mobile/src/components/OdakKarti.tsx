@@ -17,9 +17,6 @@ interface Props {
   onKaldir: () => void;
   /** #357: karti ve set panelini birlikte kapatir. */
   onKapat: () => void;
-  /** #598: set giris formunu acan/kapatan kalem dugmesi. */
-  onFormDegistir: () => void;
-  formAcik: boolean;
 }
 
 /**
@@ -27,16 +24,7 @@ interface Props {
  * glass" yuzey (#350; #590 ile uc katmanli `CamKatmanlari`). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
  * gecmisi, kaldirma; sira #407 ile listede surukleyerek degisir) kendi icinde kayar.
  */
-export default function OdakKarti({
-  hareket,
-  idler,
-  setler,
-  onSetDuzenle,
-  onKaldir,
-  onKapat,
-  onFormDegistir,
-  formAcik,
-}: Props) {
+export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onKaldir, onKapat }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
@@ -44,15 +32,7 @@ export default function OdakKarti({
     <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl">
       <CamKatmanlari koseSinifi="rounded-xl" />
       <ScrollView contentContainerClassName="flex-col gap-3 p-4" keyboardShouldPersistTaps="handled">
-        <HareketKartiGovdesi
-          hareket={hareket}
-          sira={sira}
-          setler={setler}
-          onSetDuzenle={onSetDuzenle}
-          onKapat={onKapat}
-          onFormDegistir={onFormDegistir}
-          formAcik={formAcik}
-        />
+        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetDuzenle={onSetDuzenle} onKapat={onKapat} />
         <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
         <Pressable onPress={onKaldir} className="h-12 flex-row items-center justify-center gap-2 rounded-xl">
           <Trash2 color={ikonRenk.danger} size={18} />

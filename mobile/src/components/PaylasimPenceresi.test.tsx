@@ -85,13 +85,6 @@ test('kart ismi, set sayisini, sureyi ve GRIND yazisini tasir', async () => {
   expect(screen.getByText('GRIND')).toBeTruthy();
 });
 
-/** Sablonsuz antrenmanda (#470) isim yerine "Serbest" gosterilir -- GecmisOzeti ile ayni desen. */
-test('sablon adi yoksa kartta "Serbest" gosterilir', async () => {
-  await pencereyiAc(null);
-
-  expect(screen.getByText('Serbest')).toBeTruthy();
-});
-
 /** #470: set ve sure AYNI puntoda -- ismin kucugu, GRIND'in buyugu olmali. */
 test('set ve sure satirlari ayni punto, isimden kucuk, GRIND satirindan buyuk', async () => {
   await pencereyiAc('Push Day');

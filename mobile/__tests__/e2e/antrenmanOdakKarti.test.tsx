@@ -16,11 +16,6 @@ beforeEach(async () => {
   await session.write('tok', new Date(Date.now() + 60_000).toISOString(), 'efe');
 });
 
-/** #598: set giris formu varsayilan kapali; kalem dugmesiyle acilir. */
-async function formuAc() {
-  await fireEvent.press(await screen.findByRole('button', { name: 'Set girişini aç' }));
-}
-
 async function acikAntrenmanlaAc(plannedSets: number | null = 4, completedSets = 0) {
   const { sahteRequest, state } = sahteBackendOlustur();
   state.acikOturum = {
@@ -42,7 +37,6 @@ async function acikAntrenmanlaAc(plannedSets: number | null = 4, completedSets =
 async function kartiAcipSetEkle(state: { setler: unknown[] }, sonrakiSayac: RegExp) {
   await fireEvent.press(screen.getByLabelText(/^Bench Press, /));
   await screen.findByTestId('odak-karti');
-  await formuAc();
   await fireEvent.changeText(screen.getByLabelText('Ağırlık'), '60');
   await fireEvent.changeText(screen.getByLabelText('Tekrar'), '8');
   await fireEvent.press(screen.getByRole('button', { name: 'Set ekle' }));
@@ -63,9 +57,6 @@ test('liste karti yerinde acilmaz, karta dokununca odak karti set paneliyle acil
   const odak = await screen.findByTestId('odak-karti');
   expect(within(odak).getByText('Bench Press')).toBeTruthy();
   expect(screen.getByText('Hareketi kaldır')).toBeTruthy();
-  expect(screen.queryByLabelText('Ağırlık')).toBeNull();
-
-  await formuAc();
   expect(screen.getByLabelText('Ağırlık')).toBeTruthy();
 }, 20_000);
 
@@ -74,7 +65,6 @@ test('set panelinin basligi yalnizca hareket adidir, kapatma dugmesi panelde deg
   await acikAntrenmanlaAc();
   await fireEvent.press(screen.getByLabelText(/Bench Press, 0 \/ 4 set/));
   await screen.findByTestId('odak-karti');
-  await formuAc();
 
   const panel = screen.getByTestId('set-paneli');
   expect(within(panel).getByText('Bench Press')).toBeTruthy();
@@ -97,7 +87,6 @@ test('kartin disindaki bosluga dokununca odak karti ve set paneli kapanir', asyn
   await acikAntrenmanlaAc();
   await fireEvent.press(screen.getByLabelText(/Bench Press, 0 \/ 4 set/));
   await screen.findByTestId('odak-karti');
-  await formuAc();
 
   await fireEvent.press(screen.getByLabelText('Kartı kapat'));
 
