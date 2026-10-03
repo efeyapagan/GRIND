@@ -33,8 +33,10 @@ ait" kuralı):
 
 **Efor artışı** — ikisinden biri yeter:
 
-- **RIR:** iki dönemde de RIR girilmiş **en az 3'er** set var ve son dönemin ortalama RIR'ı önceki dönemden
-  **en az 1** düşük;
+- **RIR:** iki dönemde de RIR girilmiş **en az 2'şer** set var (RIR'ın değeri ne olursa olsun — şart RIR'ı
+  doldurulmuş set SAYISI; boş bırakılan setler ortalamaya girmez) ve son dönemin ortalama RIR'ı önceki
+  dönemden **en az 1** düşük. Kaydırıcının "4+" durağı 5 saklanır ve 5 sayılır; #266 öncesi 5'ten büyük eski
+  değerler de 5'e çekilir (gösterimdeki "4+" ile aynı);
 - **Zorluk:** son dönemde zorluğu işaretlenmiş **en az 2** bitmiş oturum var ve bunların **en az yarısı**
   `Hard` ya da `Maximal`.
 
@@ -42,7 +44,7 @@ Sinyal = performans koşulu **ve** efor koşulu. Efor verisi (RIR, zorluk) hiç 
 bilinçli: yalnızca performans düşüşü bilinçli deload, hastalık ya da tatil sonrasında da görülür ve yanlış
 alarm üretir.
 
-Eşikler kodda sabittir (14/28 gün, %5, 2 hareket, 1 RIR, 3 set, 2 oturum), sorgu parametresi değildir.
+Eşikler kodda sabittir (14/28 gün, %5, 2 hareket, 1 RIR, 2 set, 2 oturum), sorgu parametresi değildir.
 
 ## Karar 3 — Uç
 
@@ -52,7 +54,7 @@ Eşikler kodda sabittir (14/28 gün, %5, 2 hareket, 1 RIR, 3 set, 2 oturum), sor
 OverreachingResponse(OverreachingSignalResponse? Signal)
 OverreachingSignalResponse(
     IReadOnlyList<ExerciseDropResponse> Drops,   // düşüşü büyükten küçüğe
-    decimal? RirBefore, decimal? RirRecent,       // RIR koşulu değerlendirilebildiyse dolu (iki dönemde ≥3 set)
+    decimal? RirBefore, decimal? RirRecent,       // RIR koşulu değerlendirilebildiyse dolu (iki dönemde ≥2 RIR'lı set)
     int HardSessions, int RatedSessions)          // son dönem: Zor/Maksimal ve zorluğu işaretli oturum sayısı
 ExerciseDropResponse(long ExerciseId, string ExerciseName, decimal PreviousBest, decimal RecentBest, decimal DropPercent)
 ```
