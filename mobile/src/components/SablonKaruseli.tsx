@@ -11,6 +11,7 @@ import Animated, {
 import type { Sablon } from '@grind/shared/api/queries';
 import { indeksleTasi, surukleHedefIndeksi } from '@grind/shared/lib/siralama';
 import { useKalkikGolge } from '../ui/renkler';
+import { useOndekiKart } from '../ui/useOndekiKart';
 
 /** Menu ve surukleme bu kadar basili tuttuktan SONRA baslar; daha kisa dokunus karuseli kaydirir. */
 const BASILI_TUTMA_MS = 400;
@@ -44,8 +45,11 @@ interface Props {
   sablonlar: readonly Sablon[];
   kartGenisligi: number;
   aralik: number;
-  /** Kartin kendisi; `onBasla` surukleme/menu sirasinda dokunusu yutan sarmalanmis halidir. */
-  kartCiz: (sablon: Sablon, onBasla: () => void) => ReactNode;
+  /**
+   * Kartin kendisi; `onBasla` surukleme/menu sirasinda dokunusu yutan sarmalanmis halidir. `figurCanli`
+   * yalnizca ondeki kartta dogrudur (#606) -- figur animasyonu yalnizca orada oynar.
+   */
+  kartCiz: (sablon: Sablon, onBasla: () => void, figurCanli: boolean) => ReactNode;
   onBasla: (sablon: Sablon) => void;
   onMenuAc: (sablon: Sablon) => void;
   /** Basili tutarken parmak kaydi: menu surukleme icin kapanir. */
@@ -89,6 +93,9 @@ interface Durum {
  * DEGIL `FlatList` -- ekran disindaki kartlar hic mount edilmez, her kartin surekli calisan figur
  * animasyonu (`SablonFiguru`) boylece sablon sayisindan BAGIMSIZ sabit kalir. Surukleme/kenar
  * kaydirma mantigi DEGISMEDI, yalnizca konteyner ve `scrollTo` -> `scrollToOffset` degisti.
+ *
+ * #606: `FlatList`'in varsayilan penceresi birkac sablonla pratikte butun kartlari mount ediyordu, yani
+ * butun figurler yine ayni anda oynuyordu. Figur artik yalnizca ondeki kartta oynar (`useOndekiKart`).
  */
 export default function SablonKaruseli({
   sablonlar,
@@ -117,6 +124,7 @@ export default function SablonKaruseli({
   const [suruklenen, setSuruklenen] = useState<number | null>(null);
   const siraImzasi = sablonlar.map((sablon) => sablon.id).join(',');
   const sira = kartGenisligi + aralik;
+  const [ondeki, ondekiniGuncelle] = useOndekiKart(sira, sablonlar.length);
 
   function sifirla() {
     if (sifirlamaZamanlayici.current) {
@@ -277,7 +285,9 @@ export default function SablonKaruseli({
       ref={kaydirici}
       data={sablonlar}
       keyExtractor={(sablon) => String(sablon.id)}
-      extraData={suruklenen}
+      testID="sablon-karuseli"
+      // Kartlar suruklenen kart ve ondeki kart (#606) degisince yeniden cizilir.
+      extraData={`${suruklenen}:${ondeki}`}
       horizontal
       showsHorizontalScrollIndicator={false}
       snapToInterval={sira}
@@ -287,6 +297,7 @@ export default function SablonKaruseli({
       scrollEventThrottle={KARE_MS}
       onScroll={(olay) => {
         kaydirma.current = olay.nativeEvent.contentOffset.x;
+        ondekiniGuncelle(olay);
       }}
       onLayout={(olay) => {
         gorunurGenislik.current = olay.nativeEvent.layout.width;
@@ -310,7 +321,7 @@ export default function SablonKaruseli({
           onGuncelle={guncelle}
           onBirak={birak}
         >
-          {kartCiz(sablon, () => dokunus(sablon))}
+          {kartCiz(sablon, () => dokunus(sablon), indeks === ondeki)}
         </Kart>
       )}
     />

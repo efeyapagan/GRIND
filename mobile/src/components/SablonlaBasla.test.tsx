@@ -9,6 +9,13 @@ jest.mock('@grind/shared/api/queries', () => ({
   useSablonlariSirala: jest.fn(),
 }));
 
+// #606: figurun kendisi (SVG + surekli animasyon) bu testlerin konusu degil; yalnizca karuselin ona
+// "oyna" mi "dur" mu dedigi gorunsun diye sade bir yer tutucuyla degistirilir.
+jest.mock('../ui/SablonFiguru', () => {
+  const { View } = require('react-native');
+  return ({ canli = true }: { canli?: boolean }) => <View testID={canli ? 'figur-canli' : 'figur-durgun'} />;
+});
+
 const mockPush = jest.fn();
 
 jest.mock('expo-router', () => {
@@ -307,4 +314,44 @@ test('kaydedilen karta basili tutunca acilan menuden o sablon silinir', async ()
   await fireEvent.press(screen.getByRole('button', { name: 'Evet, sil' }));
 
   expect(sil).toHaveBeenCalledWith(2);
+});
+
+// ---- Figur animasyonu yalnizca ondeki kartta (#606) ----
+
+/** Karuseldeki kartlarin figurlerinin canli olup olmadigi, karusel sirasiyla. */
+function figurlerCanliMi() {
+  return screen.getAllByTestId(/^figur-/).map((figur) => figur.props.testID === 'figur-canli');
+}
+
+/** `testID`li karuseli `kartSayisi` kart kadar ileri kaydirir (snap araligi kadar). */
+async function karuseliKaydir(testID: string, kartSayisi: number) {
+  const karusel = screen.getByTestId(testID);
+  await fireEvent.scroll(karusel, { nativeEvent: { contentOffset: { x: karusel.props.snapToInterval * kartSayisi, y: 0 } } });
+}
+
+/**
+ * #606 (kullanici bildirdi: karuseli kaydirirken kasma; Hareketi Azalt acilinca geciyor): butun kartlarin
+ * figuru ayni anda oynuyordu. Yalnizca ondeki kartinki oynar, kaydirinca canli figur one gelen karta gecer.
+ */
+test('Sablonlarim karuselinde yalnizca ondeki kartin figuru oynar, kaydirinca one gelen karta gecer', async () => {
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(figurlerCanliMi()).toEqual([true, false]);
+
+  await karuseliKaydir('sablon-karuseli', 1);
+
+  expect(figurlerCanliMi()).toEqual([false, true]);
+});
+
+/** #606: Kaydedilenler karuseli de ayni kurala uyar (ayni ekranda ikinci karusel). */
+test('Kaydedilenler karuselinde yalnizca ondeki kartin figuru oynar, kaydirinca one gelen karta gecer', async () => {
+  useTemplatesMock.mockReturnValue({ data: KAYDEDILENLER, isLoading: false, isError: false });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(figurlerCanliMi()).toEqual([true, false]);
+
+  await karuseliKaydir('kaydedilen-karuseli', 1);
+
+  expect(figurlerCanliMi()).toEqual([false, true]);
 });
