@@ -31,19 +31,27 @@ test('gecmiste sonradan gecilen kilo rekorunun rozeti "geçildi" diye okunur, so
 
 /**
  * #591: gecmis gorunumu gecmis detay panelinin CAMINDA cizilir -- set satiri opak `surface-1` kutu
- * degil camin ustune serilen hafif dolgu.
+ * cizmez. #615: hafif dolgu da kutu gibi okunuyordu -- satirlar dolgusuz, aralarinda sac teli cizgi;
+ * tek dolgu hareket adinin yanindaki "N SET" etiketininkidir.
  */
-test('gecmiste set satiri opak kutu cizmez', async () => {
-  await render(<SetList varyant="gecmis" sets={[set(1, 80)]} />);
+test('gecmiste set satiri kutu cizmez, satirlar cizgiyle ayrilir', async () => {
+  await render(<SetList varyant="gecmis" sets={[set(1, 80), set(2, 85)]} />);
 
   expect(screen.getByTestId('gecmis-set-1').props.className).not.toMatch(/bg-surface/);
+  expect(screen.getAllByTestId('cam-dolgu')).toHaveLength(1);
+  expect(screen.getAllByTestId('cam-ayirici')).toHaveLength(1);
 });
 
-/** #591: sablonsuz antrenmanda hareket grubu duz `surface-1` degil cam kart (hareket kartiyla ayni kose). */
-test('antrenmanda hareket grubu cam yuzeydedir', async () => {
-  await render(<SetList sets={[set(1, 80)]} onSetDuzenle={jest.fn()} />);
+/**
+ * #591: sablonsuz antrenmanda hareket grubu duz `surface-1` degil cam kart (hareket kartiyla ayni kose).
+ * #615: icindeki set satirlari da dolgusuz, cizgiyle ayrilir; tek dolgu sira karosununkidir.
+ */
+test('antrenmanda hareket grubu cam yuzeydedir, set satirlari cizgiyle ayrilir', async () => {
+  await render(<SetList sets={[set(1, 80), set(2, 85)]} onSetDuzenle={jest.fn()} />);
 
   const sinif: string = screen.getByTestId('set-grubu-1').props.className;
   expect(sinif).toContain('rounded-xl');
   expect(sinif).not.toMatch(/bg-surface/);
+  expect(screen.getAllByTestId('cam-dolgu')).toHaveLength(1);
+  expect(screen.getAllByTestId('cam-ayirici')).toHaveLength(1);
 });
