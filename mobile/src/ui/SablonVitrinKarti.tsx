@@ -87,6 +87,7 @@ export default function SablonVitrinKarti({
       <CamKatmanlari koseSinifi="rounded-2xl" />
 
       <View pointerEvents="none" className="absolute inset-x-0" style={{ top: 88 }}>
+        {/* #604: kaydedilen kartla ayni kural -- izgara kenarlara ve ust/alttaki yaziya dogru solar (`Izgara`). */}
         <Izgara genislik={genislik} yukseklik={IZGARA_YUKSEKLIGI} />
       </View>
       <View pointerEvents="none" className="absolute right-3" style={{ top: 80 }}>

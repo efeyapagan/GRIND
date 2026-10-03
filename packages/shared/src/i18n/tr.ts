@@ -427,7 +427,6 @@ export const tr = {
     paylasArkadaslar: 'Arkadaşlar',
     paylasGizli: 'Gizli',
     paylasimGuncellenemedi: 'Paylaşım ayarı güncellenemedi.',
-    kaydedilenKaynak: '{{kullaniciAdi}} tarafından paylaşıldı',
     kaydedilenlerBasligi: 'Kaydedilenler',
     kaydedilenlerYok: 'Henüz kaydedilmiş bir şablonun yok.',
     kaydedilenlerEkranBasligi: 'Kaydedilen şablonlar',

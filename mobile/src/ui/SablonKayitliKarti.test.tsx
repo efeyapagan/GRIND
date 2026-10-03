@@ -35,10 +35,11 @@ test('karta dokununca onBasla cagrilir', async () => {
   expect(onBasla).toHaveBeenCalledTimes(1);
 });
 
-test('kimden kaydedildigi metni gorunur', async () => {
+/** #604: kaynak satiri etiketsiz, yalnizca `@kullaniciadi`. */
+test('kimden kaydedildigi yalnizca @kullaniciadi olarak gorunur', async () => {
   await ciz({ kaynakKullaniciAdi: 'efe' });
 
-  expect(screen.getByText('efe tarafından paylaşıldı')).toBeTruthy();
+  expect(screen.getByText('@efe')).toBeTruthy();
 });
 
 /** #467 final review: basili tutma (touch/sighted kullanici) menuyu acar, screen reader eylemiyle sinirli degil. */

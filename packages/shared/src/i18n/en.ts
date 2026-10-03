@@ -420,7 +420,6 @@ export const en: Katalog = {
     paylasArkadaslar: 'Friends',
     paylasGizli: 'Hidden',
     paylasimGuncellenemedi: 'Could not update sharing setting.',
-    kaydedilenKaynak: 'Shared by {{kullaniciAdi}}',
     kaydedilenlerBasligi: 'Saved',
     kaydedilenlerYok: "You haven't saved any templates yet.",
     kaydedilenlerEkranBasligi: 'Saved templates',
