@@ -63,6 +63,13 @@ public interface ISetEntryRepository : IRepository<SetEntry>
         long userId, long? exerciseId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #176: kullanıcının <paramref name="fromUtcInclusive"/>'ten itibaren BAŞLAMIŞ oturumlarındaki setleri, aşırı
+    /// yüklenme analizinin ihtiyacı kadar alanla. Dönem ataması (TR günü) bellekte yapılır.
+    /// </summary>
+    Task<IReadOnlyList<OverreachingSetRow>> GetOverreachingRowsAsync(
+        long userId, DateTime fromUtcInclusive, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Bu oturumda egzersiz başına kaç set girilmiş. İlerleme hesabı bunu şablonun
     /// <c>PlannedSets</c> değeriyle karşılaştırır — önceden boş SetEntry satırı
     /// oluşturulmaz (CLAUDE.md).

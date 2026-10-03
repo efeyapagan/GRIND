@@ -52,6 +52,16 @@ public class SetEntryRepository(AppDbContext context)
             .Select(s => new WeeklySetRow(s.WorkoutSession.StartedAt, s.Weight, s.Reps, s.Exercise.Category))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<OverreachingSetRow>> GetOverreachingRowsAsync(
+        long userId, DateTime fromUtcInclusive, CancellationToken cancellationToken = default)
+        => await Set
+            .Where(s => s.WorkoutSession.UserId == userId && s.WorkoutSession.StartedAt >= fromUtcInclusive)
+            .Select(s => new OverreachingSetRow(
+                s.WorkoutSessionId, s.WorkoutSession.StartedAt, s.WorkoutSession.EndedAt != null,
+                s.WorkoutSession.Difficulty, s.ExerciseId, s.Exercise.Name, s.Exercise.Measurement,
+                s.Weight, s.Reps, s.Rir))
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<long>> GetDistinctExerciseIdsForSessionAsync(
         long sessionId, CancellationToken cancellationToken = default)
         => await Set

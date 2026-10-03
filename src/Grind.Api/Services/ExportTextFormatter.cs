@@ -82,6 +82,7 @@ public static class ExportTextFormatter
         AppendSummary(text, export.Summary);
         AppendVolumeByExercise(text, export.Summary.VolumeByExercise);
         AppendRecords(text, export.AllTimeRecords);
+        AppendOverreaching(text, export.Overreaching);
         AppendSessions(text, export.Sessions, options);
         AppendBodyWeights(text, export.BodyWeights);
 
@@ -142,6 +143,37 @@ public static class ExportTextFormatter
             Line(text, head +
                 $"en ağır {SetText(record.BestWeight, record.BestWeightReps, null)} ({LocalDateText(record.BestWeightAt)}) · " +
                 $"en çok tekrar {SetText(record.BestRepsWeight, record.BestReps, null)} ({LocalDateText(record.BestRepsAt)})");
+        }
+    }
+
+    /// <summary>
+    /// #176: aşırı yüklenme sinyali — yalnızca yanıyorsa. GRINDY yorumu bu metinle üretildiği için sinyali görür
+    /// ve açıklar; ayrı bir AI akışı yoktur.
+    /// </summary>
+    private static void AppendOverreaching(StringBuilder text, OverreachingSignalResponse? signal)
+    {
+        if (signal is null)
+        {
+            return;
+        }
+
+        Section(text, "Aşırı yüklenme sinyali (bugüne göre, aralıktan bağımsız)");
+        Line(text, "Son 14 günün en iyi tahmini 1RM'i önceki 28 güne göre en az %5 düştü ve efor arttı:");
+        foreach (var drop in signal.Drops)
+        {
+            Line(text, Inv(
+                $"- {SingleLine(drop.ExerciseName)}: tahmini 1RM {drop.PreviousBest:0.##} → {drop.RecentBest:0.##} kg (−{drop.DropPercent:0.#}%)"));
+        }
+
+        if (signal is { RirBefore: { } before, RirRecent: { } recent })
+        {
+            Line(text, Inv($"- Ortalama RIR: {before:0.#} → {recent:0.#}"));
+        }
+
+        if (signal.RatedSessions > 0)
+        {
+            // Ek yok: "{N}'ü" sayıya göre yanlış çekimlenirdi ("2'ü", "1'ü").
+            Line(text, Inv($"- Zorluğu işaretli antrenman: {signal.RatedSessions}, Zor/Maksimal: {signal.HardSessions}"));
         }
     }
 

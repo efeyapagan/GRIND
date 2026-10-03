@@ -519,6 +519,15 @@ export const en: Katalog = {
     hareketteHaftaYok: 'This exercise has no completed week yet.',
     kiloluHareketYok: 'Log a weighted exercise to see your estimated 1RM.',
   },
+  asiriYuklenme: {
+    baslik: 'Overreaching signal',
+    rozet: 'Deload suggested',
+    dususSatiri: '{{hareket}} · {{onceki}} → {{son}} kg (−{{yuzde}}%)',
+    rirSatiri: 'Average RIR {{onceki}} → {{son}}',
+    zorlukSatiri: 'Last 2 weeks: {{zor}}/{{toplam}} workouts Hard or Maximal',
+    oneri:
+      'Take a deload week: same exercises, about half the sets and ~10% less weight — or 2–3 days of active rest. Ask GRINDY for an insight and it will explain this signal in detail.',
+  },
   olcumler: {
     kiloGerekli: 'Weight is required.',
     boyGerekli: 'Height is required.',
