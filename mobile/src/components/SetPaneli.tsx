@@ -25,6 +25,8 @@ interface Props {
    * Kapatma dugmesi #357'den beri odak kartinda.
    */
   onSetEklendi: (exerciseId: number) => void;
+  /** #564: verilirse set acik antrenmana degil bu (gecmis) antrenmana eklenir. */
+  oturumId?: number;
 }
 
 /**
@@ -38,7 +40,7 @@ interface Props {
  * #346: alanlar hareketin olcum tipine gore -- kilo + tekrar + RIR, agirliksiz harekette tekrar + istege
  * bagli "ek agirlik" (RIR yok), sureli harekette kronometre + saniye kutusu.
  */
-export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Props) {
+export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi, oturumId }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -66,7 +68,11 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
     }
 
     try {
-      await eklemeMutasyonu.mutateAsync({ exerciseId: egzersizId, ...setGirdisiniAyristir(girdi, olcum) });
+      await eklemeMutasyonu.mutateAsync({
+        exerciseId: egzersizId,
+        ...setGirdisiniAyristir(girdi, olcum),
+        sessionId: oturumId,
+      });
       // #385: panel acik kalir ama ilk acildigi hale doner -- klavye kapanir, eklenen set odak
       // kartinda gorunur.
       Keyboard.dismiss();
@@ -80,8 +86,12 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi }: Pro
         // R15: istek sunucuya ulasmis olabilir -- ekran gercegi gostersin diye veriler tazelenir.
         setGenelHata(t('setler.baglantiHatasi'));
         void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
-        if (acikOturum) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(acikOturum.id) });
+        const hedefOturumId = oturumId ?? acikOturum?.id;
+        if (hedefOturumId !== undefined) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.sessionSets(hedefOturumId) });
+        }
+        if (oturumId !== undefined) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
         }
         void queryClient.invalidateQueries({ queryKey: queryKeys.exerciseProgressAll(egzersizId) });
       }

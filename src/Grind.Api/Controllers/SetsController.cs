@@ -32,6 +32,22 @@ public class SetsController(ISetEntryService setEntryService) : ControllerBase
     }
 
     /// <summary>
+    /// #564: verilen (bitmiş olabilen) antrenmana set ekler — yalnızca o antrenmanda seti olan harekete.
+    /// Mutlak yol: <see cref="GetForSession"/> ile aynı gerekçe.
+    /// </summary>
+    [HttpPost("/api/sessions/{sessionId:long}/sets")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SetEntryResponse>> CreateInSession(
+        long sessionId, CreateSetRequest request, CancellationToken cancellationToken)
+    {
+        var olusan = await setEntryService.CreateInSessionAsync(sessionId, request, cancellationToken);
+
+        return CreatedAtAction(nameof(GetForSession), new { sessionId = olusan.SessionId }, olusan);
+    }
+
+    /// <summary>
     /// Bir oturumun setleri, kronolojik. Mutlak yol: kaynak olarak oturumun altında
     /// yaşıyor ama servisi bu controller'ın — Faz 7'nin SessionsController'ına
     /// dokunmamak için (spec Soru 4/A).

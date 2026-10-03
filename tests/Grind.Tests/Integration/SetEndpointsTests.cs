@@ -54,6 +54,7 @@ public class SetEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApi
     [Theory]
     [InlineData("POST", "/api/sets")]
     [InlineData("GET", "/api/sessions/1/sets")]
+    [InlineData("POST", "/api/sessions/1/sets")]
     [InlineData("PATCH", "/api/sets/1")]
     [InlineData("DELETE", "/api/sets/1")]
     [InlineData("GET", "/api/records")]
@@ -104,6 +105,25 @@ public class SetEndpointsTests(GrindApiFactory factory) : IClassFixture<GrindApi
         var eklenen = await indirme.Content.ReadFromJsonAsync<SetEntryResponse>(Json);
 
         Assert.Equal(RecordType.None, eklenen!.RecordType);
+    }
+
+    /// <summary>#564: bitmiş antrenmana set ekleme -- set açık antrenmana değil, yoldaki antrenmana düşer.</summary>
+    [Fact]
+    public async Task Bitmis_antrenmana_set_201_doner()
+    {
+        var client = await AuthenticatedClientAsync();
+        var exerciseId = await CreateExerciseAsync(client);
+        var ilk = await (await PostSetAsync(client, exerciseId, 100m, 8))
+            .Content.ReadFromJsonAsync<SetEntryResponse>(Json);
+        (await client.PostAsJsonAsync($"/api/sessions/{ilk!.SessionId}/finish", new FinishSessionRequest(), Json))
+            .EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync($"/api/sessions/{ilk.SessionId}/sets",
+            new CreateSetRequest { ExerciseId = exerciseId, Weight = 100m, Reps = 6 }, Json);
+        var eklenen = await response.Content.ReadFromJsonAsync<SetEntryResponse>(Json);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(ilk.SessionId, eklenen!.SessionId);
     }
 
     [Fact]

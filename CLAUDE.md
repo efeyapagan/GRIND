@@ -411,6 +411,16 @@ Object Reference) açığıdır.
 > siler, rekorları bir kez yeniden hesaplar — tek `SaveChangesAsync`. Yalnızca açık antrenman düzenlenir
 > (bitmişte 409). Migration veri taşımaz: migration'dan önce başlamış antrenmanların listesi boştur.
 
+> Karar (geçmiş antrenmanın setleri — #564, 2026-10-03): bitmiş antrenmanın seti düzeltilip silinebilir
+> (`PATCH`/`DELETE /api/sets/{id}` zaten oturum durumuna bakmıyordu) ve ona set eklenebilir:
+> `POST /api/sessions/{id}/sets` — yalnızca o antrenmanda ZATEN seti olan harekete (yoksa 400; hareket
+> listesi yukarıdaki kural gereği değişmez). Rekor ve dinlenme `CreatedAt` sırasıyla hesaplandığı için
+> eklenen setin zamanı "şimdi" DEĞİL, o hareketin antrenmandaki son setinin 1 ms sonrasıdır (dinlenmesi
+> ~0 görünür — uydurma bir süreden iyidir). Hareketin rekorları baştan taranır; set henüz kayıtlı
+> olmadığından `RecalculateAsync`'e `pendingSet` olarak katılır — tek `SaveChangesAsync`. Mobilde geçmiş
+> panelinde sete basılı tutmak Düzenle/Sil menüsünü açar, her hareketin altında "Set ekle" durur;
+> arkadaşın geçmişi salt-okunurdur.
+
 > Karar: "AI'nin verdiği öneriler" için ayrı bir tablo açılmıyor — mevcut `AiInsight` tablosu
 > genişletiliyor: bir `Kind` alanı (`Insight` = genel yorum/rapor, `Suggestion` = session içi
 > aksiyon önerisi) ve opsiyonel bir `SetEntryId` eklendi. Sebep: bir "rapor" ile bir "öneri"

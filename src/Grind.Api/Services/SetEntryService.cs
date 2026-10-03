@@ -29,6 +29,88 @@ public class SetEntryService(
     public async Task<SetEntryResponse> CreateAsync(
         CreateSetRequest request, CancellationToken cancellationToken = default)
     {
+        var exercise = await ValidatedExerciseAsync(request, cancellationToken);
+        var weight = request.Weight ?? 0m;
+
+        // Rekor kararı setin EKLENMESİNDEN ÖNCE verilir: geçmiş, kendisini içermemeli.
+        var recordType = await recordService.EvaluateNewAsync(
+            exercise.Id, exercise.Measurement, weight, request.Reps, request.DurationSeconds, cancellationToken);
+
+        // Seam: kaydetmez. Oturum (gerekirse) ve set aşağıda TEK commit'te birlikte gider.
+        // #262: client zaman damgası burada VERİLMEZ -- bu yol setin kendi CreatedAt'i ile açılır.
+        var (session, _) = await sessionService.GetOrOpenTodayAsync(
+            templateId: null, notes: null, cancellationToken: cancellationToken);
+
+        // #62: hareket antrenmanın listesinde yoksa sona hedefsiz girer — "Plan dışı" diye ayrı bir
+        // kavram kalmaz. Seam kaydetmez; liste satırı set ile aynı commit'te gider.
+        await sessionService.EnsureExerciseAsync(session, exercise.Id, cancellationToken);
+
+        var set = new SetEntry
+        {
+            WorkoutSession = session,
+            ExerciseId = exercise.Id,
+            Weight = weight,
+            Reps = request.Reps,
+            DurationSeconds = request.DurationSeconds,
+            Rir = request.Rir,
+            RecordType = recordType,
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime
+        };
+
+        setEntryRepository.Add(set);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await ToResponseAsync(set, cancellationToken);
+    }
+
+    public async Task<SetEntryResponse> CreateInSessionAsync(
+        long sessionId, CreateSetRequest request, CancellationToken cancellationToken = default)
+    {
+        // Önce sahiplik: başkasının antrenmanı, gövde ne olursa olsun 404 (varlığı sızmaz).
+        var session = await sessionRepository.GetOwnedByIdAsync(sessionId, currentUser.UserId, cancellationToken)
+                      ?? throw new NotFoundException(SessionNotFound);
+
+        var exercise = await ValidatedExerciseAsync(request, cancellationToken);
+
+        // Kapsam (#564): yalnızca antrenmanda zaten seti olan hareket -- yeni hareket eklemek bitmiş
+        // antrenmanın hareket listesini değiştirirdi (#62: liste yalnızca açık antrenmanda düzenlenir).
+        var sessionSets = await setEntryRepository.GetForSessionAsync(sessionId, currentUser.UserId, cancellationToken);
+        var lastOfExercise = sessionSets.LastOrDefault(s => s.ExerciseId == exercise.Id)
+                             ?? throw new ValidationException("Bu antrenmanda bu hareketin seti yok.");
+
+        var set = new SetEntry
+        {
+            WorkoutSession = session,
+            ExerciseId = exercise.Id,
+            Weight = request.Weight ?? 0m,
+            Reps = request.Reps,
+            DurationSeconds = request.DurationSeconds,
+            Rir = request.Rir,
+            // Rekor ve dinlenme CreatedAt sırasıyla hesaplanır: "şimdi" yazılsaydı geçmişe eklenen set en
+            // yeni set sayılırdı. Hareketin son setinin hemen arkasına yerleşir (dinlenmesi ~0 görünür;
+            // uydurma bir süreden iyidir).
+            CreatedAt = lastOfExercise.CreatedAt.AddMilliseconds(1)
+        };
+
+        setEntryRepository.Add(set);
+
+        // Geçmişe eklenen set SONRAKİ setlerin rekorunu değiştirebilir: hareket baştan taranır. Set henüz
+        // veritabanında olmadığı için hesaba bekleyen set olarak katılır; tek commit.
+        await recordService.RecalculateAsync(
+            exercise.Id, pendingSet: set, cancellationToken: cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await ToResponseAsync(set, cancellationToken);
+    }
+
+    /// <summary>
+    /// İki ekleme yolunun (açık antrenman, #564 geçmiş antrenman) ortak doğrulaması: ağırlık/RIR ölçeği,
+    /// egzersizin görünürlüğü ve arşivi, ölçüm tipine göre alanlar.
+    /// </summary>
+    private async Task<Exercise> ValidatedExerciseAsync(
+        CreateSetRequest request, CancellationToken cancellationToken)
+    {
         // DataAnnotations [Required]'ı MVC katmanında zaten çalıştı; burada değerleri
         // güvenle açıyoruz. Servis doğrudan (test) çağrıldığında da aynı sözleşme geçerli.
         var exerciseId = request.ExerciseId!.Value;
@@ -60,37 +142,8 @@ public class SetEntryService(
             exercise.Measurement, request.Weight, request.Reps, request.Rir, request.DurationSeconds);
         SetMeasurementRules.EnsureRequired(
             exercise.Measurement, request.Weight, request.Reps, request.DurationSeconds);
-        var weight = request.Weight ?? 0m;
 
-        // Rekor kararı setin EKLENMESİNDEN ÖNCE verilir: geçmiş, kendisini içermemeli.
-        var recordType = await recordService.EvaluateNewAsync(
-            exerciseId, exercise.Measurement, weight, request.Reps, request.DurationSeconds, cancellationToken);
-
-        // Seam: kaydetmez. Oturum (gerekirse) ve set aşağıda TEK commit'te birlikte gider.
-        // #262: client zaman damgası burada VERİLMEZ -- bu yol setin kendi CreatedAt'i ile açılır.
-        var (session, _) = await sessionService.GetOrOpenTodayAsync(
-            templateId: null, notes: null, cancellationToken: cancellationToken);
-
-        // #62: hareket antrenmanın listesinde yoksa sona hedefsiz girer — "Plan dışı" diye ayrı bir
-        // kavram kalmaz. Seam kaydetmez; liste satırı set ile aynı commit'te gider.
-        await sessionService.EnsureExerciseAsync(session, exercise.Id, cancellationToken);
-
-        var set = new SetEntry
-        {
-            WorkoutSession = session,
-            ExerciseId = exercise.Id,
-            Weight = weight,
-            Reps = request.Reps,
-            DurationSeconds = request.DurationSeconds,
-            Rir = request.Rir,
-            RecordType = recordType,
-            CreatedAt = timeProvider.GetUtcNow().UtcDateTime
-        };
-
-        setEntryRepository.Add(set);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return await ToResponseAsync(set, cancellationToken);
+        return exercise;
     }
 
     public async Task<IReadOnlyList<SetEntryResponse>> GetForSessionAsync(
