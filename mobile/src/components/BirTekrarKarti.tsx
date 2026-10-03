@@ -42,7 +42,8 @@ export default function BirTekrarKarti() {
     egzersizler !== undefined && hacimler !== undefined && (!tumZamanGerekli || tumHacimler !== undefined);
 
   return (
-    <CamKart className="flex-col gap-3 p-4">
+    // #631: yana kayan alanda kisa kart uzun kartin boyuna gerilir (`KaydirmaliKartlar`).
+    <CamKart className="flex-col gap-3 p-4" disClassName="flex-1">
       <Text className="text-label text-muted uppercase">{t('ilerleme.birTekrarBaslik')}</Text>
       {!yuklendi ? (
         <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>

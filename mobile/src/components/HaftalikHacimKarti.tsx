@@ -37,7 +37,8 @@ export default function HaftalikHacimKarti({ haftalar }: { haftalar: readonly Ha
   const son = cizilecekler[cizilecekler.length - 1];
 
   return (
-    <CamKart className="flex-col gap-3 p-4">
+    // #631: yana kayan alanda kisa kart uzun kartin boyuna gerilir (`KaydirmaliKartlar`).
+    <CamKart className="flex-col gap-3 p-4" disClassName="flex-1">
       <Text className="text-label text-muted uppercase">{t('ilerleme.hacimBaslik')}</Text>
       <HareketSecimKutusu
         egzersizler={kilolular}
