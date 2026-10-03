@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useSharedTemplate, useSaveSharedTemplate } from '@grind/shared/api/queries';
 import BirincilDugme from '../../../../../../src/ui/BirincilDugme';
 import HataKutusu from '../../../../../../src/ui/HataKutusu';
+import CamKart from '../../../../../../src/ui/CamKart';
 import { useAltMenuPayi } from '../../../../../../src/ui/KabukTabBar';
 
 /**
@@ -53,12 +54,13 @@ export default function PaylasilanSablonDetayEkrani() {
           <Text className="text-heading font-bold text-fg">{sablon.name}</Text>
           <View className="flex-col gap-3">
             {sablon.exercises.map((hareket) => (
-              <View key={hareket.exerciseId} className="rounded-xl border border-surface-4 bg-surface-2 p-4">
+              // #592: cam kart (spec Karar 9), antrenmandaki hareket kartlariyla ayni kose.
+              <CamKart key={hareket.exerciseId} koseSinifi="rounded-xl" className="p-4">
                 <Text className="text-body-lg text-fg">{hareket.exerciseName}</Text>
                 <Text className="text-label text-muted">
                   {t('setler.setSayisi', { count: hareket.plannedSets })}
                 </Text>
-              </View>
+              </CamKart>
             ))}
           </View>
         </>
