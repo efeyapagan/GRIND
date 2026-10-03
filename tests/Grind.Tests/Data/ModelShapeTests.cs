@@ -14,12 +14,13 @@ public class ModelShapeTests
             .ToArray();
 
         // SessionExercise: antrenmanin hareket listesi (#60/#62). Follow: takip sistemi (#281).
+        // FriendRequest: arkadaslik istegi (#628).
         // UserAvatar: profil fotografi (#280). AiInsightTranslation: yorumun dil basina metni (#199).
         string[] expected =
         [
             "AiInsight", "AiInsightTranslation", "BodyWeightLog", "Exercise", "ExerciseMedia", "Follow",
-            "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar", "WorkoutSession",
-            "WorkoutTemplate"
+            "FriendRequest", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
+            "WorkoutSession", "WorkoutTemplate"
         ];
 
         Assert.Equal(expected, actual);
