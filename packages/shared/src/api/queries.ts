@@ -55,6 +55,7 @@ type NotificationResponse = components['schemas']['NotificationResponse'];
 type UnreadNotificationCountResponse = components['schemas']['UnreadNotificationCountResponse'];
 type SharedTemplateResponse = components['schemas']['SharedTemplateResponse'];
 type UpdateTemplateSharingRequest = components['schemas']['UpdateTemplateSharingRequest'];
+type UpdateTemplatePinRequest = components['schemas']['UpdateTemplatePinRequest'];
 
 /**
  * Sorgu anahtarlari TEK bir yerde tutulur (spec) -- Task 5'teki `useRecords()` de ayni
@@ -1165,6 +1166,8 @@ export interface Sablon {
   visibility: SablonGorunurlugu;
   savedFromUsername: string | null;
   lastUsedAt: string | null;
+  /** #538: kaydedilen kopya listenin basina sabitlenmis mi; kendi sablonlarinda hep false. */
+  isPinned: boolean;
 }
 
 function dogrulanmisSablonHareketi(yanit: TemplateExerciseResponse): SablonHareketi {
@@ -1202,6 +1205,7 @@ function dogrulanmisSablon(yanit: TemplateResponse): Sablon {
     visibility: yanit.visibility ?? 'Hidden',
     savedFromUsername: yanit.savedFromUsername ?? null,
     lastUsedAt: yanit.lastUsedAt ?? null,
+    isPinned: yanit.isPinned ?? false,
   };
 }
 
@@ -1387,6 +1391,29 @@ export function useUpdateTemplateSharing() {
     },
     onSuccess: (sablon) => {
       queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+    },
+  });
+}
+
+/**
+ * #538: kaydedilen sablonu basa sabitler / sabitlemeyi kaldirir. Liste onbellegi sunucunun
+ * dondurdugu sablonla ANINDA guncellenir -- kart basa gecmek icin ikinci bir GET'i beklemez.
+ */
+export function useSablonuSabitle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, isPinned }: { id: number; isPinned: boolean }): Promise<Sablon> => {
+      const govde: UpdateTemplatePinRequest = { isPinned };
+      return dogrulanmisSablon(
+        await request<TemplateResponse>(`/templates/${id}/pin`, { method: 'PUT', body: JSON.stringify(govde) }),
+      );
+    },
+    onSuccess: (sablon) => {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+      queryClient.setQueryData<Sablon[]>(queryKeys.templates, (liste) =>
+        liste?.map((eski) => (eski.id === sablon.id ? sablon : eski)),
+      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
     },
   });

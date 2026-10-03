@@ -4,6 +4,7 @@ import { Link, useRouter } from 'expo-router';
 import { ClipboardList, Plus } from 'lucide-react-native';
 import { useTemplates, useSablonlariSirala } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
+import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import DevamEdenAntrenman from '../../../src/components/DevamEdenAntrenman';
 import BosDurum from '../../../src/ui/BosDurum';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
@@ -30,6 +31,8 @@ export default function SablonlarScreen() {
   usePageTitle(t('sablonlar.baslik'));
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const siralama = useSablonlariSirala();
+  // #538: kaydedilenlerin kendi ekrani var (`/templates/saved`); burada yalnizca kendi sablonlarin.
+  const { kendi, kaydedilen } = sablonlariAyir(sablonlar ?? []);
 
   return (
     <View className="flex-1">
@@ -43,7 +46,7 @@ export default function SablonlarScreen() {
           </Text>
         )}
 
-        {sablonlar && sablonlar.length === 0 && (
+        {sablonlar && kendi.length === 0 && (
           <BosDurum
             ikon={ClipboardList}
             baslik={t('sablonlar.hicSablonYokBaslik')}
@@ -51,11 +54,14 @@ export default function SablonlarScreen() {
           />
         )}
 
-        {sablonlar && sablonlar.length > 0 && (
+        {kendi.length > 0 && (
           <SurukleSiraliListe
-            ogeler={sablonlar}
+            ogeler={kendi}
             anahtar={(sablon) => sablon.id}
-            onSirala={(yeniSira) => siralama.mutate(yeniSira.map((sablon) => sablon.id))}
+            onSirala={(yeniSira) =>
+              // Sunucu TUM id kumesini bekler (#467): kaydedilenler kendi ekraninda, siraya sona eklenir.
+              siralama.mutate([...yeniSira.map((sablon) => sablon.id), ...kaydedilen.map((sablon) => sablon.id)])
+            }
             satirCiz={(sablon, suruklenen) => (
               <SablonKarti
                 ad={sablon.name}

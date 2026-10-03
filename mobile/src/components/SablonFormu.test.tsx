@@ -29,6 +29,7 @@ const sablon = {
   visibility: 'Friends' as const,
   savedFromUsername: null,
   lastUsedAt: null,
+  isPinned: false,
 };
 
 beforeEach(() => {

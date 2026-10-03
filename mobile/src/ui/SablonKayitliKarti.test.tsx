@@ -1,10 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import SablonKayitliKarti from './SablonKayitliKarti';
-import SablonFiguru from './SablonFiguru';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
 
 jest.mock('./SablonFiguru', () => jest.fn(() => null));
-const SablonFiguruMock = SablonFiguru as unknown as jest.Mock;
 
 const sablon = {
   id: 1,
@@ -13,18 +11,24 @@ const sablon = {
   exercises: [{ exerciseId: 1, exerciseName: 'Bench Press', category: 'Push' as const, isArchived: false, plannedSets: 4, restSeconds: 90 }],
 };
 
-test('karta dokununca onBasla cagrilir', async () => {
-  const onBasla = jest.fn();
-  await render(
+function ciz(ek: Partial<React.ComponentProps<typeof SablonKayitliKarti>> = {}) {
+  return render(
     <SablonKayitliKarti
       ad={sablon.name}
       kaynakKullaniciAdi={sablon.savedFromUsername}
       ozet={sablonOzeti(sablon)}
-      onBasla={onBasla}
+      genislik={300}
+      onBasla={jest.fn()}
       onMenu={jest.fn()}
       disabled={false}
+      {...ek}
     />,
   );
+}
+
+test('karta dokununca onBasla cagrilir', async () => {
+  const onBasla = jest.fn();
+  await ciz({ onBasla });
 
   await fireEvent.press(screen.getByRole('button', { name: sablon.name }));
 
@@ -32,16 +36,7 @@ test('karta dokununca onBasla cagrilir', async () => {
 });
 
 test('kimden kaydedildigi metni gorunur', async () => {
-  await render(
-    <SablonKayitliKarti
-      ad={sablon.name}
-      kaynakKullaniciAdi="efe"
-      ozet={sablonOzeti(sablon)}
-      onBasla={jest.fn()}
-      onMenu={jest.fn()}
-      disabled={false}
-    />,
-  );
+  await ciz({ kaynakKullaniciAdi: 'efe' });
 
   expect(screen.getByText('efe tarafından paylaşıldı')).toBeTruthy();
 });
@@ -49,41 +44,34 @@ test('kimden kaydedildigi metni gorunur', async () => {
 /** #467 final review: basili tutma (touch/sighted kullanici) menuyu acar, screen reader eylemiyle sinirli degil. */
 test('basili tutunca onMenu cagrilir', async () => {
   const onMenu = jest.fn();
-  await render(
-    <SablonKayitliKarti
-      ad={sablon.name}
-      kaynakKullaniciAdi={sablon.savedFromUsername}
-      ozet={sablonOzeti(sablon)}
-      onBasla={jest.fn()}
-      onMenu={onMenu}
-      disabled={false}
-    />,
-  );
+  await ciz({ onMenu });
 
   fireEvent(screen.getByRole('button', { name: sablon.name }), 'longPress');
 
   expect(onMenu).toHaveBeenCalledTimes(1);
 });
 
-/**
- * #556: Kaydedilenler listesi dikey bir ScrollView'in icinde kayiyor (gercek FlatList
- * virtualization'i orada anti-pattern) -- bunun yerine gorunum disina dusmesi beklenen kartlarin
- * figur animasyonu `canliFigur={false}` ile durdurulur, sablon sayisi arttikca animasyon sayisi
- * sabit kalir.
- */
-test('canliFigur false iken SablonFiguru canli=false alir', async () => {
-  SablonFiguruMock.mockClear();
-  await render(
-    <SablonKayitliKarti
-      ad={sablon.name}
-      kaynakKullaniciAdi={sablon.savedFromUsername}
-      ozet={sablonOzeti(sablon)}
-      onBasla={jest.fn()}
-      onMenu={jest.fn()}
-      disabled={false}
-      canliFigur={false}
-    />,
-  );
+/** #538: sabitleme dugmesi karti baslatmadan yalnizca o sablonu sabitler. */
+test('sabitle dugmesi onSabitle cagirir, antrenmani baslatmaz', async () => {
+  const onBasla = jest.fn();
+  const onSabitle = jest.fn();
+  await ciz({ onBasla, onSabitle, sabitli: false });
 
-  expect(SablonFiguruMock.mock.calls[0][0]).toMatchObject({ canli: false });
+  await fireEvent.press(screen.getByRole('button', { name: 'Başa sabitle' }));
+
+  expect(onSabitle).toHaveBeenCalledTimes(1);
+  expect(onBasla).not.toHaveBeenCalled();
+});
+
+test('sabitli kartta dugme sabitlemeyi kaldirmayi soyler', async () => {
+  await ciz({ onSabitle: jest.fn(), sabitli: true });
+
+  expect(screen.getByRole('button', { name: 'Sabitlemeyi kaldır' })).toBeTruthy();
+});
+
+/** #538 (kullanici karari): silme kartta gorunur bir ikonla degil, basili tutunca acilan menuden yapilir. */
+test('kartta gorunur bir silme dugmesi yoktur', async () => {
+  await ciz({ onSabitle: jest.fn(), sabitli: false });
+
+  expect(screen.queryByRole('button', { name: 'Şablonu sil' })).toBeNull();
 });

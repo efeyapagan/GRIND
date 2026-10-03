@@ -20,4 +20,6 @@ public record TemplateResponse(
     /// <summary>#467: null = kendi şablonun; dolu = bir arkadaştan kaydedilmiş kopya.</summary>
     string? SavedFromUsername,
     /// <summary>#467: bu şablonla en son ne zaman antrenman başlatıldığı; hiç başlatılmadıysa null.</summary>
-    DateTime? LastUsedAt);
+    DateTime? LastUsedAt,
+    /// <summary>#538: kaydedilen kopya listenin başına sabitlenmiş mi; kendi şablonlarında hep false.</summary>
+    bool IsPinned);

@@ -17,6 +17,7 @@
     "./lib/gecikmeliSilme": "./src/lib/gecikmeliSilme.ts",
     "./lib/geriKaydirma": "./src/lib/geriKaydirma.ts",
     "./lib/grafik": "./src/lib/grafik.ts",
+    "./lib/kaydedilenSablonlar": "./src/lib/kaydedilenSablonlar.ts",
     "./lib/kartHizalama": "./src/lib/kartHizalama.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
     "./lib/profilFotografi": "./src/lib/profilFotografi.ts",

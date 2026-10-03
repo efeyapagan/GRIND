@@ -14,6 +14,7 @@ function sablon(exercises: SablonHareketi[]): Sablon {
     visibility: 'Friends',
     savedFromUsername: null,
     lastUsedAt: null,
+    isPinned: false,
   };
 }
 

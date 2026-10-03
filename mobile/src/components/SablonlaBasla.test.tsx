@@ -14,7 +14,7 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => {
   const { Text } = require('react-native');
   return {
-    Link: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text>,
+    Link: ({ children, href }: { children: React.ReactNode; href: string }) => <Text testID={`link-${href}`}>{children}</Text>,
     useRouter: () => ({ push: mockPush }),
     useFocusEffect: jest.fn(),
   };
@@ -277,4 +277,34 @@ test('surukleyip siralayinca kaydedilen sablonlarin id leri de gonderilir', asyn
 
   // Kendi sablonlari yeni sirada (8, 7), ardindan kaydedilen sablonun id'si (3) -- TUM kume.
   expect(sirala).toHaveBeenCalledWith([8, 7, 3]);
+});
+
+// ---- Kaydedilenler karuseli ve ekrani (#538) ----
+
+const KAYDEDILENLER = [
+  { id: 2, name: 'Eski Kayit', exercises: [], savedFromUsername: 'efe', lastUsedAt: '2026-09-01T00:00:00Z', isPinned: false },
+  { id: 3, name: 'Yeni Kayit', exercises: [], savedFromUsername: 'efe', lastUsedAt: '2026-09-20T00:00:00Z', isPinned: false },
+];
+
+/** #538: kaydedilenlerin "Duzenle"si kendi ekranina gider -- kullanicinin hic kendi sablonu olmasa da. */
+test('kendi sablonu yokken de Kaydedilenler basliginda kaydedilenler ekranina giden Duzenle gorunur', async () => {
+  useTemplatesMock.mockReturnValue({ data: KAYDEDILENLER, isLoading: false, isError: false });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  expect(screen.getByTestId('link-/templates/saved')).toBeTruthy();
+  expect(screen.queryByTestId('link-/templates')).toBeNull();
+});
+
+/** #538: kaydedilen karta basili tutunca da ayni menu acilir; silme oradan, onayla yapilir. */
+test('kaydedilen karta basili tutunca acilan menuden o sablon silinir', async () => {
+  useTemplatesMock.mockReturnValue({ data: KAYDEDILENLER, isLoading: false, isError: false });
+
+  await render(<SablonlaBasla onBasla={jest.fn()} bekliyor={false} />);
+
+  await fireEvent(screen.getByRole('button', { name: 'Eski Kayit' }), 'longPress');
+  await fireEvent.press(screen.getByRole('button', { name: 'Şablonu sil' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Evet, sil' }));
+
+  expect(sil).toHaveBeenCalledWith(2);
 });
