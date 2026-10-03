@@ -22,6 +22,7 @@ namespace Grind.Api.Controllers;
 [Route("api/users")]
 public class UsersController(
     IFollowService followService,
+    IFriendRequestService friendRequestService,
     IProfileService profileService,
     IPublicActivityService publicActivityService,
     ISharedTemplateService sharedTemplateService) : ControllerBase
@@ -81,6 +82,71 @@ public class UsersController(
     public async Task<IActionResult> Unfollow(string username, CancellationToken cancellationToken)
     {
         await followService.UnfollowAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>#628: arkadaşlık isteği gönder — zaten arkadaşsa/bekliyorsa no-op; 3 retten sonra 400.</summary>
+    [HttpPost("{username}/friend-request")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendFriendRequest(string username, CancellationToken cancellationToken)
+    {
+        await friendRequestService.SendAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>#628: gönderdiğim isteği geri çek — idempotent.</summary>
+    [HttpDelete("{username}/friend-request")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> WithdrawFriendRequest(string username, CancellationToken cancellationToken)
+    {
+        await friendRequestService.WithdrawAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>#628: bana gelen isteği kabul et — iki taraf karşılıklı takip eder. İstek yoksa 404.</summary>
+    [HttpPost("{username}/friend-request/accept")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AcceptFriendRequest(string username, CancellationToken cancellationToken)
+    {
+        await friendRequestService.AcceptAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>#628: bana gelen isteği reddet — takipler değişmez. İstek yoksa 404.</summary>
+    [HttpPost("{username}/friend-request/reject")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RejectFriendRequest(string username, CancellationToken cancellationToken)
+    {
+        await friendRequestService.RejectAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// #628: bu kişiyi takipçilerimden çıkar. Arkadaşken "Arkadaşlıktan çıkar" da budur — arkadaşlık biter,
+    /// ben takipte kalırım. İdempotent.
+    /// </summary>
+    [HttpDelete("{username}/follower")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveFollower(string username, CancellationToken cancellationToken)
+    {
+        await followService.RemoveFollowerAsync(username, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>#628: takip ettiğim birinden gelen tüm bildirimleri kapat/aç. Takip etmiyorsam 400.</summary>
+    [HttpPut("{username}/mute")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetMuted(string username, MuteRequest request, CancellationToken cancellationToken)
+    {
+        await followService.SetMutedAsync(username, request.Muted, cancellationToken);
         return NoContent();
     }
 
