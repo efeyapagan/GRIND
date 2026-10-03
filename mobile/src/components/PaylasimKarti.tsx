@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dumbbell } from 'lucide-react-native';
 import { renkler } from '@grind/shared/designTokens';
@@ -20,11 +20,38 @@ interface Props {
   volumePr?: boolean;
 }
 
+const BEYAZ = '#FFFFFF';
+const SIYAH = '#000000';
+
 /** #598: RN `Text` dis cizgi (stroke) desteklemez; beyaz yazinin etrafina siyah bir kenarlik, 8 kayma ile. */
 const KENAR_KAYMALARI: [number, number][] = [
   [-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5],
   [-1.06, -1.06], [1.06, -1.06], [-1.06, 1.06], [1.06, 1.06],
 ];
+
+/**
+ * #598 (kullanici karari): beyaz, harfleri siyah cerceveli yazi -- story fotografinin ustunde her zeminde
+ * okunsun. Siyah kopyalar ust yaziyla ayni genislikte durur (left/right), boylece uzun ad alt satira
+ * gectiginde kenar da ayni satirlardan gecer.
+ */
+function CerceveliYazi({ testID, style, children }: { testID: string; style: TextStyle; children: React.ReactNode }) {
+  return (
+    <View>
+      {KENAR_KAYMALARI.map(([x, y]) => (
+        <Text
+          key={`${x}:${y}`}
+          testID={`${testID}-kenar`}
+          style={[style, { color: SIYAH, position: 'absolute', left: x, right: -x, top: y, bottom: -y }]}
+        >
+          {children}
+        </Text>
+      ))}
+      <Text testID={testID} style={[style, { color: BEYAZ }]}>
+        {children}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * Paylasilan seffaf PNG'nin ta kendisi (#433, duzen #470). Yukaridan asagiya, kucule kucule:
@@ -49,36 +76,44 @@ const PaylasimKarti = forwardRef<View, Props>(function PaylasimKarti(
   return (
     <View ref={ref} collapsable={false} style={stil.kart}>
       {templateName !== null && (
-        <Text testID="paylasim-baslik" style={stil.isim}>
+        <CerceveliYazi testID="paylasim-baslik" style={stil.isim}>
           {templateName}
-        </Text>
+        </CerceveliYazi>
       )}
 
-      <Text style={stil.detay}>
-        {setCount} {t('gecmis.setBirimi')}
-      </Text>
-      <Text style={stil.detay}>
-        {saat > 0 ? `${saat} ${t('gecmis.saatBirimi')} ` : ''}
-        {dakika} {t('gecmis.dakikaBirimi')}
-      </Text>
+      {/* #598: rakam beyaz-cerceveli, birim turuncu -- ayni satirda, ayni taban cizgisinde. */}
+      <View style={stil.detaySatiri}>
+        <CerceveliYazi testID="paylasim-set-sayisi" style={stil.detay}>
+          {setCount}
+        </CerceveliYazi>
+        <Text style={stil.birim}>{t('gecmis.setBirimi')}</Text>
+      </View>
+      <View style={stil.detaySatiri}>
+        {saat > 0 && (
+          <>
+            <CerceveliYazi testID="paylasim-saat" style={stil.detay}>
+              {saat}
+            </CerceveliYazi>
+            <Text style={[stil.birim, stil.saatBirimi]}>{t('gecmis.saatBirimi')}</Text>
+          </>
+        )}
+        <CerceveliYazi testID="paylasim-dakika" style={stil.detay}>
+          {dakika}
+        </CerceveliYazi>
+        <Text style={stil.birim}>{t('gecmis.dakikaBirimi')}</Text>
+      </View>
 
       <View style={stil.markaSatiri}>
         <Dumbbell color={renkler.accent} size={18} strokeWidth={2} />
-        <Text style={stil.marka}>GRIND</Text>
+        <CerceveliYazi testID="paylasim-marka" style={stil.marka}>
+          GRIND
+        </CerceveliYazi>
       </View>
 
       {volumePr && (
-        <View style={stil.hacimRekoru}>
-          {KENAR_KAYMALARI.map(([x, y]) => (
-            <Text
-              key={`${x}:${y}`}
-              style={[stil.hacimRekoruYazi, stil.hacimRekoruKenar, { left: x, top: y }]}
-            >
-              {t('paylasim.hacimRekoru')}
-            </Text>
-          ))}
-          <Text style={stil.hacimRekoruYazi}>{t('paylasim.hacimRekoru')}</Text>
-        </View>
+        <CerceveliYazi testID="paylasim-hacim-rekoru" style={stil.hacimRekoru}>
+          {t('paylasim.hacimRekoru')}
+        </CerceveliYazi>
       )}
     </View>
   );
@@ -86,20 +121,25 @@ const PaylasimKarti = forwardRef<View, Props>(function PaylasimKarti(
 
 export default PaylasimKarti;
 
+/** #598 (kullanici karari): Volume PR GRIND'den 5 punto, birimler rakamdan 4 punto kucuk. */
+const MARKA_PUNTOSU = 16;
+const DETAY_PUNTOSU = 20;
+
 const stil = StyleSheet.create({
   // backgroundColor YOK: seffafligin kaynagi bu.
   kart: { alignItems: 'center', gap: 8, paddingHorizontal: 32, paddingVertical: 24 },
   isim: {
-    color: renkler.accent,
     fontSize: 32,
     fontWeight: '800',
     textAlign: 'center',
     maxWidth: PAYLASIM_BASLIK_AZAMI_GENISLIK,
   },
-  detay: { color: renkler.accent, fontSize: 20, fontWeight: '700', textTransform: 'uppercase' },
+  detaySatiri: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  detay: { fontSize: DETAY_PUNTOSU, fontWeight: '700' },
+  // #598: birimler rakamin yaninda bir ton geride kalsin diye soluk turuncu.
+  birim: { color: renkler['accent-soft'], fontSize: DETAY_PUNTOSU - 4, fontWeight: '700', textTransform: 'uppercase' },
+  saatBirimi: { marginRight: 4 },
   markaSatiri: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  marka: { color: renkler.accent, fontSize: 16, fontWeight: '900', letterSpacing: 2 },
-  hacimRekoru: { alignSelf: 'center' },
-  hacimRekoruYazi: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 1, textAlign: 'center' },
-  hacimRekoruKenar: { position: 'absolute', left: 0, right: 0, color: '#000000' },
+  marka: { fontSize: MARKA_PUNTOSU, fontWeight: '900', letterSpacing: 2 },
+  hacimRekoru: { fontSize: MARKA_PUNTOSU - 5, fontWeight: '800', letterSpacing: 1, textAlign: 'center' },
 });
