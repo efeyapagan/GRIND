@@ -45,9 +45,10 @@ public class SetEntryRepository(AppDbContext context)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<WeeklySetRow>> GetWeeklySetRowsAsync(
-        long userId, CancellationToken cancellationToken = default)
+        long userId, long? exerciseId = null, CancellationToken cancellationToken = default)
         => await Set
             .Where(s => s.WorkoutSession.UserId == userId)
+            .Where(s => exerciseId == null || s.ExerciseId == exerciseId)
             .Select(s => new WeeklySetRow(s.WorkoutSession.StartedAt, s.Weight, s.Reps, s.Exercise.Category))
             .ToListAsync(cancellationToken);
 

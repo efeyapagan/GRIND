@@ -100,7 +100,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 - **İlerleme sekmesi (2026-10-01, #184)** — yalnızca mobil, kendi profilinde: haftalık hacim (yalnızca
   tamamlanmış haftalar, boş hafta 0), kas grubuna göre haftalık setler (varsayılan bu hafta, geçen haftaya
   fark) ve seçilen kilolu hareketin tahmini 1RM'i (varsayılan son 90 günde en çok set atılan). Veri
-  `GET /api/stats/weekly` (hafta başına bir satır, `WeeklyStatsCalculator`) ve mevcut `.../progress`. Ayrıntı:
+  `GET /api/stats/weekly` (hafta başına bir satır, `WeeklyStatsCalculator`) ve mevcut `.../progress`. #586:
+  hacim kartı varsayılan olarak toplamı gösterir, başlıktan kilolu bir hareket seçilebilir
+  (`?exerciseId=`, görünmeyen harekette 404); iki kartın hareket seçimi pencerede (`HareketSecimKutusu`). Ayrıntı:
   [docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md](docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.

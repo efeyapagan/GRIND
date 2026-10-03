@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
-import type { HaftalikIstatistik } from '@grind/shared/api/queries';
+import { useExercises, useWeeklyStats, type HaftalikIstatistik } from '@grind/shared/api/queries';
 import { formatAralik, formatFark, formatKisaTarih, formatWeight } from '@grind/shared/lib/format';
-import { hacimHaftalari, type HacimAraligi } from '@grind/shared/lib/haftalikIlerleme';
+import { hacimHaftalari, kiloluHareketler, type HacimAraligi } from '@grind/shared/lib/haftalikIlerleme';
 import CamKart from '../ui/CamKart';
 import CizgiGrafik from '../ui/CizgiGrafik';
+import HareketSecimKutusu from '../ui/HareketSecimKutusu';
 
 const ARALIKLAR = [
   { anahtar: '1a' as HacimAraligi, etiket: 'hareketGecmisi.aralikBirAy' },
@@ -17,20 +18,40 @@ const ARALIKLAR = [
 /**
  * #184: tamamlanmis haftalarin toplam hacmi (spec Karar 3). Hareket grafigiyle ayni dil: ustte
  * "Su anki / Fark", altinda cizgi, en altta aralik secici. Devam eden hafta cizilmez.
+ *
+ * #586: acilista tum hareketlerin toplami (`haftalar`, ekranin tek istegi); basliktan kilolu bir hareket
+ * secilince o hareketin haftalari ayrica istenir. Toplam hacim ekrana geri donmek icin "Tum hareketler".
  */
 export default function HaftalikHacimKarti({ haftalar }: { haftalar: readonly HaftalikIstatistik[] }) {
   const { t } = useTranslation();
   const dil = useDil();
   const [aralik, setAralik] = useState<HacimAraligi>('3a');
-  const cizilecekler = hacimHaftalari(haftalar, aralik);
+  const [secilenId, setSecilenId] = useState<number | null>(null);
+  const { data: egzersizler } = useExercises();
+  const { data: hareketHaftalari } = useWeeklyStats(secilenId, secilenId !== null);
+  const kilolular = kiloluHareketler(egzersizler ?? []);
+  const secilenAd = kilolular.find((e) => e.id === secilenId)?.name ?? t('ilerleme.tumHareketler');
+  const gosterilen = secilenId === null ? haftalar : hareketHaftalari;
+  const cizilecekler = gosterilen ? hacimHaftalari(gosterilen, aralik) : [];
   const ilk = cizilecekler[0];
   const son = cizilecekler[cizilecekler.length - 1];
 
   return (
     <CamKart className="flex-col gap-3 p-4">
       <Text className="text-label text-muted uppercase">{t('ilerleme.hacimBaslik')}</Text>
-      {cizilecekler.length === 0 ? (
-        <Text className="text-body text-muted">{t('ilerleme.tamamlanmisHaftaYok')}</Text>
+      <HareketSecimKutusu
+        egzersizler={kilolular}
+        secilenId={secilenId}
+        secilenAd={secilenAd}
+        onSec={setSecilenId}
+        tumEtiketi={t('ilerleme.tumHareketler')}
+      />
+      {!gosterilen ? (
+        <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>
+      ) : cizilecekler.length === 0 ? (
+        <Text className="text-body text-muted">
+          {t(secilenId === null ? 'ilerleme.tamamlanmisHaftaYok' : 'ilerleme.hareketteHaftaYok')}
+        </Text>
       ) : (
         <>
           <View className="flex-row gap-8">

@@ -1,3 +1,4 @@
+using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Stats;
@@ -41,7 +42,8 @@ public class StatsServiceTests
         var saat = new SahteSaat(Bugun);
         var service = new StatsService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
-            new BodyWeightLogRepository(context), new UserRepository(context), new StubCurrentUser(user.Id), saat);
+            new BodyWeightLogRepository(context), new UserRepository(context), new ExerciseRepository(context),
+            new StubCurrentUser(user.Id), saat);
 
         return (context, user, exercise, service, saat, transaction);
     }
@@ -766,6 +768,49 @@ public class StatsServiceTests
             Assert.Equal(new DateOnly(2026, 3, 9), hafta.WeekStart);
             Assert.Equal(1000m, hafta.Volume);
             Assert.Equal(2, hafta.OtherSets); // TestDatabase.NewExercise → Category.Other
+        }
+    }
+
+    /// <summary>
+    /// #586: hareket seçilince haftalık hacim yalnızca o hareketin setlerinden hesaplanır; aynı haftadaki
+    /// başka bir hareketin seti sayılmaz.
+    /// </summary>
+    [Fact]
+    public async Task Haftalik_istatistik_hareket_secilince_yalnizca_o_hareketi_sayar()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var baskaHareket = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.Add(baskaHareket);
+            Seed(context, user, exercise, Bugun, (100m, 5));
+            Seed(context, user, baskaHareket, Bugun, (50m, 10), (50m, 10));
+            await context.SaveChangesAsync();
+
+            var yanit = await service.GetWeeklyAsync(exercise.Id);
+
+            var hafta = Assert.Single(yanit.Weeks);
+            Assert.Equal(500m, hafta.Volume);
+            Assert.Equal(1, hafta.OtherSets);
+        }
+    }
+
+    /// <summary>
+    /// #586: başkasının özel hareketi istenirse nötr 404 (Yetkilendirme Kuralı) — boş liste değil, aynı uçtaki
+    /// <c>.../progress</c> ile aynı yanıt.
+    /// </summary>
+    [Fact]
+    public async Task Haftalik_istatistik_gorunmeyen_harekette_bulunamadi_der()
+    {
+        var (context, _, _, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var baskasi = TestDatabase.NewUser();
+            var ozelHareket = TestDatabase.NewExercise(baskasi, $"Egzersiz {Guid.NewGuid():N}");
+            context.AddRange(baskasi, ozelHareket);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.GetWeeklyAsync(ozelHareket.Id));
         }
     }
 }

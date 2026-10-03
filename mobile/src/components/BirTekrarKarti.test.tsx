@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import BirTekrarKarti from './BirTekrarKarti';
@@ -64,4 +64,18 @@ test('son 90 gunde kilolu hareket yoksa tum zamanlarin en cok set atilani secili
   );
 
   expect(await screen.findByRole('button', { name: 'Hareketi değiştir: Bench Press' })).toBeTruthy();
+});
+
+/**
+ * #586 (kullanici bildirdi): basliga dokunup listeden baska bir hareket secilince grafik o harekete gecer.
+ * Liste kartin altina acilip ekranin sonunda dokunulamaz kaliyordu; secim artik pencerede yapilir.
+ */
+test('basliktan baska bir hareket secilir', async () => {
+  const SQUAT = { ...BENCH, id: 2, name: 'Squat', category: 'Legs' };
+  await kur([BENCH, SQUAT], [{ exerciseId: 1, exerciseName: 'Bench Press', volume: 5000, setCount: 12 }]);
+
+  await fireEvent.press(await screen.findByRole('button', { name: 'Hareketi değiştir: Bench Press' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Squat' }));
+
+  expect(await screen.findByRole('button', { name: 'Hareketi değiştir: Squat' })).toBeTruthy();
 });

@@ -45,6 +45,8 @@ public interface IStatsService
     /// <summary>
     /// #184: ilk antrenman haftasından bu haftaya haftalık hacim ve kas grubuna göre set sayısı; boş haftalar
     /// sıfır. Aralıktan bağımsız, tüm geçmişten. Kural <c>WeeklyStatsCalculator</c>'da.
+    /// <paramref name="exerciseId"/> verilirse yalnızca o hareketin setleri sayılır (#586); hareket
+    /// görünmüyorsa nötr 404.
     /// </summary>
-    Task<WeeklyStatsResponse> GetWeeklyAsync(CancellationToken cancellationToken = default);
+    Task<WeeklyStatsResponse> GetWeeklyAsync(long? exerciseId = null, CancellationToken cancellationToken = default);
 }
