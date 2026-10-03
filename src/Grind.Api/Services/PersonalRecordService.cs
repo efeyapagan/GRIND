@@ -37,10 +37,17 @@ public class PersonalRecordService(
         long exerciseId,
         long? excludeSetId = null,
         long? excludeSessionId = null,
+        SetEntry? pendingSet = null,
         CancellationToken cancellationToken = default)
     {
-        var sets = await setEntryRepository.GetForUserAndExerciseAsync(
+        IReadOnlyList<SetEntry> sets = await setEntryRepository.GetForUserAndExerciseAsync(
             currentUser.UserId, exerciseId, cancellationToken);
+
+        if (pendingSet is not null)
+        {
+            // OrderBy kararlıdır: eşit CreatedAt'te bekleyen set var olanların ARKASINDA kalır.
+            sets = sets.Append(pendingSet).OrderBy(s => s.CreatedAt).ToList();
+        }
 
         if (sets.Count == 0)
         {

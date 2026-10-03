@@ -864,12 +864,17 @@ export interface YeniSetGirdisi {
   reps: number | null;
   rir: number | null;
   durationSeconds: number | null;
+  /**
+   * #564: verilirse set bu (gecmis) antrenmana eklenir -- `POST /api/sessions/{id}/sets`, yalnizca
+   * antrenmanda seti olan harekete. Verilmezse acik antrenmana.
+   */
+  sessionId?: number;
 }
 
 /**
  * `POST /api/sets` oturum id'si ALMAZ -- sunucu bugunun acik oturumunu bulur ya da kendiliginden
  * acar (spec). Bu yuzden bos durumda ayri bir "oturum baslat" dugmesine gerek yok: ilk set
- * eklendiginde oturum kendiliginden dogar.
+ * eklendiginde oturum kendiliginden dogar. `sessionId` verilirse (#564) set o antrenmana gider.
  */
 export function useAddSet() {
   const queryClient = useQueryClient();
@@ -883,7 +888,8 @@ export function useAddSet() {
         rir: girdi.rir,
         durationSeconds: girdi.durationSeconds,
       };
-      const yanit = await request<SetEntryResponse>('/sets', {
+      const yol = girdi.sessionId === undefined ? '/sets' : `/sessions/${girdi.sessionId}/sets`;
+      const yanit = await request<SetEntryResponse>(yol, {
         method: 'POST',
         body: JSON.stringify(govde),
       });

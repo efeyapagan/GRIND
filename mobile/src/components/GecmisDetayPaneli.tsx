@@ -14,7 +14,9 @@ import { useTranslation } from 'react-i18next';
 import { Trash2, X } from 'lucide-react-native';
 import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
 import GecmisOzeti from './GecmisOzeti';
+import GecmisKatmani from './GecmisKatmani';
 import GecmisSetMenusu from './GecmisSetMenusu';
+import SetPaneli from './SetPaneli';
 import SetList from './SetList';
 import CamYuzey from '../ui/CamYuzey';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -34,8 +36,8 @@ interface Props {
   /** Kapanis animasyonu bittikten sonra cagrilir; paneli kaldirmak cagiranin isidir. */
   onKapat: () => void;
   /**
-   * Verilmezse panel salt-okunurdur (#284): antrenman silinmez, setlerde basili tutma menusu (#564) de
-   * yoktur. Panel kapandiktan SONRA cagrilir -- onay kartta sorulur.
+   * Verilmezse panel salt-okunurdur (#284): antrenman silinmez, setlerde basili tutma menusu ve "Set
+   * ekle" (#564) de yoktur. Panel kapandiktan SONRA cagrilir -- onay kartta sorulur.
    */
   onSil?: () => void;
 }
@@ -60,6 +62,8 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
   const [alanYuksekligi, setAlanYuksekligi] = useState(0);
   // #564: basili tutulan set; menu (ve duzenleyici) panelin ustunde, ayni Modal'da acilir.
   const [setMenusu, setSetMenusu] = useState<{ kayit: SetKaydi; sira: number } | null>(null);
+  // #564: set eklenen hareket -- yalnizca antrenmanda zaten olan hareket (grubun altindaki dugme).
+  const [ekleme, setEkleme] = useState<{ exerciseId: number; exerciseName: string } | null>(null);
   const ilerleme = useSharedValue(0);
   const kapaniyor = useRef(false);
 
@@ -140,6 +144,7 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
                 sets={oturum.sets}
                 bosDurumMetni={t('gecmis.bosDurumMetni')}
                 onSetMenu={onSil ? (kayit, sira) => setSetMenusu({ kayit, sira }) : undefined}
+                onSetEkle={onSil ? (exerciseId, exerciseName) => setEkleme({ exerciseId, exerciseName }) : undefined}
               />
               {onSil && (
                 <Pressable
@@ -160,6 +165,20 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
             sira={setMenusu.sira}
             onKapat={() => setSetMenusu(null)}
           />
+        )}
+        {ekleme && (
+          // Antrenman ekranindaki set paneli; set acik antrenmana degil bu antrenmana gider. Eklenince
+          // kapanir, panel tazelenen gecmisten yeni seti gosterir.
+          <GecmisKatmani onKapat={() => setEkleme(null)} icerikAnahtari="ekle">
+            <View testID="gecmis-set-ekleme">
+              <SetPaneli
+                egzersizId={ekleme.exerciseId}
+                egzersizAdi={ekleme.exerciseName}
+                oturumId={oturum.sessionId}
+                onSetEklendi={() => setEkleme(null)}
+              />
+            </View>
+          </GecmisKatmani>
         )}
       </View>
     </Modal>

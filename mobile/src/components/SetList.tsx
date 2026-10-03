@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable } from 'react-native';
-import { Flame, Timer, Zap } from 'lucide-react-native';
+import { Flame, Plus, Timer, Zap } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { gecilmisRekorIdleri, rekorRozetiMetni } from '@grind/shared/lib/rekor';
@@ -12,6 +12,7 @@ import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
 import SetDegeriYazisi from './SetDegeriYazisi';
+import { useIkonRenk } from '../ui/renkler';
 
 interface OrtakProps {
   sets: SetKaydi[];
@@ -23,7 +24,12 @@ type Props = OrtakProps &
     | { varyant?: 'bugun'; onSetDuzenle: (kayit: SetKaydi, sira: number) => void }
     // #564: verilirse gecmis satirina basili tutmak Duzenle / Sil menusunu acar; verilmezse
     // (arkadasin gecmisi, #284) satir salt-okunurdur.
-    | { varyant: 'gecmis'; onSetMenu?: (kayit: SetKaydi, sira: number) => void }
+    | {
+        varyant: 'gecmis';
+        onSetMenu?: (kayit: SetKaydi, sira: number) => void;
+        /** #564: verilirse her hareket grubunun altinda "Set ekle" durur (yalnizca var olan harekete). */
+        onSetEkle?: (exerciseId: number, exerciseName: string) => void;
+      }
   );
 
 interface EgzersizGrubu {
@@ -36,6 +42,7 @@ interface EgzersizGrubu {
 export default function SetList(props: Props) {
   const { t } = useTranslation();
   const dil = useDil();
+  const ikonRenk = useIkonRenk();
   const { sets, bosDurumMetni = t('setler.bosDurum') } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
@@ -130,6 +137,17 @@ export default function SetList(props: Props) {
                 );
               })}
             </View>
+            {props.onSetEkle && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('gecmis.setEkleEtiketi', { hareket: grup.exerciseName })}
+                onPress={() => props.onSetEkle?.(grup.exerciseId, grup.exerciseName)}
+                className="min-h-11 flex-row items-center gap-1 self-start px-1"
+              >
+                <Plus color={ikonRenk.accentSoft} size={16} />
+                <Text className="text-label text-accent-soft">{t('setler.setEkle')}</Text>
+              </Pressable>
+            )}
           </View>
         ))}
       </View>

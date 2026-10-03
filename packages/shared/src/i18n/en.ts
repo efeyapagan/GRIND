@@ -445,7 +445,8 @@ export const en: Katalog = {
     setMenusuIpucu: 'Long press to edit or delete',
     setiDuzenle: 'Edit set',
     setSilOnayi: 'This set will be deleted. Records for this exercise will be recalculated.',
-    setMenusunuKapat: 'Close set menu',
+    setKatmaniniKapat: 'Close set window',
+    setEkleEtiketi: 'Add set to {{hareket}}',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Est. 1RM',

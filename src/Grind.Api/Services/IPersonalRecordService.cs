@@ -1,4 +1,5 @@
 using Grind.Api.Models.Dtos.Record;
+using Grind.Api.Models.Entities;
 using Grind.Api.Models.Enums;
 
 namespace Grind.Api.Services;
@@ -39,10 +40,16 @@ public interface IPersonalRecordService
     /// Silinmek üzere olan oturum. CASCADE veritabanına henüz gitmediği için o oturumun
     /// setleri de sorguda geri gelir. Aynı sebep, oturum ölçeğinde.
     /// </param>
+    /// <param name="pendingSet">
+    /// Eklenmek üzere olan ama henüz commit edilmemiş set (#564, geçmiş antrenmana ekleme). Sorgu onu
+    /// DÖNDÜRMEZ (veritabanında yok); <c>CreatedAt</c> sırasındaki yerine katılır — <c>excludeSetId</c>'nin
+    /// tersi. Böylece ekleme ve yeniden hesap tek <c>SaveChangesAsync</c>'te kalır.
+    /// </param>
     Task RecalculateAsync(
         long exerciseId,
         long? excludeSetId = null,
         long? excludeSessionId = null,
+        SetEntry? pendingSet = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

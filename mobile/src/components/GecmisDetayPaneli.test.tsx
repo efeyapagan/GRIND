@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react-native';
+import { cleanup, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
@@ -40,6 +40,9 @@ const OTURUM: GecmisOturum = {
 beforeEach(() => {
   requestMock.mockReset();
   requestMock.mockImplementation(async (yol: string, secenekler?: { method?: string; body?: string }) => {
+    if (yol === '/sessions/1/sets' && secenekler?.method === 'POST') {
+      return { ...KAYIT, id: 9, ...JSON.parse(secenekler.body ?? '{}') };
+    }
     if (yol === '/sets/7' && secenekler?.method === 'PATCH') {
       return { ...KAYIT, ...JSON.parse(secenekler.body ?? '{}') };
     }
@@ -126,4 +129,31 @@ test('onayda Evet, sil DELETE gonderir', async () => {
   await fireEvent.press(screen.getByText('Evet, sil'));
 
   expect(setIstekleri('DELETE')).toHaveLength(1);
+});
+
+// ---- #564: gecmis antrenmana set ekleme (yalnizca antrenmanda olan harekete) ----
+
+test('kendi gecmisinde her hareketin altinda Set ekle vardir, salt-okunurda yoktur', async () => {
+  await paneliCiz();
+  expect(screen.getByLabelText('Bench Press için set ekle')).toBeTruthy();
+
+  await cleanup();
+  await paneliCiz('salt-okunur');
+  expect(screen.queryByLabelText('Bench Press için set ekle')).toBeNull();
+});
+
+test('Set ekle formu doldurulunca set o antrenmana gonderilir', async () => {
+  await paneliCiz();
+
+  await fireEvent.press(screen.getByLabelText('Bench Press için set ekle'));
+  const form = within(screen.getByTestId('gecmis-set-ekleme'));
+  await fireEvent.changeText(form.getByLabelText('Ağırlık'), '65');
+  await fireEvent.changeText(form.getByLabelText('Tekrar'), '6');
+  await fireEvent.press(form.getByText('Set ekle'));
+
+  const istekler = requestMock.mock.calls.filter(
+    ([yol, secenekler]) => yol === '/sessions/1/sets' && secenekler?.method === 'POST',
+  );
+  expect(istekler).toHaveLength(1);
+  expect(JSON.parse(istekler[0][1].body)).toMatchObject({ exerciseId: 1, weight: 65, reps: 6 });
 });

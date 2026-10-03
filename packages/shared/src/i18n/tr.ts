@@ -454,7 +454,8 @@ export const tr = {
     setMenusuIpucu: 'Düzenlemek ya da silmek için basılı tut',
     setiDuzenle: 'Seti düzenle',
     setSilOnayi: 'Bu set silinecek. Bu hareketin rekorları yeniden hesaplanır.',
-    setMenusunuKapat: 'Set menüsünü kapat',
+    setKatmaniniKapat: 'Set penceresini kapat',
+    setEkleEtiketi: '{{hareket}} için set ekle',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Tahmini 1RM',
