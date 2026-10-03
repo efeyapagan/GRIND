@@ -1,4 +1,4 @@
-import { cleanup, render, screen, fireEvent, within } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
@@ -30,7 +30,9 @@ const KAYIT: SetKaydi = {
 const OTURUM: GecmisOturum = {
   sessionId: 1,
   startedAt: '2026-09-18T10:00:00Z',
+  templateId: 1,
   templateName: 'Push Day',
+  isVolumeRecord: false,
   setCount: 1,
   totalVolume: 480,
   durationSeconds: 3600,
@@ -131,19 +133,46 @@ test('onayda Evet, sil DELETE gonderir', async () => {
   expect(setIstekleri('DELETE')).toHaveLength(1);
 });
 
-// ---- #564: gecmis antrenmana set ekleme (yalnizca antrenmanda olan harekete) ----
+// ---- #564 / #598: gecmis antrenmana set ekleme, kalemle acilan duzenleme modunda ----
 
-test('kendi gecmisinde her hareketin altinda Set ekle vardir, salt-okunurda yoktur', async () => {
+async function duzenlemeyiAc() {
+  await fireEvent.press(screen.getByRole('button', { name: 'Antrenmanı düzenle' }));
+}
+
+/**
+ * #598 (kullanici karari): "Set ekle" her zaman gorunurken yanlislikla set ekleniyordu. Kalem dugmesi
+ * kapatma (carpi) dugmesinin SOLUNDA durur; ikisi de kutusuzdur.
+ */
+test('kendi gecmisinde kalem carpinin solunda durur, ikisi de kutusuzdur', async () => {
   await paneliCiz();
+
+  const etiketler = screen.getAllByRole('button').map((dugme) => dugme.props.accessibilityLabel);
+  expect(etiketler.indexOf('Antrenmanı düzenle')).toBeGreaterThan(-1);
+  expect(etiketler.indexOf('Antrenmanı düzenle')).toBeLessThan(etiketler.indexOf('Kapat'));
+  expect(screen.getByRole('button', { name: 'Antrenmanı düzenle' }).props.className).not.toMatch(/bg-surface/);
+  expect(screen.getByRole('button', { name: 'Kapat' }).props.className).not.toMatch(/bg-surface/);
+});
+
+test('salt-okunur gecmiste kalem yoktur', async () => {
+  await paneliCiz('salt-okunur');
+
+  expect(screen.queryByRole('button', { name: 'Antrenmanı düzenle' })).toBeNull();
+});
+
+test('Set ekle varsayilan gizlidir, kalemle gorunur, tekrar basinca gizlenir', async () => {
+  await paneliCiz();
+  expect(screen.queryByLabelText('Bench Press için set ekle')).toBeNull();
+
+  await duzenlemeyiAc();
   expect(screen.getByLabelText('Bench Press için set ekle')).toBeTruthy();
 
-  await cleanup();
-  await paneliCiz('salt-okunur');
+  await fireEvent.press(screen.getByRole('button', { name: 'Düzenlemeyi bitir' }));
   expect(screen.queryByLabelText('Bench Press için set ekle')).toBeNull();
 });
 
 test('Set ekle formu doldurulunca set o antrenmana gonderilir', async () => {
   await paneliCiz();
+  await duzenlemeyiAc();
 
   await fireEvent.press(screen.getByLabelText('Bench Press için set ekle'));
   const form = within(screen.getByTestId('gecmis-set-ekleme'));
@@ -156,4 +185,27 @@ test('Set ekle formu doldurulunca set o antrenmana gonderilir', async () => {
   );
   expect(istekler).toHaveLength(1);
   expect(JSON.parse(istekler[0][1].body)).toMatchObject({ exerciseId: 1, weight: 65, reps: 6 });
+});
+
+/** #598: duzenleme modunda sete dokunmak menuyu degil dogrudan duzenleyiciyi (kg / tekrar / RIR) acar. */
+test('duzenleme modunda sete dokununca duzenleyici dogrudan acilir, Kaydet PATCH gonderir', async () => {
+  await paneliCiz();
+  await duzenlemeyiAc();
+
+  await fireEvent.press(screen.getByTestId('gecmis-set-7'));
+  const duzenleyici = within(screen.getByTestId('set-duzenleyici'));
+  await fireEvent.changeText(duzenleyici.getByDisplayValue('60'), '62.5');
+  await fireEvent.press(duzenleyici.getByText('Kaydet'));
+
+  const istekler = setIstekleri('PATCH');
+  expect(istekler).toHaveLength(1);
+  expect(JSON.parse(istekler[0][1].body)).toMatchObject({ weight: 62.5, reps: 8 });
+});
+
+test('duzenleme modu kapaliyken sete dokunmak duzenleyici acmaz', async () => {
+  await paneliCiz();
+
+  await fireEvent.press(screen.getByTestId('gecmis-set-7'));
+
+  expect(screen.queryByTestId('set-duzenleyici')).toBeNull();
 });

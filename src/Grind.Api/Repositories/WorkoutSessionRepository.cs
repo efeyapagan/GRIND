@@ -211,4 +211,35 @@ public class WorkoutSessionRepository(AppDbContext context)
 
         return query;
     }
+
+    public async Task<IReadOnlyList<TemplateSessionVolume>> GetTemplateSessionVolumesAsync(
+        long userId,
+        IReadOnlyCollection<long> templateIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (templateIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Anonim tipe projekte edip sonra record'a çevirmek bilinçli: bkz. GetSessionAggregatesAsync.
+        var rows = await Set
+            .Where(s => s.UserId == userId
+                        && s.TemplateId != null
+                        && templateIds.Contains(s.TemplateId.Value)
+                        && s.EndedAt != null
+                        && s.SetEntries.Any())
+            .Select(s => new
+            {
+                s.Id,
+                TemplateId = s.TemplateId!.Value,
+                s.StartedAt,
+                Volume = s.SetEntries.Sum(e => e.Weight * (e.Reps ?? 0)),
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new TemplateSessionVolume(r.Id, r.TemplateId, r.StartedAt, r.Volume))
+            .ToList();
+    }
 }

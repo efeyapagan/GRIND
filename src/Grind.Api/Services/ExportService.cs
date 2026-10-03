@@ -1,3 +1,4 @@
+using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.BodyWeight;
@@ -41,6 +42,11 @@ public class ExportService(
         // sessizce elenip export'tan eksik kalabilir. Kabul edilebilir bir ihtimal.
         var sets = await setEntryRepository.GetInRangeAsync(userId, fromUtc, toUtc, cancellationToken);
 
+        var volumeRecordIds = VolumeRecordCalculator.RecordSessionIds(
+            await sessionRepository.GetTemplateSessionVolumesAsync(
+                userId, sessions.Where(s => s.TemplateId != null).Select(s => s.TemplateId!.Value).Distinct().ToList(),
+                cancellationToken));
+
         var calendar = await statsService.GetCalendarAsync(query, cancellationToken);
         var volumeByExercise = await statsService.GetVolumeByExerciseAsync(query, cancellationToken);
         var records = await personalRecordService.GetAllTimeAsync(cancellationToken);
@@ -62,7 +68,7 @@ public class ExportService(
             query.From,
             query.To,
             summary,
-            HistoryMapping.ToSessionResponses(sessions, sets),
+            HistoryMapping.ToSessionResponses(sessions, sets, volumeRecordIds),
             bodyWeights.Select(b => new BodyWeightLogResponse(
                 b.Id, b.Weight, b.HeightCm, b.BodyFatPercent, b.WaistCm, b.HipCm, b.RecordedAt)).ToList(),
             records);
