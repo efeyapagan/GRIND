@@ -16,6 +16,7 @@ jest.mock('expo-image-picker', () => ({
 
 /** Yeni zincirleme API: manipulate(uri).resize(...).renderAsync() -> saveAsync({ format }). */
 const mockBoyutlandir = jest.fn();
+const mockKes = jest.fn();
 const mockKaydet = jest.fn(async () => ({ uri: 'file:///kucuk.jpg', width: 256, height: 256 }));
 jest.mock('expo-image-manipulator', () => ({
   ImageManipulator: {
@@ -25,7 +26,11 @@ jest.mock('expo-image-manipulator', () => ({
           mockBoyutlandir(boyut);
           return baglam;
         },
-        renderAsync: async () => ({ saveAsync: mockKaydet }),
+        crop: (alan: unknown) => {
+          mockKes(alan);
+          return baglam;
+        },
+        renderAsync: async () => ({ width: 256, height: 256, saveAsync: mockKaydet }),
       };
       return baglam;
     }),
@@ -169,6 +174,8 @@ test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', asy
   await renderRouterAsync('./app', { initialUrl: '/profile/edit' });
 
   await fireEvent.press(await screen.findByRole('button', { name: 'Fotoğraf seç' }));
+  // #565: kirpma uygulamanin kendi ekraninda; 2048'den kucuk gorsel hazirlanmadan dogrudan kirpilir.
+  await fireEvent.press(await screen.findByRole('button', { name: 'Kullan' }));
 
   await waitFor(() => expect(istekler.some((istek) => istek.path === '/profile/avatar')).toBe(true));
   const yukleme = istekler.find((istek) => istek.path === '/profile/avatar')!;
@@ -179,6 +186,7 @@ test('galeriden secilen fotograf 256 piksele kucultulup multipart yuklenir', asy
   expect((ekle.mock.calls[0][1] as unknown as { uri: string }).uri).toBe('file:///kucuk.jpg');
   const { ImageManipulator } = jest.requireMock('expo-image-manipulator');
   expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///buyuk.png');
+  expect(mockKes).toHaveBeenCalledWith({ originX: 0, originY: 0, width: 2000, height: 2000 });
   expect(mockBoyutlandir).toHaveBeenCalledWith({ width: 256, height: 256 });
   expect(mockKaydet).toHaveBeenCalledWith(expect.objectContaining({ format: 'jpeg' }));
 }, 20_000);
