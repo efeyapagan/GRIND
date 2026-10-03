@@ -18,6 +18,11 @@ export default function KullaniciProfiliIndex() {
   if (kendisi) {
     return <Redirect href="/profile" />;
   }
+  // #622: takip listesinden gelince ebeveyn profili beklemeden bu ekran monte olabiliyor -- gizlilik
+  // seviyesi bilinmeden yonlendirilmez, yoksa gizli hesapta Gecmis'e gidilirdi.
+  if (!profil.data && !profil.isError) {
+    return null;
+  }
   const sekme = profil.data?.privacyLevel === 'Gizli' ? 'records' : 'history';
   return <Redirect href={`/profile/u/${encodeURIComponent(username)}/${sekme}`} />;
 }
