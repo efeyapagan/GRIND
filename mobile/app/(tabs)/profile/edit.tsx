@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Component, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,14 +19,17 @@ import { ApiError } from '@grind/shared/api/problem';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { formatTarih } from '@grind/shared/lib/format';
 import { PROFIL_FOTOGRAFI_KENARI } from '@grind/shared/lib/profilFotografi';
+import type { GorselBoyutu, KirpmaDikdortgeni } from '@grind/shared/lib/fotografKirpma';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import Alan from '../../../src/ui/Alan';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import HataKutusu from '../../../src/ui/HataKutusu';
+import CamIkincilDugme from '../../../src/ui/CamIkincilDugme';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
 import CamKart from '../../../src/ui/CamKart';
 import CamDolgu from '../../../src/ui/CamDolgu';
 import ProfilFotografi from '../../../src/components/ProfilFotografi';
+import FotografKirpici from '../../../src/components/FotografKirpici';
 import KullaniciAdiPenceresi from '../../../src/components/KullaniciAdiPenceresi';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { useIkonRenk } from '../../../src/ui/renkler';
@@ -44,7 +47,9 @@ export default function ProfiliDuzenleScreen() {
       {profil.isError && <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={t('profil.profilAlinamadi')} />}
       {profil.data && (
         <>
-          <FotografAlani profil={profil.data} />
+          <FotografHataSiniri>
+            <FotografAlani profil={profil.data} />
+          </FotografHataSiniri>
           <BilgiFormu profil={profil.data} />
         </>
       )}
@@ -52,29 +57,78 @@ export default function ProfiliDuzenleScreen() {
   );
 }
 
-/** Galeri 1:1 kirpar (OS'un kendi kirpma ekrani). Iptal edilirse `null`. */
-async function galeridenSec(): Promise<string | null> {
-  const secim = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 1,
-  });
-  if (secim.canceled || !secim.assets?.[0]) {
+type KirpilacakGorsel = GorselBoyutu & { uri: string };
+
+/**
+ * #565: kirpma uygulamanin kendi ekraninda (`FotografKirpici`). `allowsEditing` VERILMEZ: iOS'ta eski
+ * `UIImagePickerController`i aciyordu -- buyuk galeride yavas, iCloud'daki fotografta kirpma ekrani
+ * tutarsiz, tam cozunurluklu gorseli uygulamanin bellegine acip 48 MP'de Expo Go'yu kapatabiliyordu.
+ * Kirpmasiz secici (PHPicker) uygulamanin disinda calisir ve iCloud indirmesini kendisi yapar.
+ */
+async function galeridenSec(): Promise<KirpilacakGorsel | null> {
+  const secim = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+  const varlik = secim.canceled ? undefined : secim.assets?.[0];
+  if (!varlik) {
     return null;
   }
-  return secim.assets[0].uri;
+  return { uri: varlik.uri, genislik: varlik.width, yukseklik: varlik.height };
 }
 
-/** Kirpilan gorsel sunucuya gitmeden once `PROFIL_FOTOGRAFI_KENARI` JPEG'e kuculur. */
-async function kucult(uri: string): Promise<string> {
-  const baglam = ImageManipulator.manipulate(uri).resize({
+/** Kirpma ekranina gidecek gorselin uzun kenari en fazla bu kadar: buyuk fotograf bellegi sisirmesin. */
+const HAZIRLIK_UZUN_KENARI = 2048;
+
+/** #565: buyuk fotograf kirpma ekranindan once BIR kez kucultulur; kucukse oldugu gibi kullanilir. */
+async function hazirla(gorsel: KirpilacakGorsel): Promise<KirpilacakGorsel> {
+  if (Math.max(gorsel.genislik, gorsel.yukseklik) <= HAZIRLIK_UZUN_KENARI) {
+    return gorsel;
+  }
+  const boyut =
+    gorsel.genislik >= gorsel.yukseklik ? { width: HAZIRLIK_UZUN_KENARI } : { height: HAZIRLIK_UZUN_KENARI };
+  const islenen = await ImageManipulator.manipulate(gorsel.uri).resize(boyut).renderAsync();
+  const kayit = await islenen.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+  return { uri: kayit.uri, genislik: kayit.width, yukseklik: kayit.height };
+}
+
+/** Secilen kare alan kirpilir ve sunucuya gitmeden once `PROFIL_FOTOGRAFI_KENARI` JPEG'e kuculur. */
+async function kirpVeKucult(uri: string, alan: KirpmaDikdortgeni): Promise<string> {
+  const baglam = ImageManipulator.manipulate(uri).crop(alan).resize({
     width: PROFIL_FOTOGRAFI_KENARI,
     height: PROFIL_FOTOGRAFI_KENARI,
   });
   const gorsel = await baglam.renderAsync();
   const kayit = await gorsel.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
   return kayit.uri;
+}
+
+/**
+ * #565: fotograf alaninda cizim sirasinda patlayan beklenmedik bir hata tum ekrani kapatmasin --
+ * formun geri kalani calismaya devam eder, alan yerine hata mesaji ve "Tekrar dene" gorunur. Yerel
+ * (native) bir cokmeyi YAKALAYAMAZ; o, kirpmanin uygulamaya alinmasiyla onlendi.
+ */
+class FotografHataSiniri extends Component<{ children: ReactNode }, { hata: boolean }> {
+  state = { hata: false };
+
+  static getDerivedStateFromError() {
+    return { hata: true };
+  }
+
+  render() {
+    return this.state.hata ? (
+      <FotografAlaniHatasi onYenile={() => this.setState({ hata: false })} />
+    ) : (
+      this.props.children
+    );
+  }
+}
+
+function FotografAlaniHatasi({ onYenile }: { onYenile: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <View className="flex-col items-center gap-3">
+      <HataKutusu baslik={t('profil.fotografYuklenemedi')} mesaj={t('profil.fotografAlaniHatasi')} />
+      <CamIkincilDugme onPress={onYenile}>{t('profil.fotografAlaniniYenile')}</CamIkincilDugme>
+    </View>
+  );
 }
 
 /** Hatanin kendi metni -- kullanici cihazda gordugunu aktarabilsin diye ekrana yazilir (#510). */
@@ -95,6 +149,8 @@ function FotografAlani({ profil }: { profil: Profil }) {
   const [hata, setHata] = useState<FotografHatasi | null>(null);
   // Galeri kapandiktan SONRA kucultme de cihazda zaman alir; gosterge yalnizca yuklemeyi degil onu da kapsar.
   const [hazirlaniyor, setHazirlaniyor] = useState(false);
+  // #565: secilip hazirlanan, kullanicinin kirpacagi gorsel; doluyken kirpma ekrani acik.
+  const [kirpilacak, setKirpilacak] = useState<KirpilacakGorsel | null>(null);
   const calisiyor = hazirlaniyor || yukle.isPending;
   const mesgul = calisiyor || kaldir.isPending;
 
@@ -115,16 +171,32 @@ function FotografAlani({ profil }: { profil: Profil }) {
    * artik uc adima bolunur -- galeri, hazirlama (kucultme + dosya), gonderme -- ve her adimin hatasi
    * kendi adiyla ve hatanin kendi metniyle ekrana yazilir. Hazirlanamayan fotograf gonderilmez.
    */
+  /** #565: galeri -> (buyukse) kucultme -> kirpma ekrani. Yukleme kirpma ekraninda "Kullan" ile baslar. */
   async function sec() {
     setHata(null);
-    let govde: FormData;
     try {
       const secilen = await galeridenSec();
       if (!secilen) {
         return;
       }
       setHazirlaniyor(true);
-      const kucuk = await kucult(secilen);
+      setKirpilacak(await hazirla(secilen));
+    } catch (hataNesnesi) {
+      setHata({
+        mesaj: t('profil.fotografHazirlanamadi'),
+        ayrinti: t('profil.hataAyrintisi', { ayrinti: hataMetni(hataNesnesi) }),
+      });
+    } finally {
+      setHazirlaniyor(false);
+    }
+  }
+
+  async function kirpVeYukle(gorsel: KirpilacakGorsel, alan: KirpmaDikdortgeni) {
+    setKirpilacak(null);
+    let govde: FormData;
+    try {
+      setHazirlaniyor(true);
+      const kucuk = await kirpVeKucult(gorsel.uri, alan);
       govde = new FormData();
       // Expo 57'nin global fetch'i (expo/fetch) RN'in eski `{ uri, name, type }` parcasini DESTEKLEMEZ
       // ("Unsupported FormDataPart", istek hic gitmez) -- dosya Blob uyumlu `File` olarak eklenir; ad ve
@@ -162,6 +234,13 @@ function FotografAlani({ profil }: { profil: Profil }) {
         )}
       </View>
       {hata && <HataKutusu baslik={t('profil.fotografYuklenemedi')} mesaj={hata.mesaj} ayrinti={hata.ayrinti} />}
+      {kirpilacak && (
+        <FotografKirpici
+          gorsel={kirpilacak}
+          onKullan={(alan) => void kirpVeYukle(kirpilacak, alan)}
+          onVazgec={() => setKirpilacak(null)}
+        />
+      )}
       <View className="w-full flex-row gap-2">
         {/* #592: sayfa zemininde duran ikincil dugmeler -- cam (spec Karar 9). */}
         <CamKart

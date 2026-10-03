@@ -20,6 +20,7 @@
     "./lib/kaydedilenSablonlar": "./src/lib/kaydedilenSablonlar.ts",
     "./lib/kartHizalama": "./src/lib/kartHizalama.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
+    "./lib/fotografKirpma": "./src/lib/fotografKirpma.ts",
     "./lib/profilFotografi": "./src/lib/profilFotografi.ts",
     "./lib/rir": "./src/lib/rir.ts",
     "./lib/sablonTaslagi": "./src/lib/sablonTaslagi.ts",

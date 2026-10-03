@@ -22,19 +22,46 @@ jest.mock('@grind/shared/api/queries', () => ({
 }));
 jest.mock('../../../../src/auth/AuthContext', () => ({ useAuth: jest.fn() }));
 
-// #510: fotograf akisinin uc yerel adimi -- galeri, kucultme, dosya. Testte ne dondurecekleri
-// (ya da hangi adimda patlayacaklari) her testte ayrica belirlenir.
+// #510: fotograf akisinin yerel adimlari -- galeri, hazirlama/kirpma (manipulator), dosya. Testte ne
+// dondurecekleri (ya da hangi adimda patlayacaklari) her testte ayrica belirlenir.
 const mockGaleri = jest.fn();
 const mockKucult = jest.fn();
-jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: () => mockGaleri() }));
+const mockKes = jest.fn();
+const mockBoyutlandir = jest.fn();
+jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: (secenek: unknown) => mockGaleri(secenek) }));
 jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
   ImageManipulator: {
-    manipulate: () => ({
-      resize: () => ({ renderAsync: () => mockKucult() }),
-    }),
+    manipulate: () => {
+      const baglam = {
+        resize: (boyut: unknown) => {
+          mockBoyutlandir(boyut);
+          return baglam;
+        },
+        crop: (alan: unknown) => {
+          mockKes(alan);
+          return baglam;
+        },
+        renderAsync: () => mockKucult(),
+      };
+      return baglam;
+    },
   },
 }));
+// #565: fotograf alani hata siniri testinde bilerek patlatilir.
+const mockFotografPatlasin = { deger: false };
+jest.mock('../../../../src/components/ProfilFotografi', () => {
+  const gercek = jest.requireActual('../../../../src/components/ProfilFotografi');
+  return {
+    __esModule: true,
+    default: (props: object) => {
+      if (mockFotografPatlasin.deger) {
+        throw new Error('Beklenmedik hata');
+      }
+      return gercek.default(props);
+    },
+  };
+});
 jest.mock('expo-file-system', () => ({ File: jest.fn() }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
 
@@ -174,21 +201,101 @@ test('sunucu 409 donerse pencerede alinmis yazar', async () => {
  * hatalar tek, sabit bir "yuklenemedi" mesajina yutuluyordu. Bu testler hatanin HANGI ADIMDA ve
  * NEDEN oldugunun ekrana yazildigini sabitler.
  */
-function galeriSecer() {
-  mockGaleri.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///secilen.heic' }] });
+function galeriSecer(genislik = 4000, yukseklik = 3000) {
+  mockGaleri.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///secilen.heic', width: genislik, height: yukseklik }] });
 }
 
+/** Manipulator her render'da bir gorsel doner: once hazirlanan (2048 uzun kenar), sonra kirpilan kucuk JPEG. */
 function kucultmeBasarili() {
-  mockKucult.mockResolvedValue({ saveAsync: async () => ({ uri: 'file:///kucuk.jpg' }) });
+  mockKucult.mockResolvedValue({
+    width: 2048,
+    height: 1536,
+    saveAsync: async () => ({ uri: 'file:///kucuk.jpg', width: 2048, height: 1536 }),
+  });
 }
 
+/** Galeriyi acar ve (acilirsa) kirpma ekraninda Kullan'a basar. */
 async function fotografSec() {
   await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Fotoğraf seç' })));
+  const kullan = screen.queryByRole('button', { name: 'Kullan' });
+  if (kullan) {
+    await act(async () => fireEvent.press(kullan));
+  }
 }
 
 beforeEach(() => {
   mockGaleri.mockReset();
   mockKucult.mockReset();
+  mockKes.mockReset();
+  mockBoyutlandir.mockReset();
+  mockFotografPatlasin.deger = false;
+});
+
+// ---- #565: kirpmayi kullanici kendi secer, iOS'un yerlesik kirpma ekrani kullanilmaz ----
+
+/**
+ * #565: `allowsEditing` iOS'ta eski `UIImagePickerController`i aciyordu (buyuk galeride ~5 sn, iCloud'daki
+ * fotografta kirpma ekrani tutarsiz, 48 MP'de bellek). Secici kirpmasiz acilir, kirpma uygulamada yapilir.
+ */
+test('galeri yerlesik kirpma olmadan acilir', async () => {
+  mockGaleri.mockResolvedValue({ canceled: true, assets: null });
+  await ciz();
+
+  await fotografSec();
+
+  expect(mockGaleri).toHaveBeenCalledTimes(1);
+  expect(mockGaleri.mock.calls[0][0]).not.toHaveProperty('allowsEditing', true);
+});
+
+test('secilen fotograf once uzun kenari 2048e kucultulup kirpma ekraninda acilir', async () => {
+  galeriSecer(4000, 3000);
+  kucultmeBasarili();
+  await ciz();
+
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Fotoğraf seç' })));
+
+  expect(mockBoyutlandir).toHaveBeenCalledWith({ width: 2048 });
+  expect(screen.getByText('Fotoğrafı kırp')).toBeTruthy();
+});
+
+test('Kullan deyince secilen alan kirpilip 256 px kareye kucultulur ve yuklenir', async () => {
+  galeriSecer(4000, 3000);
+  kucultmeBasarili();
+  const yukle = jest.fn();
+  (useFotografiYukle as jest.Mock).mockReturnValue({ mutateAsync: yukle, isPending: false });
+  await ciz();
+
+  await fotografSec();
+
+  // Hazirlanan 2048 x 1536 gorselin ortasindaki kare.
+  expect(mockKes).toHaveBeenCalledWith({ originX: 256, originY: 0, width: 1536, height: 1536 });
+  expect(mockBoyutlandir).toHaveBeenLastCalledWith({ width: 256, height: 256 });
+  expect(yukle).toHaveBeenCalledTimes(1);
+});
+
+test('kirpma ekraninda vazgecilirse yukleme yapilmaz', async () => {
+  galeriSecer();
+  kucultmeBasarili();
+  const yukle = jest.fn();
+  (useFotografiYukle as jest.Mock).mockReturnValue({ mutateAsync: yukle, isPending: false });
+  await ciz();
+
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Fotoğraf seç' })));
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Vazgeç' })));
+
+  expect(screen.queryByText('Fotoğrafı kırp')).toBeNull();
+  expect(yukle).not.toHaveBeenCalled();
+});
+
+/** Fotograf alaninda beklenmedik bir hata ekrani kapatmaz: hata mesaji gorunur, formun geri kalani calisir. */
+test('fotograf alani patlarsa ekran kapanmaz, hata mesaji gorunur', async () => {
+  mockFotografPatlasin.deger = true;
+  const konsol = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  await ciz();
+
+  expect(screen.getByText('Fotoğraf alanında beklenmedik bir hata oldu.')).toBeTruthy();
+  expect(screen.getByTestId('profil-gorunen-isim')).toBeTruthy();
+  konsol.mockRestore();
 });
 
 test('sunucu fotografi reddederse sunucunun kendi mesaji gorunur', async () => {
