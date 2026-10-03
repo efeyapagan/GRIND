@@ -61,7 +61,7 @@ export default function HareketSecimKutusu({ egzersizler, secilenId, secilenAd, 
         <ChevronDown color={ikonRenk.muted} size={18} />
       </Pressable>
 
-      <Modal acik={acik} onKapat={kapat} baslik={t('ilerleme.hareketSec')}>
+      <Modal acik={acik} onKapat={kapat} baslik={t('ilerleme.hareketSec')} cam>
         <View className="relative flex-row items-center">
           <View className="pointer-events-none absolute left-3 z-10">
             <Search color={ikonRenk.muted} size={18} />
