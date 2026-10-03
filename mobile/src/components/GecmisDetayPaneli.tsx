@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Trash2, X } from 'lucide-react-native';
+import { Pencil, Trash2, X } from 'lucide-react-native';
 import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
 import GecmisOzeti from './GecmisOzeti';
 import GecmisKatmani from './GecmisKatmani';
@@ -19,7 +19,6 @@ import GecmisSetMenusu from './GecmisSetMenusu';
 import SetPaneli from './SetPaneli';
 import SetList from './SetList';
 import CamKatmanlari from '../ui/CamKatmanlari';
-import IkonDugmesi from '../ui/IkonDugmesi';
 import { ACILIS_YAYI, ALT_MENU_YUKSEKLIGI, altMenuAltKenari } from '../ui/KabukTabBar';
 import { useEtkinTema, useIkonRenk } from '../ui/renkler';
 
@@ -61,7 +60,9 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
   const insets = useSafeAreaInsets();
   const [alanYuksekligi, setAlanYuksekligi] = useState(0);
   // #564: basili tutulan set; menu (ve duzenleyici) panelin ustunde, ayni Modal'da acilir.
-  const [setMenusu, setSetMenusu] = useState<{ kayit: SetKaydi; sira: number } | null>(null);
+  const [setMenusu, setSetMenusu] = useState<{ kayit: SetKaydi; sira: number; dogrudan?: boolean } | null>(null);
+  // #598: "Set ekle" ve dokunarak duzenleme yalnizca kalemle acilan bu modda -- yanlislikla set eklenmesin.
+  const [duzenlemeModu, setDuzenlemeModu] = useState(false);
   // #564: set eklenen hareket -- yalnizca antrenmanda zaten olan hareket (grubun altindaki dugme).
   const [ekleme, setEkleme] = useState<{ exerciseId: number; exerciseName: string } | null>(null);
   const ilerleme = useSharedValue(0);
@@ -137,9 +138,25 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
           <Animated.View style={[{ height: tamYukseklik }, icerikStili]}>
             <View className="flex-row items-start gap-2 p-4 pb-0">
               <GecmisOzeti oturum={oturum} />
-              <IkonDugmesi etiket={t('ortak.kapat')} onPress={() => kapat(onKapat)}>
-                <X color={ikonRenk.muted} size={20} />
-              </IkonDugmesi>
+              {/* #598: kalem ve carpi kutusuz ikon; kalem carpinin solunda. */}
+              {onSil && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t(duzenlemeModu ? 'gecmis.duzenlemeyiBitir' : 'gecmis.antrenmaniDuzenle')}
+                  onPress={() => setDuzenlemeModu((acik) => !acik)}
+                  className="size-11 shrink-0 items-center justify-center"
+                >
+                  <Pencil color={duzenlemeModu ? ikonRenk.accent : ikonRenk.muted} size={20} />
+                </Pressable>
+              )}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('ortak.kapat')}
+                onPress={() => kapat(onKapat)}
+                className="size-11 shrink-0 items-center justify-center"
+              >
+                <X color={ikonRenk.muted} size={22} />
+              </Pressable>
             </View>
             <ScrollView contentContainerClassName="flex-col gap-3 p-4">
               <SetList
@@ -147,7 +164,10 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
                 sets={oturum.sets}
                 bosDurumMetni={t('gecmis.bosDurumMetni')}
                 onSetMenu={onSil ? (kayit, sira) => setSetMenusu({ kayit, sira }) : undefined}
-                onSetEkle={onSil ? (exerciseId, exerciseName) => setEkleme({ exerciseId, exerciseName }) : undefined}
+                onSetEkle={
+                  onSil && duzenlemeModu ? (exerciseId, exerciseName) => setEkleme({ exerciseId, exerciseName }) : undefined
+                }
+                onSetDokun={onSil && duzenlemeModu ? (kayit, sira) => setSetMenusu({ kayit, sira, dogrudan: true }) : undefined}
               />
               {onSil && (
                 <Pressable
@@ -166,6 +186,7 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
             key={setMenusu.kayit.id}
             kayit={setMenusu.kayit}
             sira={setMenusu.sira}
+            dogrudanDuzenle={setMenusu.dogrudan}
             onKapat={() => setSetMenusu(null)}
           />
         )}

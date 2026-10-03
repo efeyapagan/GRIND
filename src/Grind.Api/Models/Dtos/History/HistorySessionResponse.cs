@@ -36,10 +36,12 @@ public record HistorySessionResponse(
     DateTime StartedAt,
     DateTime? EndedAt,
     long? DurationSeconds,
+    long? TemplateId,
     string? TemplateName,
     string? Notes,
     SessionDifficulty? Difficulty,
     decimal TotalVolume,
     int SetCount,
     int? MedianRestSeconds,
+    bool IsVolumeRecord,
     IReadOnlyList<SetEntryResponse> Sets);

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Share2 } from 'lucide-react-native';
+import { ChevronRight, Share } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
 import type { GecmisOturum } from '@grind/shared/api/queries';
 import { formatTarih } from '@grind/shared/lib/format';
@@ -76,7 +76,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
             onPress={() => setPaylasimAcik(true)}
             className="size-11 shrink-0 items-center justify-center"
           >
-            <Share2 color={ikonRenk.muted} size={20} />
+            <Share color={ikonRenk.muted} size={20} />
           </Pressable>
         )}
         <ChevronRight color={ikonRenk.muted} size={20} />
@@ -86,6 +86,7 @@ export default function GecmisKarti({ oturum, onSil }: Props) {
           templateName={oturum.templateName}
           setCount={oturum.setCount}
           durationSeconds={oturum.durationSeconds ?? 0}
+          volumePr={oturum.isVolumeRecord}
           acik
           onKapat={() => setPaylasimAcik(false)}
         />

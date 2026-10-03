@@ -456,6 +456,8 @@ export const tr = {
     // #564: geçmişteki sete basılı tutunca açılan menü (şablon menüsüyle aynı desen).
     setMenusuIpucu: 'Düzenlemek ya da silmek için basılı tut',
     setiDuzenle: 'Seti düzenle',
+    antrenmaniDuzenle: 'Antrenmanı düzenle',
+    duzenlemeyiBitir: 'Düzenlemeyi bitir',
     setSilOnayi: 'Bu set silinecek. Bu hareketin rekorları yeniden hesaplanır.',
     setKatmaniniKapat: 'Set penceresini kapat',
     setEkleEtiketi: '{{hareket}} için set ekle',
@@ -566,6 +568,7 @@ export const tr = {
     paylas: 'Antrenmanı paylaş',
     galeriyeKaydet: 'Galeriye kaydet',
     panoyaKopyala: 'Panoya kopyala',
+    hacimRekoru: 'Volume PR',
     izinYok: 'Galeriye kaydetmek için fotoğraf izni gerekiyor. Ayarlardan izin verebilirsin.',
     hata: 'Görsel hazırlanamadı. Tekrar dener misin?',
   },

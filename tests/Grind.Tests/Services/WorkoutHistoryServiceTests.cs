@@ -105,6 +105,35 @@ public class WorkoutHistoryServiceTests
         }
     }
 
+    /// <summary>
+    /// #598: hacim rekoru aynı şablonun önceki antrenmanıyla karşılaştırılır. İlk antrenman rekor değildir,
+    /// ikincisi (daha yüksek hacimle) rekordur ve şablon kimliğiyle birlikte döner.
+    /// </summary>
+    [Fact]
+    public async Task Ayni_sablonun_daha_yuksek_hacimli_antrenmani_hacim_rekorudur()
+    {
+        var (context, user, exercise, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var sablon = new WorkoutTemplate { User = user, Name = "Push Day", CreatedAt = An };
+            context.Add(sablon);
+
+            var ilk = Seed(context, user, exercise, An, (100m, 8));
+            ilk.Template = sablon;
+            var ikinci = Seed(context, user, exercise, An.AddDays(7), (100m, 10));
+            ikinci.Template = sablon;
+            await context.SaveChangesAsync();
+
+            var sayfa = await service.GetAsync(new HistoryQuery());
+            var ilkSonuc = sayfa.Items.Single(o => o.SessionId == ilk.Id);
+            var ikinciSonuc = sayfa.Items.Single(o => o.SessionId == ikinci.Id);
+
+            Assert.False(ilkSonuc.IsVolumeRecord);
+            Assert.True(ikinciSonuc.IsVolumeRecord);
+            Assert.Equal(sablon.Id, ikinciSonuc.TemplateId);
+        }
+    }
+
     // Issue #73 Karar 1 ("açık oturumda süre null") artık GEÇMİŞ düzeyinde sınanamaz: #436'dan
     // beri açık oturum geçmiş listesine hiç girmiyor. Hesabın kendisi DurationCalculatorTests'te.
 

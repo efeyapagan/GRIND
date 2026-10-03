@@ -31,6 +31,8 @@ type Props = OrtakProps &
         onSetMenu?: (kayit: SetKaydi, sira: number) => void;
         /** #564: verilirse her hareket grubunun altinda "Set ekle" durur (yalnizca var olan harekete). */
         onSetEkle?: (exerciseId: number, exerciseName: string) => void;
+        /** #598: verilirse (duzenleme modu) satira dokunmak seti dogrudan duzenlemeye acar. */
+        onSetDokun?: (kayit: SetKaydi, sira: number) => void;
       }
   );
 
@@ -136,6 +138,7 @@ export default function SetList(props: Props) {
                     accessibilityActions={[{ name: 'longpress' }]}
                     onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onSetMenu(kayit, sira)}
                     onLongPress={() => onSetMenu(kayit, sira)}
+                    onPress={props.onSetDokun ? () => props.onSetDokun?.(kayit, sira) : undefined}
                     className={satirSinifi}
                   >
                     {icerik}

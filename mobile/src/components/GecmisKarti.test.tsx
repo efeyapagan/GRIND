@@ -6,7 +6,9 @@ function ornekOturum(gecersizler: Partial<GecmisOturum> = {}): GecmisOturum {
   return {
     sessionId: 1,
     startedAt: '2026-09-18T10:00:00Z',
+    templateId: 1,
     templateName: 'Push Day',
+    isVolumeRecord: false,
     setCount: 12,
     totalVolume: 3400,
     durationSeconds: null,
