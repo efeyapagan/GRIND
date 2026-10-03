@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { View, Text, Pressable, FlatList } from 'react-native';
+import { View, Text, FlatList } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react-native';
 import { oturumSilindiTazele, oturumuSil, useInfiniteHistory, type GecmisOturum } from '@grind/shared/api/queries';
@@ -11,6 +11,7 @@ import GecmisKarti from '../../../src/components/GecmisKarti';
 import BosDurum from '../../../src/ui/BosDurum';
 import GeriAlSeridi from '../../../src/ui/GeriAlSeridi';
 import GrindyMaskot from '../../../src/ui/GrindyMaskot';
+import CamIkincilDugme from '../../../src/ui/CamIkincilDugme';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -29,6 +30,7 @@ import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 export default function HistoryScreen() {
   const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();
+  const router = useRouter();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHistory();
   const queryClient = useQueryClient();
@@ -66,12 +68,11 @@ export default function HistoryScreen() {
       }}
       ListHeaderComponent={
         <View className="mb-5 flex-col gap-5">
-          <Link href="/insights" asChild>
-            <Pressable className="h-12 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-4">
-              <GrindyMaskot boyut={22} dekoratif />
-              <Text className="text-label text-fg">{t('yorumlar.baslik')}</Text>
-            </Pressable>
-          </Link>
+          {/* #591: sayfada tek basina duran ikincil dugme -- cam (`CamIkincilDugme`). */}
+          <CamIkincilDugme onPress={() => router.push('/insights')}>
+            <GrindyMaskot boyut={22} dekoratif />
+            <Text className="text-label text-fg">{t('yorumlar.baslik')}</Text>
+          </CamIkincilDugme>
 
           {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 

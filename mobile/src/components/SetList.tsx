@@ -11,6 +11,8 @@ import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
+import CamKart from '../ui/CamKart';
+import CamDolgu from '../ui/CamDolgu';
 import SetDegeriYazisi from './SetDegeriYazisi';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -75,18 +77,22 @@ export default function SetList(props: Props) {
               <Text numberOfLines={1} className="flex-1 text-body-lg font-semibold text-fg">
                 {grup.exerciseName}
               </Text>
-              <Text className="shrink-0 rounded bg-surface-1 px-2 py-0.5 text-label-xs text-muted uppercase">
-                {t('setler.setSayisi', { count: grup.sets.length })}
-              </Text>
+              {/* #591: gecmis detay panelinin camindayiz -- opak kutu degil hafif dolgu. */}
+              <View className="shrink-0 rounded px-2 py-0.5">
+                <CamDolgu opaklik={0.06} yaricap={4} />
+                <Text className="text-label-xs text-muted uppercase">{t('setler.setSayisi', { count: grup.sets.length })}</Text>
+              </View>
             </View>
             <View className="flex-col gap-1">
               {grup.sets.map((kayit, setSirasi) => {
                 const rozet = rekorRozetiMetni(kayit);
                 const sira = setSirasi + 1;
                 const onSetMenu = props.onSetMenu;
-                const satirSinifi = 'min-h-12 flex-col justify-center gap-1.5 rounded-lg bg-surface-1 px-4 py-2';
+                const satirSinifi = 'min-h-12 flex-col justify-center gap-1.5 rounded-lg px-4 py-2';
                 const icerik = (
                   <>
+                    {/* #591: satir zemini opak `surface-1` degil camin ustunde hafif dolgu. */}
+                    <CamDolgu opaklik={0.06} yaricap={8} />
                     <View className="flex-row items-center justify-between gap-2">
                       <View className="flex-row items-center gap-4">
                         <Text className="w-5 text-label text-muted">{sira}</Text>
@@ -157,10 +163,12 @@ export default function SetList(props: Props) {
   return (
     <View className="flex-col gap-5">
       {gruplar.map((grup, grupSirasi) => (
-        <View key={grup.exerciseId} className="flex-col gap-2 rounded-xl bg-surface-1 p-4">
+        // #591: cam kart (spec Karar 9), hareket kartiyla ayni kose; sira karosu hafif dolgu.
+        <CamKart key={grup.exerciseId} testID={`set-grubu-${grup.exerciseId}`} koseSinifi="rounded-xl" className="flex-col gap-2 p-4">
           <View className="flex-row items-center justify-between gap-2 pb-1">
             <View className="min-w-0 flex-1 flex-row items-center gap-2">
-              <View className="size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
+              <View className="size-8 shrink-0 items-center justify-center rounded-lg">
+                <CamDolgu opaklik={0.1} yaricap={8} />
                 <Text className="text-label text-fg">{grupSirasi + 1}</Text>
               </View>
               <Text numberOfLines={1} className="flex-1 text-heading text-fg">
@@ -174,7 +182,7 @@ export default function SetList(props: Props) {
               <SetSatiri key={kayit.id} kayit={kayit} sira={setSirasi + 1} onDuzenle={props.onSetDuzenle} />
             ))}
           </View>
-        </View>
+        </CamKart>
       ))}
     </View>
   );

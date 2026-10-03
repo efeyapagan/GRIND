@@ -5,6 +5,7 @@ import { useGuncelTakvimOzeti, usePlatolar, useRecords } from '@grind/shared/api
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../../../src/ui/BosDurum';
 import RekorKarti from '../../../src/components/RekorKarti';
+import CamKart from '../../../src/ui/CamKart';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -27,12 +28,11 @@ export default function RecordsScreen() {
       <Text className="text-body text-muted">{t('rekorlar.altBaslik')}</Text>
 
       {takvimOzeti && (
-        <View className="rounded-xl bg-surface-2 p-4">
-          <View className="flex-col gap-1">
-            <Text className="text-label text-muted">{t('rekorlar.enUzunSeri')}</Text>
-            <Text className="text-metric text-fg">{t('takvim.haftaSayisi', { count: takvimOzeti.longestWeekStreak })}</Text>
-          </View>
-        </View>
+        // #591: cam kart (spec Karar 9).
+        <CamKart className="flex-col gap-1 p-4">
+          <Text className="text-label text-muted">{t('rekorlar.enUzunSeri')}</Text>
+          <Text className="text-metric text-fg">{t('takvim.haftaSayisi', { count: takvimOzeti.longestWeekStreak })}</Text>
+        </CamKart>
       )}
 
       {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
