@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Vibration } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Vibration } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -13,7 +14,9 @@ import { useRestTimerGorunumu } from '@grind/shared/restTimer';
 import { useKalanSure } from '@grind/shared/useKalanSure';
 import { duraklatildiMi, EK_SURE_SN, sureEkle } from '@grind/shared/lib/dinlenme';
 import { ANTRENMAN_BARI_YUKSEKLIGI } from '../ui/olculer';
-import { useIkonRenk } from '../ui/renkler';
+import { useIkonRenk, useRenkPaleti } from '../ui/renkler';
+import CamKatmanlari from '../ui/CamKatmanlari';
+import CamDolgu from '../ui/CamDolgu';
 
 /**
  * Sure dolduktan sonra bitis isaretinin (ziplayan saat) ekranda kaldigi sure -- yalnizca kullanici
@@ -39,6 +42,7 @@ const ANTRENMAN_YOLU = '/antrenman';
  */
 export default function DinlenmeKabugu() {
   const ikonRenk = useIkonRenk();
+  const palet = useRenkPaleti();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { dinlenme, setDinlenme, genis, setGenis } = useRestTimerGorunumu();
@@ -121,7 +125,9 @@ export default function DinlenmeKabugu() {
       {/* Ust barin uzerine oturur: ayni guvenli alan dolgusu, ayni yukseklik. #487: yukseklik
           `h-12` (48 px) iken bardan kisa kaliyordu ve basligin altindaki turuncu cizgi panelin
           ALTINDAN gorunuyordu -- iki yer de ayni sabitten okur. */}
-      <View style={{ paddingTop: insets.top }} className="absolute inset-x-0 top-0 z-50 bg-surface-2">
+      <View testID="dinlenme-bandi" style={{ paddingTop: insets.top }} className="absolute inset-x-0 top-0 z-50">
+        {/* #590: duz `surface-2` bant degil cam (spec Karar 9); tam genislik, kosesiz. */}
+        <CamKatmanlari koseSinifi="" />
         <View
           testID="dinlenme-paneli"
           style={{ height: ANTRENMAN_BARI_YUKSEKLIGI }}
@@ -135,21 +141,28 @@ export default function DinlenmeKabugu() {
             <Pressable
               accessibilityRole="button"
               onPress={() => setDinlenme(sureEkle(dinlenme, EK_SURE_SN))}
-              className="h-10 items-center justify-center rounded-lg bg-surface-3 px-3"
+              className="h-10 items-center justify-center rounded-lg px-3"
             >
+              {/* #590: camin icinde opak kutu degil hafif dolgu (bkz. CamDolgu). */}
+              <CamDolgu opaklik={0.1} yaricap={8} />
               <Text className="text-label text-fg">{t('antrenman.dinlenmeEkleSure')}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={() => setDinlenme(null)}
-              className="h-10 items-center justify-center rounded-lg bg-surface-3 px-3"
+              className="h-10 items-center justify-center rounded-lg px-3"
             >
+              <CamDolgu opaklik={0.1} yaricap={8} />
               <Text className="text-label text-fg">{t('ortak.atla')}</Text>
             </Pressable>
           </View>
-          {/* Ilerleme barin en alt kenarinda ince bir cizgi: satir yuksekligini buyutmez. */}
-          <View className="absolute inset-x-0 bottom-0 h-0.5 bg-surface-4">
-            <View style={{ width: `${oran * 100}%` }} className="h-full bg-fg" />
+          {/* Ilerleme barin en alt kenarinda ince bir cizgi: satir yuksekligini buyutmez. #590: SVG'de
+              (spec Karar 9 ince cizim dili) -- ray `fg` %12, dolgu `fg`; accent rekorlara ayrildi. */}
+          <View className="absolute inset-x-0 bottom-0 h-0.5">
+            <Svg testID="dinlenme-ilerleme" style={StyleSheet.absoluteFill}>
+              <Rect width="100%" height="100%" fill={palet.fg} fillOpacity={0.12} />
+              <Rect width={`${oran * 100}%`} height="100%" fill={palet.fg} />
+            </Svg>
           </View>
         </View>
       </View>

@@ -7,6 +7,7 @@ import { hedefTamamlandi } from '@grind/shared/lib/ilerleme';
 import { gecilmisRekorIdleri } from '@grind/shared/lib/rekor';
 import SetSatiri from './SetSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
+import CamDolgu from '../ui/CamDolgu';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -45,7 +46,9 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
             <X color={ikonRenk.muted} size={20} />
           </IkonDugmesi>
         )}
-        <View className="size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
+        {/* #590: cam kartin icinde opak `surface-3` karo degil, hafif dolgu. */}
+        <View testID="hareket-sira-karosu" className="size-8 shrink-0 items-center justify-center rounded-lg">
+          <CamDolgu opaklik={0.1} yaricap={8} />
           {tamamlandi ? <Check color={ikonRenk.fg} size={18} /> : <Text className="text-label text-fg">{sira + 1}</Text>}
         </View>
         <Text numberOfLines={1} className="flex-1 text-heading text-fg">

@@ -50,3 +50,13 @@ test('"Hedef yok" secilip kaydedilince hedef kaldirilir', async () => {
 
   expect(mutate).toHaveBeenCalledWith(null, expect.anything());
 });
+
+/** #590: secenekler duz `bg-surface-1` hap degil cam (spec Karar 9); secili olan yine isaretli kalir. */
+test('secenekler cam yuzeydedir ve secili olan isaretlidir', async () => {
+  await render(<HaftalikHedefFormu />);
+
+  const secili = screen.getByRole('radio', { name: '4 gün', checked: true });
+  expect(secili.props.className).toContain('rounded-full');
+  expect(secili.props.className).not.toMatch(/bg-surface/);
+  expect(screen.getAllByTestId('cam-kenar').length).toBeGreaterThan(0);
+});

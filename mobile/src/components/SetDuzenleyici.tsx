@@ -11,7 +11,7 @@ import {
   setGirdisiniDogrula,
 } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import IkincilDugme from '../ui/IkincilDugme';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
@@ -28,7 +28,7 @@ interface Props {
 
 /**
  * web/src/components/SetDuzenleyici.tsx ile ayni akis (issue #57). #396: satirin yerinde degil
- * ekranin ortasinda acilir; set paneliyle ayni "liquid glass" yuzey (`CamYuzey`, #350). Konumu ve
+ * ekranin ortasinda acilir; set paneliyle ayni "liquid glass" yuzey (#350; #590 ile uc katmanli `CamKatmanlari`). Konumu ve
  * perdesi cagiranin (antrenman.tsx).
  *
  * #346: alanlar setin hareketinin olcum tipine gore (set paneliyle ayni); sureli sette kronometre yok,
@@ -66,9 +66,9 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
     <View
       testID="set-duzenleyici"
       accessibilityLabel={t('setler.duzenleFormEtiketi', { sira })}
-      className="flex-col gap-3 overflow-hidden rounded-xl border border-surface-4 p-4"
+      className="flex-col gap-3 overflow-hidden rounded-xl p-4"
     >
-      <CamYuzey />
+      <CamKatmanlari koseSinifi="rounded-xl" />
       <Text numberOfLines={1} className="pl-1 text-label text-muted uppercase">
         {kayit.exerciseName} · {t('setler.setSirasi', { sira })}
       </Text>

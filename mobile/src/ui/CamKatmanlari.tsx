@@ -1,4 +1,5 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type ViewStyle } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import CamYuzey from './CamYuzey';
 import { useRenkPaleti } from './renkler';
@@ -8,6 +9,12 @@ interface Props {
   koseSinifi?: string;
   /** `CamKart`in vurgusu (#559): soluk sac teli yerine tam opak `accent` kenar. */
   vurguluKenar?: boolean;
+  /**
+   * #590: kosesi ANIMASYONLA degisen kap icin (`GecmisDetayPaneli` hap biciminden karta acilir) kenarin
+   * stili -- `useAnimatedStyle`'dan gelen `borderRadius`. Sabit bir `koseSinifi` o kaba uymaz; blur ve
+   * parilti kabin kendi kirpmasina birakilir (`koseSinifi=""`), kenar bu stille koseyi izler.
+   */
+  kenarStili?: AnimatedStyle<ViewStyle>;
 }
 
 /**
@@ -18,7 +25,7 @@ interface Props {
  * Yari saydamlik yeni bir token DEGIL, mevcut `fg`'nin tam opak rengi + KATMANIN opakligi: `fg` koyu
  * temada acik, acik temada koyu oldugu icin parilti ve kenar iki temada da kendiliginden dogru tonu alir.
  */
-export default function CamKatmanlari({ koseSinifi = 'rounded-3xl', vurguluKenar = false }: Props) {
+export default function CamKatmanlari({ koseSinifi = 'rounded-3xl', vurguluKenar = false, kenarStili }: Props) {
   const palet = useRenkPaleti();
   return (
     <View pointerEvents="none" className={`absolute inset-0 overflow-hidden ${koseSinifi}`}>
@@ -34,8 +41,9 @@ export default function CamKatmanlari({ koseSinifi = 'rounded-3xl', vurguluKenar
       </Svg>
       {/* Opaklik KATMANIN kendisinde: renkler Tailwind'e `var(--color-*)` olarak bagli ve `border-fg/10`
           gibi bir opaklik eki degiskene uygulanamayip kenari SIYAH ciziyordu (#547'de simulatorde goruldu). */}
-      <View
+      <Animated.View
         testID="cam-kenar"
+        style={kenarStili}
         className={`absolute inset-0 border ${koseSinifi} ${vurguluKenar ? 'border-2 border-accent' : 'border-fg opacity-10'}`}
       />
     </View>

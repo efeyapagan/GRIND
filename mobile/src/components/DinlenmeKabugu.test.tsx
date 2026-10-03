@@ -103,3 +103,18 @@ test('genis panel antrenman bariyla ayni yukseklikte cizilir', async () => {
     expect.objectContaining({ height: ANTRENMAN_BARI_YUKSEKLIGI }),
   );
 });
+
+/**
+ * #590: genis panel duz `bg-surface-2` bant degil cam (spec Karar 9); alt kenardaki ilerleme cizgisi
+ * NativeWind kutusu degil SVG'dir (Karar 9 "ince cizim dili").
+ */
+test('genis panel cam yuzeydedir ve ilerleme cizgisi SVG ile cizilir', async () => {
+  mockPathname = '/antrenman';
+  useOpenSessionMock.mockReturnValue({ data: { id: 7, isOpen: true }, isSuccess: true });
+
+  await render(<Kabuk />);
+
+  expect(screen.getByTestId('dinlenme-bandi').props.className).not.toMatch(/bg-surface/);
+  expect(screen.getByTestId('cam-kenar')).toBeTruthy();
+  expect(screen.getByTestId('dinlenme-ilerleme')).toBeTruthy();
+});

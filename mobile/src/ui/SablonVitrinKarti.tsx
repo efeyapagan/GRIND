@@ -5,7 +5,7 @@ import { useDil } from '@grind/shared/i18n';
 import { formatKisaTarihHaftaGunuyle } from '@grind/shared/lib/format';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import BirincilDugme from './BirincilDugme';
-import CamYuzey from './CamYuzey';
+import CamKatmanlari from './CamKatmanlari';
 import IkonKapsulu from './IkonKapsulu';
 import Izgara from './Izgara';
 import SablonFiguru from './SablonFiguru';
@@ -43,7 +43,7 @@ interface Props {
 }
 
 /**
- * #439: antrenman ekranindaki yana kayan sablon karti. Cam yuzey (#338/#350 ile ayni `CamYuzey` +
+ * #439: antrenman ekranindaki yana kayan sablon karti. Cam yuzey (#338/#350 ile ayni yuzey; #590 ile uc katmanli `CamKatmanlari`, eski
  * 1 px `surface-4`), sag ustte acik rozet (`accent/20` zemin + `accent-soft` ikon), ortada izgara
  * ustunde baskin kategorinin figuru, altta birincil "Basla".
  *
@@ -77,11 +77,11 @@ export default function SablonVitrinKarti({
       onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onMenu()}
       onPress={onBasla}
       disabled={disabled}
-      className="overflow-hidden rounded-2xl border border-surface-4"
+      className="overflow-hidden rounded-2xl"
       // Opaklik sinifla degil stille: stil sinifi ezerdi, ve ilk cizimden sonra sinif eklemek NativeWind tuzagi (#261).
       style={{ width: genislik, height: KART_YUKSEKLIGI, opacity: gizli ? 0 : disabled ? 0.6 : 1 }}
     >
-      <CamYuzey />
+      <CamKatmanlari koseSinifi="rounded-2xl" />
 
       <View pointerEvents="none" className="absolute inset-x-0" style={{ top: 88 }}>
         <Izgara genislik={genislik} yukseklik={IZGARA_YUKSEKLIGI} />
