@@ -29,5 +29,12 @@ test('rekor karti cam yuzeydedir, icindeki olcu kutulari opak kutu cizmez', asyn
   for (const kutu of screen.getAllByTestId('rekor-olcusu')) {
     expect(kutu.props.className).not.toMatch(/bg-surface/);
   }
-  expect(screen.getAllByTestId('cam-dolgu')).toHaveLength(2);
+});
+
+/** #615: olcu satirlari camin icinde kutu degil (dolgu yok); aralarinda sac teli cizgi var. */
+test('rekor olculeri dolgusuzdur, aralarinda tek cizgi vardir', async () => {
+  await render(<RekorKarti rekor={rekor} />);
+
+  expect(screen.queryAllByTestId('cam-dolgu')).toHaveLength(0);
+  expect(screen.getAllByTestId('cam-ayirici')).toHaveLength(1);
 });

@@ -8,6 +8,7 @@ import { gecilmisRekorIdleri } from '@grind/shared/lib/rekor';
 import SetSatiri from './SetSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import CamDolgu from '../ui/CamDolgu';
+import AyiricliListe from '../ui/AyiricliListe';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -78,7 +79,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
         <View className="min-h-12 w-full flex-row items-center justify-between gap-2">{baslik}</View>
       )}
       {setler.length > 0 && (
-        <View className="flex-col gap-1">
+        <AyiricliListe>
           {setler.map((kayit, setSirasi) => (
             <SetSatiri
               key={kayit.id}
@@ -88,7 +89,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
               onDuzenle={onSetDuzenle}
             />
           ))}
-        </View>
+        </AyiricliListe>
       )}
     </>
   );
