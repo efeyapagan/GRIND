@@ -14,7 +14,11 @@ Başkasının profilinde Instagram düzeni kurulacak: solda takip düğmesi, sa�
 ## Kullanıcı kararları (2026-10-03)
 1. Arkadaş = karşılıklı takip, saklanmaz (#281 değişmez).
 2. "Arkadaş olarak ekle" bir istek gönderir. **Kabul** edilince eksik takip satırları oluşturulur ve iki taraf arkadaş olur. **Ret** takipleri değiştirmez.
-3. **Arkadaşlıktan çıkar iki yöndeki takibi de siler.** Takibi bırak yalnızca benim takibimi siler.
+3. **Arkadaşlıktan çıkar yalnızca onun BENİ takibini kaldırır; ben takipte kalırım** (2026-10-04, ilk karar olan "iki yön"ün yerini aldı).
+   - Arkadaşlık biter: `Friends` kademesindeki şablonlar, haftalık hedef bildirimi, karşılaştırma ve arkadaş listesi kapanır.
+   - Takibe bağlı olanlar sürer: rekor bildirimleri. Gizlilik seviyesine bağlı olanlar da sürer: geçmiş ve rekorlar.
+   - Bağlantıyı tamamen koparmak isteyen ayrıca "Takibi bırak" der.
+   - Veri işlemi olarak "Takipçiden çıkar"ın aynısıdır; aynı uç kullanılır, yalnızca etiket ve onay metni farklıdır.
 4. Karşılıklı istek **otomatik kabul edilmez**: iki istek ayrı ayrı bekler.
 5. Aynı kişiye **üst üste 3 ret** olduysa yeni istek gönderilemez.
 6. **Sessize al**, o kişiden gelen TÜM bildirim türlerini kapatır. Takip sürer.
@@ -59,11 +63,10 @@ Hepsi `UsersController`'da (`api/users/{username}/...`). Hedef kullanıcı adıy
 | `DELETE {u}/friend-request` | Benden ona bekleyen isteği siler. Yoksa no-op. 204. |
 | `POST {u}/friend-request/accept` | Ondan bana bekleyen istek yoksa → 404. Varsa: eksik `Follow` satırları eklenir (o→ben, ben→o), çiftin tüm `FriendRequest` satırları silinir; tek `SaveChangesAsync`. 204. |
 | `POST {u}/friend-request/reject` | Ondan bana bekleyen istek yoksa → 404. Varsa `RejectedAt = now`. 204. |
-| `DELETE {u}/friendship` | ben→o ve o→ben takip satırlarının ikisi de silinir (olan hangisiyse). İdempotent, 204. |
-| `DELETE {u}/follower` | o→ben takip satırı silinir. İdempotent, 204. |
+| `DELETE {u}/follower` | o→ben takip satırı silinir. İdempotent, 204. "Takipçiden çıkar" ile "Arkadaşlıktan çıkar"ın ikisi de bu uçtur. |
 | `PUT {u}/mute` gövde `{ "muted": bool }` | ben→o takip satırı yoksa → 400. Varsa alan yazılır. 204. |
 
-İş mantığı yeni bir `FriendRequestService`'te yaşar (istek, geri çekme, kabul, ret). Arkadaşlıktan çıkar, takipçiden çıkar ve sessize al takip satırıyla ilgili olduğu için `FollowService`'e eklenir.
+İş mantığı yeni bir `FriendRequestService`'te yaşar (istek, geri çekme, kabul, ret). Takipçiden çıkar (= arkadaşlıktan çıkar) ve sessize al takip satırıyla ilgili olduğu için `FollowService`'e eklenir.
 
 ### Profil yanıtı (`UserProfileResponse`) — yeni alanlar
 - `friendRequest`: `None` | `Sent` | `Received` (bekleyen istek yönü; karşılıklı takipte her zaman `None`)
@@ -85,7 +88,7 @@ Hepsi `UsersController`'da (`api/users/{username}/...`). Hedef kullanıcı adıy
 - Bu uçlar antrenman verisi paylaşmaz. Yetki istisnası genişlemez.
 
 ## Paylaşılan paket (`packages/shared`)
-- **Tip ve sorgular:** `schema.d.ts` yeniden üretilir (CLAUDE.md'deki sabit sürüm komutuyla). `api/queries`'e mutasyonlar eklenir: `useArkadaslikIstegi` (gönder/geri çek), `useArkadaslikYaniti` (kabul/ret), `useArkadasliktanCikar`, `useTakipcidenCikar`, `useSessizeAl`.
+- **Tip ve sorgular:** `schema.d.ts` yeniden üretilir (CLAUDE.md'deki sabit sürüm komutuyla). `api/queries`'e mutasyonlar eklenir: `useArkadaslikIstegi` (gönder/geri çek), `useArkadaslikYaniti` (kabul/ret), `useTakipcidenCikar` (arkadaşlıktan çıkar da bunu kullanır), `useSessizeAl`.
   - Hepsi başarı sonrası profil, takip listeleri ve bildirim sorgularını geçersiz kılar (`useTakipEt` ile aynı tazeleme).
 - **`lib/takip.ts` saf eşlemeler:**
   - `arkadaslikDugmesi(profil)`: ilişki + `friendRequest` + `canSendFriendRequest` → `{ durum: 'ekle' | 'gonderildi' | 'gelen' | 'arkadas' | 'sinirDoldu', etiketAnahtari }`. Kendisi için `null`.
@@ -128,8 +131,7 @@ Her test tek bir karar kalemini sabitler.
   - kabul iki takibi oluşturur ve çiftin isteklerini siler
   - ret takipleri değiştirmez
   - başkasının isteğini kabul edemez (404)
-  - arkadaşlıktan çıkar iki satırı siler
-  - takipçiden çıkar yalnızca o→ben satırını siler
+  - takipçiden çıkar (= arkadaşlıktan çıkar) yalnızca o→ben satırını siler, ben takipte kalırım
   - takip etmeden sessize alma 400
   - sessize alınan aktör dört bildirim türünde de görünmez
   - FriendRequest bildirimi yalnızca bekleyen istekten gelir
