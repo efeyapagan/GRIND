@@ -5,6 +5,7 @@ import type { SetKaydi } from '@grind/shared/api/queries';
 import { setDegeriMetni } from '@grind/shared/lib/setDegeri';
 import { rekorRozetiMetni } from '@grind/shared/lib/rekor';
 import { rirEtiketi } from '@grind/shared/lib/rir';
+import CamDolgu from '../ui/CamDolgu';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
@@ -47,8 +48,10 @@ export default function SetSatiri({ kayit, sira, rekorGecildi = false, onDuzenle
       accessibilityRole="button"
       accessibilityLabel={erisilebilirAd}
       onPress={() => onDuzenle(kayit, sira)}
-      className="w-full flex-row items-center justify-between gap-2 rounded-lg bg-surface-2 p-2"
+      className="w-full flex-row items-center justify-between gap-2 rounded-lg p-2"
     >
+      {/* #590: cam kartin icinde opak `surface-2` kutu degil, camin ustune serilen hafif dolgu. */}
+      <CamDolgu opaklik={0.06} yaricap={8} />
       <View className="min-w-0 flex-1 flex-row items-center gap-4">
         <Text className="w-12 shrink-0 text-label text-muted">{sira}. Set</Text>
         {/* Rekor rozeti HER ZAMAN alt satirda (kullanici karari): sigdiginda yan yana, sigmadiginda

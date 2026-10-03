@@ -4,7 +4,7 @@ import { Trash2 } from 'lucide-react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import HareketGecmisi from './HareketGecmisi';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import { useIkonRenk } from '../ui/renkler';
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
 
 /**
  * #354: set paneli acikken secili hareketin buyuyerek one cikan karti -- set paneliyle ayni "liquid
- * glass" yuzey (`CamYuzey`, #350). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
+ * glass" yuzey (#350; #590 ile uc katmanli `CamKatmanlari`). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
  * gecmisi, kaldirma; sira #407 ile listede surukleyerek degisir) kendi icinde kayar.
  */
 export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onKaldir, onKapat }: Props) {
@@ -29,8 +29,8 @@ export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onKald
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
   return (
-    <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl border border-surface-4">
-      <CamYuzey />
+    <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl">
+      <CamKatmanlari koseSinifi="rounded-xl" />
       <ScrollView contentContainerClassName="flex-col gap-3 p-4" keyboardShouldPersistTaps="handled">
         <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetDuzenle={onSetDuzenle} onKapat={onKapat} />
         <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />

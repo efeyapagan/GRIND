@@ -1,7 +1,7 @@
-import { View } from 'react-native';
 import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
 import SurukleSiraliListe from '../ui/SurukleSiraliListe';
+import CamKart from '../ui/CamKart';
 
 /** Kartlar arasi bosluk (Tailwind gap-4); surukleme hesabi da bunu bilmeli. */
 const KART_ARALIGI = 16;
@@ -30,12 +30,14 @@ export default function HareketKartlari({ ilerleme, setler, onSec, onSetDuzenle,
       onSirala={(yeniSira) => onSiraDegis(yeniSira.map((hareket) => hareket.exerciseId))}
       satirCiz={(hareket, suruklenen) => {
         const sira = ilerleme.indexOf(hareket);
-        // Kenarlik hep cizilir, yalnizca rengi degisir (SablonKarti'ndaki #261 tuzagi).
-        const kenarlik = suruklenen ? 'border-accent' : 'border-transparent';
+        // #590: cam kart (spec Karar 9); kose buyuyerek acildigi odak kartiyla ayni. Surukleme vurgusu
+        // camin kendi accent kenari (#559) -- sac teli katmani yer degistirir, kabin sinifi degismez (#261).
         return (
-          <View
+          <CamKart
             testID={`hareket-karti-${hareket.exerciseId}`}
-            className={`flex-col gap-2 rounded-xl border bg-surface-1 p-4 ${kenarlik}`}
+            koseSinifi="rounded-xl"
+            vurguluKenar={suruklenen}
+            className="flex-col gap-2 p-4"
           >
             <HareketKartiGovdesi
               hareket={hareket}
@@ -44,7 +46,7 @@ export default function HareketKartlari({ ilerleme, setler, onSec, onSetDuzenle,
               onSetDuzenle={onSetDuzenle}
               onSec={() => onSec(hareket.exerciseId)}
             />
-          </View>
+          </CamKart>
         );
       }}
     />

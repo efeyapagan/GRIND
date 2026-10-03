@@ -8,7 +8,7 @@ import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import { ApiError } from '@grind/shared/api/problem';
 import { SET_ALANLARI, setGirdisiniAyristir, setGirdisiniDogrula } from '@grind/shared/lib/setGirdisi';
 import BirincilDugme from '../ui/BirincilDugme';
-import CamYuzey from '../ui/CamYuzey';
+import CamKatmanlari from '../ui/CamKatmanlari';
 import SayiAlani from '../ui/SayiAlani';
 import RirAlani from './RirAlani';
 import Kronometre from './Kronometre';
@@ -99,9 +99,9 @@ export default function SetPaneli({ egzersizId, egzersizAdi, onSetEklendi, oturu
   }
 
   return (
-    // #350: alt menuyle ayni "liquid glass" yuzey (`CamYuzey`), biraz daha ferah ic bosluk.
-    <View className="flex-col gap-3 overflow-hidden rounded-xl border border-surface-4 p-4">
-      <CamYuzey />
+    // #350: alt menuyle ayni "liquid glass" yuzey (#590 ile uc katmanli `CamKatmanlari`), biraz daha ferah ic bosluk.
+    <View className="flex-col gap-3 overflow-hidden rounded-xl p-4">
+      <CamKatmanlari koseSinifi="rounded-xl" />
       {/* #357: "Yeni set: " oneki ve kapatma dugmesi kalkti -- uzun adda dugme ekrandan tasiyordu;
           kapatma artik odak kartinin sol ust kosesinde (`HareketKartiGovdesi` `onKapat`). */}
       <Text className="pl-1 text-label text-muted uppercase">{egzersizAdi}</Text>
