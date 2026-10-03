@@ -67,7 +67,8 @@ export default function AntrenmanAltAlani({
             accessibilityRole="button"
             onPress={iptalCagrisi.onIptal}
             disabled={iptalCagrisi.beklemede}
-            className={`h-13 w-full flex-row items-center justify-center gap-2 rounded-xl bg-surface-4 ${iptalCagrisi.beklemede ? 'opacity-60' : ''}`}
+            // #589 (kullanici bildirdi): opak `surface-4` kutu kalkti -- dugmenin yuzeyi camin kendisi.
+            className={`h-13 w-full flex-row items-center justify-center gap-2 rounded-xl ${iptalCagrisi.beklemede ? 'opacity-60' : ''}`}
           >
             <X color={ikonRenk.danger} size={20} />
             <Text className="text-body-lg font-bold text-danger">{t('antrenman.iptalEt')}</Text>
