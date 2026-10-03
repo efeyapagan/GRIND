@@ -24,6 +24,8 @@ import Alan from '../../../src/ui/Alan';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
+import CamKart from '../../../src/ui/CamKart';
+import CamDolgu from '../../../src/ui/CamDolgu';
 import ProfilFotografi from '../../../src/components/ProfilFotografi';
 import KullaniciAdiPenceresi from '../../../src/components/KullaniciAdiPenceresi';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -161,28 +163,33 @@ function FotografAlani({ profil }: { profil: Profil }) {
       </View>
       {hata && <HataKutusu baslik={t('profil.fotografYuklenemedi')} mesaj={hata.mesaj} ayrinti={hata.ayrinti} />}
       <View className="w-full flex-row gap-2">
-        <Pressable
-          accessibilityRole="button"
-          disabled={mesgul}
+        {/* #592: sayfa zemininde duran ikincil dugmeler -- cam (spec Karar 9). */}
+        <CamKart
           onPress={sec}
-          className={`h-10 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-3 ${mesgul ? 'opacity-60' : ''}`}
+          disabled={mesgul}
+          accessibilityLabel={t('profil.fotografSec')}
+          koseSinifi="rounded-xl"
+          disClassName="flex-1"
+          className="h-10 flex-row items-center justify-center gap-2 px-3"
         >
           <ImagePlus color={ikonRenk.fg} size={18} />
           <Text className="text-label text-fg">{t('profil.fotografSec')}</Text>
-        </Pressable>
+        </CamKart>
         {profil.hasAvatar && (
-          <Pressable
-            accessibilityRole="button"
-            disabled={mesgul}
+          <CamKart
             onPress={() => {
               setHata(null);
               kaldir.mutate(undefined, { onError: (hataNesnesi) => setHata(sunucuHatasi(hataNesnesi)) });
             }}
-            className={`h-10 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-surface-3 px-3 ${mesgul ? 'opacity-60' : ''}`}
+            disabled={mesgul}
+            accessibilityLabel={t('profil.fotografiKaldir')}
+            koseSinifi="rounded-xl"
+            disClassName="flex-1"
+            className="h-10 flex-row items-center justify-center gap-2 px-3"
           >
             <Trash2 color={ikonRenk.danger} size={18} />
             <Text className="text-label text-danger">{t('profil.fotografiKaldir')}</Text>
-          </Pressable>
+          </CamKart>
         )}
       </View>
     </View>
@@ -291,7 +298,8 @@ function BilgiFormu({ profil }: { profil: Profil }) {
   return (
     <>
       {genelHata && <HataKutusu baslik={t('profil.guncellenemedi')} mesaj={genelHata} />}
-      <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
+      {/* #592: form kutulari cam (spec Karar 9); icteki alanlar alan olarak kalir. */}
+      <CamKart className="flex-col gap-4 p-4">
         <Alan
           id="profil-gorunen-isim"
           etiket={t('profil.gorunenIsim')}
@@ -301,18 +309,18 @@ function BilgiFormu({ profil }: { profil: Profil }) {
           value={isim}
           onChangeText={setIsim}
         />
-      </View>
+      </CamKart>
       <KullaniciAdiKarti />
-      <View className="flex-col gap-4 rounded-xl bg-surface-1 p-4">
+      <CamKart className="flex-col gap-4 p-4">
         <DogumTarihiAlani deger={dogumTarihi} degistir={setDogumTarihi} />
-      </View>
+      </CamKart>
       {/* Kullanici karari: Kaydet dogum tarihiyle AYNI kutuda degil -- alanlara degil, formun
           tamamina ait oldugu daha acik olsun. */}
-      <View className="rounded-xl bg-surface-1 p-4">
+      <CamKart className="p-4">
         <BirincilDugme yukseklik="normal" disabled={guncelle.isPending} onPress={gonder}>
           {t('ortak.kaydet')}
         </BirincilDugme>
-      </View>
+      </CamKart>
     </>
   );
 }
@@ -329,7 +337,8 @@ function KullaniciAdiKarti() {
   const [acik, setAcik] = useState(false);
 
   return (
-    <View className="flex-col gap-1 rounded-xl bg-surface-1 p-4">
+    // #592: cam kart; kalem dugmesi camin icinde opak kutu degil hafif dolgu.
+    <CamKart className="flex-col gap-1 p-4">
       <Text className="text-label text-fg">{t('ortak.kullaniciAdi')}</Text>
       <View className="flex-row items-center gap-2">
         <Text className="min-w-0 flex-1 text-body text-fg">@{username}</Text>
@@ -337,8 +346,9 @@ function KullaniciAdiKarti() {
           accessibilityRole="button"
           accessibilityLabel={t('profil.kullaniciAdiDegistir')}
           onPress={() => setAcik(true)}
-          className="size-11 items-center justify-center rounded-xl bg-surface-2"
+          className="size-11 items-center justify-center rounded-xl"
         >
+          <CamDolgu opaklik={0.1} yaricap={12} />
           <Pencil color={ikonRenk.fg} size={18} />
         </Pressable>
       </View>
@@ -350,7 +360,7 @@ function KullaniciAdiKarti() {
           updateProfile={updateProfile}
         />
       )}
-    </View>
+    </CamKart>
   );
 }
 
