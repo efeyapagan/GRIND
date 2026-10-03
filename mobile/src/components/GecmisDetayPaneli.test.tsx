@@ -30,7 +30,9 @@ const KAYIT: SetKaydi = {
 const OTURUM: GecmisOturum = {
   sessionId: 1,
   startedAt: '2026-09-18T10:00:00Z',
+  templateId: 1,
   templateName: 'Push Day',
+  isVolumeRecord: false,
   setCount: 1,
   totalVolume: 480,
   durationSeconds: 3600,

@@ -330,6 +330,8 @@ export const tr = {
     yeniSet: 'Yeni set',
     yeniSetIcin: 'Yeni set: {{ad}}',
     paneliKapat: 'Paneli kapat',
+    formuAc: 'Set girişini aç',
+    formuKapat: 'Set girişini kapat',
     egzersizEtiket: 'Egzersiz',
     eklendi: 'Eklendi: {{agirlik}} kg × {{tekrar}}',
     baglantiHatasi:
@@ -566,6 +568,7 @@ export const tr = {
     paylas: 'Antrenmanı paylaş',
     galeriyeKaydet: 'Galeriye kaydet',
     panoyaKopyala: 'Panoya kopyala',
+    hacimRekoru: 'Volume PR',
     izinYok: 'Galeriye kaydetmek için fotoğraf izni gerekiyor. Ayarlardan izin verebilirsin.',
     hata: 'Görsel hazırlanamadı. Tekrar dener misin?',
   },

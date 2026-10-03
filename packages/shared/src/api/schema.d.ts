@@ -4720,6 +4720,8 @@ export interface components {
             endedAt?: string | null;
             /** Format: int64 */
             durationSeconds?: number | null;
+            /** Format: int64 */
+            templateId?: number | null;
             templateName?: string | null;
             notes?: string | null;
             difficulty?: components["schemas"]["SessionDifficulty"];
@@ -4729,6 +4731,7 @@ export interface components {
             setCount?: number;
             /** Format: int32 */
             medianRestSeconds?: number | null;
+            isVolumeRecord?: boolean;
             sets?: components["schemas"]["SetEntryResponse"][] | null;
         };
         HistorySessionResponsePagedResponse: {

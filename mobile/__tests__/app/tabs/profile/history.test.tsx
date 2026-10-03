@@ -16,7 +16,9 @@ function ornekOturum(gecersizler: Partial<GecmisSayfasi['items'][number]> = {}) 
   return {
     sessionId: 1,
     startedAt: '2026-09-10T08:00:00Z',
+    templateId: null,
     templateName: null,
+    isVolumeRecord: false,
     totalVolume: 1000,
     setCount: 3,
     durationSeconds: null,

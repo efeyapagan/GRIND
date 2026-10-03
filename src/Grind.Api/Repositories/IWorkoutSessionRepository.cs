@@ -89,4 +89,13 @@ public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
     /// </summary>
     Task<IReadOnlyDictionary<long, DateTime>> GetLastUsedAtByTemplateIdsAsync(
         long userId, IReadOnlyCollection<long> templateIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verilen şablonların bu kullanıcıdaki BİTMİŞ ve setli oturumlarının hacmi, tek sorguda (#598 hacim
+    /// rekoru). Şablonsuz oturumlar zaten girmez; karşılaştırma çağıranın işidir.
+    /// </summary>
+    Task<IReadOnlyList<TemplateSessionVolume>> GetTemplateSessionVolumesAsync(
+        long userId,
+        IReadOnlyCollection<long> templateIds,
+        CancellationToken cancellationToken = default);
 }

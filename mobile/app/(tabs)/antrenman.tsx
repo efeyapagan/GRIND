@@ -151,6 +151,8 @@ export default function AntrenmanScreen() {
    */
   usePageTitle(t(antrenmaniGoster ? 'kabuk.antrenman' : 'sablonlar.antrenmanaBasla'));
   const [panelAcik, setPanelAcik] = useState(false);
+  // #598: set giris formu varsayilan kapali; yalnizca odak kartindaki kalem dugmesiyle acilir.
+  const [formAcik, setFormAcik] = useState(false);
   // #396: duzenlenen set -- duzenleyici ekranin ortasinda acilir. `panelAcik`a dokunulmaz: odak
   // modundan gelindiyse duzenleyici kapaninca odak karti + set paneli geri gelir.
   const [duzenlenen, setDuzenlenen] = useState<{ kayit: SetKaydi; sira: number } | null>(null);
@@ -238,6 +240,7 @@ export default function AntrenmanScreen() {
 
   function kartSec(exerciseId: number) {
     if (secimYap(exerciseId)) {
+      setFormAcik(false);
       setPanelAcik(true);
     }
   }
@@ -591,6 +594,8 @@ export default function AntrenmanScreen() {
                 onSetDuzenle={setiDuzenle}
                 onKaldir={() => hareketiKaldirmayaBasla(odakHareketi.exerciseId)}
                 onKapat={() => setPanelAcik(false)}
+                onFormDegistir={() => setFormAcik((acik) => !acik)}
+                formAcik={formAcik}
               />
             </Animated.View>
           </View>
@@ -604,7 +609,7 @@ export default function AntrenmanScreen() {
           style={{ position: 'absolute', left: 0, right: 0, bottom: panelAlti }}
           className="px-4"
         >
-          {panelAcik && !duzenlenen && etkinSecim !== null && seciliEgzersizAdi && (
+          {panelAcik && formAcik && !duzenlenen && etkinSecim !== null && seciliEgzersizAdi && (
             <Animated.View entering={PANEL_ACILISI} exiting={PANEL_KAPANISI}>
               <SetPaneli
                 key={formSurumu}

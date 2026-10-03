@@ -4,6 +4,11 @@ import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
 import { renderRouterAsync } from '../../src/testUtils/renderRouterAsync';
 
+/** #598: set giris formu varsayilan kapali; kalem dugmesiyle acilir. */
+async function formuAc() {
+  await fireEvent.press(await screen.findByRole('button', { name: 'Set girişini aç' }));
+}
+
 jest.mock('@grind/shared/api/client', () => {
   const actual = jest.requireActual('@grind/shared/api/client');
   return { ...actual, request: jest.fn() };
@@ -96,6 +101,7 @@ test('odak kartindaki sete dokununca duzenleyici acilir, vazgecince odak karti v
   await setliAntrenmanlaAc();
   await fireEvent.press(screen.getByLabelText(/^Bench Press, /));
   const odak = await screen.findByTestId('odak-karti');
+  await formuAc();
 
   await fireEvent.press(within(odak).getByLabelText(/^1\. set, /));
 

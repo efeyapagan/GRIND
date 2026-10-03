@@ -310,7 +310,10 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
 export interface GecmisOturum {
   sessionId: number;
   startedAt: string;
+  templateId: number | null;
   templateName: string | null;
+  // #598: ayni sablonun onceki antrenmanlarinin en yuksek hacmini gectiyse (sunucu hesaplar).
+  isVolumeRecord: boolean;
   totalVolume: number;
   setCount: number;
   // #246: antrenman suresi (sn), sunucudan; acik antrenmanda null.
@@ -343,7 +346,9 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
   return {
     sessionId: yanit.sessionId,
     startedAt: yanit.startedAt,
+    templateId: yanit.templateId ?? null,
     templateName: yanit.templateName ?? null,
+    isVolumeRecord: yanit.isVolumeRecord ?? false,
     totalVolume: yanit.totalVolume,
     setCount: yanit.setCount,
     durationSeconds: yanit.durationSeconds ?? null,

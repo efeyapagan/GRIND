@@ -24,19 +24,22 @@ internal static class HistoryMapping
     /// değil burada, dinlenme hesaplandıktan SONRA uygulanır (<paramref name="exerciseId"/>).
     /// </summary>
     public static IReadOnlyList<HistorySessionResponse> ToSessionResponses(
-        IReadOnlyList<WorkoutSession> sessions, IReadOnlyList<SetEntry> sets, long? exerciseId = null)
+        IReadOnlyList<WorkoutSession> sessions,
+        IReadOnlyList<SetEntry> sets,
+        IReadOnlySet<long> volumeRecordIds,
+        long? exerciseId = null)
     {
         var setsBySession = sets
             .GroupBy(s => s.WorkoutSessionId)
             .ToDictionary(g => g.Key, IReadOnlyList<SetEntry> (g) => g.ToList());
 
         return sessions
-            .Select(s => ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, []), exerciseId))
+            .Select(s => ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, []), volumeRecordIds.Contains(s.Id), exerciseId))
             .ToList();
     }
 
     private static HistorySessionResponse ToSessionResponse(
-        WorkoutSession session, IReadOnlyList<SetEntry> sets, long? exerciseId)
+        WorkoutSession session, IReadOnlyList<SetEntry> sets, bool isVolumeRecord, long? exerciseId)
     {
         var rests = RestIntervalCalculator.ForSession(sets);
         // #230: pozisyon da (rest gibi) oturumun TÜM setlerinden hesaplanır -- egzersiz filtresi
@@ -50,6 +53,7 @@ internal static class HistoryMapping
             session.StartedAt,
             session.EndedAt,
             DurationCalculator.SecondsBetween(session.StartedAt, session.EndedAt),
+            session.TemplateId,
             session.Template?.Name,
             session.Notes,
             session.Difficulty,
@@ -59,6 +63,7 @@ internal static class HistoryMapping
             shown.Sum(s => s.Weight * (s.Reps ?? 0)),
             shown.Count,
             RestIntervalCalculator.Median(shown.Select(s => s.RestSeconds)),
+            isVolumeRecord,
             shown);
     }
 

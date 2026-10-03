@@ -323,6 +323,8 @@ export const en: Katalog = {
     yeniSet: 'New set',
     yeniSetIcin: 'New set: {{ad}}',
     paneliKapat: 'Close panel',
+    formuAc: 'Open set entry',
+    formuKapat: 'Close set entry',
     egzersizEtiket: 'Exercise',
     eklendi: 'Added: {{agirlik}} kg × {{tekrar}}',
     baglantiHatasi:
@@ -554,6 +556,7 @@ export const en: Katalog = {
     paylas: 'Share workout',
     galeriyeKaydet: 'Save to gallery',
     panoyaKopyala: 'Copy to clipboard',
+    hacimRekoru: 'Volume PR',
     izinYok: 'Saving to your gallery needs photo permission. You can grant it in Settings.',
     hata: 'Could not create the image. Want to try again?',
   },

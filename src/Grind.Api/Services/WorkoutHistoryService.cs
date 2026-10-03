@@ -1,4 +1,5 @@
 using Grind.Api.Common.Exceptions;
+using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Common;
@@ -48,7 +49,11 @@ public class WorkoutHistoryService(
         var sets = await setEntryRepository.GetForSessionsAsync(
             sessions.Select(s => s.Id).ToList(), userId, cancellationToken);
 
-        var items = HistoryMapping.ToSessionResponses(sessions, sets, query.ExerciseId);
+        var volumeRecordIds = VolumeRecordCalculator.RecordSessionIds(
+            await sessionRepository.GetTemplateSessionVolumesAsync(
+                userId, sessions.Where(s => s.TemplateId != null).Select(s => s.TemplateId!.Value).Distinct().ToList(),
+                cancellationToken));
+        var items = HistoryMapping.ToSessionResponses(sessions, sets, volumeRecordIds, query.ExerciseId);
 
         return new PagedResponse<HistorySessionResponse>(
             items, query.Page, query.PageSize, totalCount);
