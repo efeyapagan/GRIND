@@ -10,12 +10,13 @@ import { KART_YUKSEKLIGI } from './SablonVitrinKarti';
 import { useIkonRenk } from './renkler';
 
 export const KAYITLI_KART_YUKSEKLIGI = KART_YUKSEKLIGI / 2;
-const FIGUR_BOYUTU = 72;
+/** #604 (kullanici): ince figur kucuk kaliyordu; yazi sutunu ile sag ustteki ikonun arasina sigar. */
+const FIGUR_BOYUTU = 100;
 /** Izgara kartin bu oranindan baslayip saga kadar uzanir; solan kenari soldaki yazinin altinda kaybolur. */
 const IZGARA_BASLANGICI = 0.34;
 /** Figurun merkezi: yazi sutununun sagi, sag ustteki ikonun solu. */
 const FIGUR_MERKEZI = 0.62;
-/** Ad ve "paylasti" satiri kartin bu kadarini kaplar; figurun ustune tasmaz. */
+/** Ad ve `@kaynak` satiri kartin bu kadarini kaplar; figurun ustune tasmaz. */
 const YAZI_ORANI = 0.42;
 /** Sag ustteki ikonun (dambil / sabitleme) karttan uzakligi; kose yuvarlakligindan uzak dursun. */
 const IKON_UST = 12;
@@ -38,7 +39,7 @@ interface Props {
 
 /**
  * #467/#538: baskasindan kaydedilen sablonun yatay karti -- `SablonVitrinKarti` ile ayni genislikte,
- * yarisi yukseklikte. Ad (vitrin basligiyla ayni punto) ve "X paylasti" en solda; ortadan saga kenarlara
+ * yarisi yukseklikte. Ad (vitrin basligiyla ayni punto) ve `@kaynak` (#604) en solda; ortadan saga kenarlara
  * ve yaziya dogru silinen izgara, ustunde baskin kategorinin figuru.
  *
  * Silme kartta gorunur bir ikonla degil (kullanici karari, #538), basili tutunca acilan
@@ -80,7 +81,7 @@ export default function SablonKayitliKarti({
       <CamKatmanlari koseSinifi="rounded-2xl" />
 
       <View pointerEvents="none" className="absolute inset-y-0" style={{ left: izgaraSolu }}>
-        <Izgara genislik={genislik - izgaraSolu} yukseklik={KAYITLI_KART_YUKSEKLIGI} solan />
+        <Izgara genislik={genislik - izgaraSolu} yukseklik={KAYITLI_KART_YUKSEKLIGI} />
       </View>
       <View
         pointerEvents="none"
@@ -97,9 +98,10 @@ export default function SablonKayitliKarti({
         <Text numberOfLines={2} className="text-heading font-bold text-fg">
           {ad}
         </Text>
+        {/* #604: kaynak etiketsiz, yalnizca kullanici adi -- cevrilecek metin yok. */}
         {kaynakKullaniciAdi && (
           <Text numberOfLines={1} className="mt-1 text-label text-muted">
-            {t('sablonlar.kaydedilenKaynak', { kullaniciAdi: kaynakKullaniciAdi })}
+            @{kaynakKullaniciAdi}
           </Text>
         )}
       </View>
