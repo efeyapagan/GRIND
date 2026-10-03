@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
 import { KeyRound, LogOut } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import EkranKaydirici from '../../../src/ui/EkranKaydirici';
+import CamKart from '../../../src/ui/CamKart';
 import HaftalikHedefSatiri from '../../../src/components/HaftalikHedefSatiri';
 import AntrenmanHedefiSecici from '../../../src/components/AntrenmanHedefiSecici';
 import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
@@ -30,24 +31,27 @@ export default function AccountScreen() {
 
   return (
     <EkranKaydirici contentContainerClassName="gap-6 px-4 pt-2 pb-4">
-      <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+      {/* #592: gruplar ve dugmeler cam (spec Karar 9); icteki secici alanlari alan olarak kalir. */}
+      <CamKart className="flex-col gap-3 p-4">
         <Text className="text-heading text-fg">{t('profil.antrenmanHedefi')}</Text>
         <HaftalikHedefSatiri />
         <AntrenmanHedefiSecici />
-      </View>
-      <View className="flex-col gap-3 rounded-xl bg-surface-1 p-4">
+      </CamKart>
+      <CamKart className="flex-col gap-3 p-4">
         <GizlilikSeviyesiSecici />
         <TemaSecici />
         <DilSecici />
-      </View>
+      </CamKart>
       <SifreDegistirDugmesi />
-      <Pressable
+      <CamKart
         onPress={logout}
-        className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-surface-1 p-4"
+        accessibilityLabel={t('profil.cikisYap')}
+        koseSinifi="rounded-xl"
+        className="min-h-12 flex-row items-center justify-center gap-2 p-4"
       >
         <LogOut color={ikonRenk.danger} size={18} />
         <Text className="text-label text-danger">{t('profil.cikisYap')}</Text>
-      </Pressable>
+      </CamKart>
     </EkranKaydirici>
   );
 }
@@ -61,14 +65,15 @@ function SifreDegistirDugmesi() {
 
   return (
     <>
-      <Pressable
-        accessibilityRole="button"
+      <CamKart
         onPress={() => setAcik(true)}
-        className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-surface-1 p-4"
+        accessibilityLabel={t('profil.sifreDegistir')}
+        koseSinifi="rounded-xl"
+        className="min-h-12 flex-row items-center justify-center gap-2 p-4"
       >
         <KeyRound color={ikonRenk.fg} size={18} />
         <Text className="text-label text-fg">{t('profil.sifreDegistir')}</Text>
-      </Pressable>
+      </CamKart>
       {acik && (
         <SifreDegistirPenceresi acik={acik} onKapat={() => setAcik(false)} updateProfile={updateProfile} />
       )}

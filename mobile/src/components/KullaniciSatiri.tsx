@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { KullaniciOzeti } from '@grind/shared/api/queries';
 import Rozet from '../ui/Rozet';
+import CamKart from '../ui/CamKart';
 import ProfilFotografi from './ProfilFotografi';
 import TakipDugmesi from './TakipDugmesi';
 
@@ -15,7 +16,8 @@ export default function KullaniciSatiri({ kisi }: { kisi: KullaniciOzeti }) {
   const router = useRouter();
 
   return (
-    <View testID={`kullanici-satiri-${kisi.username}`} className="flex-row items-center gap-3 rounded-xl bg-surface-2 p-3">
+    // #592: cam kart (spec Karar 9) -- arkadas karsilastirmasindaki satirla ayni dil ve kose.
+    <CamKart testID={`kullanici-satiri-${kisi.username}`} className="flex-row items-center gap-3 p-3">
       <Pressable
         accessibilityRole="link"
         onPress={() => router.push(`/profile/u/${encodeURIComponent(kisi.username)}`)}
@@ -38,6 +40,6 @@ export default function KullaniciSatiri({ kisi }: { kisi: KullaniciOzeti }) {
       ) : (
         <TakipDugmesi kullaniciAdi={kisi.username} iliski={kisi.relation} boyut="kucuk" />
       )}
-    </View>
+    </CamKart>
   );
 }
