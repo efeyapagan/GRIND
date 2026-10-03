@@ -17,6 +17,7 @@ function ciz(ek: Partial<React.ComponentProps<typeof SablonKayitliKarti>> = {}) 
       ad={sablon.name}
       kaynakKullaniciAdi={sablon.savedFromUsername}
       ozet={sablonOzeti(sablon)}
+      genislik={300}
       onBasla={jest.fn()}
       onMenu={jest.fn()}
       disabled={false}
