@@ -10,9 +10,9 @@ export interface Nokta {
  * (Push/Legs); barfiks bari (Pull) duz cizgidir. `eller` barin ya da dambilin tutuldugu noktalar,
  * `agirliklar` dambillerin merkezi.
  *
- * #604: `govde` cop adam cizgileri degil, kasli siluetin TEK dolu yoludur (boyun, V govde, omuzlar,
- * kollar, bacaklar). Her parca ayni yonde dolanir; `nonzero` dolguda ust uste binen parcalar
- * birlesir, delik acilmaz.
+ * #604: `govde` cop adam cizgileri degil, ince-atletik (lean) bir siluetin TEK dolu yoludur: ~7,5 bas
+ * boyunda, omuz iki bas genisliginde, gogus ve kanat kasindan bele inen yumusak bir V. Her parca ayni
+ * yonde dolanir; `nonzero` dolguda ust uste binen parcalar birlesir, delik acilmaz.
  */
 export interface FigurPozu {
   bar: { x1: number; x2: number; y: number; plakali: boolean } | null;
@@ -21,6 +21,9 @@ export interface FigurPozu {
   eller: [Nokta, Nokta];
   agirliklar: Nokta[];
 }
+
+/** Basin yaricapi: gercekci oran icin govdeye gore kucuk (boy ~7,5 bas). */
+export const BAS_YARICAPI = 4.8;
 
 // Tum yardimcilar 'worklet': ayni hesap hem testte (JS) hem animasyonda (UI thread) calisir.
 
@@ -34,18 +37,30 @@ function nokta(a: Nokta, b: Nokta, p: number): Nokta {
   return { x: ara(a.x, b.x, p), y: ara(a.y, b.y, p) };
 }
 
+/** `n`den `aci` derece yonunde (ekran: 0 sag, -90 yukari) `boy` uzaklikta nokta. */
+function uc(n: Nokta, aci: number, boy: number): Nokta {
+  'worklet';
+  const r = (aci * Math.PI) / 180;
+  return { x: n.x + Math.cos(r) * boy, y: n.y + Math.sin(r) * boy };
+}
+
 /** Path metninde bir ondalik yeter; kisa metin her karede daha ucuz kurulur. */
 function s(n: number): string {
   'worklet';
   return `${Math.round(n * 10) / 10}`;
 }
 
+function xy(n: Nokta): string {
+  'worklet';
+  return `${s(n.x)} ${s(n.y)}`;
+}
+
 /**
- * Bir uzuv (kol, bacak, boyun): `a`dan `b`ye uzanan, uclari yuvarlak, ortasi kasla siskin dolu sekil.
+ * Bir uzuv (kol, bacak, boyun): `a`dan `b`ye uzanan, uclari yuvarlak, ortasi hafif kasli dolu sekil.
  * `ra`/`rb` uclardaki, `rm` ortadaki yari kalinlik. Hep "+n kenari ileri, -n kenari geri" dolanir --
  * gidis yonu ne olursa olsun tum parcalar ayni yonde kapanir.
  */
-function uzuv(a: Nokta, b: Nokta, ra: number, rm: number, rb: number): string {
+function uzuv(a: Nokta, b: Nokta, [ra, rm, rb]: readonly [number, number, number]): string {
   'worklet';
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -71,46 +86,84 @@ function daire(m: Nokta, r: number): string {
   return `M${s(m.x - r)} ${s(m.y)} A${s(r)} ${s(r)} 0 1 0 ${s(m.x + r)} ${s(m.y)} A${s(r)} ${s(r)} 0 1 0 ${s(m.x - r)} ${s(m.y)} Z`;
 }
 
-/**
- * V govde: omuz hizasinda (`ust`) genis, belde (`bel`) dar. Yanlar kanat kasi gibi hafif disari
- * bombeli, ust kenar trapez gibi boyna dogru kalkik. Uzuvla ayni dolanma yonu.
- */
-function vGovde(ust: Nokta, bel: Nokta, omuzYari: number, belYari: number): string {
+/** Noktalardan yumusak kenar: ic noktalar kontrol, aralarindaki orta noktalar egrinin uzerinde. */
+function yumusak(noktalar: Nokta[]): string {
   'worklet';
-  const dx = bel.x - ust.x;
-  const dy = bel.y - ust.y;
+  let d = '';
+  for (let i = 1; i < noktalar.length - 1; i++) {
+    const son = i === noktalar.length - 2;
+    const sonraki = son
+      ? noktalar[i + 1]
+      : { x: (noktalar[i].x + noktalar[i + 1].x) / 2, y: (noktalar[i].y + noktalar[i + 1].y) / 2 };
+    d += `Q${xy(noktalar[i])} ${xy(sonraki)} `;
+  }
+  return d;
+}
+
+/**
+ * Govde profili: omuz hizasindan (t=0) kasiga (t=1) her satir `[t, +n yari genislik, -n yari genislik]`.
+ * Onden simetrik; yandan (squat, yuzu saga) +n sirt, -n gogus tarafidir.
+ */
+type Profil = readonly (readonly [number, number, number])[];
+
+/** Onden: omuz, gogus/kanat kasi, ince bel, hafif kalca. */
+const ON_PROFIL: Profil = [
+  [0, 7.6, 7.6],
+  [0.1, 8.6, 8.6],
+  [0.3, 7.6, 7.6],
+  [0.55, 5.6, 5.6],
+  [0.8, 5.4, 5.4],
+  [1, 3.6, 3.6],
+];
+
+/** Yandan: one cikan gogus, duz karin, arkada kalca. */
+const YAN_PROFIL: Profil = [
+  [0, 4.4, 4.8],
+  [0.15, 4.8, 6.2],
+  [0.4, 4.4, 4.9],
+  [0.65, 4.1, 4.2],
+  [0.85, 5.6, 4.3],
+  [1, 4.4, 4],
+];
+
+/** Govde: `ust` (omuz hizasi ortasi) ile `alt` (kasik) arasinda profile gore; ust kenar trapez gibi boyna kalkar. */
+function govdeYolu(ust: Nokta, alt: Nokta, profil: Profil): string {
+  'worklet';
+  const dx = alt.x - ust.x;
+  const dy = alt.y - ust.y;
   const boy = Math.sqrt(dx * dx + dy * dy) || 1;
   const ux = dx / boy;
   const uy = dy / boy;
   const nx = -uy;
   const ny = ux;
-  // Kanat kasinin en genis yeri govdenin ust ucte birinde.
-  const kx = ust.x + ux * boy * 0.35;
-  const ky = ust.y + uy * boy * 0.35;
-  const kanat = omuzYari + 1;
-  return (
-    `M${s(ust.x + nx * omuzYari)} ${s(ust.y + ny * omuzYari)} ` +
-    `Q${s(kx + nx * kanat)} ${s(ky + ny * kanat)} ${s(bel.x + nx * belYari)} ${s(bel.y + ny * belYari)} ` +
-    `L${s(bel.x - nx * belYari)} ${s(bel.y - ny * belYari)} ` +
-    `Q${s(kx - nx * kanat)} ${s(ky - ny * kanat)} ${s(ust.x - nx * omuzYari)} ${s(ust.y - ny * omuzYari)} ` +
-    `Q${s(ust.x - ux * 4)} ${s(ust.y - uy * 4)} ${s(ust.x + nx * omuzYari)} ${s(ust.y + ny * omuzYari)} Z`
-  );
+  const arti: Nokta[] = [];
+  const eksi: Nokta[] = [];
+  for (let i = 0; i < profil.length; i++) {
+    const [t, wa, we] = profil[i];
+    const cx = ust.x + ux * boy * t;
+    const cy = ust.y + uy * boy * t;
+    arti.push({ x: cx + nx * wa, y: cy + ny * wa });
+    eksi.unshift({ x: cx - nx * we, y: cy - ny * we });
+  }
+  const trapez = { x: ust.x - ux * 2.5, y: ust.y - uy * 2.5 };
+  return `M${xy(arti[0])} ${yumusak(arti)}L${xy(eksi[0])} ${yumusak(eksi)}Q${xy(trapez)} ${xy(arti[0])} Z`;
 }
 
-/** Kaslarin yari kalinliklari: ucta (eklem) ince, ortada (kas karni) kalin. */
-const KOL_UST = [4.5, 6, 3.5] as const;
-const ON_KOL = [3.5, 4.5, 2.5] as const;
-const UYLUK = [5.5, 6.5, 3.5] as const;
-const BALDIR = [3.5, 4.5, 2.2] as const;
-const DELTOID = 5.5;
+/** Yari kalinliklar `[eklem, kas karni, eklem]`: ince ama sekilli. */
+const BOYUN = [1.9, 2.1, 2.6] as const;
+const KOL_UST = [2.6, 3.2, 2] as const;
+const ON_KOL = [2.1, 2.5, 1.5] as const;
+const UYLUK = [2.9, 3.3, 2.1] as const;
+const BALDIR = [2.1, 2.5, 1.3] as const;
+const AYAK = [1.6, 1.6, 1.2] as const;
+const DELTOID = 3.4;
 
 interface Iskelet {
-  boyun: Nokta;
-  /** Govdenin ust (omuz hizasi) ve alt (bel) orta noktalari. */
+  bas: Nokta;
+  /** Govdenin ust (omuz hizasi) ve alt (kasik) orta noktalari. */
   ust: Nokta;
-  bel: Nokta;
-  omuzYari: number;
-  belYari: number;
+  alt: Nokta;
+  profil: Profil;
   omuzlar: Nokta[];
   dirsekler: Nokta[];
   eller: Nokta[];
@@ -121,130 +174,111 @@ interface Iskelet {
   ayakUclari?: Nokta[];
 }
 
-/** Iskeletten kasli siluet: her parca ayri bir alt yol, hepsi tek `d`. */
-function siluet(i: Iskelet, bas: Nokta): string {
+/** Iskeletten siluet: her parca ayri bir alt yol, hepsi tek `d`. */
+function siluet(i: Iskelet): string {
   'worklet';
-  const parcalar = [uzuv(bas, i.boyun, 3.5, 4, 5), vGovde(i.ust, i.bel, i.omuzYari, i.belYari)];
+  const parcalar = [uzuv(i.bas, i.ust, BOYUN), govdeYolu(i.ust, i.alt, i.profil)];
   for (let k = 0; k < i.kalcalar.length; k++) {
-    parcalar.push(uzuv(i.kalcalar[k], i.dizler[k], UYLUK[0], UYLUK[1], UYLUK[2]));
-    parcalar.push(uzuv(i.dizler[k], i.ayaklar[k], BALDIR[0], BALDIR[1], BALDIR[2]));
-    if (i.ayakUclari) parcalar.push(uzuv(i.ayaklar[k], i.ayakUclari[k], 3, 3, 2));
+    parcalar.push(uzuv(i.kalcalar[k], i.dizler[k], UYLUK));
+    parcalar.push(uzuv(i.dizler[k], i.ayaklar[k], BALDIR));
+    if (i.ayakUclari) parcalar.push(uzuv(i.ayaklar[k], i.ayakUclari[k], AYAK));
   }
   for (let k = 0; k < i.omuzlar.length; k++) {
-    parcalar.push(uzuv(i.omuzlar[k], i.dirsekler[k], KOL_UST[0], KOL_UST[1], KOL_UST[2]));
-    parcalar.push(uzuv(i.dirsekler[k], i.eller[k], ON_KOL[0], ON_KOL[1], ON_KOL[2]));
+    parcalar.push(uzuv(i.omuzlar[k], i.dirsekler[k], KOL_UST));
+    parcalar.push(uzuv(i.dirsekler[k], i.eller[k], ON_KOL));
     parcalar.push(daire(i.omuzlar[k], DELTOID));
   }
   return parcalar.join(' ');
 }
 
-/** Onden gorunen figurlerin ortak bacaklari: kalca, diz ve ayak `x`leri iki yana simetrik. */
-function ondenBacaklar(kalcaY: number, dizY: number, ayakY: number) {
+/**
+ * Onden, omuz hizasi `y` olan figurun basi, govdesi ve bacaklari. Oranlar: boyun+bas 7,5, govde 24,
+ * uyluk 18,5, baldir 17,5 -- toplam ~7,5 bas, bacak boyun yarisi. Uyluklar arasinda bosluk kalir.
+ */
+function onden(y: number) {
   'worklet';
   return {
-    kalcalar: [{ x: 44, y: kalcaY }, { x: 56, y: kalcaY }],
-    dizler: [{ x: 41, y: dizY }, { x: 59, y: dizY }],
-    ayaklar: [{ x: 40, y: ayakY }, { x: 60, y: ayakY }],
+    bas: { x: 50, y: y - 7.5 },
+    ust: { x: 50, y },
+    alt: { x: 50, y: y + 24 },
+    profil: ON_PROFIL,
+    omuzlar: [{ x: 42, y: y + 1.5 }, { x: 58, y: y + 1.5 }],
+    kalcalar: [{ x: 46, y: y + 22 }, { x: 54, y: y + 22 }],
+    dizler: [{ x: 45.6, y: y + 40.5 }, { x: 54.4, y: y + 40.5 }],
+    ayaklar: [{ x: 45, y: y + 58 }, { x: 55, y: y + 58 }],
   };
 }
 
-/** Push: overhead press -- bar basin ustunden omuz hizasina iner, kollar barla bukulur. */
+/** Push: overhead press -- bar basin ustunden alin hizasina iner, dirsekler yana acilir. */
 function itis(p: number): FigurPozu {
   'worklet';
-  const barY = ara(14, 26, p);
-  const solEl = { x: 32, y: barY };
-  const sagEl = { x: 68, y: barY };
-  const bas = { x: 50, y: 32 };
+  const barY = ara(14, 24, p);
+  const solEl = { x: 35, y: barY };
+  const sagEl = { x: 65, y: barY };
+  const govde = onden(37);
   return {
     bar: { x1: 10, x2: 90, y: barY, plakali: true },
-    bas,
-    govde: siluet(
-      {
-        boyun: { x: 50, y: 44 },
-        ust: { x: 50, y: 44 },
-        bel: { x: 50, y: 68 },
-        omuzYari: 13,
-        belYari: 6.5,
-        omuzlar: [{ x: 39, y: 47 }, { x: 61, y: 47 }],
-        dirsekler: [nokta({ x: 30, y: 34 }, { x: 25, y: 43 }, p), nokta({ x: 70, y: 34 }, { x: 75, y: 43 }, p)],
-        eller: [solEl, sagEl],
-        ...ondenBacaklar(68, 82, 95),
-      },
-      bas,
-    ),
+    bas: govde.bas,
+    govde: siluet({
+      ...govde,
+      dirsekler: [nokta({ x: 38, y: 27 }, { x: 30, y: 34 }, p), nokta({ x: 62, y: 27 }, { x: 70, y: 34 }, p)],
+      eller: [solEl, sagEl],
+    }),
     eller: [solEl, sagEl],
     agirliklar: [],
   };
 }
 
-/** Pull: barfiks -- govde asili hale iner, eller sabit barda kalir, dirsekler acilir. */
+/** Pull: barfiks -- ustte bas bara yakin, asagida kollar uzanir; eller barda sabit. */
 function cekis(p: number): FigurPozu {
   'worklet';
-  // Govde noktasi `y`den asagi iner. Ayaklar viewBox'in altina tasmasin diye inis kisa (5 birim ~ 6 px).
-  const in_ = (n: Nokta): Nokta => {
-    'worklet';
-    return { x: n.x, y: ara(n.y, n.y + 5, p) };
-  };
-  const solEl = { x: 34, y: 8 };
-  const sagEl = { x: 66, y: 8 };
-  const bas = in_({ x: 50, y: 22 });
+  const solEl = { x: 35, y: 8 };
+  const sagEl = { x: 65, y: 8 };
+  const govde = onden(ara(23, 30, p));
   return {
     bar: { x1: 12, x2: 88, y: 8, plakali: false },
-    bas,
-    govde: siluet(
-      {
-        boyun: in_({ x: 50, y: 34 }),
-        ust: in_({ x: 50, y: 34 }),
-        bel: in_({ x: 50, y: 58 }),
-        omuzYari: 13,
-        belYari: 6.5,
-        omuzlar: [in_({ x: 39, y: 37 }), in_({ x: 61, y: 37 })],
-        dirsekler: [nokta({ x: 29, y: 26 }, { x: 33, y: 28 }, p), nokta({ x: 71, y: 26 }, { x: 67, y: 28 }, p)],
-        eller: [solEl, sagEl],
-        // Bacaklar barfikste dizden hafif bukuk, ayaklar arkaya toplanir.
-        kalcalar: [in_({ x: 44, y: 58 }), in_({ x: 56, y: 58 })],
-        dizler: [in_({ x: 41, y: 74 }), in_({ x: 59, y: 74 })],
-        ayaklar: [in_({ x: 46, y: 89 }), in_({ x: 60, y: 87 })],
-      },
-      bas,
-    ),
+    bas: govde.bas,
+    govde: siluet({
+      ...govde,
+      dirsekler: [nokta({ x: 31, y: 18 }, { x: 37, y: 20 }, p), nokta({ x: 69, y: 18 }, { x: 63, y: 20 }, p)],
+      eller: [solEl, sagEl],
+    }),
     eller: [solEl, sagEl],
     agirliklar: [],
   };
 }
 
-/** Legs: squat (yandan) -- ust govde (bar, bas, govde) kalcayla birlikte kalkar, diz acilir, ayak sabit. */
+/**
+ * Legs: squat (yandan, yuzu saga) -- dipten kalkar. Eklemler ACIyla hareket eder: noktalar dogrusal
+ * kaydirilsaydi hareketin ortasinda uyluk ve govde kisalirdi.
+ */
 function squat(p: number): FigurPozu {
   'worklet';
-  const kalk = (x: number, y: number): Nokta => {
-    'worklet';
-    return { x: ara(x, x + 6, p), y: ara(y, y - 8, p) };
-  };
-  const el = kalk(46, 30);
-  const bar = kalk(22, 30);
-  const bas = kalk(61, 17);
-  const ayak = { x: 58, y: 93 };
+  const ayak = { x: 54, y: 93 };
+  const diz = uc(ayak, ara(-60, -88, p), 17);
+  const kalca = uc(diz, ara(180, 265, p), 18);
+  const omuz = uc(kalca, ara(-55, -85, p), 26);
+  const bas = uc(omuz, ara(-60, -80, p), 7.5);
+  // Bar sirtin ustunde, omzun biraz arkasinda; el bari omuz yaninda tutar.
+  const barX = omuz.x - 1.5;
+  const barY = Math.round((omuz.y - 1.5) * 10) / 10;
+  const el = { x: barX + 2, y: barY };
   return {
-    bar: { x1: bar.x, x2: ara(86, 92, p), y: bar.y, plakali: true },
+    bar: { x1: barX - 32, x2: barX + 32, y: barY, plakali: true },
     bas,
-    govde: siluet(
-      {
-        boyun: kalk(57, 28),
-        ust: kalk(54, 31),
-        bel: kalk(42, 56),
-        // Yandan: omuz hizasinda gogus + sirt kalinligi, belde karin.
-        omuzYari: 9,
-        belYari: 7,
-        omuzlar: [kalk(54, 34)],
-        dirsekler: [kalk(44, 42)],
-        eller: [el],
-        kalcalar: [kalk(40, 60)],
-        dizler: [nokta({ x: 64, y: 66 }, { x: 57, y: 73 }, p)],
-        ayaklar: [ayak],
-        ayakUclari: [{ x: 66, y: 94 }],
-      },
+    govde: siluet({
       bas,
-    ),
+      ust: omuz,
+      alt: kalca,
+      profil: YAN_PROFIL,
+      omuzlar: [omuz],
+      dirsekler: [{ x: omuz.x - 6, y: omuz.y + 6 }],
+      eller: [el],
+      kalcalar: [kalca],
+      dizler: [diz],
+      ayaklar: [ayak],
+      ayakUclari: [{ x: 62, y: 94 }],
+    }),
     eller: [el, el],
     agirliklar: [],
   };
@@ -253,26 +287,17 @@ function squat(p: number): FigurPozu {
 /** Other: iki kolla sirayla curl -- kivrik kol iner, duz kol kivrilir; dambil eli izler. */
 function curl(p: number): FigurPozu {
   'worklet';
-  const solEl = nokta({ x: 22, y: 36 }, { x: 28, y: 66 }, p);
-  const sagEl = nokta({ x: 72, y: 66 }, { x: 78, y: 36 }, p);
-  const bas = { x: 50, y: 16 };
+  const govde = onden(31);
+  const solEl = nokta({ x: 35, y: 35 }, { x: 38, y: 58 }, p);
+  const sagEl = nokta({ x: 62, y: 58 }, { x: 65, y: 35 }, p);
   return {
     bar: null,
-    bas,
-    govde: siluet(
-      {
-        boyun: { x: 50, y: 28 },
-        ust: { x: 50, y: 28 },
-        bel: { x: 50, y: 58 },
-        omuzYari: 13,
-        belYari: 6.5,
-        omuzlar: [{ x: 38, y: 31 }, { x: 62, y: 31 }],
-        dirsekler: [{ x: 30, y: 49 }, { x: 70, y: 49 }],
-        eller: [solEl, sagEl],
-        ...ondenBacaklar(58, 76, 95),
-      },
-      bas,
-    ),
+    bas: govde.bas,
+    govde: siluet({
+      ...govde,
+      dirsekler: [{ x: 38.5, y: 45.5 }, { x: 61.5, y: 45.5 }],
+      eller: [solEl, sagEl],
+    }),
     eller: [solEl, sagEl],
     agirliklar: [solEl, sagEl],
   };

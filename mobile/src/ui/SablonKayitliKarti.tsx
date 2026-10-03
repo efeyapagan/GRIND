@@ -10,7 +10,8 @@ import { KART_YUKSEKLIGI } from './SablonVitrinKarti';
 import { useIkonRenk } from './renkler';
 
 export const KAYITLI_KART_YUKSEKLIGI = KART_YUKSEKLIGI / 2;
-const FIGUR_BOYUTU = 72;
+/** #604 (kullanici): ince figur kucuk kaliyordu; yazi sutunu ile sag ustteki ikonun arasina sigar. */
+const FIGUR_BOYUTU = 100;
 /** Izgara kartin bu oranindan baslayip saga kadar uzanir; solan kenari soldaki yazinin altinda kaybolur. */
 const IZGARA_BASLANGICI = 0.34;
 /** Figurun merkezi: yazi sutununun sagi, sag ustteki ikonun solu. */

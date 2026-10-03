@@ -13,7 +13,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import type { EgzersizKategorisi } from '@grind/shared/api/queries';
-import { figurPozu } from './figurPozu';
+import { BAS_YARICAPI, figurPozu } from './figurPozu';
 import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useRenkPaleti } from './renkler';
 
@@ -33,7 +33,7 @@ const YARIM_TUR_MS = 1400;
  * Hook sayisi kategoriden bagimsiz sabit kalsin diye hepsi her zaman hesaplanir; bari ya da dambili
  * olmayan figurde o parca cizilmez.
  *
- * #604: poz kare basina BIR kez hesaplanir (`useDerivedValue`); parcalar onu okur. Kasli siluet tek bir
+ * #604: poz kare basina BIR kez hesaplanir (`useDerivedValue`); parcalar onu okur. Siluet tek bir
  * dolu yoldur (`govde`), cizgi kalinligi yok.
  */
 function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<number> }) {
@@ -46,43 +46,43 @@ function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<n
   });
   const solPlakaProps = useAnimatedProps(() => {
     const bar = poz.value.bar;
-    return bar ? { x: bar.x1 + 2, y: bar.y - 10 } : {};
+    return bar ? { x: bar.x1 + 2, y: bar.y - 8 } : {};
   });
   const sagPlakaProps = useAnimatedProps(() => {
     const bar = poz.value.bar;
-    return bar ? { x: bar.x2 - 8, y: bar.y - 10 } : {};
+    return bar ? { x: bar.x2 - 7, y: bar.y - 8 } : {};
   });
   const basProps = useAnimatedProps(() => ({ cx: poz.value.bas.x, cy: poz.value.bas.y }));
   const govdeProps = useAnimatedProps(() => ({ d: poz.value.govde }));
   const solDambilProps = useAnimatedProps(() => {
     const dambil = poz.value.agirliklar[0];
-    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+    return dambil ? { x: dambil.x - 6, y: dambil.y - 2.5 } : {};
   });
   const sagDambilProps = useAnimatedProps(() => {
     const dambil = poz.value.agirliklar[1];
-    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+    return dambil ? { x: dambil.x - 6, y: dambil.y - 2.5 } : {};
   });
 
   return (
     <>
       {baslangic.bar && (
         <>
-          <AnimasyonluLine animatedProps={barProps} strokeWidth={4} strokeLinecap="round" />
+          <AnimasyonluLine animatedProps={barProps} strokeWidth={3} strokeLinecap="round" />
           {baslangic.bar.plakali && (
             <>
-              <AnimasyonluRect animatedProps={solPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
-              <AnimasyonluRect animatedProps={sagPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
+              <AnimasyonluRect animatedProps={solPlakaProps} width={5} height={16} rx={2} strokeWidth={0} />
+              <AnimasyonluRect animatedProps={sagPlakaProps} width={5} height={16} rx={2} strokeWidth={0} />
             </>
           )}
         </>
       )}
-      {/* #604: kasli silueti oranli gostermek icin bas eskisinden (8) biraz kucuk. */}
-      <AnimasyonluCircle animatedProps={basProps} r={7} strokeWidth={0} />
+      {/* #604: ince-atletik oran -- bas ve ekipman figurle birlikte kuculdu. */}
+      <AnimasyonluCircle animatedProps={basProps} r={BAS_YARICAPI} strokeWidth={0} />
       <AnimasyonluPath animatedProps={govdeProps} strokeWidth={0} />
       {baslangic.agirliklar.length > 0 && (
         <>
-          <AnimasyonluRect animatedProps={solDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
-          <AnimasyonluRect animatedProps={sagDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
+          <AnimasyonluRect animatedProps={solDambilProps} width={12} height={5} rx={2} strokeWidth={0} />
+          <AnimasyonluRect animatedProps={sagDambilProps} width={12} height={5} rx={2} strokeWidth={0} />
         </>
       )}
     </>
@@ -90,7 +90,7 @@ function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<n
 }
 
 /**
- * #439: sablon kartinin arkasindaki silik sporcu figuru (#604'ten beri kasli siluet); sablonun baskin kategorisine gore secilir.
+ * #439: sablon kartinin arkasindaki silik sporcu figuru (#604'ten beri ince-atletik siluet); sablonun baskin kategorisine gore secilir.
  * Referanstaki gibi cok hafif bulanik cizilir: arka planda kalsin, metinle yarismasin.
  * Saf dekorasyon: dokunmayi yutmaz, erisilebilirlik agacina girmez. Renk `fg`, dusuk opaklikla --
  * iki temada da zeminden hafifce ayrilir, metnin okunurlugunu bozmaz.

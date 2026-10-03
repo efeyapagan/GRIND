@@ -23,8 +23,15 @@ export function useVitrinKartGenisligi(): number {
   const { width } = useWindowDimensions();
   return Math.min(Math.round(width * KART_ORANI), EN_GENIS_KART);
 }
-const FIGUR_BOYUTU = 112;
-const IZGARA_YUKSEKLIGI = 108;
+/** #604 (kullanici): ince figur kartta kucuk kaliyordu -- buyutuldu, alt ucu (ust + boyut = 200) sayac satirinin ustunde kalir. */
+const FIGUR_BOYUTU = 140;
+const FIGUR_USTU = 60;
+/**
+ * #604 (kullanici): izgara yukari, hareket adlarinin arkasina dogru uzar; alt kenari (88 + 108) yerinde
+ * kalir. Yazinin ustunde kalan kismi zaten soluk kenar bolgesidir.
+ */
+const IZGARA_USTU = 56;
+const IZGARA_YUKSEKLIGI = 196 - IZGARA_USTU;
 
 interface Props {
   ad: string;
@@ -86,11 +93,11 @@ export default function SablonVitrinKarti({
     >
       <CamKatmanlari koseSinifi="rounded-2xl" />
 
-      <View pointerEvents="none" className="absolute inset-x-0" style={{ top: 88 }}>
+      <View pointerEvents="none" className="absolute inset-x-0" style={{ top: IZGARA_USTU }}>
         {/* #604: kaydedilen kartla ayni kural -- izgara kenarlara ve ust/alttaki yaziya dogru solar (`Izgara`). */}
         <Izgara genislik={genislik} yukseklik={IZGARA_YUKSEKLIGI} />
       </View>
-      <View pointerEvents="none" className="absolute right-3" style={{ top: 80 }}>
+      <View pointerEvents="none" className="absolute right-3" style={{ top: FIGUR_USTU }}>
         <SablonFiguru kategori={ozet.kategori} boyut={FIGUR_BOYUTU} canli={figurCanli} />
       </View>
 

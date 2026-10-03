@@ -3,10 +3,10 @@ import { figurPozu } from './figurPozu';
 const ANLAR = [0, 0.25, 0.5, 0.75, 1];
 
 /**
- * #604: kasli siluet (gogus, omuz, kol, bacak hacmi) iskeletle birlikte hareket eder -- kaslar sabit bir
+ * #604: siluet (gogus, omuz, kol, bacak sekli) iskeletle birlikte hareket eder -- kaslar sabit bir
  * katman olarak kalip figur kategoriye gore oynarken geride kalmaz.
  */
-test.each(['Push', 'Pull', 'Legs', 'Other'] as const)('%s figurunun kasli silueti hareketle degisir', (kategori) => {
+test.each(['Push', 'Pull', 'Legs', 'Other'] as const)('%s figurunun silueti hareketle degisir', (kategori) => {
   expect(figurPozu(kategori, 1).govde).not.toBe(figurPozu(kategori, 0).govde);
 });
 
