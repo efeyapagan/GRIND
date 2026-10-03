@@ -445,6 +445,28 @@ public class WorkoutTemplateServiceTests
         }
     }
 
+    /// <summary>
+    /// #555 (kullanıcı isteği: depolama tasarrufu): hiç antrenmanda kullanılmamış şablon, kullanıcının
+    /// silme isteğiyle (servis yolu) veritabanından TAMAMEN gider -- şablon satırı da hareket satırları da.
+    /// Arşivleme/gizleme gibi yer kaplamaya devam eden bir yol yoktur; bu test onu sabitler.
+    /// </summary>
+    [Fact]
+    public async Task Hic_kullanilmamis_sablon_silinince_sablon_ve_hareketleri_tamamen_gider()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var olusan = await service.CreateAsync(Create(UniqueName(), Satir(1), Satir(11)));
+            Assert.False(await context.Set<WorkoutSession>().AnyAsync(s => s.TemplateId == olusan.Id));
+
+            await service.DeleteAsync(olusan.Id);
+
+            context.ChangeTracker.Clear();
+            Assert.False(await context.Set<WorkoutTemplate>().AnyAsync(t => t.Id == olusan.Id));
+            Assert.Equal(0, await context.Set<TemplateExercise>().CountAsync(te => te.WorkoutTemplateId == olusan.Id));
+        }
+    }
+
     // ---- LastUsedAt ----
 
     [Fact]
