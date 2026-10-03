@@ -813,4 +813,56 @@ public class StatsServiceTests
             await Assert.ThrowsAsync<NotFoundException>(() => service.GetWeeklyAsync(ozelHareket.Id));
         }
     }
+
+    // ---- Aşırı yüklenme (#176) ----
+
+    /// <summary>İki harekette %5 düşüş (80 → 76 kg × 5) + RIR 3 → 2 üreten setler (Bugun = 2026-03-12).</summary>
+    private static void AsiriYuklenmeSeed(AppDbContext context, User user, Exercise a, Exercise b)
+    {
+        foreach (var (exercise, gun, weight, rir) in new[]
+                 {
+                     (a, 10, 80m, 3m), (b, 12, 80m, 3m),
+                 })
+        {
+            var oturum = Seed(context, user, exercise, new DateTime(2026, 2, gun, 15, 0, 0, DateTimeKind.Utc), (weight, 5));
+            oturum.EndedAt = oturum.StartedAt.AddHours(1);
+        }
+
+        foreach (var (exercise, gun) in new[] { (a, 5), (b, 6) })
+        {
+            var oturum = Seed(context, user, exercise, new DateTime(2026, 3, gun, 15, 0, 0, DateTimeKind.Utc), (76m, 5));
+            oturum.EndedAt = oturum.StartedAt.AddHours(1);
+        }
+
+        foreach (var set in context.ChangeTracker.Entries<SetEntry>().Select(e => e.Entity)
+                     .Where(s => s.WorkoutSession.User == user))
+        {
+            set.Rir = set.WorkoutSession.StartedAt.Month == 2 ? 3m : 2m;
+        }
+    }
+
+    [Fact]
+    public async Task Asiri_yuklenme_sinyali_yalnizca_kendi_setlerinden_hesaplanir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var ikinci = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            var baskasi = TestDatabase.NewUser();
+            context.AddRange(ikinci, baskasi);
+            AsiriYuklenmeSeed(context, baskasi, exercise, ikinci);
+            await context.SaveChangesAsync();
+
+            Assert.Null((await service.GetOverreachingAsync()).Signal);
+
+            AsiriYuklenmeSeed(context, user, exercise, ikinci);
+            await context.SaveChangesAsync();
+
+            var sinyal = (await service.GetOverreachingAsync()).Signal;
+            Assert.NotNull(sinyal);
+            Assert.Equal(2, sinyal.Drops.Count);
+            Assert.Equal(3m, sinyal.RirBefore);
+            Assert.Equal(2m, sinyal.RirRecent);
+        }
+    }
 }

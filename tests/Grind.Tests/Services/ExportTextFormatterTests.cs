@@ -211,6 +211,26 @@ public class ExportTextFormatterTests
         Assert.Contains("- 1. Plank: 75 sn [PR: süre]\n", metin);
     }
 
+    /// <summary>
+    /// #176: aşırı yüklenme sinyali varsa GRINDY'nin okuyacağı bölüm yazılır; yoksa bölüm hiç yoktur (mevcut
+    /// tam çıktı testi bunu da sabitler).
+    /// </summary>
+    [Fact]
+    public void Asiri_yuklenme_sinyali_varsa_bolum_yazilir()
+    {
+        var sinyal = new OverreachingSignalResponse(
+            [new ExerciseDropResponse(1, "Bench Press", 112.5m, 104.06m, 7.5m)], 2.5m, 1m, 3, 4);
+
+        var metin = ExportTextFormatter.Format(Bos() with { Overreaching = sinyal });
+
+        Assert.Contains("## Aşırı yüklenme sinyali (bugüne göre, aralıktan bağımsız)\n", metin);
+        Assert.Contains("- Bench Press: tahmini 1RM 112.5 → 104.06 kg (−7.5%)\n", metin);
+        Assert.Contains("- Ortalama RIR: 2.5 → 1\n", metin);
+        // Ek yok: "{N}'ü" sayıya göre yanlış çekimlenirdi ("2'ü", "1'ü").
+        Assert.Contains("- Zorluğu işaretli antrenman: 4, Zor/Maksimal: 3\n", metin);
+        Assert.DoesNotContain("Aşırı yüklenme", ExportTextFormatter.Format(Bos()));
+    }
+
     /// <summary>RIR 0 geçerli bir değerdir ("tükenişe kadar"); null ile karıştırılıp atlanmamalı.</summary>
     [Fact]
     public void RIR_ve_rekor_ekleri_yazilir()
