@@ -3,29 +3,11 @@ import { figurPozu } from './figurPozu';
 const ANLAR = [0, 0.25, 0.5, 0.75, 1];
 
 /**
- * #474: animasyonun baslangic karesi bugunku sabit cizimin aynisidir -- "hareketi azalt" acikken figur
- * bu karede durur, yani #439'daki gorunum degismez.
+ * #604: siluet (gogus, omuz, kol, bacak sekli) iskeletle birlikte hareket eder -- kaslar sabit bir
+ * katman olarak kalip figur kategoriye gore oynarken geride kalmaz.
  */
-test('baslangic karesi bugunku sabit cizimle aynidir', () => {
-  expect(figurPozu('Push', 0)).toMatchObject({
-    bar: { x1: 10, x2: 90, y: 14 },
-    bas: { x: 50, y: 32 },
-    kollar: 'M44 46 L32 32 L32 14 M56 46 L68 32 L68 14',
-  });
-  expect(figurPozu('Pull', 0)).toMatchObject({
-    bar: { x1: 12, x2: 88, y: 8 },
-    bas: { x: 50, y: 24 },
-    kollar: 'M44 38 L32 28 L34 8 M56 38 L68 28 L66 8',
-  });
-  expect(figurPozu('Legs', 0)).toMatchObject({
-    bar: { x1: 22, x2: 86, y: 30 },
-    bas: { x: 60, y: 16 },
-    govde: 'M56 30 L40 60 M40 60 L64 66 L58 94',
-  });
-  expect(figurPozu('Other', 0)).toMatchObject({
-    bas: { x: 50, y: 16 },
-    kollar: 'M46 32 L36 50 L28 36 M54 32 L62 50 L64 64',
-  });
+test.each(['Push', 'Pull', 'Legs', 'Other'] as const)('%s figurunun silueti hareketle degisir', (kategori) => {
+  expect(figurPozu(kategori, 1).govde).not.toBe(figurPozu(kategori, 0).govde);
 });
 
 /** #474: hareket boyunca bar ve dambil elden kopmaz -- animasyonun her karesinde. */

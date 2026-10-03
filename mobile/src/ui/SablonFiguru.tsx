@@ -5,6 +5,7 @@ import Animated, {
   Easing,
   cancelAnimation,
   useAnimatedProps,
+  useDerivedValue,
   useReducedMotion,
   useSharedValue,
   withRepeat,
@@ -12,11 +13,10 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import type { EgzersizKategorisi } from '@grind/shared/api/queries';
-import { figurPozu } from './figurPozu';
+import { BAS_YARICAPI, figurPozu } from './figurPozu';
 import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useRenkPaleti } from './renkler';
 
-const CIZGI = 8;
 /** Figurun cok hafif bulanikligi (viewBox birimi; 112 px'lik figurde ~1,5 px). */
 const BULANIKLIK = 1.3;
 
@@ -29,61 +29,60 @@ const AnimasyonluCircle = Animated.createAnimatedComponent(Circle);
 const YARIM_TUR_MS = 1400;
 
 /**
- * #474: figurun parcalari; her biri kendi ozelliklerini her karede `figurPozu`ndan okur (UI thread'de).
+ * #474: figurun parcalari; her biri kendi ozelliklerini her karede pozdan okur (UI thread'de).
  * Hook sayisi kategoriden bagimsiz sabit kalsin diye hepsi her zaman hesaplanir; bari ya da dambili
  * olmayan figurde o parca cizilmez.
+ *
+ * #604: poz kare basina BIR kez hesaplanir (`useDerivedValue`); parcalar onu okur. Siluet tek bir
+ * dolu yoldur (`govde`), cizgi kalinligi yok.
  */
 function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<number> }) {
   const baslangic = figurPozu(kategori, 0);
+  const poz = useDerivedValue(() => figurPozu(kategori, p.value));
 
   const barProps = useAnimatedProps(() => {
-    const bar = figurPozu(kategori, p.value).bar;
+    const bar = poz.value.bar;
     return bar ? { x1: bar.x1, x2: bar.x2, y1: bar.y, y2: bar.y } : {};
   });
   const solPlakaProps = useAnimatedProps(() => {
-    const bar = figurPozu(kategori, p.value).bar;
-    return bar ? { x: bar.x1 + 2, y: bar.y - 10 } : {};
+    const bar = poz.value.bar;
+    return bar ? { x: bar.x1 + 2, y: bar.y - 8 } : {};
   });
   const sagPlakaProps = useAnimatedProps(() => {
-    const bar = figurPozu(kategori, p.value).bar;
-    return bar ? { x: bar.x2 - 8, y: bar.y - 10 } : {};
+    const bar = poz.value.bar;
+    return bar ? { x: bar.x2 - 7, y: bar.y - 8 } : {};
   });
-  const basProps = useAnimatedProps(() => {
-    const bas = figurPozu(kategori, p.value).bas;
-    return { cx: bas.x, cy: bas.y };
-  });
-  const govdeProps = useAnimatedProps(() => ({ d: figurPozu(kategori, p.value).govde }));
-  const kollarProps = useAnimatedProps(() => ({ d: figurPozu(kategori, p.value).kollar }));
+  const basProps = useAnimatedProps(() => ({ cx: poz.value.bas.x, cy: poz.value.bas.y }));
+  const govdeProps = useAnimatedProps(() => ({ d: poz.value.govde }));
   const solDambilProps = useAnimatedProps(() => {
-    const dambil = figurPozu(kategori, p.value).agirliklar[0];
-    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+    const dambil = poz.value.agirliklar[0];
+    return dambil ? { x: dambil.x - 6, y: dambil.y - 2.5 } : {};
   });
   const sagDambilProps = useAnimatedProps(() => {
-    const dambil = figurPozu(kategori, p.value).agirliklar[1];
-    return dambil ? { x: dambil.x - 8, y: dambil.y - 3 } : {};
+    const dambil = poz.value.agirliklar[1];
+    return dambil ? { x: dambil.x - 6, y: dambil.y - 2.5 } : {};
   });
 
   return (
     <>
       {baslangic.bar && (
         <>
-          <AnimasyonluLine animatedProps={barProps} strokeWidth={4} strokeLinecap="round" />
+          <AnimasyonluLine animatedProps={barProps} strokeWidth={3} strokeLinecap="round" />
           {baslangic.bar.plakali && (
             <>
-              <AnimasyonluRect animatedProps={solPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
-              <AnimasyonluRect animatedProps={sagPlakaProps} width={6} height={20} rx={2} strokeWidth={0} />
+              <AnimasyonluRect animatedProps={solPlakaProps} width={5} height={16} rx={2} strokeWidth={0} />
+              <AnimasyonluRect animatedProps={sagPlakaProps} width={5} height={16} rx={2} strokeWidth={0} />
             </>
           )}
         </>
       )}
-      <AnimasyonluCircle animatedProps={basProps} r={8} strokeWidth={0} />
-      {/* Govde parcalari ayni kalin, yuvarlak uclu cizgi -- piktogram gorunumu. */}
-      <AnimasyonluPath animatedProps={govdeProps} strokeWidth={CIZGI} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <AnimasyonluPath animatedProps={kollarProps} strokeWidth={CIZGI} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {/* #604: ince-atletik oran -- bas ve ekipman figurle birlikte kuculdu. */}
+      <AnimasyonluCircle animatedProps={basProps} r={BAS_YARICAPI} strokeWidth={0} />
+      <AnimasyonluPath animatedProps={govdeProps} strokeWidth={0} />
       {baslangic.agirliklar.length > 0 && (
         <>
-          <AnimasyonluRect animatedProps={solDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
-          <AnimasyonluRect animatedProps={sagDambilProps} width={16} height={6} rx={2} strokeWidth={0} />
+          <AnimasyonluRect animatedProps={solDambilProps} width={12} height={5} rx={2} strokeWidth={0} />
+          <AnimasyonluRect animatedProps={sagDambilProps} width={12} height={5} rx={2} strokeWidth={0} />
         </>
       )}
     </>
@@ -91,7 +90,7 @@ function Figur({ kategori, p }: { kategori: EgzersizKategorisi; p: SharedValue<n
 }
 
 /**
- * #439: sablon kartinin arkasindaki silik sporcu figuru; sablonun baskin kategorisine gore secilir.
+ * #439: sablon kartinin arkasindaki silik sporcu figuru (#604'ten beri ince-atletik siluet); sablonun baskin kategorisine gore secilir.
  * Referanstaki gibi cok hafif bulanik cizilir: arka planda kalsin, metinle yarismasin.
  * Saf dekorasyon: dokunmayi yutmaz, erisilebilirlik agacina girmez. Renk `fg`, dusuk opaklikla --
  * iki temada da zeminden hafifce ayrilir, metnin okunurlugunu bozmaz.
