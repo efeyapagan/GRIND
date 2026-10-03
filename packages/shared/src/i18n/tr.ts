@@ -450,6 +450,11 @@ export const tr = {
     etiketSure: 'Süre',
     bosDurumMetni: 'Bu antrenmanda set yok.',
     detayiKapat: 'Antrenman ayrıntısını kapat',
+    // #564: geçmişteki sete basılı tutunca açılan menü (şablon menüsüyle aynı desen).
+    setMenusuIpucu: 'Düzenlemek ya da silmek için basılı tut',
+    setiDuzenle: 'Seti düzenle',
+    setSilOnayi: 'Bu set silinecek. Bu hareketin rekorları yeniden hesaplanır.',
+    setMenusunuKapat: 'Set menüsünü kapat',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Tahmini 1RM',

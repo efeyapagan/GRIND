@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Flame, Timer, Zap } from 'lucide-react-native';
+import { useDil } from '@grind/shared/i18n';
 import type { SetKaydi } from '@grind/shared/api/queries';
 import { gecilmisRekorIdleri, rekorRozetiMetni } from '@grind/shared/lib/rekor';
+import { setDegeriMetni } from '@grind/shared/lib/setDegeri';
 import { rirEtiketi } from '@grind/shared/lib/rir';
 import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
@@ -17,7 +19,12 @@ interface OrtakProps {
 }
 
 type Props = OrtakProps &
-  ({ varyant?: 'bugun'; onSetDuzenle: (kayit: SetKaydi, sira: number) => void } | { varyant: 'gecmis' });
+  (
+    | { varyant?: 'bugun'; onSetDuzenle: (kayit: SetKaydi, sira: number) => void }
+    // #564: verilirse gecmis satirina basili tutmak Duzenle / Sil menusunu acar; verilmezse
+    // (arkadasin gecmisi, #284) satir salt-okunurdur.
+    | { varyant: 'gecmis'; onSetMenu?: (kayit: SetKaydi, sira: number) => void }
+  );
 
 interface EgzersizGrubu {
   exerciseId: number;
@@ -28,6 +35,7 @@ interface EgzersizGrubu {
 /** web/src/components/SetList.tsx ile ayni: setler egzersize gore gruplanir. */
 export default function SetList(props: Props) {
   const { t } = useTranslation();
+  const dil = useDil();
   const { sets, bosDurumMetni = t('setler.bosDurum') } = props;
   const gruplar = useMemo(() => {
     const harita = new Map<number, EgzersizGrubu>();
@@ -67,14 +75,14 @@ export default function SetList(props: Props) {
             <View className="flex-col gap-1">
               {grup.sets.map((kayit, setSirasi) => {
                 const rozet = rekorRozetiMetni(kayit);
-                return (
-                  <View
-                    key={kayit.id}
-                    className="min-h-12 flex-col justify-center gap-1.5 rounded-lg bg-surface-1 px-4 py-2"
-                  >
+                const sira = setSirasi + 1;
+                const onSetMenu = props.onSetMenu;
+                const satirSinifi = 'min-h-12 flex-col justify-center gap-1.5 rounded-lg bg-surface-1 px-4 py-2';
+                const icerik = (
+                  <>
                     <View className="flex-row items-center justify-between gap-2">
                       <View className="flex-row items-center gap-4">
-                        <Text className="w-5 text-label text-muted">{setSirasi + 1}</Text>
+                        <Text className="w-5 text-label text-muted">{sira}</Text>
                         <SetDegeriYazisi kayit={kayit} className="text-body-lg text-fg" birimSinifi="text-fg" />
                       </View>
                       <View className="flex-row items-center gap-2">
@@ -94,7 +102,31 @@ export default function SetList(props: Props) {
                         </Rozet>
                       </View>
                     )}
-                  </View>
+                  </>
+                );
+                if (!onSetMenu) {
+                  return (
+                    <View key={kayit.id} testID={`gecmis-set-${kayit.id}`} className={satirSinifi}>
+                      {icerik}
+                    </View>
+                  );
+                }
+                // #564: sablon kartiyla ayni desen (`SablonKayitliKarti`) -- dokunus yok, basili tutmak
+                // menuyu acar; ekran okuyucuda ayni menu `longpress` eylemiyle acilir.
+                return (
+                  <Pressable
+                    key={kayit.id}
+                    testID={`gecmis-set-${kayit.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('setler.setSirasi', { sira })}, ${setDegeriMetni(kayit, dil)}`}
+                    accessibilityHint={t('gecmis.setMenusuIpucu')}
+                    accessibilityActions={[{ name: 'longpress' }]}
+                    onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onSetMenu(kayit, sira)}
+                    onLongPress={() => onSetMenu(kayit, sira)}
+                    className={satirSinifi}
+                  >
+                    {icerik}
+                  </Pressable>
                 );
               })}
             </View>

@@ -12,8 +12,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Trash2, X } from 'lucide-react-native';
-import type { GecmisOturum } from '@grind/shared/api/queries';
+import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
 import GecmisOzeti from './GecmisOzeti';
+import GecmisSetMenusu from './GecmisSetMenusu';
 import SetList from './SetList';
 import CamYuzey from '../ui/CamYuzey';
 import IkonDugmesi from '../ui/IkonDugmesi';
@@ -32,7 +33,10 @@ interface Props {
   oturum: GecmisOturum;
   /** Kapanis animasyonu bittikten sonra cagrilir; paneli kaldirmak cagiranin isidir. */
   onKapat: () => void;
-  /** Verilmezse panel salt-okunurdur (#284). Panel kapandiktan SONRA cagrilir -- onay kartta sorulur. */
+  /**
+   * Verilmezse panel salt-okunurdur (#284): antrenman silinmez, setlerde basili tutma menusu (#564) de
+   * yoktur. Panel kapandiktan SONRA cagrilir -- onay kartta sorulur.
+   */
   onSil?: () => void;
 }
 
@@ -54,6 +58,8 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [alanYuksekligi, setAlanYuksekligi] = useState(0);
+  // #564: basili tutulan set; menu (ve duzenleyici) panelin ustunde, ayni Modal'da acilir.
+  const [setMenusu, setSetMenusu] = useState<{ kayit: SetKaydi; sira: number } | null>(null);
   const ilerleme = useSharedValue(0);
   const kapaniyor = useRef(false);
 
@@ -129,7 +135,12 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
               </IkonDugmesi>
             </View>
             <ScrollView contentContainerClassName="flex-col gap-3 p-4">
-              <SetList varyant="gecmis" sets={oturum.sets} bosDurumMetni={t('gecmis.bosDurumMetni')} />
+              <SetList
+                varyant="gecmis"
+                sets={oturum.sets}
+                bosDurumMetni={t('gecmis.bosDurumMetni')}
+                onSetMenu={onSil ? (kayit, sira) => setSetMenusu({ kayit, sira }) : undefined}
+              />
               {onSil && (
                 <Pressable
                   onPress={() => kapat(onSil)}
@@ -142,6 +153,14 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
             </ScrollView>
           </Animated.View>
         </Animated.View>
+        {setMenusu && (
+          <GecmisSetMenusu
+            key={setMenusu.kayit.id}
+            kayit={setMenusu.kayit}
+            sira={setMenusu.sira}
+            onKapat={() => setSetMenusu(null)}
+          />
+        )}
       </View>
     </Modal>
   );

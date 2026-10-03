@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -11,13 +11,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Trash2 } from 'lucide-react-native';
 import type { Sablon } from '@grind/shared/api/queries';
 import type { SablonOzeti } from '@grind/shared/lib/sablonOzeti';
 import CamYuzey from '../ui/CamYuzey';
 import SablonVitrinKarti, { KART_YUKSEKLIGI } from '../ui/SablonVitrinKarti';
 import { ACILIS_YAYI } from '../ui/KabukTabBar';
-import { useEtkinTema, useIkonRenk } from '../ui/renkler';
+import { useEtkinTema } from '../ui/renkler';
+import DuzenleSilSecenekleri from './DuzenleSilSecenekleri';
 
 /** Kartin ekrandaki kutusu (`measureInWindow`). */
 export interface Kutu {
@@ -59,10 +59,8 @@ const OLCUM_BEKLEME_MS = 80;
  */
 export default function SablonMenusu({ sablon, ozet, kartGenisligi, kaynak, onKapat, onDuzenle, onSil }: Props) {
   const { t } = useTranslation();
-  const ikonRenk = useIkonRenk();
   const etkinTema = useEtkinTema();
   const { width: ekranG, height: ekranY } = useWindowDimensions();
-  const [silOnayi, setSilOnayi] = useState(false);
   // Panel yuksekligi ILK olcumde sabitlenir: silme onayina gecince panel uzar ama kart yerinden oynamaz.
   const [panelYuksekligi, setPanelYuksekligi] = useState<number | null>(null);
   // Acilisin hangi kutudan basladigi BIR KEZ sabitlenir: olcum gec gelirse kart yolun ortasinda sicramasin.
@@ -180,47 +178,13 @@ export default function SablonMenusu({ sablon, ozet, kartGenisligi, kaynak, onKa
         ]}
       >
         <CamYuzey />
-        {silOnayi ? (
-          <View className="flex-col gap-3 p-4">
-            <Text className="text-body text-fg">{t('sablonlar.silOnayMesaji')}</Text>
-            <View className="flex-row gap-2">
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => kapat(onSil)}
-                className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg"
-              >
-                <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSilOnayi(false)}
-                className="h-12 flex-1 items-center justify-center rounded-xl bg-surface-3"
-              >
-                <Text className="text-label text-fg">{t('ortak.vazgec')}</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <View className="flex-col p-2">
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => kapat(onDuzenle)}
-              className="h-13 flex-row items-center justify-between rounded-xl px-3"
-            >
-              <Text className="text-body-lg text-fg">{t('sablonlar.duzenleBaslik')}</Text>
-              <Pencil color={ikonRenk.fg} size={20} />
-            </Pressable>
-            <View className="mx-3 h-px bg-surface-4" />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setSilOnayi(true)}
-              className="h-13 flex-row items-center justify-between rounded-xl px-3"
-            >
-              <Text className="text-body-lg text-danger">{t('sablonlar.sil')}</Text>
-              <Trash2 color={ikonRenk.danger} size={20} />
-            </Pressable>
-          </View>
-        )}
+        <DuzenleSilSecenekleri
+          duzenleEtiketi={t('sablonlar.duzenleBaslik')}
+          silEtiketi={t('sablonlar.sil')}
+          silOnayMesaji={t('sablonlar.silOnayMesaji')}
+          onDuzenle={() => kapat(onDuzenle)}
+          onSil={() => kapat(onSil)}
+        />
       </Animated.View>
     </Modal>
   );

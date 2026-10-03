@@ -22,7 +22,8 @@ interface Props {
   kayit: SetKaydi;
   sira: number;
   onKapat: () => void;
-  onSil: () => void;
+  /** Verilmezse "Seti sil" cizilmez (#564: gecmiste silme basili tutma menusunden, onayla). */
+  onSil?: () => void;
 }
 
 /**
@@ -136,14 +137,16 @@ export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
           </BirincilDugme>
         </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onSil}
-        className="h-12 flex-row items-center justify-center gap-2 rounded-xl"
-      >
-        <Trash2 color={ikonRenk.danger} size={18} />
-        <Text className="text-label text-danger">{t('setler.setiSil')}</Text>
-      </Pressable>
+      {onSil && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSil}
+          className="h-12 flex-row items-center justify-center gap-2 rounded-xl"
+        >
+          <Trash2 color={ikonRenk.danger} size={18} />
+          <Text className="text-label text-danger">{t('setler.setiSil')}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

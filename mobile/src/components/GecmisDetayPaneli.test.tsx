@@ -1,0 +1,129 @@
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { request } from '@grind/shared/api/client';
+import type { GecmisOturum, SetKaydi } from '@grind/shared/api/queries';
+import GecmisDetayPaneli from './GecmisDetayPaneli';
+
+jest.mock('@grind/shared/api/client', () => ({
+  request: jest.fn(),
+  setUnauthorizedHandler: jest.fn(),
+}));
+
+const requestMock = request as jest.Mock;
+
+const KAYIT: SetKaydi = {
+  id: 7,
+  sessionId: 1,
+  exerciseId: 1,
+  exerciseName: 'Bench Press',
+  exercisePosition: 1,
+  weight: 60,
+  reps: 8,
+  durationSeconds: null,
+  recordType: 'None',
+  rir: null,
+  createdAt: new Date(Date.UTC(2026, 8, 18, 10, 0)).toISOString(),
+  restSeconds: null,
+  measurement: 'WeightReps',
+};
+
+const OTURUM: GecmisOturum = {
+  sessionId: 1,
+  startedAt: '2026-09-18T10:00:00Z',
+  templateName: 'Push Day',
+  setCount: 1,
+  totalVolume: 480,
+  durationSeconds: 3600,
+  sets: [KAYIT],
+};
+
+beforeEach(() => {
+  requestMock.mockReset();
+  requestMock.mockImplementation(async (yol: string, secenekler?: { method?: string; body?: string }) => {
+    if (yol === '/sets/7' && secenekler?.method === 'PATCH') {
+      return { ...KAYIT, ...JSON.parse(secenekler.body ?? '{}') };
+    }
+    if (yol === '/sets/7' && secenekler?.method === 'DELETE') {
+      return undefined;
+    }
+    // Hareket listesi (agirlik ibaresi) vb.: bos donmek testin konusu disinda.
+    return [];
+  });
+});
+
+/** Kendi gecmisinde panel `onSil` alir (#284 deseni): verilmezse salt-okunurdur. */
+async function paneliCiz(salt?: 'salt-okunur') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  await render(
+    <QueryClientProvider client={queryClient}>
+      <GecmisDetayPaneli
+        oturum={OTURUM}
+        onKapat={jest.fn()}
+        onSil={salt === 'salt-okunur' ? undefined : jest.fn()}
+      />
+    </QueryClientProvider>,
+  );
+}
+
+async function setMenusunuAc() {
+  await fireEvent(screen.getByTestId('gecmis-set-7'), 'longPress');
+}
+
+function setIstekleri(method: string) {
+  return requestMock.mock.calls.filter(([yol, secenekler]) => yol === '/sets/7' && secenekler?.method === method);
+}
+
+// #564: sablon kartindaki gibi -- sete basili tutunca Duzenle / Sil menusu acilir.
+test('kendi gecmisinde sete basili tutunca Duzenle ve Sil menusu acilir', async () => {
+  await paneliCiz();
+
+  await setMenusunuAc();
+
+  const menu = within(screen.getByTestId('set-menusu'));
+  expect(menu.getByText('Seti düzenle')).toBeTruthy();
+  expect(menu.getByText('Seti sil')).toBeTruthy();
+});
+
+// #284: arkadasin gecmisi salt-okunur kalir -- setlerinde menu yoktur.
+test('salt-okunur gecmiste sete basili tutmak menu acmaz', async () => {
+  await paneliCiz('salt-okunur');
+
+  await setMenusunuAc();
+
+  expect(screen.queryByTestId('set-menusu')).toBeNull();
+});
+
+test('Duzenle setin degerleriyle duzenleyiciyi acar, Kaydet PATCH gonderir', async () => {
+  await paneliCiz();
+  await setMenusunuAc();
+
+  await fireEvent.press(screen.getByText('Seti düzenle'));
+  const duzenleyici = within(screen.getByTestId('set-duzenleyici'));
+  await fireEvent.changeText(duzenleyici.getByDisplayValue('60'), '62.5');
+  await fireEvent.press(duzenleyici.getByText('Kaydet'));
+
+  const istekler = setIstekleri('PATCH');
+  expect(istekler).toHaveLength(1);
+  expect(JSON.parse(istekler[0][1].body)).toMatchObject({ weight: 62.5, reps: 8 });
+});
+
+test('Sil onay sorar, Vazgec ile hic istek gitmez', async () => {
+  await paneliCiz();
+  await setMenusunuAc();
+
+  await fireEvent.press(screen.getByText('Seti sil'));
+  expect(screen.getByText('Evet, sil')).toBeTruthy();
+  await fireEvent.press(screen.getByText('Vazgeç'));
+
+  expect(setIstekleri('DELETE')).toHaveLength(0);
+});
+
+test('onayda Evet, sil DELETE gonderir', async () => {
+  await paneliCiz();
+  await setMenusunuAc();
+
+  await fireEvent.press(screen.getByText('Seti sil'));
+  await fireEvent.press(screen.getByText('Evet, sil'));
+
+  expect(setIstekleri('DELETE')).toHaveLength(1);
+});
