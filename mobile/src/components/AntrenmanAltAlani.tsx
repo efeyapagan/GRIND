@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CircleCheck, X } from 'lucide-react-native';
 import type { Egzersiz } from '@grind/shared/api/queries';
 import BirincilDugme from '../ui/BirincilDugme';
+import CamKart from '../ui/CamKart';
 import HareketEklePaneli from './HareketEklePaneli';
 import { useIkonRenk } from '../ui/renkler';
 
@@ -45,7 +46,8 @@ export default function AntrenmanAltAlani({
   return (
     // `mt-auto` YOK (#274): kisa listede ekranin dibine itilmez, son kartin hemen ardinda durur (web #226).
     <View className="pb-2">
-      <View className="flex-col gap-2 rounded-xl bg-surface-3 p-3">
+      {/* #589: cam yuzey (spec Karar 9). `CamKart` icerigi kirpmaz -- hareket ekleme listesi tasabilir (#559). */}
+      <CamKart testID="antrenman-alt-alani" className="flex-col gap-2 p-3">
         {acik ? (
           <HareketEklePaneli
             egzersizler={egzersizler}
@@ -71,7 +73,7 @@ export default function AntrenmanAltAlani({
             <Text className="text-body-lg font-bold text-danger">{t('antrenman.iptalEt')}</Text>
           </Pressable>
         ) : null}
-      </View>
+      </CamKart>
     </View>
   );
 }

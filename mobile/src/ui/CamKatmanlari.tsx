@@ -35,6 +35,7 @@ export default function CamKatmanlari({ koseSinifi = 'rounded-3xl', vurguluKenar
       {/* Opaklik KATMANIN kendisinde: renkler Tailwind'e `var(--color-*)` olarak bagli ve `border-fg/10`
           gibi bir opaklik eki degiskene uygulanamayip kenari SIYAH ciziyordu (#547'de simulatorde goruldu). */}
       <View
+        testID="cam-kenar"
         className={`absolute inset-0 border ${koseSinifi} ${vurguluKenar ? 'border-2 border-accent' : 'border-fg opacity-10'}`}
       />
     </View>
