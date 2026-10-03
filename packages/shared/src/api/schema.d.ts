@@ -3075,7 +3075,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    exerciseId?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -3091,6 +3093,17 @@ export interface paths {
                         "text/plain": components["schemas"]["WeeklyStatsResponse"];
                         "application/json": components["schemas"]["WeeklyStatsResponse"];
                         "text/json": components["schemas"]["WeeklyStatsResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };

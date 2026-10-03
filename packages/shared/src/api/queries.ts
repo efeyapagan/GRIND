@@ -814,11 +814,22 @@ function dogrulanmisHafta(yanit: WeeklyStatsRow): HaftalikIstatistik {
  * #184: `GET /api/stats/weekly` -- ilk antrenman haftasindan bu haftaya, eskiden yeniye; son satir icinde
  * bulunulan hafta. Tek istek: hacim karti ve kas grubu karti ayni veriyi keser.
  */
-export function useWeeklyStats() {
+/**
+ * #586: `exerciseId` verilirse yalnizca o hareketin haftalik hacmi/setleri. Anahtar `weeklyStats`in
+ * altinda: set/oturum degisince yapilan onek gecersizlestirmesi hareketli sorgulari da tazeler.
+ */
+export function useWeeklyStats(exerciseId: number | null = null, enabled = true) {
   return useQuery({
-    queryKey: queryKeys.weeklyStats,
+    enabled,
+    queryKey: exerciseId === null ? queryKeys.weeklyStats : [...queryKeys.weeklyStats, exerciseId],
     queryFn: async (): Promise<HaftalikIstatistik[]> =>
-      ((await request<WeeklyStatsResponse>('/stats/weekly')).weeks ?? []).map(dogrulanmisHafta),
+      (
+        (await request<WeeklyStatsResponse>(
+          exerciseId === null ? '/stats/weekly' : `/stats/weekly?exerciseId=${exerciseId}`,
+        )).weeks ?? []
+      ).map(dogrulanmisHafta),
+    // Hareket degisince onceki grafik yeni veri gelene kadar yerinde kalir (useExerciseProgress ile ayni).
+    placeholderData: keepPreviousData,
   });
 }
 

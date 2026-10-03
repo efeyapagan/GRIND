@@ -90,7 +90,7 @@ public class AiInsightServiceTests
             sessions,
             sets,
             bodyWeights,
-            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), currentUser, saat),
+            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), new ExerciseRepository(context), currentUser, saat),
             new PersonalRecordService(sets, currentUser),
             currentUser,
             saat);

@@ -6,12 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
 import { useEkranKaydiriciBaglami } from './EkranKaydirici';
 import { useIkonRenk } from './renkler';
-
-/**
- * Kategori haplari. Etiket katalogdan gelir (`antrenman.kategori.*`): Push/Pull/Legs Ingilizce
- * kategori adlaridir ve iki dilde de ayni, "Diğer" ve "Tümü" cevrilir.
- */
-const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
+import KategoriHaplari from './KategoriHaplari';
 
 /**
  * Oneri listesinin yuksekligi: kullanici ilk acilista TAM 3 sonuc satiri gormek istedi (once 4
@@ -196,20 +191,11 @@ export default function HareketSecici({
             stickyHeaderIndices={[0]}
             style={{ maxHeight: LISTE_ICERIK_YUKSEKLIGI }}
           >
-            <View className="flex-row flex-wrap gap-1 rounded-t-lg border-b border-surface-4 bg-surface-3 p-1">
-              {KATEGORILER.map((deger) => (
-                <Pressable
-                  key={deger ?? 'tumu'}
-                  accessibilityState={{ selected: kategori === deger }}
-                  onPress={() => setKategori(deger)}
-                  className={`min-h-11 items-center justify-center rounded-full px-3 ${kategori === deger ? 'bg-surface-4' : ''}`}
-                >
-                  <Text className={`text-label ${kategori === deger ? 'text-fg' : 'text-muted'}`}>
-                    {deger === null ? t('antrenman.kategoriTumu') : t(`antrenman.kategori.${deger}`)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <KategoriHaplari
+              secili={kategori}
+              onSec={setKategori}
+              className="rounded-t-lg border-b border-surface-4 bg-surface-3 p-1"
+            />
             {oneriler.length > 0 && (
               <Text className="px-4 pt-2 pb-1 text-label text-muted">{t('antrenman.oneriBaslik')}</Text>
             )}

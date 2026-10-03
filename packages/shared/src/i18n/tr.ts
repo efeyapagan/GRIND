@@ -514,6 +514,10 @@ export const tr = {
     kasGrubuSatiri_other: '{{grup}}: {{count}} set',
     birTekrarBaslik: 'Tahmini 1RM',
     hareketDegistir: 'Hareketi değiştir',
+    // #586: İlerleme kartlarının hareket seçim penceresi.
+    hareketSec: 'Hareket seç',
+    tumHareketler: 'Tüm hareketler',
+    hareketteHaftaYok: 'Bu hareketin henüz tamamlanmış bir haftası yok.',
     kiloluHareketYok: 'Tahmini 1RM için kilolu bir hareket kaydet.',
   },
   olcumler: {
