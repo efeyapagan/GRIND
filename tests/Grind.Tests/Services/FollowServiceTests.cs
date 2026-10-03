@@ -56,6 +56,7 @@ public class FollowServiceTests
         return new FollowService(
             followRepository, new UserRepository(context), avatarRepository,
             new UserSummaryBuilder(followRepository, avatarRepository, currentUser),
+            new FriendRequestRepository(context),
             new UnitOfWork(context), currentUser, new SahteSaat());
     }
 
@@ -329,6 +330,80 @@ public class FollowServiceTests
             var sonuc = await ServiceFor(context, ben).SearchAsync(onEk.ToUpperInvariant());
 
             Assert.Equal([aktif.Username], sonuc.Select(s => s.Username));
+        }
+    }
+
+    // ---- #628: takipçiden çıkar (= arkadaşlıktan çıkar) / sessize al ----
+
+    private static Task<bool> TakipVarMi(AppDbContext context, User a, User b)
+        => context.Follows.AnyAsync(f => f.FollowerId == a.Id && f.FolloweeId == b.Id);
+
+    /// <summary>Arkadaşken çalıştırılınca arkadaşlık biter ama ben takipte kalırım (kullanıcı kararı 2026-10-04).</summary>
+    [Fact]
+    public async Task Takipciden_cikar_yalnizca_onun_takibini_siler()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            await ServiceFor(context, a).FollowAsync(b.Username);
+            await ServiceFor(context, b).FollowAsync(a.Username);
+
+            await ServiceFor(context, a).RemoveFollowerAsync(b.Username);
+
+            Assert.False(await TakipVarMi(context, b, a));
+            Assert.True(await TakipVarMi(context, a, b));
+        }
+    }
+
+    [Fact]
+    public async Task Takip_etmeden_sessize_alma_400()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(
+                () => ServiceFor(context, users[0]).SetMutedAsync(users[1].Username, true));
+        }
+    }
+
+    /// <summary>Review Focus 3: sessize alma takip satırında yaşar — bırakıp yeniden takip edince sıfırdan başlar.</summary>
+    [Fact]
+    public async Task Sessize_alma_profilde_gorunur_yeniden_takipte_sifirlanir()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            var aGozuyle = ServiceFor(context, a);
+            await aGozuyle.FollowAsync(b.Username);
+            await aGozuyle.SetMutedAsync(b.Username, true);
+            Assert.True((await aGozuyle.GetProfileAsync(b.Username)).NotificationsMuted);
+
+            await aGozuyle.UnfollowAsync(b.Username);
+            await aGozuyle.FollowAsync(b.Username);
+
+            Assert.False((await aGozuyle.GetProfileAsync(b.Username)).NotificationsMuted);
+        }
+    }
+
+    [Fact]
+    public async Task Profil_istek_yonunu_ve_ret_sinirini_soyler()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            context.Add(new FriendRequest { RequesterId = a.Id, TargetId = b.Id, CreatedAt = An });
+            for (var i = 0; i < FriendRequestService.RejectionLimit; i++)
+                context.Add(new FriendRequest { RequesterId = b.Id, TargetId = a.Id, CreatedAt = An, RejectedAt = An });
+            await context.SaveChangesAsync();
+
+            var aGozuyle = await ServiceFor(context, a).GetProfileAsync(b.Username);
+            Assert.Equal((FriendRequestState.Sent, true), (aGozuyle.FriendRequest, aGozuyle.CanSendFriendRequest));
+
+            var bGozuyle = await ServiceFor(context, b).GetProfileAsync(a.Username);
+            Assert.Equal((FriendRequestState.Received, false), (bGozuyle.FriendRequest, bGozuyle.CanSendFriendRequest));
         }
     }
 }
