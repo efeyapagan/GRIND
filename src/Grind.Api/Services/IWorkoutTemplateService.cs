@@ -40,4 +40,10 @@ public interface IWorkoutTemplateService
     /// </summary>
     Task<TemplateResponse> UpdateSharingAsync(
         long id, TemplateVisibility visibility, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Kaydedilen kopyayı başa sabitler ya da sabitlemeyi kaldırır (#538). Kendi şablonunda
+    /// ValidationException (400), başkasının şablonunda NotFoundException (404).
+    /// </summary>
+    Task<TemplateResponse> PinAsync(long id, bool isPinned, CancellationToken cancellationToken = default);
 }

@@ -524,4 +524,82 @@ public class WorkoutTemplateServiceTests
             await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateSharingAsync(digerSablon.Id, TemplateVisibility.Public));
         }
     }
+
+    // ---- Kaydedilen şablonu başa sabitleme (#538) ----
+
+    /// <summary>Kullanıcının, başka birinden kaydettiği bir kopya (SavedFromUserId dolu).</summary>
+    private static async Task<WorkoutTemplate> KaydedilenKopyaAsync(AppDbContext context, User sahip)
+    {
+        var kaynak = TestDatabase.NewUser();
+        var kopya = new WorkoutTemplate
+        {
+            UserId = sahip.Id, Name = UniqueName(), CreatedAt = DateTime.UtcNow, SavedFromUser = kaynak
+        };
+        context.Add(kopya);
+        await context.SaveChangesAsync();
+        return kopya;
+    }
+
+    [Fact]
+    public async Task PinAsync_kaydedilen_sablonu_sabitler_ve_listede_okunur()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var kopya = await KaydedilenKopyaAsync(context, user);
+
+            var yanit = await service.PinAsync(kopya.Id, true);
+            var liste = await service.GetAllAsync();
+
+            Assert.True(yanit.IsPinned);
+            Assert.True(liste.Single(t => t.Id == kopya.Id).IsPinned);
+        }
+    }
+
+    [Fact]
+    public async Task PinAsync_false_sabitlemeyi_kaldirir()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var kopya = await KaydedilenKopyaAsync(context, user);
+            await service.PinAsync(kopya.Id, true);
+
+            var yanit = await service.PinAsync(kopya.Id, false);
+
+            Assert.False(yanit.IsPinned);
+        }
+    }
+
+    /// <summary>
+    /// Kendi şablonlarının sırası kullanıcının sürükleyerek kurduğu <c>OrderIndex</c>'tir; pin yalnızca
+    /// son kullanıma göre dizilen kaydedilen kopyalar içindir. Kendi şablonunda saklanan bir pin hiçbir
+    /// ekranda etkisi olmayan gizli bir durum olurdu.
+    /// </summary>
+    [Fact]
+    public async Task PinAsync_kendi_sablonunda_400_verir()
+    {
+        var (_, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var kendi = await service.CreateAsync(Create(UniqueName(), Satir(1)));
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.PinAsync(kendi.Id, true));
+        }
+    }
+
+    [Fact]
+    public async Task PinAsync_baskasinin_sablonunda_404_verir()
+    {
+        var (context, _, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            context.Add(digerKullanici);
+            await context.SaveChangesAsync();
+            var onunKopyasi = await KaydedilenKopyaAsync(context, digerKullanici);
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.PinAsync(onunKopyasi.Id, true));
+        }
+    }
 }

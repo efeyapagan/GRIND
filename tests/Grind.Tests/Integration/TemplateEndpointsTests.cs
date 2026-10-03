@@ -201,6 +201,23 @@ public class TemplateEndpointsTests(GrindApiFactory factory) : IClassFixture<Gri
         Assert.Equal(HttpStatusCode.NotFound, sonra.StatusCode);
     }
 
+    /// <summary>
+    /// #538: sabitleme yalnızca kaydedilen kopyalar içindir; uç kendi şablonunda 400 döner (rota
+    /// olmasaydı 404 dönerdi -- bu test ucun bağlı olduğunu da kanıtlar).
+    /// </summary>
+    [Fact]
+    public async Task Kendi_sablonunu_sabitlemek_400_verir()
+    {
+        var client = await AuthenticatedClientAsync();
+        var created = await client.PostAsJsonAsync("/api/templates", Create(UniqueName()), Json);
+        var olusan = await created.Content.ReadFromJsonAsync<TemplateResponse>(Json);
+
+        var response = await client.PutAsJsonAsync($"/api/templates/{olusan!.Id}/pin",
+            new UpdateTemplatePinRequest { IsPinned = true }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     /// <summary>Sıralama testleri için: adları verilen şablonları sırayla oluşturup id'lerini döner.</summary>
     private async Task<List<long>> SablonlariOlusturAsync(HttpClient client, params string[] adlar)
     {

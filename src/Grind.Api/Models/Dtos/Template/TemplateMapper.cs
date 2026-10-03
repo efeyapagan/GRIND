@@ -17,7 +17,8 @@ public static class TemplateMapper
         ExercisesOf(template),
         TemplateVisibilityRules.Effective(template.Visibility, template.User.PrivacyLevel),
         template.SavedFromUser?.Username,
-        lastUsedAt);
+        lastUsedAt,
+        template.IsPinned);
 
     /// <summary>
     /// #467 final review: paylaşılan görünümde (`SharedTemplateService`) sahibin egzersiz listesi

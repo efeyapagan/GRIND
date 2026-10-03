@@ -104,3 +104,40 @@ test('acik antrenman yokken kart cizilmez', async () => {
 
   expect(screen.queryByText('Antrenmana devam et')).toBeNull();
 });
+
+/**
+ * #538: kaydedilen sablonlarin kendi ekrani var (`/templates/saved`); Sablonlarim yalnizca kendi
+ * sablonlarini surukleyerek siralar. Sunucu yine TUM id kumesini bekledigi icin kaydedilenler sona eklenir.
+ */
+test('kaydedilen sablon listede yok, siralamada id si sona eklenir', async () => {
+  (useTemplates as jest.Mock).mockReturnValue({
+    data: [
+      { id: 7, name: 'Push Day', exercises: [] },
+      { id: 10, name: 'Kayitli Sablon', exercises: [], savedFromUsername: 'efe', lastUsedAt: null, isPinned: false },
+      { id: 8, name: 'Pull Day', exercises: [] },
+    ],
+    isLoading: false,
+    isError: false,
+  });
+  const panSpy = jest.spyOn(Gesture, 'Pan');
+  await render(
+    <PageTitleProvider>
+      <SablonlarScreen />
+    </PageTitleProvider>,
+  );
+
+  expect(screen.queryByText('Kayitli Sablon')).toBeNull();
+
+  for (const satir of screen.getAllByTestId('surukle-satir')) {
+    satir.props.onLayout({ nativeEvent: { layout: { height: 64 } } });
+  }
+  const ilkSatir = panSpy.mock.results[0].value.handlers;
+  await act(async () => {
+    ilkSatir.onStart({ translationY: 0 });
+    ilkSatir.onUpdate({ translationY: 70 });
+    ilkSatir.onEnd({ translationY: 70 });
+  });
+
+  await waitFor(() => expect(mutate).toHaveBeenCalledWith([8, 7, 10]));
+  panSpy.mockRestore();
+});
