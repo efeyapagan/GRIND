@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IAiInsightService, AiInsightService>();
         services.AddScoped<IUserSummaryBuilder, UserSummaryBuilder>();
         services.AddScoped<IFollowService, FollowService>();
+        services.AddScoped<IFriendRequestService, FriendRequestService>();
         services.AddScoped<IFriendshipService, FriendshipService>();
         services.AddScoped<IFriendWeeklyService, FriendWeeklyService>();
         services.AddScoped<IPublicActivityService, PublicActivityService>();
