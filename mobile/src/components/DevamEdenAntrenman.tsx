@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useOpenSession } from '@grind/shared/api/queries';
 import { formatSaat } from '@grind/shared/lib/format';
 import BirincilDugme from '../ui/BirincilDugme';
+import CamKart from '../ui/CamKart';
 import TurEtiketi from '../ui/TurEtiketi';
 
 /**
@@ -37,7 +38,8 @@ export default function DevamEdenAntrenman({
   }
 
   return (
-    <View className={`flex-col gap-3 rounded-xl bg-surface-2 p-4 ${className}`}>
+    // #589: cam yuzey (spec Karar 9) -- ana sayfanin ozet kartlariyla ayni dil. `className` yalnizca dis bosluk.
+    <CamKart testID="devam-eden-antrenman" disClassName={className} className="flex-col gap-3 p-4">
       {/* #502 (kullanici karari): "Devam ediyor" rozeti kalkti, yerini SABLON ADI aldi -- kart bir
           satir kisaldi. Antrenmanin surdugu bilgisi dugmenin kendi metninde ("Antrenmana devam
           et") ve ust bardaki sayacta zaten var. Sablonsuz antrenmanda solda gosterilecek ad yok;
@@ -49,6 +51,6 @@ export default function DevamEdenAntrenman({
       <BirincilDugme yukseklik="normal" onPress={onDevam ?? (() => router.navigate('/antrenman'))}>
         {t('antrenman.antrenmanaDevamEt')}
       </BirincilDugme>
-    </View>
+    </CamKart>
   );
 }

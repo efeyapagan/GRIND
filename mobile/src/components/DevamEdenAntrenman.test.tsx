@@ -72,6 +72,20 @@ test('kart devam ediyor rozeti tasimaz, ust satirda sablon adi durur', async () 
   expect(screen.getByRole('button', { name: 'Antrenmana devam et' })).toBeTruthy();
 });
 
+/**
+ * #589: kart duz `bg-surface-2` degil cam kart (spec Karar 9) -- ana sayfa, Sablonlarim ve
+ * antrenman ekraninin baslatma gorunumu ayni govdeyi cizdigi icin uc yerde birden.
+ */
+test('kart cam yuzeydedir', async () => {
+  useOpenSessionMock.mockReturnValue({ data: ACIK_OTURUM, isLoading: false, isError: false });
+
+  await render(<DevamEdenAntrenman />);
+
+  const sinif: string = screen.getByTestId('devam-eden-antrenman').props.className;
+  expect(sinif).toContain('rounded-3xl');
+  expect(sinif).not.toMatch(/bg-surface/);
+});
+
 /** Sablonsuz (serbest) antrenmanda solda gosterilecek ad yoktur: satirda yalnizca saat kalir. */
 test('sablonsuz antrenmanda ust satirda yalnizca baslangic saati kalir', async () => {
   useOpenSessionMock.mockReturnValue({

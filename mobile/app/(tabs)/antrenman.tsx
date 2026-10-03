@@ -49,7 +49,7 @@ import SablonlaBasla from '../../src/components/SablonlaBasla';
 import DevamEdenAntrenman from '../../src/components/DevamEdenAntrenman';
 import SablonOlusturCagrisi from '../../src/components/SablonOlusturCagrisi';
 import GeriAlSeridi from '../../src/ui/GeriAlSeridi';
-import IkincilDugme from '../../src/ui/IkincilDugme';
+import CamIkincilDugme from '../../src/ui/CamIkincilDugme';
 import TurEtiketi from '../../src/ui/TurEtiketi';
 import { useEtkinTema, useIkonRenk } from '../../src/ui/renkler';
 
@@ -495,7 +495,8 @@ export default function AntrenmanScreen() {
               ikinci bir antrenman baslatilmaz. */}
           <SablonlaBasla onBasla={sablonlaBasla} bekliyor={baslatMutasyonu.isPending || acikAntrenmanVar} />
           {/* #186: ikincil yol -- sablonsuz antrenman; hareketler acildiktan sonra eklenir. */}
-          <IkincilDugme
+          {/* #589: cam yuzey (spec Karar 9). */}
+          <CamIkincilDugme
             onPress={() => {
               setBaslatmaGorunumu(false);
               baslatMutasyonu.mutate(null);
@@ -503,7 +504,7 @@ export default function AntrenmanScreen() {
             disabled={baslatMutasyonu.isPending || acikAntrenmanVar}
           >
             {t('antrenman.bosBaslat')}
-          </IkincilDugme>
+          </CamIkincilDugme>
         </>
       )}
 
