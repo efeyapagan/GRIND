@@ -2,6 +2,7 @@ import { Pressable, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTakipEt, type TakipIliskisi } from '@grind/shared/api/queries';
 import { takipDugmesi } from '@grind/shared/lib/takip';
+import CamDolgu from '../ui/CamDolgu';
 
 const BOYUT = { normal: 'h-10 flex-1 px-3', kucuk: 'h-9 px-3' } as const;
 
@@ -29,9 +30,11 @@ export default function TakipDugmesi({
         disabled={takip.isPending}
         onPress={() => takip.mutate({ kullaniciAdi, takipEt: dugme.takipEt })}
         className={`items-center justify-center rounded-xl ${BOYUT[boyut]} ${
-          dugme.takipEt ? 'bg-accent' : 'bg-surface-3'
+          dugme.takipEt ? 'bg-accent' : 'bg-transparent'
         } ${takip.isPending ? 'opacity-60' : ''}`}
       >
+        {/* #591: "Takibi birak" opak `surface-3` kutu degil hafif dolgu (IkincilDugme ile ayni dil). */}
+        {!dugme.takipEt && <CamDolgu opaklik={0.1} yaricap={12} />}
         <Text className={`text-label ${dugme.takipEt ? 'font-bold text-on-accent' : 'text-fg'}`}>
           {t(dugme.etiketAnahtari)}
         </Text>
