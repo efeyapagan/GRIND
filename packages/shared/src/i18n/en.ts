@@ -6,6 +6,7 @@ export const en: Katalog = {
     internetBaglan: 'Connect to the internet',
     internetGerekiyor: 'This section needs an internet connection.',
     yukleniyor: 'Loading...',
+    sayfaGostergesi: 'Page {{no}} of {{toplam}}',
     kaydet: 'Save',
     kapat: 'Close',
     vazgec: 'Cancel',
