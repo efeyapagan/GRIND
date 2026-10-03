@@ -442,6 +442,11 @@ export const en: Katalog = {
     etiketSure: 'Duration',
     bosDurumMetni: 'No sets in this workout.',
     detayiKapat: 'Close workout details',
+    setMenusuIpucu: 'Long press to edit or delete',
+    setiDuzenle: 'Edit set',
+    setSilOnayi: 'This set will be deleted. Records for this exercise will be recalculated.',
+    setKatmaniniKapat: 'Close set window',
+    setEkleEtiketi: 'Add set to {{hareket}}',
   },
   hareketGecmisi: {
     tahminiBirTekrar: 'Est. 1RM',

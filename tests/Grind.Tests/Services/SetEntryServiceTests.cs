@@ -527,4 +527,118 @@ public class SetEntryServiceTests
                 () => service.PatchAsync(ikinci.Id, new PatchSetRequest { Reps = 10 }));
         }
     }
+
+    // ---- #564: geçmiş antrenmana set ekleme ----
+
+    /// <summary>Bitiş başlangıçtan SONRA olmalı (DB kısıtı): saat önce ilerletilir.</summary>
+    private static Task BitirAsync(IWorkoutSessionService sessionService, SahteSaat saat, long sessionId)
+    {
+        saat.UtcNow = saat.UtcNow.AddMinutes(30);
+        return sessionService.FinishAsync(sessionId, new Grind.Api.Models.Dtos.Session.FinishSessionRequest());
+    }
+
+    /// <summary>Set açık antrenmana değil, verilen (bitmiş) antrenmana düşer; yeni antrenman açılmaz.</summary>
+    [Fact]
+    public async Task Bitmis_antrenmana_eklenen_set_o_antrenmana_duser()
+    {
+        var (context, user, exercise, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var ilk = await service.CreateAsync(Yeni(exercise.Id, 100m, 8));
+            await BitirAsync(sessionService, saat, ilk.SessionId);
+            saat.UtcNow = saat.UtcNow.AddDays(2);
+
+            var eklenen = await service.CreateInSessionAsync(ilk.SessionId, Yeni(exercise.Id, 100m, 6));
+
+            Assert.Equal(ilk.SessionId, eklenen.SessionId);
+            Assert.Equal(1, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
+        }
+    }
+
+    /// <summary>
+    /// Kayıt zamanı "şimdi" DEĞİL: rekor ve dinlenme <c>CreatedAt</c> sırasıyla hesaplanır. Set, hareketin o
+    /// antrenmandaki son setinin hemen arkasına yerleşir -- başka hareketin sonraki setinden önce.
+    /// </summary>
+    [Fact]
+    public async Task Eklenen_set_hareketin_son_setinin_hemen_arkasina_yerlesir()
+    {
+        var (context, user, bench, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var curl = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.Add(curl);
+            await context.SaveChangesAsync();
+
+            var ilk = await service.CreateAsync(Yeni(bench.Id, 60m, 8));
+            saat.UtcNow = saat.UtcNow.AddMinutes(3);
+            await service.CreateAsync(Yeni(curl.Id, 30m, 10));
+            await BitirAsync(sessionService, saat, ilk.SessionId);
+            saat.UtcNow = saat.UtcNow.AddDays(1);
+
+            await service.CreateInSessionAsync(ilk.SessionId, Yeni(bench.Id, 60m, 7));
+
+            var setler = await service.GetForSessionAsync(ilk.SessionId);
+            Assert.Equal([8, 7, 10], setler.Select(s => s.Reps));
+        }
+    }
+
+    /// <summary>
+    /// Rekorlar kronolojik yeniden hesaplanır: geçmişe eklenen ağır set rekor olur, SONRAKİ antrenmanda
+    /// daha hafif kalan set rekorunu kaybeder.
+    /// </summary>
+    [Fact]
+    public async Task Gecmise_eklenen_set_sonraki_antrenmanin_rekorunu_yeniden_hesaplar()
+    {
+        var (_, _, exercise, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var a = await service.CreateAsync(Yeni(exercise.Id, 100m, 5));
+            await BitirAsync(sessionService, saat, a.SessionId);
+            saat.UtcNow = saat.UtcNow.AddDays(2);
+            var b = await service.CreateAsync(Yeni(exercise.Id, 105m, 5));
+            await BitirAsync(sessionService, saat, b.SessionId);
+            Assert.Equal(RecordType.Weight, b.RecordType);
+
+            var eklenen = await service.CreateInSessionAsync(a.SessionId, Yeni(exercise.Id, 110m, 3));
+
+            Assert.Equal(RecordType.Weight, eklenen.RecordType);
+            var bSetleri = await service.GetForSessionAsync(b.SessionId);
+            Assert.Equal(RecordType.None, Assert.Single(bSetleri).RecordType);
+        }
+    }
+
+    /// <summary>Kapsam (#564): yalnızca antrenmanda zaten seti olan harekete eklenir.</summary>
+    [Fact]
+    public async Task Antrenmanda_seti_olmayan_harekete_eklemek_400()
+    {
+        var (context, user, bench, service, sessionService, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var curl = TestDatabase.NewExercise(user, $"Egzersiz {Guid.NewGuid():N}");
+            context.Add(curl);
+            await context.SaveChangesAsync();
+            var ilk = await service.CreateAsync(Yeni(bench.Id, 60m, 8));
+            await BitirAsync(sessionService, saat, ilk.SessionId);
+
+            await Assert.ThrowsAsync<ValidationException>(
+                () => service.CreateInSessionAsync(ilk.SessionId, Yeni(curl.Id, 30m, 10)));
+        }
+    }
+
+    /// <summary>IDOR: başkasının antrenmanına set eklenemez -- varlığı da sızdırılmaz (404).</summary>
+    [Fact]
+    public async Task Baskasinin_antrenmanina_set_eklenemez()
+    {
+        var (context, _, exercise, service, _, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var digerKullanici = TestDatabase.NewUser();
+            var digerOturum = TestDatabase.NewSession(digerKullanici);
+            context.AddRange(digerKullanici, digerOturum);
+            await context.SaveChangesAsync();
+
+            await Assert.ThrowsAsync<NotFoundException>(
+                () => service.CreateInSessionAsync(digerOturum.Id, Yeni(exercise.Id, 100m, 8)));
+        }
+    }
 }
