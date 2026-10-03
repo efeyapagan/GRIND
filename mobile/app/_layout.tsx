@@ -15,8 +15,14 @@ import { TemaProvider, useTema } from '../src/ui/TemaContext';
 import { DilProvider, baslangicDili } from '../src/ui/DilContext';
 import { YorumDiliProvider } from '../src/ui/YorumDiliContext';
 import { renkler } from '@grind/shared/designTokens';
+import BaglantiSaglayici from '../src/baglanti/BaglantiSaglayici';
+import CevrimdisiSeridi from '../src/baglanti/CevrimdisiSeridi';
+import OnbellekKaliciligi from '../src/onbellek/OnbellekKaliciligi';
+import { ONBELLEK_OMRU_MS } from '../src/onbellek/kaliciOnbellek';
 
-const sorguIstemcisi = new QueryClient();
+// #174: sorgular diske kalici yazilir; bellekten erken dusen sorgu diske de yazilmazdi -- `gcTime` kalicilik
+// suresine esitlenir.
+const sorguIstemcisi = new QueryClient({ defaultOptions: { queries: { gcTime: ONBELLEK_OMRU_MS } } });
 
 /**
  * Saat/pil rengi (#271). Isletim sistemi semasini degil UYGULAMANIN temasini izler: kullanici
@@ -53,17 +59,23 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={sorguIstemcisi}>
-        <TemaProvider>
-          <DurumCubugu />
-          <DilProvider>
-            {/* Arayuz dilini varsayilan aldigi icin DilProvider'in ICINDE (#199). */}
-            <YorumDiliProvider>
-              <AuthProvider>
-                <Slot />
-              </AuthProvider>
-            </YorumDiliProvider>
-          </DilProvider>
-        </TemaProvider>
+        {/* #174: sunucuya ulasilabilirlik; cevrimdisiyken sorgular duraklar, serit gorunur. */}
+        <BaglantiSaglayici>
+          <TemaProvider>
+            <DurumCubugu />
+            <DilProvider>
+              {/* Arayuz dilini varsayilan aldigi icin DilProvider'in ICINDE (#199). */}
+              <YorumDiliProvider>
+                <AuthProvider>
+                  <OnbellekKaliciligi />
+                  <CevrimdisiSeridi>
+                    <Slot />
+                  </CevrimdisiSeridi>
+                </AuthProvider>
+              </YorumDiliProvider>
+            </DilProvider>
+          </TemaProvider>
+        </BaglantiSaglayici>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

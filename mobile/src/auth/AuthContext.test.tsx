@@ -4,7 +4,9 @@ import { Text, Pressable } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import { AuthProvider, useAuth } from './AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { session } from '../session';
+import { onbellekAnahtari } from '../onbellek/kaliciOnbellek';
 
 jest.mock('@grind/shared/api/client', () => ({
   request: jest.fn(),
@@ -76,6 +78,19 @@ test('cikis oturumu kapatir ve session i temizler', async () => {
 
   await waitFor(() => expect(screen.getByText('giris yapilmadi')).toBeTruthy());
   expect(session.read()).toBeNull();
+});
+
+/** #174: cikista diskteki kalici onbellek de silinir -- paylasilan cihazda baska hesap onu gormesin. */
+test('cikis kullanicinin diskteki onbellegini siler', async () => {
+  await AsyncStorage.setItem(onbellekAnahtari('efe'), '{"onbellek":true}');
+  requestMock.mockResolvedValue({ token: 'tok-4', expiresAtUtc: new Date(Date.now() + 60_000).toISOString(), username: 'efe' });
+  await ekraniOlustur();
+  await fireEvent.press(screen.getByText('giris'));
+  await waitFor(() => expect(screen.getByText('giris yapildi: efe')).toBeTruthy());
+
+  await fireEvent.press(screen.getByText('cikis'));
+
+  await waitFor(async () => expect(await AsyncStorage.getItem(onbellekAnahtari('efe'))).toBeNull());
 });
 
 test('giris basarisiz olursa oturum acilmaz', async () => {

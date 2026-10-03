@@ -1,6 +1,8 @@
+import { Alert } from 'react-native';
 import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
+import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import SablonlaBasla from './SablonlaBasla';
 
 jest.mock('@grind/shared/api/queries', () => ({
@@ -120,6 +122,23 @@ test('basili tutunca acilan menudeki Duzenle sablon formuna gider, antrenmani ba
 
   expect(mockPush).toHaveBeenCalledWith('/templates/7');
   expect(onBasla).not.toHaveBeenCalled();
+});
+
+/** #174 (kullanici karari): sablon duzenleme cevrimdisi calismaz -- forma gidilmez, uyari cikar. */
+test('cevrimdisiyken menudeki Duzenle forma gitmez, internete baglan uyarisi verir', async () => {
+  const uyari = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  await render(
+    <BaglantiBaglami.Provider value>
+      <SablonlaBasla onBasla={jest.fn()} bekliyor={false} />
+    </BaglantiBaglami.Provider>,
+  );
+
+  await menuyuAc(0);
+  await fireEvent.press(screen.getByRole('button', { name: 'Şablonu düzenle' }));
+
+  expect(mockPush).not.toHaveBeenCalled();
+  expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
+  uyari.mockRestore();
 });
 
 /** Silme geri alinamaz: menudeki Sil once onay sorar, onayla O sablon silinir. */

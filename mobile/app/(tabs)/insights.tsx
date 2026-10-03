@@ -26,6 +26,7 @@ import HataKutusu from '../../src/ui/HataKutusu';
 import GrindyMaskot from '../../src/ui/GrindyMaskot';
 import { useIkonRenk } from '../../src/ui/renkler';
 import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
+import CevrimdisiKapisi from '../../src/baglanti/CevrimdisiKapisi';
 import { useYorumDili } from '../../src/ui/YorumDiliContext';
 
 /**
@@ -33,7 +34,18 @@ import { useYorumDili } from '../../src/ui/YorumDiliContext';
  * yerine SONSUZ KAYDIRMA'dir (issue #147, Gecmis'in #142'siyle ayni desen): `FlatList`in
  * `onEndReached`i listenin sonuna gelinince bir sonraki 25'lik sayfayi ceker.
  */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function InsightsScreen() {
+  const { t } = useTranslation();
+  usePageTitle(t('yorumlar.basligiKisa'));
+  return (
+    <CevrimdisiKapisi>
+      <InsightsIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function InsightsIcerigi() {
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
   const { t } = useTranslation();

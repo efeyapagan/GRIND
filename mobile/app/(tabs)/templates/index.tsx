@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { ClipboardList, Plus } from 'lucide-react-native';
-import { useTemplates, useSablonlariSirala } from '@grind/shared/api/queries';
+import { useTemplates, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import DevamEdenAntrenman from '../../../src/components/DevamEdenAntrenman';
@@ -11,6 +11,7 @@ import BirincilDugme from '../../../src/ui/BirincilDugme';
 import SablonKarti from '../../../src/ui/SablonKarti';
 import SurukleSiraliListe from '../../../src/ui/SurukleSiraliListe';
 import { useIkonRenk } from '../../../src/ui/renkler';
+import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -31,6 +32,8 @@ export default function SablonlarScreen() {
   usePageTitle(t('sablonlar.baslik'));
   const { data: sablonlar, isLoading, isError } = useTemplates();
   const siralama = useSablonlariSirala();
+  // #174: sablon duzenleme ve siralama cevrimdisi calismaz, uyari cikar.
+  const cevrimici = useCevrimiciEylem();
   // #538: kaydedilenlerin kendi ekrani var (`/templates/saved`); burada yalnizca kendi sablonlarin.
   const { kendi, kaydedilen } = sablonlariAyir(sablonlar ?? []);
 
@@ -40,7 +43,7 @@ export default function SablonlarScreen() {
       <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
         {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
 
-        {isError && (
+        {isError && !sablonlar && (
           <Text accessibilityRole="alert" className="text-body text-danger">
             {t('sablonlar.hataYenile')}
           </Text>
@@ -58,15 +61,15 @@ export default function SablonlarScreen() {
           <SurukleSiraliListe
             ogeler={kendi}
             anahtar={(sablon) => sablon.id}
-            onSirala={(yeniSira) =>
+            onSirala={cevrimici((yeniSira: Sablon[]) =>
               // Sunucu TUM id kumesini bekler (#467): kaydedilenler kendi ekraninda, siraya sona eklenir.
-              siralama.mutate([...yeniSira.map((sablon) => sablon.id), ...kaydedilen.map((sablon) => sablon.id)])
-            }
+              siralama.mutate([...yeniSira.map((sablon) => sablon.id), ...kaydedilen.map((sablon) => sablon.id)]),
+            )}
             satirCiz={(sablon, suruklenen) => (
               <SablonKarti
                 ad={sablon.name}
                 hareketSayisi={sablon.exercises.length}
-                onPress={() => router.push(`/templates/${sablon.id}`)}
+                onPress={cevrimici(() => router.push(`/templates/${sablon.id}`))}
                 kaldirilmis={suruklenen}
               />
             )}

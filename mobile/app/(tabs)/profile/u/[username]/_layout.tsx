@@ -10,6 +10,7 @@ import HataKutusu from '../../../../../src/ui/HataKutusu';
 import Rozet from '../../../../../src/ui/Rozet';
 import ProfilBasligi from '../../../../../src/components/ProfilBasligi';
 import ProfilSekmeleri from '../../../../../src/components/ProfilSekmeleri';
+import CevrimdisiKapisi from '../../../../../src/baglanti/CevrimdisiKapisi';
 import TakipDugmesi from '../../../../../src/components/TakipDugmesi';
 
 const LISTE_EKRANLARI = ['friends', 'followers', 'following'];
@@ -83,7 +84,16 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
  * giderken burada yonlendirmek navigasyonla sonsuz dongu kuruyordu. `Slot` ust duzendeki gibi hep
  * ayni konumda cizilir (bkz. `profile/_layout.tsx`).
  */
+/** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
 export default function KullaniciProfiliLayout() {
+  return (
+    <CevrimdisiKapisi>
+      <KullaniciProfiliIcerigi />
+    </CevrimdisiKapisi>
+  );
+}
+
+function KullaniciProfiliIcerigi() {
   const pathname = usePathname();
   const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
   const { username: ben } = useAuth();

@@ -3,6 +3,8 @@ import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { useCalendar, useOpenSession } from '@grind/shared/api/queries';
 import { TakvimDonemiProvider } from '../../../src/ui/TakvimDonemiContext';
 import AnaSayfaScreen from '../../../app/(tabs)/index';
+import { BaglantiBaglami } from '../../../src/baglanti/BaglantiSaglayici';
+import { useArkadasDonemi } from '@grind/shared/api/queries';
 
 // Takvim ve kart GERCEK cizilir (ikisinin de kendi testleri var): sinanan sey ikisinin Ana sayfadaki
 // SIRASI, o yuzden yalnizca besledikleri sorgular mock'lanir.
@@ -10,7 +12,7 @@ jest.mock('@grind/shared/api/queries', () => ({
   useCalendar: jest.fn(),
   useOpenSession: jest.fn(),
   // #418: ana ekranda arkadas karsilastirmasi da var; bu testin konusu degil, bos liste yeter.
-  useArkadasDonemi: () => ({ data: [], isLoading: false, isError: false }),
+  useArkadasDonemi: jest.fn(() => ({ data: [], isLoading: false, isError: false })),
   useProfilFotografi: () => ({ data: null }),
 }));
 
@@ -106,4 +108,26 @@ test('acik antrenman yokken sayfa beklemeden cizilir', async () => {
 
   expect(screen.getByText('Haftalık seri')).toBeTruthy();
   expect(screen.queryByText('Antrenmana devam et')).toBeNull();
+});
+
+/**
+ * #174 (kullanici karari): arkadaslar karti onbellekten gosterilmez -- cevrimdisiyken uyari cikar, kartin
+ * sorgusu hic calismaz; takvim ve seriler (onbellekten) cizilmeye devam eder.
+ */
+test('cevrimdisiyken arkadaslar karti yerine uyari cikar, takvim cizilir', async () => {
+  (useArkadasDonemi as jest.Mock).mockClear();
+  await render(
+    <TakvimDonemiProvider>
+      <PageTitleProvider>
+        <BaglantiBaglami.Provider value>
+          <AnaSayfaScreen />
+        </BaglantiBaglami.Provider>
+      </PageTitleProvider>
+    </TakvimDonemiProvider>,
+  );
+
+  expect(screen.getByText('İnternete bağlan')).toBeTruthy();
+  expect(useArkadasDonemi).not.toHaveBeenCalled();
+  expect(screen.getByText('Haftalık seri')).toBeTruthy();
+  expect(screen.queryByText('Arkadaşlar')).toBeNull();
 });

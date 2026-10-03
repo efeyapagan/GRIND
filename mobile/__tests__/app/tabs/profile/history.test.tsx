@@ -111,3 +111,17 @@ test('son sayfadaysa (hasNextPage false) onEndReached tetiklense de fetchNextPag
 
   expect(sonuc.fetchNextPage).not.toHaveBeenCalled();
 });
+
+/**
+ * #174: cevrimdisiyken (ya da arka plan yenilemesi dustugunde) onbellekteki gecmis gosterilir -- veri
+ * varken hata mesaji cikmaz. Hata yalnizca hic veri yokken gorunur.
+ */
+test('veri varken yenileme hatasi gecmisi gizlemez, hata mesaji cikmaz', async () => {
+  useInfiniteHistoryMock.mockReturnValue(
+    sonsuzSorguSonucu([sayfa([ornekOturum({ sessionId: 1, templateName: 'OnbellektekiAntrenman' })])], { isError: true }),
+  );
+  await ekraniOlustur();
+
+  expect(await screen.findByText('OnbellektekiAntrenman')).toBeTruthy();
+  expect(screen.queryByRole('alert')).toBeNull();
+});

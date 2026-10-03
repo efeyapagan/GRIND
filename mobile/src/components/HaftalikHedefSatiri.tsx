@@ -32,7 +32,7 @@ export default function HaftalikHedefSatiri() {
         <ChevronRight color={ikonRenk.muted} size={20} />
       </Pressable>
 
-      {isError && (
+      {isError && !ozet && (
         <Text accessibilityRole="alert" className="text-label text-danger">
           {t('profil.hedefAlinamadi')}
         </Text>

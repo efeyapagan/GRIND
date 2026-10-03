@@ -52,7 +52,7 @@ export default function GizlilikSeviyesiSecici() {
         </View>
       </Modal>
 
-      {isError && (
+      {isError && !profil && (
         <Text accessibilityRole="alert" className="text-label text-danger">
           {t('profil.gizlilikAlinamadi')}
         </Text>

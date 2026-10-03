@@ -27,6 +27,19 @@ export function configureRequestClient(next: Partial<ClientConfig>): void {
 
 let oturumDusurIsleyici: () => void = () => {};
 
+/** #174: bir istegin sunucuya ulasip ulasmadigi -- HTTP yaniti (4xx/5xx dahil) ya da ag hatasi. */
+export type BaglantiSonucu = 'yanit' | 'agHatasi';
+
+let baglantiDinleyicisi: (sonuc: BaglantiSonucu) => void = () => {};
+
+/**
+ * #174: mobil cevrimdisi seridi her istegin sonucunu buradan dinler. Olcut cihazin ag durumu degil,
+ * sunucuya ulasilip ulasilmadigidir: internetsiz bir Wi-Fi'da cihaz "bagli" gorunur.
+ */
+export function setBaglantiDinleyicisi(fn: (sonuc: BaglantiSonucu) => void): void {
+  baglantiDinleyicisi = fn;
+}
+
 /**
  * 401 artik "token suresi doldu" ya da "hesap pasiflestirildi" (Faz 13) anlamina gelebilir --
  * istemci ikisini ayirt etmez, ikisinin de cevabi ayni: oturumu dusur, giris ekranina don.
@@ -69,10 +82,20 @@ export async function request<T>(
     }
   }
 
-  const yanit = await fetch(`${config.baseUrl}${path}`, {
-    ...rest,
-    headers: basliklar,
-  });
+  let yanit: Response;
+  try {
+    yanit = await fetch(`${config.baseUrl}${path}`, {
+      ...rest,
+      headers: basliklar,
+    });
+  } catch (hata) {
+    // Iptal (sorgu iptali, AbortSignal) sunucuya ulasilamadigi anlamina gelmez.
+    if (!(hata instanceof Error && hata.name === 'AbortError')) {
+      baglantiDinleyicisi('agHatasi');
+    }
+    throw hata;
+  }
+  baglantiDinleyicisi('yanit');
 
   if (!yanit.ok) {
     const govde = await govdeyiGuvenliOku(yanit);

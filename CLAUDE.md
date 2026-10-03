@@ -104,6 +104,14 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   hacim kartı varsayılan olarak toplamı gösterir, başlıktan kilolu bir hareket seçilebilir
   (`?exerciseId=`, görünmeyen harekette 404); iki kartın hareket seçimi pencerede (`HareketSecimKutusu`). Ayrıntı:
   [docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md](docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md).
+- **Çevrimdışı kullanım dilim 1 (#174, 2026-10-03)** — yalnızca mobil: "çevrimdışı" = sunucuya ulaşılamamak
+  (cihazın ağ durumu değil; ölçüt `request()`'in her istek sonucu, `GET /api/health` yoklaması). 5 sn
+  kesintisiz ulaşılamazsa üstte kırmızı "Çevrimdışı" şeridi; ön plana dönüşte ilk 3 sn gösterilmez. Sorgu
+  önbelleği cihaza kalıcı yazılır (AsyncStorage, kullanıcıya bağlı, çıkışta silinir); veri varken hata
+  kutusu çıkmaz. Önbellekten gösterilmeyen bölümler `CevrimdisiKapisi`, izin verilmeyen eylemler
+  `useCevrimiciEylem` ile "İnternete bağlan" der; ekran ekran kapsam issue #174'te. Çevrimdışı antrenman
+  (kuyruk) dilim 2, şablon oluşturma dilim 3. Ayrıntı:
+  [docs/superpowers/specs/2026-10-03-cevrimdisi-design.md](docs/superpowers/specs/2026-10-03-cevrimdisi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

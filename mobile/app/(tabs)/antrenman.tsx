@@ -103,13 +103,17 @@ export default function AntrenmanScreen() {
   const ikonRenk = useIkonRenk();
   const etkinTema = useEtkinTema();
   const { t } = useTranslation();
-  const { data: oturum, isLoading: oturumYukleniyor, isError: oturumHataliMi } = useOpenSession();
+  const { data: oturum, isLoading: oturumYukleniyor, isError: oturumSorgusuHatali } = useOpenSession();
+  // #174: onbellekteki veri (null = acik antrenman yok da dahil) varken arka plan yenilemesinin hatasi
+  // ekrani hataya dusurmez; hata yalnizca hic veri yokken (undefined) sayilir.
+  const oturumHataliMi = oturumSorgusuHatali && oturum === undefined;
   const gorunenOturum = !oturumYukleniyor && !oturumHataliMi ? (oturum ?? null) : null;
   const {
     data: setler,
     isLoading: setlerYukleniyor,
-    isError: setlerHataliMi,
+    isError: setlerSorgusuHatali,
   } = useSessionSets(oturum?.id ?? null);
+  const setlerHataliMi = setlerSorgusuHatali && setler === undefined;
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
   const oturumBos = setlerYuklendi && setler.length === 0;
   const { data: egzersizler } = useExercises();
