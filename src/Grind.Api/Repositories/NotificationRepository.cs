@@ -8,21 +8,29 @@ namespace Grind.Api.Repositories;
 
 public class NotificationRepository(AppDbContext context) : INotificationRepository
 {
+    /// <summary>#628: <paramref name="userId"/>'nin sessize aldığı kişilere giden takip satırları — süzgeç tek yerde.</summary>
+    private IQueryable<Follow> Muted(long userId)
+        => context.Set<Follow>().Where(m => m.FollowerId == userId && m.NotificationsMuted);
+
     public async Task<IReadOnlyList<FollowEvent>> GetFollowEventsAsync(
         long userId, DateTime since, int take, CancellationToken cancellationToken = default)
-        => await context.Set<Follow>()
-            .Where(f => f.FolloweeId == userId && f.Follower.DeletedAt == null && f.CreatedAt >= since)
+    {
+        var muted = Muted(userId);
+        return await context.Set<Follow>()
+            .Where(f => f.FolloweeId == userId && f.Follower.DeletedAt == null && f.CreatedAt >= since
+                        && !muted.Any(m => m.FolloweeId == f.FollowerId))
             .OrderByDescending(f => f.CreatedAt).ThenByDescending(f => f.Id)
             .Take(take)
             .Select(f => new FollowEvent(
                 f.Id, f.CreatedAt, new UserRef(f.Follower.Id, f.Follower.Username, f.Follower.DisplayName)))
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<RecordSessionEvent>> GetRecordSessionEventsAsync(
         long userId, DateTime since, int take, CancellationToken cancellationToken = default)
         => await (
                 from f in context.Set<Follow>()
-                where f.FollowerId == userId && f.Followee.DeletedAt == null
+                where f.FollowerId == userId && !f.NotificationsMuted && f.Followee.DeletedAt == null
                 join s in context.Set<WorkoutSession>() on f.FolloweeId equals s.UserId
                 where s.EndedAt != null && s.EndedAt > f.CreatedAt && s.EndedAt >= since
                       && s.SetEntries.Any(e => e.RecordType != RecordType.None)
@@ -49,7 +57,7 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
         long userId, DateTime since, CancellationToken cancellationToken = default)
         => await (
                 from f in context.Set<Follow>()
-                where f.FollowerId == userId
+                where f.FollowerId == userId && !f.NotificationsMuted
                       && f.Followee.DeletedAt == null
                       && f.Followee.WeeklyTargetDays != null
                       && f.Followee.PrivacyLevel != PrivacyLevel.Gizli
@@ -63,4 +71,19 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                     f.Followee.WeeklyTargetDays!.Value,
                     new UserRef(f.Followee.Id, f.Followee.Username, f.Followee.DisplayName)))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<FriendRequestEvent>> GetFriendRequestEventsAsync(
+        long userId, DateTime since, int take, CancellationToken cancellationToken = default)
+    {
+        var muted = Muted(userId);
+        return await context.Set<FriendRequest>()
+            .Where(r => r.TargetId == userId && r.RejectedAt == null && r.CreatedAt >= since
+                        && r.Requester.DeletedAt == null
+                        && !muted.Any(m => m.FolloweeId == r.RequesterId))
+            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+            .Take(take)
+            .Select(r => new FriendRequestEvent(
+                r.Id, r.CreatedAt, new UserRef(r.Requester.Id, r.Requester.Username, r.Requester.DisplayName)))
+            .ToListAsync(cancellationToken);
+    }
 }

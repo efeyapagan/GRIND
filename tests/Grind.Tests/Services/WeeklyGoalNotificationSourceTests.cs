@@ -228,4 +228,22 @@ public class WeeklyGoalNotificationSourceTests
             Assert.Equal(2, (await BildirimlerAsync(context, ben)).Count);
         }
     }
+
+    [Fact]
+    public async Task Sessize_alinan_arkadas_icin_bildirim_yok()
+    {
+        var (context, users, transaction) = await KurAsync(2);
+        await using (transaction)
+        {
+            var (ben, arkadas) = (users[0], users[1]);
+            await ArkadasAsync(context, ben, arkadas, Simdi.AddDays(-10));
+            await HedefAsync(context, arkadas, 1);
+            await AntrenmanAsync(context, arkadas, Carsamba.AddDays(-1));
+            (await context.Follows.SingleAsync(f => f.FollowerId == ben.Id && f.FolloweeId == arkadas.Id))
+                .NotificationsMuted = true;
+            await context.SaveChangesAsync();
+
+            Assert.Empty(await BildirimlerAsync(context, ben));
+        }
+    }
 }
