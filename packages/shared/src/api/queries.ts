@@ -24,6 +24,8 @@ type WeeklyStatsResponse = components['schemas']['WeeklyStatsResponse'];
 type WeeklyStatsRow = components['schemas']['WeeklyStatsRow'];
 type ExerciseVolumeResponseVolumeSummaryResponse = components['schemas']['ExerciseVolumeResponseVolumeSummaryResponse'];
 type ExerciseVolumeResponse = components['schemas']['ExerciseVolumeResponse'];
+type OverreachingResponse = components['schemas']['OverreachingResponse'];
+type ExerciseDropResponse = components['schemas']['ExerciseDropResponse'];
 type PlateauResponse = components['schemas']['PlateauResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
@@ -78,6 +80,8 @@ export const queryKeys = {
   plateaus: ['records', 'plateaus'] as const,
   // #184: Ilerleme sekmesi. Set eklenince/silinince tazelenir (bkz. setDegistiTazele).
   weeklyStats: ['weeklyStats'] as const,
+  // #176: asiri yuklenme sinyali (Ilerleme sekmesinin en ustu).
+  overreaching: ['overreaching'] as const,
   volumeByExerciseAll: ['volumeByExercise'] as const,
   volumeByExercise: (from: string | null) => [...queryKeys.volumeByExerciseAll, from ?? 'tum'] as const,
   historyAll: ['history'] as const,
@@ -874,6 +878,65 @@ export function useVolumeByExercise(from: string | null, enabled = true) {
   });
 }
 
+export interface HareketDususu {
+  exerciseId: number;
+  exerciseName: string;
+  previousBest: number;
+  recentBest: number;
+  dropPercent: number;
+}
+
+/** #176: yanan sinyal; RIR ortalamalari yalnizca RIR kurali degerlendirilebildiyse dolu. */
+export interface AsiriYuklenmeSinyali {
+  drops: HareketDususu[];
+  rirBefore: number | null;
+  rirRecent: number | null;
+  hardSessions: number;
+  ratedSessions: number;
+}
+
+function dogrulanmisDusus(yanit: ExerciseDropResponse): HareketDususu {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.previousBest === undefined ||
+    yanit.recentBest === undefined ||
+    yanit.dropPercent === undefined
+  ) {
+    throw new Error('Sunucudan eksik dusus satiri alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    previousBest: yanit.previousBest,
+    recentBest: yanit.recentBest,
+    dropPercent: yanit.dropPercent,
+  };
+}
+
+/** #176: `GET /api/stats/overreaching` -- sinyal yoksa `null`. */
+export function useOverreaching() {
+  return useQuery({
+    queryKey: queryKeys.overreaching,
+    queryFn: async (): Promise<AsiriYuklenmeSinyali | null> => {
+      const sinyal = (await request<OverreachingResponse>('/stats/overreaching')).signal;
+      if (!sinyal) {
+        return null;
+      }
+      if (sinyal.hardSessions === undefined || sinyal.ratedSessions === undefined) {
+        throw new Error('Sunucudan eksik asiri yuklenme sinyali alindi.');
+      }
+      return {
+        drops: (sinyal.drops ?? []).map(dogrulanmisDusus),
+        rirBefore: sinyal.rirBefore ?? null,
+        rirRecent: sinyal.rirRecent ?? null,
+        hardSessions: sinyal.hardSessions,
+        ratedSessions: sinyal.ratedSessions,
+      };
+    },
+  });
+}
+
 /** #346: hangi alanlarin dolu oldugu hareketin olcum tipine bagli (`lib/setGirdisi`); `null` = gonderilmedi. */
 export interface YeniSetGirdisi {
   exerciseId: number;
@@ -939,6 +1002,8 @@ export function setDegistiTazele(
   // #184: Ilerleme sekmesinin haftalik satirlari ve 1RM kartinin varsayilan hareketi setlerden turer.
   void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
   void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
+  // #176: sinyal setlerden turer.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
 }
 
 export interface SetDuzeltmesi {
@@ -1017,6 +1082,8 @@ export function useFinishSession() {
 export function oturumBittiTazele(queryClient: QueryClient): void {
   queryClient.setQueryData(queryKeys.openSession, null);
   void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+  // #176: zorluk bitirirken isaretlenir, sinyalin efor kuralina girer.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
 }
 
 /**
@@ -1116,6 +1183,7 @@ export function oturumSilindiTazele(queryClient: QueryClient, sessionId: number)
   // #184: Ilerleme sekmesi silinen oturumun setlerini gostermeye devam etmesin.
   void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
   void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
   // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
   // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
   queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
