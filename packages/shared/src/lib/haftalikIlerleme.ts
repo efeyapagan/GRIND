@@ -43,6 +43,14 @@ export function kasGrubuSatirlari(haftalar: readonly HaftalikIstatistik[], sira:
 }
 
 /**
+ * Kilolu (`WeightReps`) hareketler: 1RM tahmini (#346) ve anlamli bir hacim (#586) yalnizca onlarda var --
+ * tekrarli/sureli hareketin hacmi 0'dir. Olcusu gelmeyen eski kayit kilolu sayilir.
+ */
+export function kiloluHareketler(egzersizler: readonly Egzersiz[]): Egzersiz[] {
+  return egzersizler.filter((e) => (e.measurement ?? 'WeightReps') === 'WeightReps');
+}
+
+/**
  * #184: 1RM kartinin acilistaki hareketi -- verilen hacim listesinde (son 90 gun) en cok set atilan kilolu
  * (`WeightReps`) hareket; esitlikte ada gore. Agirliksiz ve sureli harekette 1RM tahmini yoktur (#346).
  */
@@ -50,9 +58,7 @@ export function varsayilanBirTekrarHareketi(
   hacimler: readonly EgzersizHacmi[],
   egzersizler: readonly Egzersiz[],
 ): number | null {
-  const kilolu = new Set(
-    egzersizler.filter((e) => (e.measurement ?? 'WeightReps') === 'WeightReps').map((e) => e.id),
-  );
+  const kilolu = new Set(kiloluHareketler(egzersizler).map((e) => e.id));
   const aday = hacimler
     .filter((h) => kilolu.has(h.exerciseId))
     .sort((a, b) => b.setCount - a.setCount || a.exerciseName.localeCompare(b.exerciseName))[0];

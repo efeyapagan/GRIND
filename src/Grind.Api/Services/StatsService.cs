@@ -1,3 +1,4 @@
+using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
 using Grind.Api.Common.Time;
@@ -12,9 +13,12 @@ public class StatsService(
     ISetEntryRepository setEntryRepository,
     IBodyWeightLogRepository bodyWeightRepository,
     IUserRepository userRepository,
+    IExerciseRepository exerciseRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IStatsService
 {
+    private const string ExerciseNotFound = "Egzersiz bulunamadı.";
+
     public async Task<VolumeSummaryResponse<DailyVolumeResponse>> GetDailyVolumeAsync(
         StatsRangeQuery query, CancellationToken cancellationToken = default)
     {
@@ -166,9 +170,17 @@ public class StatsService(
             .ToList();
     }
 
-    public async Task<WeeklyStatsResponse> GetWeeklyAsync(CancellationToken cancellationToken = default)
+    public async Task<WeeklyStatsResponse> GetWeeklyAsync(
+        long? exerciseId = null, CancellationToken cancellationToken = default)
     {
-        var sets = await setEntryRepository.GetWeeklySetRowsAsync(currentUser.UserId, cancellationToken);
+        // IDOR: kendi ya da global egzersiz; başkasının özel egzersizi nötr 404 (CLAUDE.md, `.../progress` ile aynı).
+        if (exerciseId is { } id
+            && await exerciseRepository.GetVisibleByIdAsync(id, currentUser.UserId, cancellationToken: cancellationToken) is null)
+        {
+            throw new NotFoundException(ExerciseNotFound);
+        }
+
+        var sets = await setEntryRepository.GetWeeklySetRowsAsync(currentUser.UserId, exerciseId, cancellationToken);
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
         return new WeeklyStatsResponse(WeeklyStatsCalculator.Build(sets, today));
     }

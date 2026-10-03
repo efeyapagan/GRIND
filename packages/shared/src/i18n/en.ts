@@ -504,6 +504,9 @@ export const en: Katalog = {
     kasGrubuSatiri_other: '{{grup}}: {{count}} sets',
     birTekrarBaslik: 'Estimated 1RM',
     hareketDegistir: 'Change exercise',
+    hareketSec: 'Choose exercise',
+    tumHareketler: 'All exercises',
+    hareketteHaftaYok: 'This exercise has no completed week yet.',
     kiloluHareketYok: 'Log a weighted exercise to see your estimated 1RM.',
   },
   olcumler: {
