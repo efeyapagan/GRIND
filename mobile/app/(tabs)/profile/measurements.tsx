@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { View, Text, Pressable, FlatList } from 'react-native';
-import { Plus, Scale, Trash2 } from 'lucide-react-native';
+import { View, Text, Pressable, FlatList, useWindowDimensions } from 'react-native';
+import { Plus, Scale } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useDil } from '@grind/shared/i18n';
@@ -22,8 +22,13 @@ import BosDurum from '../../../src/ui/BosDurum';
 import CamKart from '../../../src/ui/CamKart';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import { useIkonRenk } from '../../../src/ui/renkler';
+import BasiliTutmaMenusu from '../../../src/components/BasiliTutmaMenusu';
+import { useBasiliTutmaMenusu } from '../../../src/components/useBasiliTutmaMenusu';
 import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
+
+/** Olcum gelmeden onceki ilk kare icin: iki satir metin + p-4. */
+const OLCU_KARTI_TAHMINI_YUKSEKLIK = 76;
 
 const BILINEN_ALANLAR = ['weight', 'heightCm', 'bodyFatPercent', 'waistCm', 'hipCm'] as const;
 
@@ -63,6 +68,8 @@ function MeasurementsIcerigi() {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
+  const { width: ekranG } = useWindowDimensions();
+  const { menu, menuyuAc, menuyuKapat, kartRef } = useBasiliTutmaMenusu<Olcu>();
   usePageTitle('');
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteMeasurements();
   const ekleMutasyonu = useAddMeasurement();
@@ -77,7 +84,7 @@ function MeasurementsIcerigi() {
   const [kalcaCevresi, setKalcaCevresi] = useState('');
   const [genelHata, setGenelHata] = useState<string | null>(null);
   const [alanHatalari, setAlanHatalari] = useState<Record<string, string>>({});
-  const [silinecekId, setSilinecekId] = useState<number | null>(null);
+  const [duzenlenenId, setDuzenlenenId] = useState<number | null>(null);
   const [cakisma, setCakisma] = useState<{ govde: OlcumGovdesi; hedefId: number } | null>(null);
   const [cakismaHata, setCakismaHata] = useState<string | null>(null);
 
@@ -91,10 +98,25 @@ function MeasurementsIcerigi() {
     setAlanHatalari({});
     setCakisma(null);
     setCakismaHata(null);
+    setDuzenlenenId(null);
   }
 
   function penceresiniAc() {
     formuSifirla();
+    setModalAcik(true);
+  }
+
+  /** #623: menuden Duzenle -- form olcunun mevcut degerleriyle acilir. */
+  function duzenlemeyiAc(olcu: Olcu) {
+    formuSifirla();
+    const metin = (deger: number | null) => (deger === null ? '' : String(deger));
+    setKilo(metin(olcu.weight));
+    setBoy(metin(olcu.heightCm));
+    setYagOrani(metin(olcu.bodyFatPercent));
+    setBelCevresi(metin(olcu.waistCm));
+    setKalcaCevresi(metin(olcu.hipCm));
+    setDuzenlenenId(olcu.id);
+    menuyuKapat();
     setModalAcik(true);
   }
 
@@ -127,6 +149,26 @@ function MeasurementsIcerigi() {
       weight: govde.weight!,
       heightCm: govde.heightCm!,
     };
+
+    // #623: duzenlemede cakisma sorusu yok -- ayni kayit PATCH ile guncellenir. Bos birakilan opsiyonel
+    // alan gonderilmez (PATCH'te `null` = "dokunma"), eski degeri kalir.
+    if (duzenlenenId !== null) {
+      guncelleMutasyonu.mutate(
+        { id: duzenlenenId, ...doluGovde },
+        {
+          onSuccess: () => {
+            formuSifirla();
+            setModalAcik(false);
+          },
+          onError: (hata) => {
+            const ayrilmis = apiHatasiniAyir(hata, BILINEN_ALANLAR);
+            setGenelHata(ayrilmis.genelHata);
+            setAlanHatalari(ayrilmis.alanHatalari);
+          },
+        },
+      );
+      return;
+    }
 
     // #260: bugunun (TR gunu) olculeri arasinda TAM AYNI boy+kiloyla bir kayit varsa (issue #119)
     // soru sorulmaz -- dogrudan gonderilir, sunucu hala sert 409 doner (davranis degismedi).
@@ -188,151 +230,169 @@ function MeasurementsIcerigi() {
   const tumOlculer = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
 
   return (
-    <FlatList
-      testID="olcu-liste"
-      data={tumOlculer}
-      keyExtractor={(olcu) => String(olcu.id)}
-      renderItem={({ item }) => (
-        <OlcuKarti
-          olcu={item}
-          onayAcik={silinecekId === item.id}
-          onSilmeyeBasla={() => setSilinecekId(item.id)}
-          onVazgec={() => setSilinecekId(null)}
-          onSil={() => {
-            silMutasyonu.mutate(item.id);
-            setSilinecekId(null);
-          }}
-        />
-      )}
-      ItemSeparatorComponent={() => <View className="h-3" />}
-      contentContainerClassName="px-4 pt-2"
-      contentContainerStyle={{ paddingBottom: altMenuPayi }}
-      onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      }}
-      ListHeaderComponent={
-        <View className="mb-5 flex-col gap-5">
-          <BirincilDugme onPress={penceresiniAc} yukseklik="normal">
-            <Plus color={ikonRenk.onAccent} size={20} />
-            <Text className="text-body-lg font-bold text-on-accent">{t('olcumler.yeniOlcumEkle')}</Text>
-          </BirincilDugme>
+    <>
+      <FlatList
+        testID="olcu-liste"
+        data={tumOlculer}
+        keyExtractor={(olcu) => String(olcu.id)}
+        renderItem={({ item }) => (
+          <OlcuKarti ref={kartRef(item.id)} olcu={item} onMenu={() => menuyuAc(item)} />
+        )}
+        ItemSeparatorComponent={() => <View className="h-3" />}
+        contentContainerClassName="px-4 pt-2"
+        contentContainerStyle={{ paddingBottom: altMenuPayi }}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            void fetchNextPage();
+          }
+        }}
+        ListHeaderComponent={
+          <View className="mb-5 flex-col gap-5">
+            <BirincilDugme onPress={penceresiniAc} yukseklik="normal">
+              <Plus color={ikonRenk.onAccent} size={20} />
+              <Text className="text-body-lg font-bold text-on-accent">{t('olcumler.yeniOlcumEkle')}</Text>
+            </BirincilDugme>
 
-          <Modal
-            acik={modalAcik}
-            onKapat={() => setModalAcik(false)}
-            baslik={t(cakisma ? 'olcumler.cakismaBaslik' : 'olcumler.yeniOlcum')}
-          >
-            {cakisma ? (
-              // #260: ayni gun icin farkli degerli ikinci olcum -- form BILEREK arkada kalir
-              // (deger kaybolmaz), "Vazgeç" yalnizca bu soruyu kapatir, pencereyi degil.
-              <View className="flex-col gap-3">
-                {cakismaHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={cakismaHata} />}
-                <BirincilDugme
-                  yukseklik="normal"
-                  onPress={yerineKaydet}
-                  disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}
-                >
-                  {t('olcumler.cakismaYerineKaydet')}
-                </BirincilDugme>
-                <IkincilDugme onPress={ekstraOlcumEkle} disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}>
-                  {t('olcumler.cakismaEkstraOlcum')}
-                </IkincilDugme>
-                <IkincilDugme onPress={() => setCakisma(null)}>{t('ortak.vazgec')}</IkincilDugme>
-              </View>
-            ) : (
-              <View className="flex-col gap-4">
-                <View className="flex-row flex-wrap gap-2">
-                  <View style={{ width: '48%' }}>
-                    <SayiAlani
-                      id="olcu-boy"
-                      etiket={t('olcumler.boy')}
-                      birim="cm"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={boy}
-                      onChange={setBoy}
-                      hata={alanHatalari.heightCm}
-                    />
-                  </View>
-                  <View style={{ width: '48%' }}>
-                    <SayiAlani
-                      id="olcu-kilo"
-                      etiket={t('olcumler.kilo')}
-                      birim="kg"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={kilo}
-                      onChange={setKilo}
-                      hata={alanHatalari.weight}
-                    />
-                  </View>
-                  <View style={{ width: '48%' }}>
-                    <SayiAlani
-                      id="olcu-yag-orani"
-                      etiket={t('olcumler.yagOrani')}
-                      birim="%"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={yagOrani}
-                      onChange={setYagOrani}
-                      hata={alanHatalari.bodyFatPercent}
-                    />
-                  </View>
-                  <View style={{ width: '48%' }}>
-                    <SayiAlani
-                      id="olcu-bel-cevresi"
-                      etiket={t('olcumler.belCevresi')}
-                      birim="cm"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={belCevresi}
-                      onChange={setBelCevresi}
-                      hata={alanHatalari.waistCm}
-                    />
-                  </View>
-                  <View style={{ width: '48%' }}>
-                    <SayiAlani
-                      id="olcu-kalca-cevresi"
-                      etiket={t('olcumler.kalcaCevresi')}
-                      birim="cm"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={kalcaCevresi}
-                      onChange={setKalcaCevresi}
-                      hata={alanHatalari.hipCm}
-                    />
-                  </View>
+            <Modal
+              acik={modalAcik}
+              onKapat={() => setModalAcik(false)}
+              baslik={t(cakisma ? 'olcumler.cakismaBaslik' : duzenlenenId !== null ? 'olcumler.olcuyuDuzenle' : 'olcumler.yeniOlcum')}
+            >
+              {cakisma ? (
+                // #260: ayni gun icin farkli degerli ikinci olcum -- form BILEREK arkada kalir
+                // (deger kaybolmaz), "Vazgeç" yalnizca bu soruyu kapatir, pencereyi degil.
+                <View className="flex-col gap-3">
+                  {cakismaHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={cakismaHata} />}
+                  <BirincilDugme
+                    yukseklik="normal"
+                    onPress={yerineKaydet}
+                    disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}
+                  >
+                    {t('olcumler.cakismaYerineKaydet')}
+                  </BirincilDugme>
+                  <IkincilDugme onPress={ekstraOlcumEkle} disabled={guncelleMutasyonu.isPending || ekleMutasyonu.isPending}>
+                    {t('olcumler.cakismaEkstraOlcum')}
+                  </IkincilDugme>
+                  <IkincilDugme onPress={() => setCakisma(null)}>{t('ortak.vazgec')}</IkincilDugme>
                 </View>
-                <Text className="text-label text-muted">{t('olcumler.zorunluAciklama')}</Text>
-                {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
-                <BirincilDugme yukseklik="normal" disabled={ekleMutasyonu.isPending} onPress={gonder}>
-                  {t('ortak.kaydet')}
-                </BirincilDugme>
-              </View>
+              ) : (
+                <View className="flex-col gap-4">
+                  <View className="flex-row flex-wrap gap-2">
+                    <View style={{ width: '48%' }}>
+                      <SayiAlani
+                        id="olcu-boy"
+                        etiket={t('olcumler.boy')}
+                        birim="cm"
+                        inputMode="decimal"
+                        placeholder="—"
+                        value={boy}
+                        onChange={setBoy}
+                        hata={alanHatalari.heightCm}
+                      />
+                    </View>
+                    <View style={{ width: '48%' }}>
+                      <SayiAlani
+                        id="olcu-kilo"
+                        etiket={t('olcumler.kilo')}
+                        birim="kg"
+                        inputMode="decimal"
+                        placeholder="—"
+                        value={kilo}
+                        onChange={setKilo}
+                        hata={alanHatalari.weight}
+                      />
+                    </View>
+                    <View style={{ width: '48%' }}>
+                      <SayiAlani
+                        id="olcu-yag-orani"
+                        etiket={t('olcumler.yagOrani')}
+                        birim="%"
+                        inputMode="decimal"
+                        placeholder="—"
+                        value={yagOrani}
+                        onChange={setYagOrani}
+                        hata={alanHatalari.bodyFatPercent}
+                      />
+                    </View>
+                    <View style={{ width: '48%' }}>
+                      <SayiAlani
+                        id="olcu-bel-cevresi"
+                        etiket={t('olcumler.belCevresi')}
+                        birim="cm"
+                        inputMode="decimal"
+                        placeholder="—"
+                        value={belCevresi}
+                        onChange={setBelCevresi}
+                        hata={alanHatalari.waistCm}
+                      />
+                    </View>
+                    <View style={{ width: '48%' }}>
+                      <SayiAlani
+                        id="olcu-kalca-cevresi"
+                        etiket={t('olcumler.kalcaCevresi')}
+                        birim="cm"
+                        inputMode="decimal"
+                        placeholder="—"
+                        value={kalcaCevresi}
+                        onChange={setKalcaCevresi}
+                        hata={alanHatalari.hipCm}
+                      />
+                    </View>
+                  </View>
+                  <Text className="text-label text-muted">{t('olcumler.zorunluAciklama')}</Text>
+                  {genelHata && <HataKutusu baslik={t('olcumler.kaydedilemedi')} mesaj={genelHata} />}
+                  <BirincilDugme
+                    yukseklik="normal"
+                    disabled={ekleMutasyonu.isPending || guncelleMutasyonu.isPending}
+                    onPress={gonder}
+                  >
+                    {t('ortak.kaydet')}
+                  </BirincilDugme>
+                </View>
+              )}
+            </Modal>
+
+            {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
+
+            {isError && (
+              <Text accessibilityRole="alert" className="text-body text-danger">
+                {t('olcumler.hata')}
+              </Text>
             )}
-          </Modal>
-
-          {isLoading && <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text>}
-
-          {isError && (
-            <Text accessibilityRole="alert" className="text-body text-danger">
-              {t('olcumler.hata')}
-            </Text>
-          )}
-        </View>
-      }
-      ListEmptyComponent={
-        !isLoading && !isError && data ? (
-          <BosDurum ikon={Scale} baslik={t('olcumler.bosBaslik')} aciklama={t('olcumler.bosAciklama')} />
-        ) : null
-      }
-      ListFooterComponent={
-        isFetchingNextPage ? <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text> : null
-      }
-    />
+          </View>
+        }
+        ListEmptyComponent={
+          !isLoading && !isError && data ? (
+            <BosDurum ikon={Scale} baslik={t('olcumler.bosBaslik')} aciklama={t('olcumler.bosAciklama')} />
+          ) : null
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? <Text className="text-body text-muted">{t('ortak.yukleniyor')}</Text> : null
+        }
+      />
+      {menu && (
+        // #623: sablon menusuyle AYNI acilis (kart yerinden kalkip buyur); liste px-4 oldugu icin olcum
+        // gelmeden once kart genisligi ekran - 32 sayilir.
+        <BasiliTutmaMenusu
+          testID="olcu-menusu"
+          kartGenisligi={menu.kaynak?.genislik ?? ekranG - 32}
+          kartYuksekligi={menu.kaynak?.yukseklik ?? OLCU_KARTI_TAHMINI_YUKSEKLIK}
+          kaynak={menu.kaynak}
+          onKapat={menuyuKapat}
+          onDuzenle={() => duzenlemeyiAc(menu.oge)}
+          onSil={() => {
+            silMutasyonu.mutate(menu.oge.id);
+            menuyuKapat();
+          }}
+          duzenleEtiketi={t('olcumler.olcuyuDuzenle')}
+          silEtiketi={t('olcumler.olcuyuSil')}
+          silOnayMesaji={t('olcumler.silmeOnayi')}
+        >
+          <OlcuKartiGovdesi olcu={menu.oge} />
+        </BasiliTutmaMenusu>
+      )}
+    </>
   );
 }
 
@@ -349,50 +409,40 @@ function olcuMetni(olcu: Olcu, t: TFunction): string {
 
 interface OlcuKartiProps {
   olcu: Olcu;
-  onayAcik: boolean;
-  onSilmeyeBasla: () => void;
-  onVazgec: () => void;
-  onSil: () => void;
+  onMenu: () => void;
+  ref?: React.Ref<View>;
 }
 
-function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKartiProps) {
+/**
+ * #623: silme/duzenleme kartta gorunur bir ikonla degil, basili tutunca acilan menuden
+ * (`BasiliTutmaMenusu`, sablon karti ile ayni). `ref` menunun acilisi icin kartin yerini olcer.
+ */
+function OlcuKarti({ olcu, onMenu, ref }: OlcuKartiProps) {
   const { t } = useTranslation();
-  const ikonRenk = useIkonRenk();
-  const dil = useDil();
-  if (onayAcik) {
-    return (
-      // #591: cam kart (spec Karar 9); "Vazgec" IkincilDugme'nin hafif dolgusuyla.
-      <CamKart className="flex-col gap-3 p-4">
-        <Text className="text-body text-fg">{t('olcumler.silmeOnayi')}</Text>
-        <View className="flex-row gap-2">
-          <Pressable onPress={onSil} className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg">
-            <Text className="text-label text-on-danger-bg">{t('ortak.evetSil')}</Text>
-          </Pressable>
-          <View className="flex-1">
-            <IkincilDugme onPress={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
-          </View>
-        </View>
-      </CamKart>
-    );
-  }
-
   return (
-    // #591: cam kart; cop ikonu KUTUSUZ (gecmis kartindaki #433 karariyla ayni).
-    <CamKart className="flex-row items-center justify-between gap-2 p-4">
-      <View className="flex-col gap-1">
-        <Text className="text-label text-muted">
-          {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
-        </Text>
-        <Text className="text-body text-fg">{olcuMetni(olcu, t)}</Text>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('olcumler.olcuyuSil')}
-        onPress={onSilmeyeBasla}
-        className="size-11 items-center justify-center"
-      >
-        <Trash2 color={ikonRenk.muted} size={18} />
-      </Pressable>
+    <Pressable
+      ref={ref}
+      accessibilityHint={t('olcumler.olcuIpucu')}
+      accessibilityActions={[{ name: 'longpress' }]}
+      onAccessibilityAction={(olay) => olay.nativeEvent.actionName === 'longpress' && onMenu()}
+      onLongPress={onMenu}
+    >
+      <OlcuKartiGovdesi olcu={olcu} />
+    </Pressable>
+  );
+}
+
+/** Kartin gorunumu -- listede ve menunun buyuyen onizlemesinde ayni. */
+function OlcuKartiGovdesi({ olcu }: { olcu: Olcu }) {
+  const { t } = useTranslation();
+  const dil = useDil();
+  return (
+    // #591: cam kart (spec Karar 9).
+    <CamKart className="flex-col gap-1 p-4">
+      <Text className="text-label text-muted">
+        {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
+      </Text>
+      <Text className="text-body text-fg">{olcuMetni(olcu, t)}</Text>
     </CamKart>
   );
 }
