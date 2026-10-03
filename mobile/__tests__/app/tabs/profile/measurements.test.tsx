@@ -235,19 +235,78 @@ describe('ayni gun ikinci olcum sorusu (#260)', () => {
   });
 });
 
-test('olcu silme once onay ister, Vazgec ile istek atilmaz', async () => {
-  const mutate = jest.fn();
-  useDeleteMeasurementMock.mockReturnValue({ mutate });
-  useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekOlcu()])]));
-  await ekraniOlustur();
+describe('basili tutma menusu (#623)', () => {
+  function olcuMenusunuAc() {
+    fireEvent(screen.getByText(/82\.4 kg/), 'longPress');
+  }
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Ölçüyü sil' }));
-  expect(screen.getByText('Bu ölçü kalıcı olarak silinecek.')).toBeTruthy();
+  test('kartta gorunur sil dugmesi yok; basili tutunca Duzenle ve Sil secenekleri acilir', async () => {
+    useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekOlcu()])]));
+    await ekraniOlustur();
 
-  await fireEvent.press(screen.getByText('Vazgeç'));
+    expect(screen.queryByRole('button', { name: 'Ölçüyü sil' })).toBeNull();
 
-  expect(screen.queryByText('Bu ölçü kalıcı olarak silinecek.')).toBeNull();
-  expect(mutate).not.toHaveBeenCalled();
+    await olcuMenusunuAc();
+
+    expect(await screen.findByRole('button', { name: /Ölçüyü düzenle/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Ölçüyü sil/ })).toBeTruthy();
+  });
+
+  test('Sil once onay ister, Vazgec ile istek atilmaz', async () => {
+    const mutate = jest.fn();
+    useDeleteMeasurementMock.mockReturnValue({ mutate });
+    useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekOlcu()])]));
+    await ekraniOlustur();
+
+    await olcuMenusunuAc();
+    await fireEvent.press(await screen.findByRole('button', { name: /Ölçüyü sil/ }));
+    expect(screen.getByText('Bu ölçü kalıcı olarak silinecek.')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('Vazgeç'));
+
+    expect(screen.queryByText('Bu ölçü kalıcı olarak silinecek.')).toBeNull();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  test('"Evet, sil" olcuyu id ile siler ve menu kapanir', async () => {
+    const mutate = jest.fn();
+    useDeleteMeasurementMock.mockReturnValue({ mutate });
+    useInfiniteMeasurementsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([ornekOlcu({ id: 7 })])]));
+    await ekraniOlustur();
+
+    await olcuMenusunuAc();
+    await fireEvent.press(await screen.findByRole('button', { name: /Ölçüyü sil/ }));
+    await fireEvent.press(screen.getByText('Evet, sil'));
+
+    expect(mutate).toHaveBeenCalledWith(7);
+    await waitFor(() => expect(screen.queryByText('Bu ölçü kalıcı olarak silinecek.')).toBeNull());
+  });
+
+  test("Duzenle formu mevcut degerlerle acar, Kaydet ayni id'yi PATCH ile gunceller", async () => {
+    const guncelleMutate = jest.fn((govde, { onSuccess }) => onSuccess());
+    const ekleMutate = jest.fn();
+    useUpdateMeasurementMock.mockReturnValue({ mutate: guncelleMutate, isPending: false });
+    useAddMeasurementMock.mockReturnValue({ mutate: ekleMutate, isPending: false });
+    useInfiniteMeasurementsMock.mockReturnValue(
+      sonsuzSorguSonucu([sayfa([ornekOlcu({ id: 7, weight: 82.4, heightCm: 180 })])]),
+    );
+    await ekraniOlustur();
+
+    await olcuMenusunuAc();
+    await fireEvent.press(await screen.findByRole('button', { name: /Ölçüyü düzenle/ }));
+
+    expect(screen.getByLabelText('Boy').props.value).toBe('180');
+    expect(screen.getByLabelText('Kilo').props.value).toBe('82.4');
+
+    await fireEvent.changeText(screen.getByLabelText('Kilo'), '81');
+    await fireEvent.press(screen.getByRole('button', { name: 'Kaydet' }));
+
+    expect(guncelleMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7, weight: 81, heightCm: 180 }),
+      expect.anything(),
+    );
+    expect(ekleMutate).not.toHaveBeenCalled();
+  });
 });
 
 test('iki sayfanin olculeri birlikte, ust uste yazmadan listelenir', async () => {

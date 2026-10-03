@@ -550,6 +550,8 @@ export const tr = {
     kalcaDegeri: '{{cm}} cm kalça',
     silmeOnayi: 'Bu ölçü kalıcı olarak silinecek.',
     olcuyuSil: 'Ölçüyü sil',
+    olcuyuDuzenle: 'Ölçüyü düzenle',
+    olcuIpucu: 'Düzenlemek veya silmek için basılı tut',
     cakismaBaslik: 'Bugün için başka bir ölçüm girdiniz.',
     cakismaYerineKaydet: 'Ölçümü değiştir',
     cakismaEkstraOlcum: 'Ekstra ölçüm',
