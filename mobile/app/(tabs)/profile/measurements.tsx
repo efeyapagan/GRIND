@@ -18,8 +18,8 @@ import Modal from '../../../src/ui/Modal';
 import SayiAlani from '../../../src/ui/SayiAlani';
 import BirincilDugme from '../../../src/ui/BirincilDugme';
 import IkincilDugme from '../../../src/ui/IkincilDugme';
-import IkonDugmesi from '../../../src/ui/IkonDugmesi';
 import BosDurum from '../../../src/ui/BosDurum';
+import CamKart from '../../../src/ui/CamKart';
 import HataKutusu from '../../../src/ui/HataKutusu';
 import { useIkonRenk } from '../../../src/ui/renkler';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
@@ -350,7 +350,8 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
   const dil = useDil();
   if (onayAcik) {
     return (
-      <View className="flex-col gap-3 rounded-xl bg-surface-2 p-4">
+      // #591: cam kart (spec Karar 9); "Vazgec" IkincilDugme'nin hafif dolgusuyla.
+      <CamKart className="flex-col gap-3 p-4">
         <Text className="text-body text-fg">{t('olcumler.silmeOnayi')}</Text>
         <View className="flex-row gap-2">
           <Pressable onPress={onSil} className="h-12 flex-1 items-center justify-center rounded-xl bg-danger-bg">
@@ -360,21 +361,27 @@ function OlcuKarti({ olcu, onayAcik, onSilmeyeBasla, onVazgec, onSil }: OlcuKart
             <IkincilDugme onPress={onVazgec}>{t('ortak.vazgec')}</IkincilDugme>
           </View>
         </View>
-      </View>
+      </CamKart>
     );
   }
 
   return (
-    <View className="flex-row items-center justify-between gap-2 rounded-xl bg-surface-2 p-4">
+    // #591: cam kart; cop ikonu KUTUSUZ (gecmis kartindaki #433 karariyla ayni).
+    <CamKart className="flex-row items-center justify-between gap-2 p-4">
       <View className="flex-col gap-1">
         <Text className="text-label text-muted">
           {formatTarih(olcu.recordedAt, dil)} {formatSaat(olcu.recordedAt)}
         </Text>
         <Text className="text-body text-fg">{olcuMetni(olcu, t)}</Text>
       </View>
-      <IkonDugmesi etiket={t('olcumler.olcuyuSil')} onPress={onSilmeyeBasla}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('olcumler.olcuyuSil')}
+        onPress={onSilmeyeBasla}
+        className="size-11 items-center justify-center"
+      >
         <Trash2 color={ikonRenk.muted} size={18} />
-      </IkonDugmesi>
-    </View>
+      </Pressable>
+    </CamKart>
   );
 }

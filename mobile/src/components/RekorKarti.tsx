@@ -5,6 +5,8 @@ import type { EgzersizRekoru, Plato } from '@grind/shared/api/queries';
 import { formatTarih, formatWeight } from '@grind/shared/lib/format';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import Rozet from '../ui/Rozet';
+import CamKart from '../ui/CamKart';
+import CamDolgu from '../ui/CamDolgu';
 
 /**
  * web/src/components/RekorKarti.tsx ile ayni: en agir set ve en cok tekrar AYRI; degerler sunucunun.
@@ -17,7 +19,8 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
   const dil = useDil();
 
   return (
-    <View testID={`rekor-karti-${rekor.exerciseId}`} className="flex-col gap-4 rounded-xl bg-surface-2 p-4">
+    // #591: cam kart (spec Karar 9; gecmis kartiyla ayni kose); olcu kutulari camin ustunde hafif dolgu.
+    <CamKart testID={`rekor-karti-${rekor.exerciseId}`} className="flex-col gap-4 p-4">
       <View className="flex-col gap-1">
         <View className="flex-row items-center justify-between gap-2">
           <View className="flex-1 flex-row items-center gap-2.5">
@@ -34,7 +37,8 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
       </View>
       <View className="flex-col gap-2">
         {rekor.measurement === 'Duration' && rekor.bestDurationSeconds !== null && (
-          <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
+          <View testID="rekor-olcusu" className="flex-col gap-1 rounded-lg p-3">
+            <CamDolgu opaklik={0.06} yaricap={8} />
             <View className="flex-row items-center gap-1.5">
               <Rozet>{t('rekorlar.enUzunSure')}</Rozet>
               <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</Text>
@@ -43,7 +47,8 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
           </View>
         )}
         {(rekor.measurement === 'WeightReps' || (rekor.measurement === 'Reps' && rekor.bestWeight > 0)) && (
-          <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
+          <View testID="rekor-olcusu" className="flex-col gap-1 rounded-lg p-3">
+            <CamDolgu opaklik={0.06} yaricap={8} />
             <View className="flex-row items-center gap-1.5">
               <Rozet>{t('rekorlar.enAgirSet')}</Rozet>
               <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</Text>
@@ -55,7 +60,8 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
           </View>
         )}
         {rekor.measurement !== 'Duration' && (
-          <View className="flex-col gap-1 rounded-lg bg-surface-1 p-3">
+          <View testID="rekor-olcusu" className="flex-col gap-1 rounded-lg p-3">
+            <CamDolgu opaklik={0.06} yaricap={8} />
             <View className="flex-row items-center gap-1.5">
               <Rozet ton="acik">{t('rekorlar.enCokTekrar')}</Rozet>
               <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestRepsAt, dil)}</Text>
@@ -69,6 +75,6 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
           </View>
         )}
       </View>
-    </View>
+    </CamKart>
   );
 }

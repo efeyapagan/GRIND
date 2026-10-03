@@ -28,3 +28,22 @@ test('gecmiste sonradan gecilen kilo rekorunun rozeti "geçildi" diye okunur, so
   expect(screen.getAllByLabelText('Ağırlık rekoru, geçildi')).toHaveLength(1);
   expect(screen.getAllByText('Ağırlık rekoru')).toHaveLength(2);
 });
+
+/**
+ * #591: gecmis gorunumu gecmis detay panelinin CAMINDA cizilir -- set satiri opak `surface-1` kutu
+ * degil camin ustune serilen hafif dolgu.
+ */
+test('gecmiste set satiri opak kutu cizmez', async () => {
+  await render(<SetList varyant="gecmis" sets={[set(1, 80)]} />);
+
+  expect(screen.getByTestId('gecmis-set-1').props.className).not.toMatch(/bg-surface/);
+});
+
+/** #591: sablonsuz antrenmanda hareket grubu duz `surface-1` degil cam kart (hareket kartiyla ayni kose). */
+test('antrenmanda hareket grubu cam yuzeydedir', async () => {
+  await render(<SetList sets={[set(1, 80)]} onSetDuzenle={jest.fn()} />);
+
+  const sinif: string = screen.getByTestId('set-grubu-1').props.className;
+  expect(sinif).toContain('rounded-xl');
+  expect(sinif).not.toMatch(/bg-surface/);
+});
