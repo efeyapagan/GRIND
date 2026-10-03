@@ -5,6 +5,7 @@
 export const tr = {
   ortak: {
     yukleniyor: 'Yükleniyor...',
+    sayfaGostergesi: 'Sayfa {{no}} / {{toplam}}',
     cevrimdisi: 'Çevrimdışı',
     internetBaglan: 'İnternete bağlan',
     internetGerekiyor: 'Bu bölüm internet bağlantısı gerektiriyor.',
