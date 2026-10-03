@@ -1058,4 +1058,72 @@ public class WorkoutSessionServiceTests
                 () => service.ReorderExercisesAsync(id, new ReorderSessionExercisesRequest { ExerciseIds = [1, 1] }));
         }
     }
+
+    // ---- #174 dilim 2: çevrimdışı antrenmanın kuyruktan gönderilmesi ----
+
+    /// <summary>Çevrimdışı bitirilen antrenmanın bitişi cihazın gerçek zamanıdır, gönderildiği an değil.</summary>
+    [Fact]
+    public async Task Bitirmede_istemci_zamani_bitis_zamani_olur()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await service.StartAsync(new StartSessionRequest { StartedAt = saat.UtcNow });
+            var bitis = saat.UtcNow.AddMinutes(50);
+            saat.UtcNow = saat.UtcNow.AddHours(9);
+
+            var biten = await service.FinishAsync(oturum.Session.Id,
+                new FinishSessionRequest { ClientEndedAt = new DateTimeOffset(bitis) });
+
+            Assert.Equal(bitis, biten.EndedAt);
+        }
+    }
+
+    [Fact]
+    public async Task Bitirmede_baslangictan_onceki_istemci_zamani_reddedilir()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await service.StartAsync(new StartSessionRequest { StartedAt = saat.UtcNow });
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.FinishAsync(oturum.Session.Id,
+                new FinishSessionRequest { ClientEndedAt = new DateTimeOffset(saat.UtcNow.AddMinutes(-5)) }));
+        }
+    }
+
+    [Fact]
+    public async Task Bitirmede_gelecekteki_istemci_zamani_reddedilir()
+    {
+        var (_, _, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = await service.StartAsync(new StartSessionRequest());
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.FinishAsync(oturum.Session.Id,
+                new FinishSessionRequest { ClientEndedAt = new DateTimeOffset(saat.UtcNow.AddHours(1)) }));
+        }
+    }
+
+    /// <summary>
+    /// Yanıtı kaybolan başlatmanın tekrarı yeni antrenman açmaz -- başlangıç açık oturum penceresinin (6 sa)
+    /// dışında kalsa bile: çevrimdışı antrenman saatler sonra gönderilebilir.
+    /// </summary>
+    [Fact]
+    public async Task Ayni_istemci_anahtariyla_ikinci_baslatma_ilk_antrenmani_doner()
+    {
+        var (context, user, service, saat, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var anahtar = Guid.NewGuid();
+            var baslangic = saat.UtcNow.AddHours(-8);
+            StartSessionRequest Istek() => new() { StartedAt = new DateTimeOffset(baslangic), ClientRequestId = anahtar };
+
+            var ilk = await service.StartAsync(Istek());
+            var ikinci = await service.StartAsync(Istek());
+
+            Assert.Equal(ilk.Session.Id, ikinci.Session.Id);
+            Assert.Equal(1, await context.Set<WorkoutSession>().CountAsync(s => s.UserId == user.Id));
+        }
+    }
 }

@@ -30,6 +30,12 @@ function bitenOturum(gecersizler: Record<string, unknown> = {}) {
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+// #174 dilim 2: ekran kuyruklu bitirmeyi kullanir; bu testin konusu ekranin akisi, kuyruk degil (kuyruk
+// kendi testlerinde) -- kuyruklu hook paylasilan hook'un mock'una yonlenir.
+jest.mock('../../../src/kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluFinishSession: () => jest.requireMock('@grind/shared/api/queries').useFinishSession(),
+}));
+
 jest.mock('expo-router', () => ({
   // Odak kazanma/birakma: geri cagrinin dondurdugu temizleyici "ekrandan cikildi" demektir.
   useFocusEffect: (geriCagri: () => (() => void) | void) => {
