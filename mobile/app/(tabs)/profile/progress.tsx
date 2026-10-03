@@ -11,10 +11,12 @@ import KasGrubuKarti from '../../../src/components/KasGrubuKarti';
 import CevrimdisiKapisi from '../../../src/baglanti/CevrimdisiKapisi';
 import BirTekrarKarti from '../../../src/components/BirTekrarKarti';
 import AsiriYuklenmeKarti from '../../../src/components/AsiriYuklenmeKarti';
+import KaydirmaliKartlar from '../../../src/ui/KaydirmaliKartlar';
 
 /**
- * #184: asamali yuklenme analizi -- haftalik hacim, kas grubuna gore setler, tahmini 1RM. Veri tek istekte
- * (`/stats/weekly`); hic seti olmayan kullaniciya kartlar yerine tek bir bos durum.
+ * #184: asamali yuklenme analizi -- haftalik hacim, kas grubuna gore setler, tahmini 1RM (#631: hacim ve 1RM
+ * ayni yana kayan alanda). Veri tek istekte (`/stats/weekly`); hic seti olmayan kullaniciya kartlar yerine tek
+ * bir bos durum.
  * #176: en ustte asiri yuklenme karti, yalnizca sinyal yanarken.
  */
 /** #174: cevrimdisiyken bu bolum onbellekten gosterilmez -- icerik baglanmaz, uyari cizilir. */
@@ -52,9 +54,12 @@ function ProgressIcerigi() {
     // Rekorlar sekmesiyle ayni kaydirma kabi (`records.tsx`).
     <ScrollView contentContainerClassName="gap-5 px-4 pt-2" contentContainerStyle={{ paddingBottom: altMenuPayi }}>
       <AsiriYuklenmeKarti />
-      <HaftalikHacimKarti haftalar={haftalar} />
+      {/* #631: hacim ve 1RM tek alanda, Instagram'daki coklu gonderi gibi yana kayar. */}
+      <KaydirmaliKartlar>
+        <HaftalikHacimKarti haftalar={haftalar} />
+        <BirTekrarKarti />
+      </KaydirmaliKartlar>
       <KasGrubuKarti haftalar={haftalar} />
-      <BirTekrarKarti />
     </ScrollView>
   );
 }

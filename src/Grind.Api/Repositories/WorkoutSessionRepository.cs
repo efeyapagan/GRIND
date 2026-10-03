@@ -30,6 +30,10 @@ public class WorkoutSessionRepository(AppDbContext context)
             .OrderByDescending(s => s.StartedAt)
             .ToListAsync(cancellationToken);
 
+    public Task<WorkoutSession?> GetByClientRequestIdAsync(
+        long userId, Guid clientRequestId, CancellationToken cancellationToken = default)
+        => Set.FirstOrDefaultAsync(s => s.UserId == userId && s.ClientRequestId == clientRequestId, cancellationToken);
+
     public Task<WorkoutSession?> GetOwnedByIdAsync(
         long id, long userId, CancellationToken cancellationToken = default)
         => Set

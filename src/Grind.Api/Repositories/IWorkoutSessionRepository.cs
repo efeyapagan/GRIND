@@ -27,6 +27,10 @@ public interface IWorkoutSessionRepository : IRepository<WorkoutSession>
     Task<WorkoutSession?> GetOwnedByIdAsync(
         long id, long userId, CancellationToken cancellationToken = default);
 
+    /// <summary>#174: kullanıcının bu istemci anahtarıyla başlattığı antrenman (kuyruktan tekrar gelen istek).</summary>
+    Task<WorkoutSession?> GetByClientRequestIdAsync(
+        long userId, Guid clientRequestId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Geçmiş sayfası ve toplam sayı BİRLİKTE. İkisi tek metotta çünkü aynı filtreden türerler:
     /// ayrı metotlar filtre ifadesini iki yerde tekrarlar ve biri değişince diğeri sessizce

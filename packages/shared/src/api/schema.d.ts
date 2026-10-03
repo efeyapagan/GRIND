@@ -4568,6 +4568,10 @@ export interface components {
             rir?: number | null;
             /** Format: int32 */
             durationSeconds?: number | null;
+            /** Format: date-time */
+            clientCreatedAt?: string | null;
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         CreateTemplateRequest: {
             name: string;
@@ -4754,6 +4758,8 @@ export interface components {
         };
         FinishSessionRequest: {
             difficulty?: components["schemas"]["SessionDifficulty"];
+            /** Format: date-time */
+            clientEndedAt?: string | null;
         };
         /** @enum {string} */
         FollowRelation: "Self" | "None" | "Following" | "FollowedBy" | "Friends";
@@ -5034,6 +5040,8 @@ export interface components {
             notes?: string | null;
             /** Format: date-time */
             startedAt?: string | null;
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         TemplateExerciseRequest: {
             /** Format: int64 */

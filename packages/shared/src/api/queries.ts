@@ -455,7 +455,9 @@ export function useSessionSets(sessionId: number | null) {
       const yanit = await request<SetEntryResponse[]>(`/sessions/${sessionId}/sets`);
       return yanit.map(dogrulanmisSet);
     },
-    enabled: sessionId !== null,
+    // #174: negatif kimlik cevrimdisi baslatilmis (henuz sunucuda olmayan) antrenmandir -- setleri yalnizca
+    // cihazdaki onbellektedir, sunucuya sorulmaz.
+    enabled: sessionId !== null && sessionId > 0,
   });
 }
 

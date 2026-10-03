@@ -115,8 +115,11 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   kesintisiz ulaşılamazsa üstte kırmızı "Çevrimdışı" şeridi; ön plana dönüşte ilk 3 sn gösterilmez. Sorgu
   önbelleği cihaza kalıcı yazılır (AsyncStorage, kullanıcıya bağlı, çıkışta silinir); veri varken hata
   kutusu çıkmaz. Önbellekten gösterilmeyen bölümler `CevrimdisiKapisi`, izin verilmeyen eylemler
-  `useCevrimiciEylem` ile "İnternete bağlan" der; ekran ekran kapsam issue #174'te. Çevrimdışı antrenman
-  (kuyruk) dilim 2, şablon oluşturma dilim 3. Ayrıntı:
+  `useCevrimiciEylem` ile "İnternete bağlan" der; ekran ekran kapsam issue #174'te. **Dilim 2:** çevrimdışı
+  antrenman bekleyen işlemler kuyruğuyla (`mobile/src/kuyruk/`, ekranlar `useKuyruklu*` hook'larını kullanır);
+  kuyruk sırayla, `clientRequestId` + istemci zamanıyla gönderilir. **Kullanıcı kararıyla istisna:** gönderilmeyi
+  bekleyen antrenmanın set sayacı, set sayısı, süresi ve hacmi cihazda hesaplanır (gönderilince sunucununkiyle
+  değişir); PR asla cihazda hesaplanmaz. Şablon oluşturma dilim 3. Ayrıntı:
   [docs/superpowers/specs/2026-10-03-cevrimdisi-design.md](docs/superpowers/specs/2026-10-03-cevrimdisi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.

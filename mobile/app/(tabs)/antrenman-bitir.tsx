@@ -5,7 +5,6 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   oturumBittiTazele,
-  useFinishSession,
   useOpenSession,
   useTemplate,
   type Zorluk,
@@ -21,6 +20,8 @@ import { duraklat, surdur } from '@grind/shared/lib/dinlenme';
 import EkranKaydirici from '../../src/ui/EkranKaydirici';
 import BirincilDugme from '../../src/ui/BirincilDugme';
 import ZorlukKadrani from '../../src/components/ZorlukKadrani';
+import { useKuyrukluFinishSession } from '../../src/kuyruk/kuyrukluMutasyonlar';
+import { useCevrimdisi } from '../../src/baglanti/BaglantiSaglayici';
 import PaylasimPenceresi from '../../src/components/PaylasimPenceresi';
 
 /** Kadran burada açılır: ortadaki kademe, hiç dokunmadan bitirenin göndereceği değerdir. */
@@ -61,7 +62,9 @@ export default function AntrenmanBitirScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: oturum, isLoading, isError } = useOpenSession();
-  const bitirMutasyonu = useFinishSession();
+  // #174 dilim 2: cevrimdisi bitirme kuyruga girer; antrenman gecmiste hemen gorunur.
+  const bitirMutasyonu = useKuyrukluFinishSession();
+  const cevrimdisi = useCevrimdisi();
   const [zorluk, setZorluk] = useState<Zorluk>(VARSAYILAN_ZORLUK);
   // Kadran cevrilirken ekran kaymaz: iOS ScrollView jesti aksi halde dikey hareketi calar (#182).
   const [kadranCevriliyor, setKadranCevriliyor] = useState(false);
@@ -201,7 +204,11 @@ export default function AntrenmanBitirScreen() {
         onSuccess: (biten) => {
           // #433: seti ve suresi olan bir antrenman paylasilabilir; once kart sunulur, sonra
           // sablon sorusu / ana sayfa. Suresiz ya da setsiz antrenmanin karti anlamsizdir.
-          if (biten.durationSeconds !== null && setSayisi > 0) {
+          // #174 (kullanici karari): paylasim penceresi internet yokken hic acilmaz; sablon kaydetme de
+          // sunucu ister (cevrimdisi sablon olusturma dilim 3).
+          if (cevrimdisi) {
+            router.replace('/');
+          } else if (biten.durationSeconds !== null && setSayisi > 0) {
             setPaylasim({
               templateName: oturum?.templateName ?? null,
               setCount: setSayisi,

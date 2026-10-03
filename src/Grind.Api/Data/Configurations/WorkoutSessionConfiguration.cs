@@ -27,6 +27,10 @@ public class WorkoutSessionConfiguration : IEntityTypeConfiguration<WorkoutSessi
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(s => new { s.UserId, s.StartedAt });
+        // #174: kuyruktan tekrar gelen başlatma yeni antrenman açmasın.
+        builder.HasIndex(s => new { s.UserId, s.ClientRequestId })
+            .IsUnique()
+            .HasFilter("\"ClientRequestId\" IS NOT NULL");
 
         builder.ToTable(t =>
             t.HasCheckConstraint(

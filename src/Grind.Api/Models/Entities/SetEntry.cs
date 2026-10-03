@@ -34,6 +34,12 @@ public class SetEntry
 
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// #174: çevrimdışı kuyruktan gelen isteğin cihazda üretilen tekil anahtarı. Yanıtı kaybolan isteğin
+    /// tekrar denenmesi seti iki kez yazmasın diye aynı antrenmanda benzersizdir; anahtarsız setlerde null.
+    /// </summary>
+    public Guid? ClientRequestId { get; set; }
+
     public WorkoutSession WorkoutSession { get; set; } = null!;
     public Exercise Exercise { get; set; } = null!;
     public ICollection<AiInsight> AiInsights { get; set; } = [];
