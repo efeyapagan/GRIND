@@ -1,4 +1,5 @@
-import { screen, fireEvent, within } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { request } from '@grind/shared/api/client';
 import { session } from '../../src/session';
 import { sahteBackendOlustur } from '../../src/testUtils/sahteBackend';
@@ -25,6 +26,9 @@ function profil(username: string, relation: Iliski, ek: Record<string, unknown> 
     followingCount: 3,
     relation,
     privacyLevel: 'Acik',
+    friendRequest: 'None',
+    canSendFriendRequest: false,
+    notificationsMuted: false,
     ...ek,
   };
 }
@@ -97,6 +101,11 @@ function takipBackendiKur() {
       takipEdilenler.delete(takip[1]!);
       return undefined;
     }
+    const takipciCikar = path.match(/^\/users\/(\w+)\/follower$/);
+    if (takipciCikar && method === 'DELETE') {
+      takipcilerim.delete(takipciCikar[1]!);
+      return undefined;
+    }
     if (path === '/users/efeypgn/profile') {
       return profil('efeypgn', 'Self', { followerCount: takipcilerim.size, followingCount: takipEdilenler.size });
     }
@@ -120,13 +129,18 @@ function ileriTarih(msSonra: number): string {
   return new Date(Date.now() + msSonra).toISOString();
 }
 
+afterEach(() => jest.restoreAllMocks());
+
 beforeEach(async () => {
   await session.write('tok', ileriTarih(60_000), 'efeypgn');
 });
 
 /** İlk test rotaları soğuk derler (profil.test.tsx ile aynı gerekçe) -- süre ona göre. */
-test('Takipciler sayaci listeyi acar; satirlar iliskiye gore ciziler, Geri takip et sonrasi Arkadas olur', async () => {
+// #628: kendi takipçi listemde her satırın sağında "Takipçiden çıkar" durur (onay ister); "Arkadaş" rozeti ve
+// "Geri takip et" kendi listemde yoktur -- onlar başkasının listesinde ve profil başlığında kalır.
+test('Takipciler sayaci listeyi acar; her satirda Takipciden cikar, onaydan sonra satir kaybolur', async () => {
   const istekler = takipBackendiKur();
+  jest.spyOn(Alert, 'alert').mockImplementation((_b, _m, dugmeler) => dugmeler?.[1]?.onPress?.());
 
   await renderRouterAsync('./app', { initialUrl: '/profile' });
 
@@ -134,23 +148,26 @@ test('Takipciler sayaci listeyi acar; satirlar iliskiye gore ciziler, Geri takip
 
   const ayse = within(await screen.findByTestId('kullanici-satiri-ayse'));
   expect(ayse.getByText('Ayşe Kaya')).toBeTruthy();
-  expect(ayse.getByText('Arkadaş')).toBeTruthy();
-  expect(ayse.queryByRole('button')).toBeNull();
+  expect(ayse.getByRole('button', { name: 'Takipçiden çıkar' })).toBeTruthy();
+  expect(ayse.queryByText('Arkadaş')).toBeNull();
 
-  await fireEvent.press(within(screen.getByTestId('kullanici-satiri-can')).getByRole('button', { name: 'Geri takip et' }));
+  await fireEvent.press(within(screen.getByTestId('kullanici-satiri-can')).getByRole('button', { name: 'Takipçiden çıkar' }));
 
-  expect(await within(screen.getByTestId('kullanici-satiri-can')).findByText('Arkadaş')).toBeTruthy();
-  expect(istekler).toContainEqual({ method: 'POST', path: '/users/can/follow' });
+  expect(istekler).toContainEqual({ method: 'DELETE', path: '/users/can/follower' });
+  await waitFor(() => expect(screen.queryByTestId('kullanici-satiri-can')).toBeNull());
+  expect(screen.getByTestId('kullanici-satiri-ayse')).toBeTruthy();
 }, 60_000);
 
-test('arkadasin profili: baslik, Takibi birak, Gecmis/Rekorlar/Sablonlar; gecmis karti silinemez', async () => {
+test('arkadasin profili: baslik, Takiptesin menusu, Gecmis/Rekorlar/Sablonlar; gecmis karti silinemez', async () => {
   takipBackendiKur();
 
   await renderRouterAsync('./app', { initialUrl: '/profile/u/ayse' });
 
   expect(await screen.findByText('Ayşe Kaya')).toBeTruthy();
   expect(screen.getByText('24 yaş')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Takibi bırak' })).toBeTruthy();
+  // #628: takip ederken sol düğme doğrudan bırakmaz, "Takiptesin" kişi menüsünü açar.
+  expect(screen.getByRole('button', { name: 'Takiptesin' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Takibi bırak' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Profili düzenle' })).toBeNull();
   expect(within(screen.getByTestId('profil-sekmeleri')).getAllByRole('tab').map((sekme) => sekme.props.accessibilityLabel)).toEqual(['Geçmiş', 'Rekorlar', 'Şablonlar']);
 
@@ -170,7 +187,7 @@ test('gizli hesapta Rekorlar ve Sablonlar sekmesi; gecmis istenmez; Takip et POS
 
   await fireEvent.press(screen.getByRole('button', { name: 'Takip et' }));
 
-  expect(await screen.findByRole('button', { name: 'Takibi bırak' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Takiptesin' })).toBeTruthy();
   expect(istekler).toContainEqual({ method: 'POST', path: '/users/mehmet/follow' });
   expect(istekler.some((istek) => istek.path.startsWith('/users/mehmet/history'))).toBe(false);
 }, 20_000);

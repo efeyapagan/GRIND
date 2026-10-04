@@ -98,6 +98,9 @@ function profilBackendiKur(baslangic: Partial<typeof PROFIL> = {}) {
         followerCount: 12,
         followingCount: 7,
         relation: 'Self',
+        friendRequest: 'None',
+        canSendFriendRequest: false,
+        notificationsMuted: false,
         privacyLevel: 'Kisitli',
       };
     }
