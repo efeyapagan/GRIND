@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import TakipDugmesi from './TakipDugmesi';
 
 jest.mock('@grind/shared/api/queries', () => ({
@@ -11,4 +11,11 @@ test('takibi birak hali opak kutu cizmez', async () => {
 
   expect(screen.getByRole('button', { name: 'Takibi bırak' }).props.className).not.toMatch(/bg-surface/);
   expect(screen.getByTestId('cam-dolgu')).toBeTruthy();
+});
+
+test('menu verilince takip ederken Takiptesin cizer ve menuyu acar', async () => {
+  const menu = jest.fn();
+  await render(<TakipDugmesi kullaniciAdi="ali" iliski="Following" onMenu={menu} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Takiptesin' }));
+  expect(menu).toHaveBeenCalled();
 });

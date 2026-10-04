@@ -1,0 +1,44 @@
+import { Alert } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import KisiMenusu from './KisiMenusu';
+
+const mockIstek = jest.fn();
+const mockSessiz = jest.fn();
+const mockTakip = jest.fn();
+const mockCikar = jest.fn();
+jest.mock('@grind/shared/api/queries', () => ({
+  useArkadaslikIstegi: () => ({ mutate: mockIstek, isPending: false, isError: false }),
+  useSessizeAl: () => ({ mutate: mockSessiz, isPending: false, isError: false }),
+  useTakipEt: () => ({ mutate: mockTakip, isPending: false, isError: false }),
+  useTakipcidenCikar: () => ({ mutate: mockCikar, isPending: false, isError: false }),
+}));
+jest.mock('../baglanti/useCevrimiciEylem', () => ({ useCevrimiciEylem: () => (f: unknown) => f }));
+jest.mock('./ProfilFotografi', () => () => null);
+
+const profil = {
+  username: 'ali', displayName: null, hasAvatar: false, avatarVersion: null, age: null,
+  friendCount: 0, followerCount: 0, followingCount: 0, privacyLevel: 'Kisitli',
+  relation: 'Following', friendRequest: 'None', canSendFriendRequest: true, notificationsMuted: false,
+} as const;
+
+beforeEach(() => jest.clearAllMocks());
+
+test('satirlar sirayla: arkadaslik, sessize al, takibi birak', async () => {
+  await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
+  expect(screen.getAllByRole('button').map((d) => d.props.accessibilityLabel).filter(Boolean)).toEqual(
+    expect.arrayContaining(['Arkadaş ekle', 'Sessize al', 'Takibi bırak']),
+  );
+});
+
+test('sessize al dogrudan calisir ve menuyu kapatir', async () => {
+  await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Sessize al' }));
+  expect(mockSessiz).toHaveBeenCalledWith({ kullaniciAdi: 'ali', sessiz: true }, expect.anything());
+});
+
+test('takibi birak onay ister', async () => {
+  jest.spyOn(Alert, 'alert').mockImplementation((_b, _m, dugmeler) => dugmeler?.[1]?.onPress?.());
+  await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Takibi bırak' }));
+  expect(mockTakip).toHaveBeenCalledWith({ kullaniciAdi: 'ali', takipEt: false }, expect.anything());
+});
