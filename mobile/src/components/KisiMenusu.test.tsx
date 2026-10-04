@@ -6,11 +6,13 @@ const mockIstek = jest.fn();
 const mockSessiz = jest.fn();
 const mockTakip = jest.fn();
 const mockCikar = jest.fn();
+const mockSifirla = jest.fn();
+const mockHata = { sessiz: false };
 jest.mock('@grind/shared/api/queries', () => ({
-  useArkadaslikIstegi: () => ({ mutate: mockIstek, isPending: false, isError: false }),
-  useSessizeAl: () => ({ mutate: mockSessiz, isPending: false, isError: false }),
-  useTakipEt: () => ({ mutate: mockTakip, isPending: false, isError: false }),
-  useTakipcidenCikar: () => ({ mutate: mockCikar, isPending: false, isError: false }),
+  useArkadaslikIstegi: () => ({ mutate: mockIstek, reset: mockSifirla, isPending: false, isError: false }),
+  useSessizeAl: () => ({ mutate: mockSessiz, reset: mockSifirla, isPending: false, isError: mockHata.sessiz }),
+  useTakipEt: () => ({ mutate: mockTakip, reset: mockSifirla, isPending: false, isError: false }),
+  useTakipcidenCikar: () => ({ mutate: mockCikar, reset: mockSifirla, isPending: false, isError: false }),
 }));
 jest.mock('../baglanti/useCevrimiciEylem', () => ({ useCevrimiciEylem: () => (f: unknown) => f }));
 jest.mock('./ProfilFotografi', () => () => null);
@@ -21,7 +23,10 @@ const profil = {
   relation: 'Following', friendRequest: 'None', canSendFriendRequest: true, notificationsMuted: false,
 } as const;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockHata.sessiz = false;
+});
 afterEach(() => jest.restoreAllMocks());
 
 test('satirlar sirayla: arkadaslik, sessize al, takibi birak', async () => {
@@ -52,4 +57,25 @@ test('gonderilmis istekte geri cek satiri onay ister ve istegi geri ceker', asyn
   await fireEvent.press(screen.getByRole('button', { name: 'İsteği geri çek' }));
   expect(uyari).toHaveBeenCalled();
   expect(mockIstek).toHaveBeenCalledWith({ kullaniciAdi: 'ali', gonder: false }, expect.anything());
+});
+
+/** Kapanan menu eski hatayi tasimaz: dort mutasyon da sifirlanir, yeniden acilinca uyari gorunmez. */
+test('menu kapanirken mutasyon hatalari sifirlanir', async () => {
+  mockHata.sessiz = true;
+  const kapat = jest.fn();
+  await render(<KisiMenusu profil={profil} acik onKapat={kapat} />);
+  expect(screen.getByRole('alert')).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Kapat' }));
+
+  expect(mockSifirla).toHaveBeenCalledTimes(4);
+  expect(kapat).toHaveBeenCalled();
+});
+
+test('yeni eylem baslarken onceki hata sifirlanir', async () => {
+  await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Sessize al' }));
+
+  expect(mockSifirla).toHaveBeenCalledTimes(4);
 });

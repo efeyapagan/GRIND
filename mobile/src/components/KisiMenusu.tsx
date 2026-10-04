@@ -34,7 +34,18 @@ export default function KisiMenusu({ profil, acik, onKapat }: { profil: Kullanic
   const takip = useTakipEt();
   const kullaniciAdi = profil.username;
   const ad = profil.displayName ?? profil.username;
-  const kapatinca = { onSuccess: onKapat };
+  // Menü kapanınca ve her yeni eylemden önce eski hata temizlenir: yeniden açılan menü eski bir hatayı göstermesin.
+  const hataSifirla = () => {
+    istek.reset();
+    cikar.reset();
+    sessiz.reset();
+    takip.reset();
+  };
+  const kapat = () => {
+    hataSifirla();
+    onKapat();
+  };
+  const kapatinca = { onSuccess: kapat };
 
   const arkadaslik = arkadaslikDurumu(profil);
   const arkadaslikSatiri: Satir | null =
@@ -62,7 +73,7 @@ export default function KisiMenusu({ profil, acik, onKapat }: { profil: Kullanic
   const hata = istek.isError || cikar.isError || sessiz.isError || takip.isError;
 
   return (
-    <Modal acik={acik} onKapat={onKapat} baslik={t('takip.menuEtiketi', { ad })} cam>
+    <Modal acik={acik} onKapat={kapat} baslik={t('takip.menuEtiketi', { ad })} cam>
       <View className="items-center gap-2 pb-2">
         <ProfilFotografi profil={profil} boyut="orta" />
         {/* Başlık zaten `ad`ı söylüyor; kullanıcı adı yalnızca görünen addan farklıysa yazılır. */}
@@ -79,7 +90,10 @@ export default function KisiMenusu({ profil, acik, onKapat }: { profil: Kullanic
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={s.etiket}
-              onPress={cevrimici(s.onPress)}
+              onPress={cevrimici(() => {
+                hataSifirla();
+                s.onPress();
+              })}
               className="h-13 flex-row items-center justify-between rounded-xl px-3"
             >
               <Text className={`text-body-lg ${s.tehlikeli ? 'text-danger' : 'text-fg'}`}>{s.etiket}</Text>

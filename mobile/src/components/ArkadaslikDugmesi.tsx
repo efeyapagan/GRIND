@@ -36,6 +36,10 @@ export default function ArkadaslikDugmesi({ profil }: { profil: KullaniciProfili
   const hata = istek.isError || yanit.isError || cikar.isError;
 
   const bas = cevrimici(() => {
+    // Yeni eylem eski hatayı göstermesin.
+    istek.reset();
+    yanit.reset();
+    cikar.reset();
     switch (durum) {
       case 'ekle':
         istek.mutate({ kullaniciAdi, gonder: true });

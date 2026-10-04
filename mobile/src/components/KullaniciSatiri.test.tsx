@@ -4,15 +4,19 @@ import KullaniciSatiri from './KullaniciSatiri';
 
 const mockTakip = jest.fn();
 const mockTakipci = jest.fn();
+const mockDurum = { takipci: { isPending: false, isError: false } };
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('@grind/shared/api/queries', () => ({
   useTakipEt: () => ({ mutate: mockTakip, isPending: false, isError: false }),
-  useTakipcidenCikar: () => ({ mutate: mockTakipci, isPending: false, isError: false }),
+  useTakipcidenCikar: () => ({ mutate: mockTakipci, ...mockDurum.takipci }),
   useProfilFotografi: () => ({ data: undefined }),
 }));
 jest.mock('../baglanti/useCevrimiciEylem', () => ({ useCevrimiciEylem: () => (f: unknown) => f }));
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockDurum.takipci = { isPending: false, isError: false };
+});
 afterEach(() => jest.restoreAllMocks());
 
 /**
@@ -52,4 +56,32 @@ test.each([
 
   expect(mutasyon).toHaveBeenCalled();
   expect(screen.queryByText('Arkadaş')).toBeNull();
+});
+
+/** Liste eylemi calisirken dugme kilitlenir; hata olursa takip dugmesindeki gibi uyari cikar. */
+test('liste eylemi beklerken kilitlenir, hata verirse uyari gosterir', async () => {
+  mockDurum.takipci = { isPending: true, isError: false };
+  const kisi = { username: 'ali', displayName: null, hasAvatar: false, avatarVersion: null, relation: 'Friends' } as const;
+  const { rerender } = await render(<KullaniciSatiri kisi={kisi} eylem="takipcidenCikar" />);
+
+  expect(screen.getByRole('button', { name: 'Takipçiden çıkar' })).toBeDisabled();
+
+  mockDurum.takipci = { isPending: false, isError: true };
+  await rerender(<KullaniciSatiri kisi={kisi} eylem="takipcidenCikar" />);
+
+  expect(screen.getByRole('alert')).toBeTruthy();
+});
+
+/** Eylemsiz (baskasinin listesi) satirda iliski belirler: arkadas = gosterge, iliskisiz = takip dugmesi. */
+test('eylemsiz satirda arkadasa gosterge, iliskisize takip dugmesi gelir', async () => {
+  const kisi = { username: 'ali', displayName: null, hasAvatar: false, avatarVersion: null } as const;
+  const { rerender } = await render(<KullaniciSatiri kisi={{ ...kisi, relation: 'Friends' }} />);
+
+  expect(screen.getByText('Arkadaş')).toBeTruthy();
+  expect(screen.queryByRole('button')).toBeNull();
+
+  await rerender(<KullaniciSatiri kisi={{ ...kisi, relation: 'None' }} />);
+
+  expect(screen.queryByText('Arkadaş')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Takip et' })).toBeTruthy();
 });

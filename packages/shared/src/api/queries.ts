@@ -147,7 +147,9 @@ export const queryKeys = {
   okunmamisBildirim: ['bildirimler', 'okunmamis'] as const,
   // #467: bir kullanicinin paylasilan sablonlari; onek sayesinde kaydetme/paylasim degisikligi
   // hem listeyi hem detayi tazeler.
-  paylasilanSablonlarAll: (kullaniciAdi: string) => ['paylasilanSablonlar', kullaniciAdi] as const,
+  /** Tüm kullanıcıların paylaşılan şablon sorguları -- takip/arkadaşlık değişince topluca eskir (#628). */
+  paylasilanSablonlarTumu: ['paylasilanSablonlar'] as const,
+  paylasilanSablonlarAll: (kullaniciAdi: string) => [...queryKeys.paylasilanSablonlarTumu, kullaniciAdi] as const,
   paylasilanSablonlar: (kullaniciAdi: string) =>
     [...queryKeys.paylasilanSablonlarAll(kullaniciAdi), 'liste'] as const,
   paylasilanSablon: (kullaniciAdi: string, id: number) =>
@@ -2008,6 +2010,8 @@ export function takipSorgulariniTazele(queryClient: QueryClient) {
     queryKeys.takipListesiAll,
     queryKeys.kullaniciAramaAll,
     queryKeys.arkadasAll,
+    queryKeys.arkadasDonemiAll,
+    queryKeys.paylasilanSablonlarTumu,
     queryKeys.bildirimlerAll,
   ]) {
     void queryClient.invalidateQueries({ queryKey });

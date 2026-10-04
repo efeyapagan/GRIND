@@ -6,9 +6,9 @@ const mockIstek = jest.fn();
 const mockYanit = jest.fn();
 const mockCikar = jest.fn();
 jest.mock('@grind/shared/api/queries', () => ({
-  useArkadaslikIstegi: () => ({ mutate: mockIstek, isPending: false, isError: false }),
-  useArkadaslikYaniti: () => ({ mutate: mockYanit, isPending: false, isError: false }),
-  useTakipcidenCikar: () => ({ mutate: mockCikar, isPending: false, isError: false }),
+  useArkadaslikIstegi: () => ({ mutate: mockIstek, reset: jest.fn(), isPending: false, isError: false }),
+  useArkadaslikYaniti: () => ({ mutate: mockYanit, reset: jest.fn(), isPending: false, isError: false }),
+  useTakipcidenCikar: () => ({ mutate: mockCikar, reset: jest.fn(), isPending: false, isError: false }),
 }));
 jest.mock('../baglanti/useCevrimiciEylem', () => ({ useCevrimiciEylem: () => (f: unknown) => f }));
 

@@ -27,7 +27,7 @@ function profil(username: string, relation: Iliski, ek: Record<string, unknown> 
     relation,
     privacyLevel: 'Acik',
     friendRequest: 'None',
-    canSendFriendRequest: false,
+    canSendFriendRequest: relation !== 'Self',
     notificationsMuted: false,
     ...ek,
   };

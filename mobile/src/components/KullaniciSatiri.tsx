@@ -41,6 +41,8 @@ export default function KullaniciSatiri({
     e === 'takibiBirak'
       ? takip.mutate({ kullaniciAdi: kisi.username, takipEt: false })
       : takipci.mutate({ kullaniciAdi: kisi.username });
+  // Satirdaki eylemin kendi mutasyonu: bekleyince dugme kilitlenir, hata verince TakipDugmesi gibi uyarir.
+  const aktif = eylem === 'takibiBirak' ? takip : takipci;
 
   return (
     // #592: cam kart (spec Karar 9) -- arkadas karsilastirmasindaki satirla ayni dil ve kose.
@@ -63,21 +65,29 @@ export default function KullaniciSatiri({
         </View>
       </Pressable>
       {eylem ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t(EYLEM_METNI[eylem].etiket)}
-          onPress={cevrimici(() =>
-            onayIste({
-              mesaj: t(EYLEM_METNI[eylem].onay, { ad }),
-              eylemEtiketi: t(EYLEM_METNI[eylem].etiket),
-              onEvet: () => calistir(eylem),
-            }),
+        <View className="items-end gap-1">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t(EYLEM_METNI[eylem].etiket)}
+            disabled={aktif.isPending}
+            onPress={cevrimici(() =>
+              onayIste({
+                mesaj: t(EYLEM_METNI[eylem].onay, { ad }),
+                eylemEtiketi: t(EYLEM_METNI[eylem].etiket),
+                onEvet: () => calistir(eylem),
+              }),
+            )}
+            className={`h-9 items-center justify-center rounded-xl px-3 ${aktif.isPending ? 'opacity-60' : ''}`}
+          >
+            <CamDolgu opaklik={0.1} yaricap={12} />
+            <Text className="text-label text-fg">{t(EYLEM_METNI[eylem].etiket)}</Text>
+          </Pressable>
+          {aktif.isError && (
+            <Text accessibilityRole="alert" className="text-label-xs text-danger">
+              {t('takip.islemYapilamadi')}
+            </Text>
           )}
-          className="h-9 items-center justify-center rounded-xl px-3"
-        >
-          <CamDolgu opaklik={0.1} yaricap={12} />
-          <Text className="text-label text-fg">{t(EYLEM_METNI[eylem].etiket)}</Text>
-        </Pressable>
+        </View>
       ) : kisi.relation === 'Friends' ? (
         <Rozet ton="acik">{t('takip.arkadas')}</Rozet>
       ) : (
