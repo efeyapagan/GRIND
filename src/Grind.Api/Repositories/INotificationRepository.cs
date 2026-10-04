@@ -5,6 +5,7 @@ namespace Grind.Api.Repositories;
 /// <summary>
 /// Bildirimlerin kaynağı olan satırlar (#325). Bildirim tablosu yok: sorgular <c>Follow</c>,
 /// <c>WorkoutSession</c> ve <c>SetEntry</c>'den okur; işi yapan kişi pasifse satır dışarıda kalır.
+/// #628: sessize alınan aktörler (benim → onun takip satırında <c>NotificationsMuted</c>) HER sorguda dışarıda kalır.
 /// </summary>
 public interface INotificationRepository
 {
@@ -31,4 +32,8 @@ public interface INotificationRepository
     /// <summary>Verilen antrenmanların rekor setleri (<c>RecordType != None</c>).</summary>
     Task<IReadOnlyList<RecordSetRow>> GetRecordSetsAsync(
         IReadOnlyCollection<long> sessionIds, CancellationToken cancellationToken = default);
+
+    /// <summary>#628: bana gelen BEKLEYEN arkadaşlık istekleri, en yeni önce; gönderen pasifse dışarıda.</summary>
+    Task<IReadOnlyList<FriendRequestEvent>> GetFriendRequestEventsAsync(
+        long userId, DateTime since, int take, CancellationToken cancellationToken = default);
 }

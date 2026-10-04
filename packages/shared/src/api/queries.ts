@@ -151,7 +151,9 @@ export const queryKeys = {
   okunmamisBildirim: ['bildirimler', 'okunmamis'] as const,
   // #467: bir kullanicinin paylasilan sablonlari; onek sayesinde kaydetme/paylasim degisikligi
   // hem listeyi hem detayi tazeler.
-  paylasilanSablonlarAll: (kullaniciAdi: string) => ['paylasilanSablonlar', kullaniciAdi] as const,
+  /** Tüm kullanıcıların paylaşılan şablon sorguları -- takip/arkadaşlık değişince topluca eskir (#628). */
+  paylasilanSablonlarTumu: ['paylasilanSablonlar'] as const,
+  paylasilanSablonlarAll: (kullaniciAdi: string) => [...queryKeys.paylasilanSablonlarTumu, kullaniciAdi] as const,
   paylasilanSablonlar: (kullaniciAdi: string) =>
     [...queryKeys.paylasilanSablonlarAll(kullaniciAdi), 'liste'] as const,
   paylasilanSablon: (kullaniciAdi: string, id: number) =>
@@ -1903,6 +1905,12 @@ export interface KullaniciProfili extends FotografSahibi {
   followingCount: number;
   relation: TakipIliskisi;
   privacyLevel: GizlilikSeviyesi;
+  /** #628: bekleyen arkadaşlık isteğinin yönü (bakanın gözünden). */
+  friendRequest: 'None' | 'Sent' | 'Received';
+  /** #628: false = 3 ret sınırına ulaşıldı. */
+  canSendFriendRequest: boolean;
+  /** #628: bu kişiden gelen bildirimler kapalı mı. */
+  notificationsMuted: boolean;
 }
 
 function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfili {
@@ -1913,7 +1921,10 @@ function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfi
     yanit.followingCount === undefined ||
     yanit.relation === undefined ||
     yanit.hasAvatar === undefined ||
-    !yanit.privacyLevel
+    !yanit.privacyLevel ||
+    !yanit.friendRequest ||
+    yanit.canSendFriendRequest === undefined ||
+    yanit.notificationsMuted === undefined
   ) {
     throw new Error('Sunucudan eksik kullanici profili yaniti alindi.');
   }
@@ -1928,6 +1939,9 @@ function dogrulanmisKullaniciProfili(yanit: UserProfileResponse): KullaniciProfi
     followingCount: yanit.followingCount,
     relation: yanit.relation,
     privacyLevel: yanit.privacyLevel,
+    friendRequest: yanit.friendRequest,
+    canSendFriendRequest: yanit.canSendFriendRequest,
+    notificationsMuted: yanit.notificationsMuted,
   };
 }
 
@@ -2083,6 +2097,21 @@ export function useKullaniciAra(sorgu: string) {
   });
 }
 
+/** Takip/arkadaşlık değişince eskiyen her şey (#284, #628) -- tek liste. */
+export function takipSorgulariniTazele(queryClient: QueryClient) {
+  for (const queryKey of [
+    queryKeys.kullaniciProfiliAll,
+    queryKeys.takipListesiAll,
+    queryKeys.kullaniciAramaAll,
+    queryKeys.arkadasAll,
+    queryKeys.arkadasDonemiAll,
+    queryKeys.paylasilanSablonlarTumu,
+    queryKeys.bildirimlerAll,
+  ]) {
+    void queryClient.invalidateQueries({ queryKey });
+  }
+}
+
 /**
  * Takip et (`takipEt: true`) ya da birak. Sonuc sunucudan tazelenir (#284 madde 4): sayaclar, listeler,
  * aramadaki iliski ve -- arkadaslik acilip kapanmis olabilecegi icin -- o kisinin gecmis/rekorlari.
@@ -2093,17 +2122,60 @@ export function useTakipEt() {
     mutationFn: async ({ kullaniciAdi, takipEt }: { kullaniciAdi: string; takipEt: boolean }): Promise<void> => {
       await request<void>(kullaniciYolu(kullaniciAdi, 'follow'), { method: takipEt ? 'POST' : 'DELETE' });
     },
-    onSuccess: () => {
-      for (const queryKey of [
-        queryKeys.kullaniciProfiliAll,
-        queryKeys.takipListesiAll,
-        queryKeys.kullaniciAramaAll,
-        queryKeys.arkadasAll,
-        queryKeys.bildirimlerAll,
-      ]) {
-        void queryClient.invalidateQueries({ queryKey });
-      }
+    onSuccess: () => takipSorgulariniTazele(queryClient),
+  });
+}
+
+/** #628: arkadaşlık isteği gönder (`gonder: true`) ya da geri çek. */
+export function useArkadaslikIstegi() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kullaniciAdi, gonder }: { kullaniciAdi: string; gonder: boolean }): Promise<void> => {
+      await request<void>(kullaniciYolu(kullaniciAdi, 'friend-request'), { method: gonder ? 'POST' : 'DELETE' });
     },
+    onSuccess: () => takipSorgulariniTazele(queryClient),
+  });
+}
+
+/**
+ * #628: bana gelen isteği kabul et / reddet. HATADA da tazelenir: istek bu arada geri çekildiyse (404)
+ * bildirim satırı listeden düşmeli, ekran eski satırda kalmamalı.
+ */
+export function useArkadaslikYaniti() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kullaniciAdi, kabul }: { kullaniciAdi: string; kabul: boolean }): Promise<void> => {
+      await request<void>(kullaniciYolu(kullaniciAdi, `friend-request/${kabul ? 'accept' : 'reject'}`), { method: 'POST' });
+    },
+    onSettled: () => takipSorgulariniTazele(queryClient),
+  });
+}
+
+/**
+ * #628: bu kişiyi takipçilerimden çıkar. Arkadaşken "Arkadaşlıktan çıkar" da budur — arkadaşlık biter,
+ * ben takipte kalırım (kullanıcı kararı 2026-10-04); arayüz yalnızca etiketi ve onay metnini değiştirir.
+ */
+export function useTakipcidenCikar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kullaniciAdi }: { kullaniciAdi: string }): Promise<void> => {
+      await request<void>(kullaniciYolu(kullaniciAdi, 'follower'), { method: 'DELETE' });
+    },
+    onSuccess: () => takipSorgulariniTazele(queryClient),
+  });
+}
+
+/** #628: takip ettiğim birinden gelen tüm bildirimleri kapat/aç. */
+export function useSessizeAl() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ kullaniciAdi, sessiz }: { kullaniciAdi: string; sessiz: boolean }): Promise<void> => {
+      await request<void>(kullaniciYolu(kullaniciAdi, 'mute'), {
+        method: 'PUT',
+        body: JSON.stringify({ muted: sessiz }),
+      });
+    },
+    onSuccess: () => takipSorgulariniTazele(queryClient),
   });
 }
 
@@ -2151,7 +2223,7 @@ export interface BildirimRekoru {
 
 /** Sunucuda saklanmaz, takip ve rekor satirlarindan turetilir; `actor` BAKANIN gozunden. */
 export interface Bildirim {
-  kind: 'Follow' | 'Records' | 'WeeklyGoal';
+  kind: 'Follow' | 'Records' | 'WeeklyGoal' | 'FriendRequest';
   occurredAt: string;
   isUnread: boolean;
   actor: KullaniciOzeti;

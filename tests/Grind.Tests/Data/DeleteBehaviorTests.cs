@@ -82,6 +82,13 @@ public class DeleteBehaviorTests
         Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<Follow>("FolloweeId"));
     }
 
+    [Fact]
+    public void Arkadaslik_istegi_kullanici_silinmesini_engeller()
+    {
+        Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<FriendRequest>("RequesterId"));
+        Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<FriendRequest>("TargetId"));
+    }
+
     /// <summary>
     /// #280: fotoğraf kullanıcının parçasıdır (composition). Kullanıcı bugün hard-delete edilmez; ileride
     /// bir purge yazılırsa fotoğraf onunla gider, ayrıca silinmesi gerekmez.

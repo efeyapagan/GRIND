@@ -17,6 +17,7 @@ public class FollowService(
     IUserRepository userRepository,
     IUserAvatarRepository avatarRepository,
     IUserSummaryBuilder summaryBuilder,
+    IFriendRequestRepository friendRequestRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFollowService
@@ -38,6 +39,12 @@ public class FollowService(
             FolloweeId = target.Id,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         });
+
+        // Karşı takip arkadaşlık kurar: bekleyen/reddedilmiş istek satırları artık anlamsız, aynı kayıtta silinir
+        // (aksi hâlde hedefte hayalet bir "istek" bildirimi kalırdı).
+        if (await followRepository.GetAsync(target.Id, currentUser.UserId, cancellationToken) is not null)
+            foreach (var request in await friendRequestRepository.GetPairAsync(currentUser.UserId, target.Id, cancellationToken))
+                friendRequestRepository.Remove(request);
 
         try
         {
@@ -61,6 +68,28 @@ public class FollowService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RemoveFollowerAsync(string username, CancellationToken cancellationToken = default)
+    {
+        var follower = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
+        if (follower.Id == currentUser.UserId)
+            throw new ValidationException("Kendini takipçilerinden çıkaramazsın.");
+        var follow = await followRepository.GetAsync(follower.Id, currentUser.UserId, cancellationToken);
+        if (follow is null)
+            return;
+
+        followRepository.Remove(follow);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SetMutedAsync(string username, bool muted, CancellationToken cancellationToken = default)
+    {
+        var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
+        var follow = await followRepository.GetAsync(currentUser.UserId, target.Id, cancellationToken)
+                     ?? throw new ValidationException("Takip etmediğin birini sessize alamazsın.");
+        follow.NotificationsMuted = muted;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<UserProfileResponse> GetProfileAsync(string username, CancellationToken cancellationToken = default)
     {
         var target = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
@@ -69,13 +98,30 @@ public class FollowService(
         var avatarUpdatedAt = await avatarRepository.GetUpdatedAtAsync(target.Id, cancellationToken);
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
 
+        var relation = relations(target.Id);
+        var me = currentUser.UserId;
+        var self = target.Id == me;
+        var friendRequest = self || relation == FollowRelation.Friends
+            ? FriendRequestState.None
+            : await friendRequestRepository.GetPendingAsync(target.Id, me, cancellationToken) is not null
+                ? FriendRequestState.Received
+                : await friendRequestRepository.GetPendingAsync(me, target.Id, cancellationToken) is not null
+                    ? FriendRequestState.Sent
+                    : FriendRequestState.None;
+        var canSend = !self
+            && await friendRequestRepository.CountRejectedAsync(me, target.Id, cancellationToken)
+                < FriendRequestService.RejectionLimit;
+        var muted = !self
+            && (await followRepository.GetAsync(me, target.Id, cancellationToken))?.NotificationsMuted == true;
+
         return new UserProfileResponse(
             target.Username,
             target.DisplayName,
             target.BirthDate is { } birthDate ? AgeCalculator.AgeOn(birthDate, today) : null,
             avatarUpdatedAt is not null,
             avatarUpdatedAt is { } updatedAt ? AvatarVersion.Of(updatedAt) : null,
-            counts.Friends, counts.Followers, counts.Following, relations(target.Id), target.PrivacyLevel);
+            counts.Friends, counts.Followers, counts.Following, relation, target.PrivacyLevel,
+            friendRequest, canSend, muted);
     }
 
     public Task<PagedResponse<UserSummaryResponse>> GetFriendsAsync(

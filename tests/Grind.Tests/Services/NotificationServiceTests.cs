@@ -44,7 +44,7 @@ public class NotificationServiceTests
         var currentUser = new StubCurrentUser(current);
         var repository = new NotificationRepository(context);
         return new NotificationService(
-            [new FollowNotificationSource(repository), new RecordNotificationSource(repository)],
+            [new FollowNotificationSource(repository), new RecordNotificationSource(repository), new FriendRequestNotificationSource(repository)],
             new UserRepository(context),
             new UserSummaryBuilder(new FollowRepository(context), new UserAvatarRepository(context), currentUser),
             new UnitOfWork(context), currentUser, new SahteSaat());
@@ -362,6 +362,54 @@ public class NotificationServiceTests
 
             Assert.Equal(Simdi, (await context.Set<User>().AsNoTracking().SingleAsync(u => u.Id == ben.Id)).NotificationsSeenAt);
             Assert.Equal(0, (await ServiceFor(context, ben).GetUnreadCountAsync()).Count);
+        }
+    }
+
+    // ---- #628: arkadaşlık isteği + sessize alma ----
+
+    [Fact]
+    public async Task Bekleyen_istek_bildirimdir_reddedilen_ve_pasif_gonderen_degildir()
+    {
+        var (context, users, transaction) = await CreateAsync(3);
+        await using (transaction)
+        {
+            var (ben, ali, veli) = (users[0], users[1], users[2]);
+            context.Add(new FriendRequest { RequesterId = ali.Id, TargetId = ben.Id, CreatedAt = Simdi.AddHours(-1) });
+            context.Add(new FriendRequest { RequesterId = veli.Id, TargetId = ben.Id, CreatedAt = Simdi.AddHours(-2), RejectedAt = Simdi });
+            await context.SaveChangesAsync();
+
+            var bildirim = Assert.Single(await ServiceFor(context, ben).GetAsync());
+            Assert.Equal((NotificationKind.FriendRequest, ali.Username), (bildirim.Kind, bildirim.Actor.Username));
+
+            ali.DeletedAt = Simdi;
+            await context.SaveChangesAsync();
+            Assert.Empty(await ServiceFor(context, ben).GetAsync());
+        }
+    }
+
+    /// <summary>Sessize aldığım kişiden takip, rekor ve istek bildirimi gelmez (haftalık hedef ayrı dosyada).</summary>
+    [Fact]
+    public async Task Sessize_alinan_kisiden_hicbir_bildirim_gelmez()
+    {
+        var (context, users, transaction) = await CreateAsync(3);
+        await using (transaction)
+        {
+            var (ben, ali, veli) = (users[0], users[1], users[2]);
+            var benim = await TakipAsync(context, ben, ali, Simdi.AddHours(-5));
+            await TakipAsync(context, ali, ben, Simdi.AddHours(-4));
+            var hareket = await HareketAsync(context, ali, "Bench");
+            await AntrenmanAsync(context, ali, Simdi.AddHours(-1), (hareket, 100, 5, RecordType.Weight));
+            context.Add(new FriendRequest { RequesterId = ali.Id, TargetId = ben.Id, CreatedAt = Simdi.AddHours(-3) });
+            await context.SaveChangesAsync();
+            await TakipAsync(context, veli, ben, Simdi.AddHours(-2));
+            Assert.Equal(4, (await ServiceFor(context, ben).GetAsync()).Count);
+
+            benim.NotificationsMuted = true;
+            await context.SaveChangesAsync();
+
+            // Sessize alma yalnızca o kişiyi susturur: üçüncü kişinin bildirimi hâlâ gelir.
+            var kalan = Assert.Single(await ServiceFor(context, ben).GetAsync());
+            Assert.Equal(veli.Username, kalan.Actor.Username);
         }
     }
 }

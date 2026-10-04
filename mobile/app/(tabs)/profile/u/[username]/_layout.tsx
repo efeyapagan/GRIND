@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text } from 'react-native';
 import { Slot, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,11 +8,12 @@ import { usePageTitle } from '@grind/shared/pageTitle';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useAuth } from '../../../../../src/auth/AuthContext';
 import HataKutusu from '../../../../../src/ui/HataKutusu';
-import Rozet from '../../../../../src/ui/Rozet';
 import ProfilBasligi from '../../../../../src/components/ProfilBasligi';
 import ProfilSekmeleri from '../../../../../src/components/ProfilSekmeleri';
 import CevrimdisiKapisi from '../../../../../src/baglanti/CevrimdisiKapisi';
 import TakipDugmesi from '../../../../../src/components/TakipDugmesi';
+import ArkadaslikDugmesi from '../../../../../src/components/ArkadaslikDugmesi';
+import KisiMenusu from '../../../../../src/components/KisiMenusu';
 
 const LISTE_EKRANLARI = ['friends', 'followers', 'following'];
 
@@ -41,6 +43,7 @@ export function gorunurSekmeler(kok: string, gizli: boolean) {
 function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<KullaniciProfili> }) {
   const { t } = useTranslation();
   usePageTitle(ad);
+  const [menuAcik, setMenuAcik] = useState(false);
 
   if (profil.isError) {
     return (
@@ -53,20 +56,17 @@ function BaskasininBasligi({ ad, profil }: { ad: string; profil: UseQueryResult<
     return <View className="min-h-40" />;
   }
 
-  const arkadas = profil.data.relation === 'Friends';
   const gizli = profil.data.privacyLevel === 'Gizli';
   const kok = `/profile/u/${ad}`;
   const sekmeler = gorunurSekmeler(kok, gizli);
 
   return (
     <>
-      <ProfilBasligi
-        kisi={profil.data}
-        sayaclar={profil.data}
-        adYani={arkadas && <Rozet ton="acik">{t('takip.arkadas')}</Rozet>}
-      >
-        <TakipDugmesi kullaniciAdi={profil.data.username} iliski={profil.data.relation} />
+      <ProfilBasligi kisi={profil.data} sayaclar={profil.data}>
+        <TakipDugmesi kullaniciAdi={profil.data.username} iliski={profil.data.relation} onMenu={() => setMenuAcik(true)} />
+        <ArkadaslikDugmesi profil={profil.data} />
       </ProfilBasligi>
+      <KisiMenusu profil={profil.data} acik={menuAcik} onKapat={() => setMenuAcik(false)} />
       <ProfilSekmeleri sekmeler={sekmeler} />
       {gizli && (
         <Text className="px-4 text-label text-muted">{t('takip.gizliHesapGecmisi')}</Text>

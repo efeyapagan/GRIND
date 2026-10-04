@@ -3,9 +3,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { Users } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTakipListesi, type TakipListesiTuru } from '@grind/shared/api/queries';
+import { listeSatiriEylemi } from '@grind/shared/lib/takip';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import BosDurum from '../ui/BosDurum';
 import KullaniciSatiri from './KullaniciSatiri';
+import { useAuth } from '../auth/AuthContext';
 import { useAltMenuPayi } from '../ui/KabukTabBar';
 
 const METINLER = {
@@ -24,13 +26,16 @@ export default function TakipListesi({ liste }: { liste: TakipListesiTuru }) {
   const { username: ad = '' } = useLocalSearchParams<{ username: string }>();
   usePageTitle(t(METINLER[liste].baslik));
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useTakipListesi(ad, liste);
+  const { username: ben } = useAuth();
+  const kendiListem = ben !== null && ad.toLowerCase() === ben.toLowerCase();
+  const eylem = listeSatiriEylemi(liste, kendiListem);
   const kisiler = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
 
   return (
     <FlatList
       data={kisiler}
       keyExtractor={(kisi) => kisi.username}
-      renderItem={({ item }) => <KullaniciSatiri kisi={item} />}
+      renderItem={({ item }) => <KullaniciSatiri kisi={item} eylem={eylem} />}
       ItemSeparatorComponent={() => <View className="h-2" />}
       contentContainerClassName="px-4 pt-2"
       contentContainerStyle={{ paddingBottom: altMenuPayi }}

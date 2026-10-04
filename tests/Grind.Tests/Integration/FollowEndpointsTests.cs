@@ -68,4 +68,77 @@ public class FollowEndpointsTests(GrindApiFactory factory) : IClassFixture<Grind
 
         Assert.Equal([bAdi], sonuc!.Select(s => s.Username));
     }
+
+    /// <summary>#628: istek → profilde Received → kabul → iki taraf arkadaş.</summary>
+    [Fact]
+    public async Task Arkadaslik_istegi_kabul_edilince_arkadas_olunur()
+    {
+        var (a, aAdi) = await RegisteredClientAsync();
+        var (b, bAdi) = await RegisteredClientAsync();
+
+        Assert.Equal(HttpStatusCode.NoContent, (await a.PostAsync($"/api/users/{bAdi}/friend-request", null)).StatusCode);
+        var bGozuyle = await b.GetFromJsonAsync<UserProfileResponse>($"/api/users/{aAdi}/profile", Json);
+        Assert.Equal(FriendRequestState.Received, bGozuyle!.FriendRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await b.PostAsync($"/api/users/{aAdi}/friend-request/accept", null)).StatusCode);
+        var profil = await a.GetFromJsonAsync<UserProfileResponse>($"/api/users/{bAdi}/profile", Json);
+        Assert.Equal(FollowRelation.Friends, profil!.Relation);
+    }
+
+    [Fact]
+    public async Task Gelen_istek_yokken_kabul_ve_ret_404()
+    {
+        var (a, _) = await RegisteredClientAsync();
+        var (_, bAdi) = await RegisteredClientAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, (await a.PostAsync($"/api/users/{bAdi}/friend-request/accept", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await a.PostAsync($"/api/users/{bAdi}/friend-request/reject", null)).StatusCode);
+    }
+
+    private static Task<UserProfileResponse?> ProfilAsync(HttpClient client, string username)
+        => client.GetFromJsonAsync<UserProfileResponse>($"/api/users/{username}/profile", Json);
+
+    [Fact]
+    public async Task Istek_reddedilince_gonderen_tarafta_bekleyen_istek_kalmaz()
+    {
+        var (a, aAdi) = await RegisteredClientAsync();
+        var (b, bAdi) = await RegisteredClientAsync();
+        Assert.Equal(HttpStatusCode.NoContent, (await a.PostAsync($"/api/users/{bAdi}/friend-request", null)).StatusCode);
+        Assert.Equal(FriendRequestState.Sent, (await ProfilAsync(a, bAdi))!.FriendRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await b.PostAsync($"/api/users/{aAdi}/friend-request/reject", null)).StatusCode);
+
+        Assert.Equal(FriendRequestState.None, (await ProfilAsync(a, bAdi))!.FriendRequest);
+        Assert.Equal(FriendRequestState.None, (await ProfilAsync(b, aAdi))!.FriendRequest);
+    }
+
+    [Fact]
+    public async Task Istek_geri_cekilince_hedefte_bekleyen_istek_kalmaz()
+    {
+        var (a, aAdi) = await RegisteredClientAsync();
+        var (b, bAdi) = await RegisteredClientAsync();
+        await a.PostAsync($"/api/users/{bAdi}/friend-request", null);
+        Assert.Equal(FriendRequestState.Received, (await ProfilAsync(b, aAdi))!.FriendRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await a.DeleteAsync($"/api/users/{bAdi}/friend-request")).StatusCode);
+
+        Assert.Equal(FriendRequestState.None, (await ProfilAsync(b, aAdi))!.FriendRequest);
+    }
+
+    [Fact]
+    public async Task Takipciden_cikar_ve_sessize_al_uclari()
+    {
+        var (a, aAdi) = await RegisteredClientAsync();
+        var (b, bAdi) = await RegisteredClientAsync();
+        await a.PostAsync($"/api/users/{bAdi}/follow", null);
+        await b.PostAsync($"/api/users/{aAdi}/follow", null);
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await a.PutAsJsonAsync($"/api/users/{bAdi}/mute", new { muted = true })).StatusCode);
+        Assert.True((await a.GetFromJsonAsync<UserProfileResponse>($"/api/users/{bAdi}/profile", Json))!.NotificationsMuted);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await a.DeleteAsync($"/api/users/{bAdi}/follower")).StatusCode);
+        var profil = await a.GetFromJsonAsync<UserProfileResponse>($"/api/users/{bAdi}/profile", Json);
+        Assert.Equal(FollowRelation.Following, profil!.Relation);
+    }
 }

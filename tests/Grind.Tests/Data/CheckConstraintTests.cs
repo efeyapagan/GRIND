@@ -102,4 +102,8 @@ public class CheckConstraintTests
     {
         Assert.Contains("\"FollowerId\" <> \"FolloweeId\"", SqlOf<Follow>("CK_Follow_NotSelf"));
     }
+
+    [Fact]
+    public void Kendine_arkadaslik_istegi_yasaktir()
+        => Assert.Contains("\"RequesterId\" <> \"TargetId\"", SqlOf<FriendRequest>("CK_FriendRequest_NotSelf"));
 }

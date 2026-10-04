@@ -10,6 +10,7 @@ namespace Grind.Api.Models.Dtos.Social;
 /// <see cref="PrivacyLevel"/> (#294) istemciye hangi sekmelerin (geçmiş/rekor) gösterileceğini
 /// söyler — gerçek kısıtlama sunucuda <c>PublicActivityService</c>'te uygulanır, bu alan yalnızca
 /// arayüzü önceden doğru çizer.
+/// #628: arkadaşlık isteği yönü, ret sınırı ve sessize alma bakanın gözünden.
 /// </summary>
 public record UserProfileResponse(
     string Username,
@@ -21,4 +22,7 @@ public record UserProfileResponse(
     int FollowerCount,
     int FollowingCount,
     FollowRelation Relation,
-    PrivacyLevel PrivacyLevel);
+    PrivacyLevel PrivacyLevel,
+    FriendRequestState FriendRequest,
+    bool CanSendFriendRequest,
+    bool NotificationsMuted);

@@ -69,6 +69,19 @@ public class IndexTests
         Assert.False(IndexOn<Follow>("FolloweeId").IsUnique);
     }
 
+    /// <summary>
+    /// #628: bir çift arasında aynı anda tek BEKLEYEN istek — reddedilenler (`RejectedAt` dolu) ret
+    /// sınırı için saklanır ve benzersizliğe girmez. Gelen istekler TargetId'den okunur.
+    /// </summary>
+    [Fact]
+    public void Bekleyen_arkadaslik_istegi_cift_basina_tektir()
+    {
+        var cift = IndexOn<FriendRequest>("RequesterId", "TargetId");
+        Assert.True(cift.IsUnique);
+        Assert.Equal("\"RejectedAt\" IS NULL", cift.GetFilter());
+        Assert.False(IndexOn<FriendRequest>("TargetId").IsUnique);
+    }
+
     /// <summary>#280: kullanıcı başına en fazla bir fotoğraf — yeni yükleme eskisinin yerine geçer.</summary>
     [Fact]
     public void Kullanici_basina_tek_fotograf_vardir()
