@@ -4576,6 +4576,8 @@ export interface components {
         CreateTemplateRequest: {
             name: string;
             exercises: components["schemas"]["TemplateExerciseRequest"][];
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         DailyBodyWeightResponse: {
             /** Format: date */

@@ -19,6 +19,10 @@ public interface IWorkoutTemplateRepository : IRepository<WorkoutTemplate>
     Task<WorkoutTemplate?> GetOwnedByIdAsync(
         long id, long userId, CancellationToken cancellationToken = default);
 
+    /// <summary>#174: kullanıcının bu istemci anahtarıyla oluşturduğu şablon (kuyruktan tekrar gelen istek).</summary>
+    Task<WorkoutTemplate?> GetByClientRequestIdAsync(
+        long userId, Guid clientRequestId, CancellationToken cancellationToken = default);
+
     /// <summary>Büyük/küçük harf gözetmez. <paramref name="excludeId"/> verilirse o kayıt sayılmaz.</summary>
     Task<bool> NameExistsAsync(
         long userId, string name, long? excludeId = null, CancellationToken cancellationToken = default);

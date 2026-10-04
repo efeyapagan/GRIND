@@ -17,6 +17,10 @@ public class WorkoutTemplateRepository(AppDbContext context)
             .ThenBy(t => t.Name)
             .ToListAsync(cancellationToken);
 
+    public Task<WorkoutTemplate?> GetByClientRequestIdAsync(
+        long userId, Guid clientRequestId, CancellationToken cancellationToken = default)
+        => Set.FirstOrDefaultAsync(t => t.UserId == userId && t.ClientRequestId == clientRequestId, cancellationToken);
+
     public Task<WorkoutTemplate?> GetOwnedByIdAsync(
         long id, long userId, CancellationToken cancellationToken = default)
         => WithExercises(Set)

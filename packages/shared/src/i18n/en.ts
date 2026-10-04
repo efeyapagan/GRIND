@@ -379,6 +379,7 @@ export const en: Katalog = {
   },
   sablonlar: {
     baslik: 'Templates',
+    adZatenVar: "You already have a template named '{{ad}}'.",
     baslaBasligi: 'Start with a template',
     antrenmanaBasla: 'Start workout',
     sablonlarim: 'My templates',

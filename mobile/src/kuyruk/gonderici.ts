@@ -1,9 +1,9 @@
 import { request } from '@grind/shared/api/client';
 import { ApiError } from '@grind/shared/api/problem';
-import { kimlikEsle, type BekleyenIslem } from './kuyruk';
+import { kimlikEsle, sablonuBirak, type BekleyenIslem } from './kuyruk';
 
 export interface KimlikEslemesi {
-  tur: 'oturum' | 'set';
+  tur: 'oturum' | 'set' | 'sablon';
   gecici: number;
   gercek: number;
 }
@@ -77,6 +77,28 @@ async function gonder(islem: BekleyenIslem): Promise<KimlikEslemesi | null> {
     case 'oturumIptal':
       await request(`/sessions/${islem.oturumId}`, { method: 'DELETE' });
       return null;
+    case 'sablonOlustur': {
+      const yanit = await request<{ id: number }>('/templates', {
+        method: 'POST',
+        ...govde({ name: islem.name, exercises: islem.exercises, clientRequestId: islem.anahtar }),
+      });
+      return { tur: 'sablon', gecici: islem.sablonId, gercek: yanit.id };
+    }
+    case 'sablonGuncelle':
+      await request(`/templates/${islem.sablonId}`, {
+        method: 'PUT',
+        ...govde({ name: islem.name, exercises: islem.exercises }),
+      });
+      return null;
+    case 'sablonSil':
+      await request(`/templates/${islem.sablonId}`, { method: 'DELETE' });
+      return null;
+    case 'sablonSirala':
+      await request('/templates/order', { method: 'PUT', ...govde({ templateIds: islem.templateIds }) });
+      return null;
+    case 'sablonSabitle':
+      await request(`/templates/${islem.sablonId}/pin`, { method: 'PUT', ...govde({ isPinned: islem.isPinned }) });
+      return null;
   }
 }
 
@@ -110,7 +132,8 @@ export async function kuyruguGonder(
       // 401: oturum dusmus -- islem gecersiz degil, yeniden giristen sonra gonderilir (atilirsa antrenman kaybolur).
       if (hata instanceof ApiError && hata.status >= 400 && hata.status < 500 && hata.status !== 401) {
         atlanan += 1;
-        kalan = sonrakiler;
+        // Reddedilen sablon hic olusmayacak: onunla baslatilan antrenman sablonsuz gider, kaybolmaz.
+        kalan = islem.tur === 'sablonOlustur' ? sablonuBirak(sonrakiler, islem.sablonId) : sonrakiler;
         continue;
       }
       onIslemBasliyor(undefined);

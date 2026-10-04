@@ -204,11 +204,9 @@ export default function AntrenmanBitirScreen() {
         onSuccess: (biten) => {
           // #433: seti ve suresi olan bir antrenman paylasilabilir; once kart sunulur, sonra
           // sablon sorusu / ana sayfa. Suresiz ya da setsiz antrenmanin karti anlamsizdir.
-          // #174 (kullanici karari): paylasim penceresi internet yokken hic acilmaz; sablon kaydetme de
-          // sunucu ister (cevrimdisi sablon olusturma dilim 3).
-          if (cevrimdisi) {
-            router.replace('/');
-          } else if (biten.durationSeconds !== null && setSayisi > 0) {
+          // #174 (kullanici karari): paylasim penceresi internet yokken hic acilmaz; sablon sorusu cevrimdisi
+          // de gelir (dilim 3: sablon cihazda olusur, kuyrukla gider).
+          if (!cevrimdisi && biten.durationSeconds !== null && setSayisi > 0) {
             setPaylasim({
               templateName: oturum?.templateName ?? null,
               setCount: setSayisi,

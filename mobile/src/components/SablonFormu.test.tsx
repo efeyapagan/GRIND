@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import {
   useExercises,
@@ -7,6 +8,7 @@ import {
   useUpdateTemplateSharing,
 } from '@grind/shared/api/queries';
 import { EkranKaydiriciBaglami } from '../ui/EkranKaydirici';
+import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import SablonFormu from './SablonFormu';
 
 jest.mock('@grind/shared/api/queries', () => ({
@@ -15,6 +17,13 @@ jest.mock('@grind/shared/api/queries', () => ({
   useUpdateTemplate: jest.fn(),
   useDeleteTemplate: jest.fn(),
   useUpdateTemplateSharing: jest.fn(),
+}));
+
+// #174 dilim 3: ekran kuyruklu hook'lari kullanir; kuyruk kendi testlerinde -- burada paylasilan mock'lara yonlenir.
+jest.mock('../kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluCreateTemplate: () => jest.requireMock('@grind/shared/api/queries').useCreateTemplate(),
+  useKuyrukluUpdateTemplate: () => jest.requireMock('@grind/shared/api/queries').useUpdateTemplate(),
+  useKuyrukluDeleteTemplate: () => jest.requireMock('@grind/shared/api/queries').useDeleteTemplate(),
 }));
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
@@ -61,6 +70,29 @@ test('Herkese acik secilince gorunurluk Public olarak gonderilir', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Herkese açık' }));
 
   expect(paylasimMutasyonu).toHaveBeenCalledWith({ id: 1, visibility: 'Public' });
+});
+
+/** #174 (kullanici karari): sablon cevrimdisi duzenlenir ama paylasim internet ister -- uyari cikar, istek gitmez. */
+test('cevrimdisiyken gorunurluk degistirilmez, internete baglan uyarisi cikar', async () => {
+  const uyari = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  await render(
+    <BaglantiBaglami.Provider value>
+      <SablonFormu sablon={sablon} donusYolu="/templates" />
+    </BaglantiBaglami.Provider>,
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Herkese açık' }));
+
+  expect(paylasimMutasyonu).not.toHaveBeenCalled();
+  expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
+  uyari.mockRestore();
+});
+
+/** Cevrimdisi olusturulup henuz gonderilmemis (gecici kimlikli) sablon sunucuda yok: paylasim gosterilmez. */
+test('gonderilmemis sablonda paylasim kontrolu gorunmez', async () => {
+  await render(<SablonFormu sablon={{ ...sablon, id: -5 }} donusYolu="/templates" />);
+
+  expect(screen.queryByRole('button', { name: 'Herkese açık' })).toBeNull();
 });
 
 /** Issue: "Arkadaslarin ... gorebilir" aciklamasi uc secenekle celisiyordu (Public herkese acik). */
