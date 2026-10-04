@@ -9,6 +9,12 @@ jest.mock('@grind/shared/api/queries', () => ({
   useSablonuSabitle: jest.fn(),
 }));
 
+// #174 dilim 3: ekran kuyruklu hook'lari kullanir; kuyruk kendi testlerinde -- burada paylasilan mock'lara yonlenir.
+jest.mock('../../../src/kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluDeleteTemplate: () => jest.requireMock('@grind/shared/api/queries').useDeleteTemplate(),
+  useKuyrukluSablonuSabitle: () => jest.requireMock('@grind/shared/api/queries').useSablonuSabitle(),
+}));
+
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),

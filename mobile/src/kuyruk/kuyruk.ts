@@ -35,7 +35,19 @@ export type BekleyenIslem =
   | { tur: 'hareketKaldir'; anahtar: string; oturumId: number; exerciseId: number }
   | { tur: 'hareketSirala'; anahtar: string; oturumId: number; exerciseIds: number[] }
   | { tur: 'oturumBitir'; anahtar: string; oturumId: number; zorluk: Zorluk | null; endedAt: string }
-  | { tur: 'oturumIptal'; anahtar: string; oturumId: number };
+  | { tur: 'oturumIptal'; anahtar: string; oturumId: number }
+  // #174 dilim 3: sablon islemleri (paylasim ayari HARIC -- o internet ister).
+  | { tur: 'sablonOlustur'; anahtar: string; sablonId: number; name: string; exercises: SablonHareketGirdisi[] }
+  | { tur: 'sablonGuncelle'; anahtar: string; sablonId: number; name: string; exercises: SablonHareketGirdisi[] }
+  | { tur: 'sablonSil'; anahtar: string; sablonId: number }
+  | { tur: 'sablonSirala'; anahtar: string; templateIds: number[] }
+  | { tur: 'sablonSabitle'; anahtar: string; sablonId: number; isPinned: boolean };
+
+export interface SablonHareketGirdisi {
+  exerciseId: number;
+  plannedSets: number;
+  restSeconds: number;
+}
 
 export function geciciMi(kimlik: number): boolean {
   return kimlik < 0;
@@ -92,17 +104,57 @@ export function kuyrugaEkle(
     }
   }
 
+  if (islem.tur === 'sablonGuncelle' && geciciMi(islem.sablonId)) {
+    const olusturma = kuyruk.find(
+      (aday) => aday.tur === 'sablonOlustur' && aday.sablonId === islem.sablonId && beklemede(aday),
+    );
+    if (olusturma) {
+      return kuyruk.map((aday) => (aday === olusturma ? { ...aday, name: islem.name, exercises: islem.exercises } : aday));
+    }
+  }
+
+  if (islem.tur === 'sablonSil' && geciciMi(islem.sablonId)) {
+    const olusturma = kuyruk.find(
+      (aday) => aday.tur === 'sablonOlustur' && aday.sablonId === islem.sablonId && beklemede(aday),
+    );
+    if (olusturma) {
+      return sablonuBirak(kuyruk, islem.sablonId);
+    }
+  }
+
   return [...kuyruk, islem];
+}
+
+/**
+ * Sunucuya hic gitmeyecek (silinen ya da sunucunun reddettigi) gecici sablonun islemlerini duser; onunla
+ * baslatilmis antrenman korunur ama sablonsuz olur (sunucuda sablon silinince antrenmanin TemplateId'si de
+ * SET NULL olur).
+ */
+export function sablonuBirak(kuyruk: readonly BekleyenIslem[], sablonId: number): BekleyenIslem[] {
+  return kuyruk.flatMap((aday): BekleyenIslem[] => {
+    if ('sablonId' in aday && aday.sablonId === sablonId) return [];
+    if (aday.tur === 'oturumBaslat' && aday.templateId === sablonId) return [{ ...aday, templateId: null }];
+    if (aday.tur === 'sablonSirala') return [{ ...aday, templateIds: aday.templateIds.filter((id) => id !== sablonId) }];
+    return [aday];
+  });
 }
 
 /** Gecici kimligi (antrenman ya da set) sunucunun verdigi gercek kimlikle degistirir. */
 export function kimlikEsle(
   kuyruk: readonly BekleyenIslem[],
-  tur: 'oturum' | 'set',
+  tur: 'oturum' | 'set' | 'sablon',
   gecici: number,
   gercek: number,
 ): BekleyenIslem[] {
   return kuyruk.map((islem) => {
+    if (tur === 'sablon') {
+      if (islem.tur === 'oturumBaslat' && islem.templateId === gecici) return { ...islem, templateId: gercek };
+      if (islem.tur === 'sablonSirala') {
+        return { ...islem, templateIds: islem.templateIds.map((id) => (id === gecici ? gercek : id)) };
+      }
+      if ('sablonId' in islem && islem.sablonId === gecici) return { ...islem, sablonId: gercek };
+      return islem;
+    }
     if (tur === 'oturum' && 'oturumId' in islem && islem.oturumId === gecici) {
       return { ...islem, oturumId: gercek };
     }

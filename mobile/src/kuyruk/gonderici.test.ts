@@ -84,3 +84,53 @@ test('401 alinca durur ve islem kuyrukta kalir', async () => {
   expect(sonuc.durdu).toBe(true);
   expect(sonuc.kalan).toHaveLength(1);
 });
+
+/** #174 dilim 3: sablon once gider; gercek kimligi onunla baslatilan antrenmana uygulanir. */
+test('sablon olusturma anahtarla gider, gercek kimlik sonraki baslatmaya uygulanir', async () => {
+  requestMock.mockImplementation(async (yol: string) => {
+    if (yol === '/templates') return { id: 12 };
+    if (yol === '/sessions') return { id: 501 };
+    return {};
+  });
+
+  const sonuc = await kuyruguGonder([
+    { tur: 'sablonOlustur', anahtar: 't1', sablonId: -50, name: 'Leg Day', exercises: [{ exerciseId: 3, plannedSets: 3, restSeconds: 90 }] },
+    { tur: 'oturumBaslat', anahtar: 'a1', oturumId: -1, templateId: -50, startedAt: '2026-10-04T10:00:00Z' },
+    { tur: 'sablonSabitle', anahtar: 'p1', sablonId: 12, isPinned: true },
+    { tur: 'sablonSirala', anahtar: 'r1', templateIds: [12, 7] },
+    { tur: 'sablonGuncelle', anahtar: 'g1', sablonId: 7, name: 'Push', exercises: [] },
+    { tur: 'sablonSil', anahtar: 's1', sablonId: 9 },
+  ]);
+
+  expect(sonuc.kalan).toEqual([]);
+  expect(requestMock.mock.calls.map(([yol, secenek]) => `${secenek.method} ${yol}`)).toEqual([
+    'POST /templates',
+    'POST /sessions',
+    'PUT /templates/12/pin',
+    'PUT /templates/order',
+    'PUT /templates/7',
+    'DELETE /templates/9',
+  ]);
+  expect(JSON.parse(requestMock.mock.calls[0][1].body)).toMatchObject({ name: 'Leg Day', clientRequestId: 't1' });
+  expect(JSON.parse(requestMock.mock.calls[1][1].body)).toMatchObject({ templateId: 12 });
+  expect(JSON.parse(requestMock.mock.calls[2][1].body)).toEqual({ isPinned: true });
+  expect(JSON.parse(requestMock.mock.calls[3][1].body)).toEqual({ templateIds: [12, 7] });
+});
+
+/** Sunucu cevrimdisi olusturulan sablonu reddederse (orn. ad cakismasi) onunla yapilan antrenman sablonsuz gider. */
+test('reddedilen sablon olusturma antrenmani kaybettirmez, baslatma sablonsuz gider', async () => {
+  const olustur: BekleyenIslem = {
+    tur: 'sablonOlustur', anahtar: 't1', sablonId: -5, name: 'Leg Day', exercises: [{ exerciseId: 3, plannedSets: 4, restSeconds: 90 }],
+  };
+  requestMock.mockImplementation(async (yol: string) => {
+    if (yol === '/templates') throw new ApiError(409, 'cakisma');
+    if (yol === '/sessions') return { id: 501 };
+    return {};
+  });
+
+  const sonuc = await kuyruguGonder([olustur, { ...baslat, templateId: -5 }, bitir]);
+
+  expect(sonuc.atlanan).toBe(1);
+  expect(requestMock.mock.calls.map(([yol]) => yol)).toEqual(['/templates', '/sessions', '/sessions/501/finish']);
+  expect(JSON.parse(requestMock.mock.calls[1][1].body)).toMatchObject({ templateId: null });
+});

@@ -83,3 +83,61 @@ test('gecici set kimligi gercek kimlikle degisince duzeltme ve silme gercek kiml
 
   expect(kuyruk.map((islem) => ('setId' in islem ? islem.setId : null))).toEqual([900, 900]);
 });
+
+// ---- #174 dilim 3: cevrimdisi sablon islemleri ----
+
+const sablonOlustur: BekleyenIslem = {
+  tur: 'sablonOlustur', anahtar: 't1', sablonId: -50, name: 'Leg Day',
+  exercises: [{ exerciseId: 3, plannedSets: 3, restSeconds: 90 }],
+};
+
+test('gonderilmemis sablona duzenleme bekleyen olusturmayi gunceller', () => {
+  const kuyruk = kuyrugaEkle([sablonOlustur], {
+    tur: 'sablonGuncelle', anahtar: 't2', sablonId: -50, name: 'Leg Day B', exercises: [],
+  });
+
+  expect(kuyruk).toHaveLength(1);
+  expect(kuyruk[0]).toMatchObject({ tur: 'sablonOlustur', name: 'Leg Day B', exercises: [] });
+});
+
+/** Silinen sablonla baslatilmis bekleyen antrenman korunur, sablonsuz olur (sunucudaki SET NULL gibi). */
+test('gonderilmemis sablon silinince olusturmasi duser, onunla baslatilan antrenman sablonsuz kalir', () => {
+  const kuyruk = kuyrugaEkle(
+    [
+      sablonOlustur,
+      { tur: 'sablonSabitle', anahtar: 't3', sablonId: -50, isPinned: true },
+      { tur: 'oturumBaslat', anahtar: 'a1', oturumId: -1, templateId: -50, startedAt: '2026-10-04T10:00:00Z' },
+    ],
+    { tur: 'sablonSil', anahtar: 't4', sablonId: -50 },
+  );
+
+  expect(kuyruk).toEqual([
+    { tur: 'oturumBaslat', anahtar: 'a1', oturumId: -1, templateId: null, startedAt: '2026-10-04T10:00:00Z' },
+  ]);
+});
+
+test('sunucudaki sablonun duzenleme, silme, siralama ve sabitlemesi kuyruga normal islem olarak girer', () => {
+  let kuyruk = kuyrugaEkle([], { tur: 'sablonGuncelle', anahtar: 'u1', sablonId: 7, name: 'Push', exercises: [] });
+  kuyruk = kuyrugaEkle(kuyruk, { tur: 'sablonSirala', anahtar: 'u2', templateIds: [7, 8] });
+  kuyruk = kuyrugaEkle(kuyruk, { tur: 'sablonSabitle', anahtar: 'u3', sablonId: 8, isPinned: true });
+  kuyruk = kuyrugaEkle(kuyruk, { tur: 'sablonSil', anahtar: 'u4', sablonId: 7 });
+
+  expect(kuyruk.map((islem) => islem.tur)).toEqual(['sablonGuncelle', 'sablonSirala', 'sablonSabitle', 'sablonSil']);
+});
+
+test('gecici sablon kimligi gercekle degisince baslatma, siralama ve sablon islemleri gercegi kullanir', () => {
+  const kuyruk = kimlikEsle(
+    [
+      { tur: 'oturumBaslat', anahtar: 'a1', oturumId: -1, templateId: -50, startedAt: '2026-10-04T10:00:00Z' },
+      { tur: 'sablonSirala', anahtar: 'u2', templateIds: [7, -50] },
+      { tur: 'sablonSabitle', anahtar: 'u3', sablonId: -50, isPinned: false },
+    ],
+    'sablon',
+    -50,
+    12,
+  );
+
+  expect(kuyruk[0]).toMatchObject({ templateId: 12 });
+  expect(kuyruk[1]).toMatchObject({ templateIds: [7, 12] });
+  expect(kuyruk[2]).toMatchObject({ sablonId: 12 });
+});

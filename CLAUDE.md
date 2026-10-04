@@ -110,7 +110,7 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   sekmesinin en üstünde kapatılamaz bir deload kartı; `GET /api/stats/overreaching`. AI'a ayrı akış yok: sinyal
   export metninde bölüm olarak yer alır, GRINDY yorumu onu görür. Ayrıntı:
   [docs/superpowers/specs/2026-10-04-asiri-yuklenme-design.md](docs/superpowers/specs/2026-10-04-asiri-yuklenme-design.md).
-- **Çevrimdışı kullanım dilim 1 (#174, 2026-10-03)** — yalnızca mobil: "çevrimdışı" = sunucuya ulaşılamamak
+- **Çevrimdışı kullanım (#174, 2026-10-03 — dilim 3 ile 2026-10-04'te tamamlandı)** — yalnızca mobil: "çevrimdışı" = sunucuya ulaşılamamak
   (cihazın ağ durumu değil; ölçüt `request()`'in her istek sonucu, `GET /api/health` yoklaması). 5 sn
   kesintisiz ulaşılamazsa üstte kırmızı "Çevrimdışı" şeridi; ön plana dönüşte ilk 3 sn gösterilmez. Sorgu
   önbelleği cihaza kalıcı yazılır (AsyncStorage, kullanıcıya bağlı, çıkışta silinir); veri varken hata
@@ -119,7 +119,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   antrenman bekleyen işlemler kuyruğuyla (`mobile/src/kuyruk/`, ekranlar `useKuyruklu*` hook'larını kullanır);
   kuyruk sırayla, `clientRequestId` + istemci zamanıyla gönderilir. **Kullanıcı kararıyla istisna:** gönderilmeyi
   bekleyen antrenmanın set sayacı, set sayısı, süresi ve hacmi cihazda hesaplanır (gönderilince sunucununkiyle
-  değişir); PR asla cihazda hesaplanmaz. Şablon oluşturma dilim 3. Ayrıntı:
+  değişir); PR asla cihazda hesaplanmaz. **Dilim 3:** telefondaki şablonlar çevrimdışı oluşturulur,
+  düzenlenir, silinir, sıralanır ve sabitlenir (aynı kuyruk, `WorkoutTemplate.ClientRequestId`); yalnızca
+  paylaşım internet ister. Ayrıntı:
   [docs/superpowers/specs/2026-10-03-cevrimdisi-design.md](docs/superpowers/specs/2026-10-03-cevrimdisi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.

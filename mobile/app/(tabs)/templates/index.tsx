@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Link, useRouter } from 'expo-router';
 import { ClipboardList, Plus } from 'lucide-react-native';
-import { useTemplates, useSablonlariSirala, type Sablon } from '@grind/shared/api/queries';
+import { useTemplates, type Sablon } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import DevamEdenAntrenman from '../../../src/components/DevamEdenAntrenman';
@@ -11,7 +11,7 @@ import BirincilDugme from '../../../src/ui/BirincilDugme';
 import SablonKarti from '../../../src/ui/SablonKarti';
 import SurukleSiraliListe from '../../../src/ui/SurukleSiraliListe';
 import { useIkonRenk } from '../../../src/ui/renkler';
-import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
+import { useKuyrukluSablonlariSirala } from '../../../src/kuyruk/kuyrukluMutasyonlar';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -31,9 +31,8 @@ export default function SablonlarScreen() {
   const altMenuPayi = useAltMenuPayi();
   usePageTitle(t('sablonlar.baslik'));
   const { data: sablonlar, isLoading, isError } = useTemplates();
-  const siralama = useSablonlariSirala();
-  // #174: sablon duzenleme ve siralama cevrimdisi calismaz, uyari cikar.
-  const cevrimici = useCevrimiciEylem();
+  // #174 dilim 3: siralama ve duzenleme cevrimdisi de calisir (kuyruga yazilir).
+  const siralama = useKuyrukluSablonlariSirala();
   // #538: kaydedilenlerin kendi ekrani var (`/templates/saved`); burada yalnizca kendi sablonlarin.
   const { kendi, kaydedilen } = sablonlariAyir(sablonlar ?? []);
 
@@ -61,15 +60,15 @@ export default function SablonlarScreen() {
           <SurukleSiraliListe
             ogeler={kendi}
             anahtar={(sablon) => sablon.id}
-            onSirala={cevrimici((yeniSira: Sablon[]) =>
+            onSirala={(yeniSira: Sablon[]) =>
               // Sunucu TUM id kumesini bekler (#467): kaydedilenler kendi ekraninda, siraya sona eklenir.
-              siralama.mutate([...yeniSira.map((sablon) => sablon.id), ...kaydedilen.map((sablon) => sablon.id)]),
-            )}
+              siralama.mutate([...yeniSira.map((sablon) => sablon.id), ...kaydedilen.map((sablon) => sablon.id)])
+            }
             satirCiz={(sablon, suruklenen) => (
               <SablonKarti
                 ad={sablon.name}
                 hareketSayisi={sablon.exercises.length}
-                onPress={cevrimici(() => router.push(`/templates/${sablon.id}`))}
+                onPress={() => router.push(`/templates/${sablon.id}`)}
                 kaldirilmis={suruklenen}
               />
             )}

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/react-query';
 import {
   hareketiKaldir,
@@ -10,12 +11,18 @@ import {
   useDeleteSession,
   useFinishSession,
   useReorderSessionExercises,
+  useCreateTemplate,
+  useDeleteTemplate,
+  useSablonlariSirala,
+  useSablonuSabitle,
   useStartSession,
   useUpdateSet,
+  useUpdateTemplate,
   type AcikOturum,
   type Egzersiz,
   type GecmisSayfasi,
   type Sablon,
+  type SablonGirdisi,
   type SetDuzeltmesi,
   type SetKaydi,
   type TakvimOzeti,
@@ -39,6 +46,13 @@ import {
   takvimeIsle,
   yeniSetKaydi,
 } from './iyimser';
+import {
+  sablonGuncelleIyimser,
+  sablonOlusturIyimser,
+  sablonSabitleIyimser,
+  sablonSilIyimser,
+  sablonSiralaIyimser,
+} from './sablonIyimser';
 
 /**
  * #174 dilim 2: antrenman ekranlarinin yazma hook'larinin kuyruklu surumleri. Arayuz paylasilan hook'larla
@@ -394,3 +408,168 @@ export function useKuyrukluDeleteSession() {
   });
 }
 
+
+/*
+ * #174 dilim 3 (kullanici karari): telefondaki sablonlar icin olusturma, duzenleme, silme, siralama ve sabitleme
+ * cevrimdisi da calisir. Yalnizca paylasim (gorunurluk) internet ister.
+ */
+
+function sablonlar(queryClient: QueryClient): Sablon[] {
+  return queryClient.getQueryData<Sablon[]>(queryKeys.templates) ?? [];
+}
+
+function yazSablonlar(queryClient: QueryClient, liste: Sablon[]) {
+  queryClient.setQueryData(queryKeys.templates, liste);
+  for (const sablon of liste) {
+    if (queryClient.getQueryData(queryKeys.template(sablon.id))) {
+      queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
+    }
+  }
+}
+
+/**
+ * Sunucu ayni adla ikinci sablonu reddeder (409, buyuk/kucuk harf duyarsiz); cevrimdisi bu kontrolu cihaz yapar.
+ * Yakalanmazsa sablon ekranda gorunur, sunucu reddedince sessizce kaybolurdu.
+ */
+function useAdKontrolu() {
+  const { t } = useTranslation();
+  return useCallback(
+    (liste: readonly Sablon[], ad: string, haricId: number | null) => {
+      const aranan = ad.trim();
+      const cakisan = liste.some(
+        (sablon) => sablon.id !== haricId && sablon.name.trim().localeCompare(aranan, undefined, { sensitivity: 'accent' }) === 0,
+      );
+      if (cakisan) {
+        throw new ApiError(409, t('sablonlar.adZatenVar', { ad: aranan }));
+      }
+    },
+    [t],
+  );
+}
+
+export function useKuyrukluCreateTemplate() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const adKontrolu = useAdKontrolu();
+  const cevrimici = useCreateTemplate();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (girdi: SablonGirdisi) => {
+      // Ayni anahtar cevrimici denemede de gider: istek sunucuya ulasip yanit kaybolursa kuyruktaki tekrar ikinci
+      // sablon acmaz.
+      const anahtar = tekilAnahtar();
+      return yol(
+        () => cevrimici.mutateAsync({ ...girdi, clientRequestId: anahtar }),
+        () => {
+          const liste = sablonlar(queryClient);
+          adKontrolu(liste, girdi.name, null);
+          const sablonId = yeniGeciciKimlik();
+          const name = girdi.name.trim();
+          const yeni = sablonOlusturIyimser(liste, {
+            sablonId,
+            name,
+            exercises: girdi.exercises,
+            egzersizler: queryClient.getQueryData<Egzersiz[]>(queryKeys.exercises) ?? [],
+          });
+          yazSablonlar(queryClient, yeni);
+          ekle({ tur: 'sablonOlustur', anahtar, sablonId, name, exercises: girdi.exercises });
+          return yeni[yeni.length - 1];
+        },
+      );
+    },
+  });
+}
+
+export function useKuyrukluUpdateTemplate() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const adKontrolu = useAdKontrolu();
+  const cevrimici = useUpdateTemplate();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: ({ id, girdi }: { id: number; girdi: SablonGirdisi }) =>
+      yol(
+        () => cevrimici.mutateAsync({ id, girdi }),
+        () => {
+          const liste = sablonlar(queryClient);
+          adKontrolu(liste, girdi.name, id);
+          const name = girdi.name.trim();
+          const yeni = sablonGuncelleIyimser(liste, {
+            sablonId: id,
+            name,
+            exercises: girdi.exercises,
+            egzersizler: queryClient.getQueryData<Egzersiz[]>(queryKeys.exercises) ?? [],
+          });
+          yazSablonlar(queryClient, yeni);
+          ekle({ tur: 'sablonGuncelle', anahtar: tekilAnahtar(), sablonId: id, name, exercises: girdi.exercises });
+          return yeni.find((sablon) => sablon.id === id) as Sablon;
+        },
+      ),
+  });
+}
+
+export function useKuyrukluDeleteTemplate() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useDeleteTemplate();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (id: number) =>
+      yol(
+        () => cevrimici.mutateAsync(id),
+        () => {
+          queryClient.setQueryData(queryKeys.templates, sablonSilIyimser(sablonlar(queryClient), id));
+          queryClient.removeQueries({ queryKey: queryKeys.template(id) });
+          ekle({ tur: 'sablonSil', anahtar: tekilAnahtar(), sablonId: id });
+        },
+      ),
+  });
+}
+
+export function useKuyrukluSablonlariSirala() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useSablonlariSirala();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (templateIds: number[]) =>
+      yol(
+        () => cevrimici.mutateAsync(templateIds),
+        () => {
+          const yeni = sablonSiralaIyimser(sablonlar(queryClient), templateIds);
+          queryClient.setQueryData(queryKeys.templates, yeni);
+          ekle({ tur: 'sablonSirala', anahtar: tekilAnahtar(), templateIds });
+          return yeni;
+        },
+      ),
+  });
+}
+
+export function useKuyrukluSablonuSabitle() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useSablonuSabitle();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: ({ id, isPinned }: { id: number; isPinned: boolean }) =>
+      yol(
+        () => cevrimici.mutateAsync({ id, isPinned }),
+        () => {
+          const yeni = sablonSabitleIyimser(sablonlar(queryClient), id, isPinned);
+          yazSablonlar(queryClient, yeni);
+          ekle({ tur: 'sablonSabitle', anahtar: tekilAnahtar(), sablonId: id, isPinned });
+          return yeni.find((sablon) => sablon.id === id) as Sablon;
+        },
+      ),
+  });
+}

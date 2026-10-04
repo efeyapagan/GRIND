@@ -461,14 +461,19 @@ export function useSessionSets(sessionId: number | null) {
   });
 }
 
-export function useExercises() {
-  return useQuery({
+/** Sorgu tanimi disari acik: mobil cevrimdisi kullanim icin onden ceker (#174). */
+export function egzersizlerSorgusu() {
+  return {
     queryKey: queryKeys.exercises,
     queryFn: async (): Promise<Egzersiz[]> => {
       const yanit = await request<ExerciseResponse[]>('/exercises');
       return yanit.map(dogrulanmisEgzersiz);
     },
-  });
+  };
+}
+
+export function useExercises() {
+  return useQuery(egzersizlerSorgusu());
 }
 
 /**
@@ -1325,36 +1330,48 @@ export interface SablonGirdisi {
   exercises: { exerciseId: number; plannedSets: number; restSeconds: number }[];
 }
 
-export function useTemplates() {
-  return useQuery({
+/** Sorgu tanimi disari acik: mobil cevrimdisi kullanim icin onden ceker (#174). */
+export function sablonlarSorgusu() {
+  return {
     queryKey: queryKeys.templates,
     queryFn: async (): Promise<Sablon[]> => {
       const yanit = await request<TemplateResponse[]>('/templates');
       return yanit.map(dogrulanmisSablon);
     },
-  });
+  };
 }
 
+export function useTemplates() {
+  return useQuery(sablonlarSorgusu());
+}
+
+/**
+ * #174: cevrimdisi olusturulan (negatif, gecici kimlikli) sablon sunucuda yok -- istek atilmaz, detay listedeki
+ * kopyadan gelir. Liste, onbellekteki detay yokken de (cevrimdisi soguk acilis) ekrani hemen doldurur.
+ */
 export function useTemplate(id: number | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.template(id ?? 0),
     queryFn: async (): Promise<Sablon> =>
       dogrulanmisSablon(await request<TemplateResponse>(`/templates/${id}`)),
-    enabled: id !== null,
+    enabled: id !== null && id > 0,
+    placeholderData: () => queryClient.getQueryData<Sablon[]>(queryKeys.templates)?.find((sablon) => sablon.id === id),
   });
 }
 
-function sablonGovdesi(girdi: SablonGirdisi): string {
-  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises };
+function sablonGovdesi(girdi: SablonGirdisi, clientRequestId?: string): string {
+  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises, clientRequestId };
   return JSON.stringify(govde);
 }
 
 export function useCreateTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (girdi: SablonGirdisi): Promise<Sablon> =>
+    // `clientRequestId` (#174): ayni olusturma cevrimdisi kuyruktan tekrar giderse sunucu ikinci sablon acmaz.
+    mutationFn: async ({ clientRequestId, ...girdi }: SablonGirdisi & { clientRequestId?: string }): Promise<Sablon> =>
       dogrulanmisSablon(
-        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi) }),
+        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi, clientRequestId) }),
       ),
     onSuccess: (sablon) => {
       queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
