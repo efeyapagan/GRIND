@@ -22,18 +22,21 @@ const profil = {
 } as const;
 
 beforeEach(() => jest.clearAllMocks());
+afterEach(() => jest.restoreAllMocks());
 
 test('satirlar sirayla: arkadaslik, sessize al, takibi birak', async () => {
   await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
-  expect(screen.getAllByRole('button').map((d) => d.props.accessibilityLabel).filter(Boolean)).toEqual(
-    expect.arrayContaining(['Arkadaş ekle', 'Sessize al', 'Takibi bırak']),
-  );
+  const etiketler = screen.getAllByRole('button').map((d) => d.props.accessibilityLabel).filter(Boolean);
+  expect(etiketler.filter((e: string) => e !== 'Kapat')).toEqual(['Arkadaş ekle', 'Sessize al', 'Takibi bırak']);
 });
 
 test('sessize al dogrudan calisir ve menuyu kapatir', async () => {
-  await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
+  const kapat = jest.fn();
+  await render(<KisiMenusu profil={profil} acik onKapat={kapat} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Sessize al' }));
   expect(mockSessiz).toHaveBeenCalledWith({ kullaniciAdi: 'ali', sessiz: true }, expect.anything());
+  mockSessiz.mock.calls[0][1].onSuccess();
+  expect(kapat).toHaveBeenCalled();
 });
 
 test('takibi birak onay ister', async () => {
@@ -41,4 +44,12 @@ test('takibi birak onay ister', async () => {
   await render(<KisiMenusu profil={profil} acik onKapat={jest.fn()} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Takibi bırak' }));
   expect(mockTakip).toHaveBeenCalledWith({ kullaniciAdi: 'ali', takipEt: false }, expect.anything());
+});
+
+test('gonderilmis istekte geri cek satiri onay ister ve istegi geri ceker', async () => {
+  const uyari = jest.spyOn(Alert, 'alert').mockImplementation((_b, _m, dugmeler) => dugmeler?.[1]?.onPress?.());
+  await render(<KisiMenusu profil={{ ...profil, friendRequest: 'Sent' }} acik onKapat={jest.fn()} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'İsteği geri çek' }));
+  expect(uyari).toHaveBeenCalled();
+  expect(mockIstek).toHaveBeenCalledWith({ kullaniciAdi: 'ali', gonder: false }, expect.anything());
 });

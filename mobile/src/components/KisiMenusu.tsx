@@ -43,8 +43,8 @@ export default function KisiMenusu({ profil, acik, onKapat }: { profil: Kullanic
           onPress: () => onayIste({ mesaj: t('takip.arkadasliktanCikarOnay', { ad }), eylemEtiketi: t('takip.arkadasliktanCikar'),
             onEvet: () => cikar.mutate({ kullaniciAdi }, kapatinca) }) }
       : arkadaslik === 'gonderildi'
-        ? { etiket: t('takip.istekGonderildi'), ikon: UserPlus,
-            onPress: () => onayIste({ mesaj: t('takip.istegiGeriCekOnay', { ad }), eylemEtiketi: t('takip.istekGonderildi'),
+        ? { etiket: t('takip.istegiGeriCek'), ikon: UserPlus,
+            onPress: () => onayIste({ mesaj: t('takip.istegiGeriCekOnay', { ad }), eylemEtiketi: t('takip.istegiGeriCek'),
               onEvet: () => istek.mutate({ kullaniciAdi, gonder: false }, kapatinca) }) }
         : arkadaslik === 'ekle'
           ? { etiket: t('takip.arkadasEkle'), ikon: UserPlus, onPress: () => istek.mutate({ kullaniciAdi, gonder: true }, kapatinca) }

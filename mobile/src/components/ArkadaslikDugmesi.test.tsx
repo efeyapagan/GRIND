@@ -18,6 +18,7 @@ const temel = {
 } as const;
 
 beforeEach(() => jest.clearAllMocks());
+afterEach(() => jest.restoreAllMocks());
 
 test('ekle halinde istek gonderir', async () => {
   await render(<ArkadaslikDugmesi profil={{ ...temel, relation: 'None', friendRequest: 'None', canSendFriendRequest: true }} />);

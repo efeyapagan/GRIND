@@ -271,6 +271,7 @@ export const en: Katalog = {
     takiptesin: 'Following',
     arkadasEkle: 'Add friend',
     istekGonderildi: 'Request sent',
+    istegiGeriCek: 'Withdraw request',
     istegiYanitla: 'Respond',
     arkadassiniz: 'Friends',
     istekGonderilemez: "Can't send request",

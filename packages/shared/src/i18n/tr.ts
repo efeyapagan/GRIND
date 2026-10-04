@@ -278,6 +278,7 @@ export const tr = {
     takiptesin: 'Takiptesin',
     arkadasEkle: 'Arkadaş ekle',
     istekGonderildi: 'İstek gönderildi',
+    istegiGeriCek: 'İsteği geri çek',
     istegiYanitla: 'İsteği yanıtla',
     arkadassiniz: 'Arkadaşsınız',
     istekGonderilemez: 'İstek gönderilemez',

@@ -41,7 +41,7 @@ export default function ArkadaslikDugmesi({ profil }: { profil: KullaniciProfili
         istek.mutate({ kullaniciAdi, gonder: true });
         return;
       case 'gonderildi':
-        onayIste({ mesaj: t('takip.istegiGeriCekOnay', { ad }), eylemEtiketi: t('takip.istekGonderildi'),
+        onayIste({ mesaj: t('takip.istegiGeriCekOnay', { ad }), eylemEtiketi: t('takip.istegiGeriCek'),
           onEvet: () => istek.mutate({ kullaniciAdi, gonder: false }) });
         return;
       case 'gelen':
