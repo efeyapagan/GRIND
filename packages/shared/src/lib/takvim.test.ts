@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
   ayBasligi,
   ayIzgarasi,
@@ -7,6 +7,7 @@ import {
   gunBasligi,
   haftaGunleri,
   kaydir,
+  onbelleklenecekTakvimAraliklari,
   setKademesi,
   sonDonemler,
 } from './takvim';
@@ -106,4 +107,22 @@ test('listede gelecek donem yoktur', () => {
   const [ilk] = sonDonemler('hafta', '2026-09-30', 5);
 
   expect(gezilebilirMi('hafta', ilk, 1, '2026-09-30')).toBe(false);
+});
+
+// #174 (kullanici karari): bu ayin ve bir onceki ayin gecmis haftalari cevrimdisi de gorunsun -- cevrimiciyken
+// bu araliklar onceden cekilip kalici onbellege girer. Araliklar takvimin istedigiyle (gorunumAraligi) BIREBIR ayni.
+describe('onbelleklenecekTakvimAraliklari', () => {
+  test('bu ay ve onceki ay ile bu iki aya dokunan her hafta, gelecek yok', () => {
+    const araliklar = onbelleklenecekTakvimAraliklari('2026-10-03');
+
+    expect(araliklar).toContainEqual({ from: '2026-10-01', to: '2026-10-31' });
+    expect(araliklar).toContainEqual({ from: '2026-09-01', to: '2026-09-30' });
+    // Bu hafta ve onceki ayin ilk gununu iceren hafta (31 Agu - 6 Eyl) dahil; ondan oncesi degil.
+    expect(araliklar).toContainEqual({ from: '2026-09-28', to: '2026-10-04' });
+    expect(araliklar).toContainEqual({ from: '2026-08-31', to: '2026-09-06' });
+    expect(araliklar).not.toContainEqual({ from: '2026-08-24', to: '2026-08-30' });
+    expect(araliklar.filter((aralik) => aralik.to.length === 10 && aralik.from > '2026-10-04')).toEqual([]);
+    // 2 ay + 5 hafta (31 Agu, 7, 14, 21, 28 Eyl haftalari).
+    expect(araliklar).toHaveLength(2 + 5);
+  });
 });

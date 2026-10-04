@@ -77,6 +77,21 @@ export function sonDonemler(gorunum: TakvimGorunumu, bugun: string, adet: number
 }
 
 /**
+ * #174 (kullanici karari): cevrimdisiyken de gorunsun diye onceden cekilip kalici onbellege konan takvim
+ * araliklari -- bu ay ve bir onceki ay (aylik gorunum) ile bu iki aya dokunan her hafta (haftalik gorunum).
+ * Araliklar takvimin istedigiyle ayni kuraldan (`gorunumAraligi`) turer, onbellek anahtarlari birebir tutar.
+ */
+export function onbelleklenecekTakvimAraliklari(bugun: string): { from: string; to: string }[] {
+  const aylar = sonDonemler('ay', bugun, 2).map((ay) => gorunumAraligi('ay', ay));
+  const enEski = aylar[aylar.length - 1].from;
+  const haftalar: { from: string; to: string }[] = [];
+  for (let hafta = gorunumAraligi('hafta', bugun); hafta.to >= enEski; hafta = gorunumAraligi('hafta', kaydir('hafta', hafta.from, -1))) {
+    haftalar.push(hafta);
+  }
+  return [...aylar, ...haftalar];
+}
+
+/**
  * Gosterilen donemden `yon` yonune gidilebilir mi? Gelecege gezinilmez (#81): bugunun donemindeyken
  * ileri gitmek kapali, geriye gitmek her zaman acik. #315'ten beri gezinme kaydirmayla oldugu icin
  * karar iki platformda da BURADAN okunur -- bir dugmenin `disabled`i degil, hareketin kendisi susar.

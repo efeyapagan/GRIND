@@ -15,7 +15,7 @@ const YENIDEN_DENEME_MS = 10_000;
  * de cekemez): sunucudaki eski hal, gonderilmemis islemlerin iyimser halinin ustune yazilmasin.
  */
 function dondurulanSorgular() {
-  return [queryKeys.openSession, ['sessionSets'], queryKeys.historyAll];
+  return [queryKeys.openSession, ['sessionSets'], queryKeys.historyAll, queryKeys.calendarAll];
 }
 
 export function kuyrukAnahtari(kullaniciAdi: string): string {

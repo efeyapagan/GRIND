@@ -38,6 +38,9 @@ iki temada kontrast testleri zaten var).
 - `gcTime` kalıcılık süresiyle uyumlu yükseltilir (7 gün); aksi hâlde bellekten düşen sorgu diske de yazılmaz.
 - Önbellek **kullanıcıya bağlıdır**: anahtarın içinde kullanıcı adı vardır ve çıkışta (`logout`) diskteki
   kopya da silinir — paylaşılan bir cihazda başka hesabın verisi görünmez.
+- **Takvim önden çekilir (kullanıcı kararı):** bu ayın ve bir önceki ayın geçmiş haftaları çevrimdışı da
+  görünsün diye çevrimiçiyken bu aralıklar (aylık + bu iki aya dokunan her haftalık; `onbelleklenecekTakvimAraliklari`, takvimin anahtarlarıyla birebir) önceden çekilir (`TakvimOnYuklemesi`). Kuyrukta bekleyen işlem
+  varken çekilmez — sunucudaki eski takvim, çevrimdışı antrenmanın işlendiği takvimin üstüne yazılırdı.
 - Hatalı bir sorgu verisini korur. Ekranlar "veri varsa göster, yoksa hata/uyarı" sırasına çekilir:
   çevrimdışıyken önbellekte veri olan ekranda hata kutusu ÇIKMAZ.
 
@@ -80,6 +83,11 @@ davranır — tek bileşen, tek kural.
   (set sayısı, süre, hacim cihazda hesaplanır). Gerekçe: internet çekmeyen salondaki kullanıcı antrenmanını
   ve gelişimini görebilmeli. Bu değerler yalnızca bekleyen antrenman içindir; gönderilince sunucununkilerle
   değişir. **PR asla cihazda hesaplanmaz** — rozet hiç yoktur, PR'ları sunucu yüklemede hesaplar.
+- **Takvim ve haftalık hedef de (kullanıcı kararı):** çevrimdışı bitirilen (setli) antrenman önbellekteki her
+  takvim aralığına işlenir (`takvimeIsle`: gün eklenir/artar; o gün yeni antrenman günüyse antrenmanlı gün ve
+  bu haftaysa haftalık hedefin gün sayısı artar). Günü başlangıcın TR günüdür. **Seriler (hafta serisi, hedef
+  serisi) önceki haftalara bağlı sunucu hesabıdır, değişmez;** gönderilince sunucunun değerleriyle sabitlenir.
+  Kuyruk boşalana kadar takvim de dondurulur.
 - **Backend:**
   - `POST /api/sessions/{id}/sets`: antrenman AÇIKSA canlı ekleme gibidir (hareket listede yoksa eklenir,
     zaman `clientCreatedAt`, rekorlar yeniden hesaplanır); bitmiş antrenmanda #564 davranışı aynen kalır.

@@ -670,11 +670,18 @@ function dogrulanmisTakvim(yanit: CalendarResponse): TakvimOzeti {
  * Takvim (#81): `from`-`to` araligindaki antrenman gunleri ve seriler. Seriler araliktan bagimsiz, tum
  * gecmisten sunucuda hesaplanir; istemci yeniden saymaz.
  */
-export function useCalendar(from: string, to: string) {
-  return useQuery({
+/** Takvim sorgusunun anahtari ve getiricisi -- `useCalendar` ve onden cekme (#174) ayni tanimi kullanir. */
+export function takvimSorgusu(from: string, to: string) {
+  return {
     queryKey: queryKeys.calendar(from, to),
     queryFn: async (): Promise<TakvimOzeti> =>
       dogrulanmisTakvim(await request<CalendarResponse>(`/stats/calendar?From=${from}&To=${to}`)),
+  };
+}
+
+export function useCalendar(from: string, to: string) {
+  return useQuery({
+    ...takvimSorgusu(from, to),
     // Ay/hafta degisince onceki izgara yeni veri gelene kadar yerinde kalir (useExerciseProgress ile ayni).
     placeholderData: keepPreviousData,
   });

@@ -8,6 +8,7 @@ import {
   setEkleIyimser,
   setSilIyimser,
   siralaIyimser,
+  takvimeIsle,
   yeniSetKaydi,
 } from './iyimser';
 
@@ -103,4 +104,58 @@ test('bitirilen antrenmanin gecmis ozeti set sayisini, sureyi ve hacmi tasir', (
     isVolumeRecord: false,
   });
   expect(ozet.sets).toHaveLength(3);
+});
+
+// ---- Kullanici karari: cevrimdisi bitirilen antrenman takvimde ve haftalik hedefte de hemen gorunur ----
+
+const OZET = {
+  days: [{ date: '2026-09-29', sessionCount: 1, setCount: 4 }],
+  trainedDayCount: 1,
+  currentWeekStreak: 2,
+  longestWeekStreak: 5,
+  thisWeekTrainedDays: 1,
+  weeklyTargetDays: 3,
+  currentTargetStreak: 1,
+};
+const HAFTA = { from: '2026-09-28', to: '2026-10-04' };
+
+test('yeni bir gun araliga eklenir, antrenmanli gun ve haftanin gun sayisi artar', () => {
+  const sonuc = takvimeIsle(OZET, HAFTA, { gun: '2026-10-03', setSayisi: 5, yeniGun: true, buHaftaMi: true });
+
+  expect(sonuc.days).toEqual([
+    { date: '2026-09-29', sessionCount: 1, setCount: 4 },
+    { date: '2026-10-03', sessionCount: 1, setCount: 5 },
+  ]);
+  expect(sonuc.trainedDayCount).toBe(2);
+  expect(sonuc.thisWeekTrainedDays).toBe(2);
+  // Seriler sunucunun hesabidir; gonderilince guncellenir.
+  expect(sonuc.currentWeekStreak).toBe(2);
+  expect(sonuc.currentTargetStreak).toBe(1);
+});
+
+test('ayni gun ikinci antrenman gunun sayilarini artirir, gun sayilari degismez', () => {
+  const sonuc = takvimeIsle(OZET, HAFTA, { gun: '2026-09-29', setSayisi: 3, yeniGun: false, buHaftaMi: true });
+
+  expect(sonuc.days).toEqual([{ date: '2026-09-29', sessionCount: 2, setCount: 7 }]);
+  expect(sonuc.trainedDayCount).toBe(1);
+  expect(sonuc.thisWeekTrainedDays).toBe(1);
+});
+
+test('aralik disindaki gun gunlere eklenmez ama bu haftanin gun sayisi yine artar', () => {
+  const sonuc = takvimeIsle(OZET, { from: '2026-09-01', to: '2026-09-30' }, {
+    gun: '2026-10-03', setSayisi: 5, yeniGun: true, buHaftaMi: true,
+  });
+
+  expect(sonuc.days).toEqual(OZET.days);
+  expect(sonuc.trainedDayCount).toBe(1);
+  expect(sonuc.thisWeekTrainedDays).toBe(2);
+});
+
+test('bu hafta disindaki gun haftalik hedefi degistirmez', () => {
+  const sonuc = takvimeIsle(OZET, { from: '2026-09-01', to: '2026-10-31' }, {
+    gun: '2026-09-27', setSayisi: 2, yeniGun: true, buHaftaMi: false,
+  });
+
+  expect(sonuc.thisWeekTrainedDays).toBe(1);
+  expect(sonuc.trainedDayCount).toBe(2);
 });
