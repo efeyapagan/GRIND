@@ -503,3 +503,8 @@ web/coverage/
 web/.vite/
 .env.local
 .env.*.local
+
+# graphify (yerel makineye özgü önbellek ve yollar)
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root

@@ -137,6 +137,12 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | Ortak paket | `packages/shared` (npm workspace — API sorguları, i18n kataloğu, yardımcılar); testler vitest |
 | Frontend (web — DONDURULDU, #326) | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu, çeviri i18next + react-i18next |
 
+## Bilgi Grafiği (graphify) — ZORUNLU
+- Repoda `graphify-out/graph.json` ve `GRAPH_REPORT.md` bulunur (kapsam: `src/`, `mobile/`, `packages/`, `tests/`, `docs/`). Kod tabanı hakkında bir soru ("X nerede kullanılıyor?", "Y akışı hangi servislerden geçiyor?") geldiğinde önce `graphify query "<soru>"` ile grafikten yanıt ara, sonra kaynak dosyada doğrula.
+- Yeni bir iş başlamadan önce ilgili alanı grafikte incele (`graphify explain` / `graphify path`); bağımlılıkları tahmin etmek yerine grafikten oku.
+- Büyük bir değişiklikten sonra grafik eskir; `graphify update` ile yeniden üret ve grafiği ayrı bir commit'te güncelle.
+- Kurulum ve kullanım adımları, bilinen sınırlar: [docs/graphify.md](docs/graphify.md).
+
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.
 Detaylı kurallar `solid-dry-kiss` skill'inde — kod yazmadan veya inceleme yaparken bu skill
