@@ -39,7 +39,7 @@ iki temada kontrast testleri zaten var).
 - Önbellek **kullanıcıya bağlıdır**: anahtarın içinde kullanıcı adı vardır ve çıkışta (`logout`) diskteki
   kopya da silinir — paylaşılan bir cihazda başka hesabın verisi görünmez.
 - **Takvim önden çekilir (kullanıcı kararı):** bu ayın ve bir önceki ayın geçmiş haftaları çevrimdışı da
-  görünsün diye çevrimiçiyken bu aralıklar (aylık + bu iki aya dokunan her haftalık; `onbelleklenecekTakvimAraliklari`, takvimin anahtarlarıyla birebir) önceden çekilir (`TakvimOnYuklemesi`). Kuyrukta bekleyen işlem
+  görünsün diye çevrimiçiyken bu aralıklar (aylık + bu iki aya dokunan her haftalık; `onbelleklenecekTakvimAraliklari`, takvimin anahtarlarıyla birebir) önceden çekilir (`CevrimdisiOnYukleme`; dilim 3'ten beri şablon ve hareket listesi de — salonda ilk kez şablon oluşturan ya da antrenmana hareket ekleyen kullanıcı listeyi hiç açmamış olabilir). Kuyrukta bekleyen işlem
   varken çekilmez — sunucudaki eski takvim, çevrimdışı antrenmanın işlendiği takvimin üstüne yazılırdı.
 - Hatalı bir sorgu verisini korur. Ekranlar "veri varsa göster, yoksa hata/uyarı" sırasına çekilir:
   çevrimdışıyken önbellekte veri olan ekranda hata kutusu ÇIKMAZ.
@@ -49,7 +49,7 @@ iki temada kontrast testleri zaten var).
 `CevrimdisiUyari` (tek metin, katalogdan) ve `useCevrimdisi()` kancası. Önbellekten gösterilmeyen ekranlar
 (arkadaşlar kartı, rekorlar, ölçüler, ilerleme, arkadaş arama, başkasının profili, GRINDY) çevrimdışıyken
 içerik yerine bu uyarıyı çizer ve isteğe hiç çıkmaz. Çevrimdışı izin verilmeyen eylemler (şifre değiştir,
-profil kalemi, şablon düzenle/sil/sırala/sabitle/paylaş, geçmişte set düzenle/sil) ya gizlenir (profil
+profil kalemi, şablon paylaşımı, geçmişte set düzenle/sil) ya gizlenir (profil
 kalemi — kullanıcı kararı) ya da basılınca uyarı gösterir.
 
 ## Karar 3b — Çevrimdışıyken şablon figürleri sabit durur
@@ -97,19 +97,33 @@ davranır — tek bileşen, tek kural.
   - `clientRequestId` (başlatma ve set ekleme): aynı anahtarla ikinci istek yeni kayıt açmaz, ilk kaydı döner
     (`WorkoutSession (UserId, ClientRequestId)` ve `SetEntry (WorkoutSessionId, ClientRequestId)` filtreli
     benzersiz indeksleri). Başlatmada açık oturum penceresine bakılmaz.
-- Antrenman bitince paylaşım penceresi ve "şablon olarak kaydet" sorusu **çevrimdışıyken açılmaz**
-  (şablon oluşturma dilim 3).
+- Antrenman bitince paylaşım penceresi **çevrimdışıyken açılmaz**; "şablon olarak kaydet" sorusu dilim 3'ten
+  beri çevrimdışı da gelir (Karar 5).
 
 ## Karar 5 — Çevrimdışı şablon oluşturma (dilim 3)
 
-Aynı kuyruk: `POST /api/templates` istemci anahtarıyla; şablon listesinde geçici kimlikle hemen görünür.
-Çevrimdışı oluşturulan şablonla çevrimdışı antrenman başlatılabilir (geçici kimlik zinciri).
+Kullanıcı kararı: telefondaki (önbellekteki) şablonlar için **oluşturma, düzenleme, silme, sıralama ve
+sabitleme** çevrimdışı da çalışır; **yalnızca paylaşım (görünürlük) internet ister** (`useCevrimiciEylem`).
+
+- Aynı kuyruk (`sablonOlustur` / `sablonGuncelle` / `sablonSil` / `sablonSirala` / `sablonSabitle`); ekranlar
+  `useKuyrukluCreateTemplate` vb. kullanır, liste ve detay önbelleği hemen güncellenir. Kuyruk beklerken
+  şablon sorguları da dondurulur.
+- `POST /api/templates` istemci anahtarıyla (`WorkoutTemplate (UserId, ClientRequestId)` filtreli benzersiz
+  indeksi; aynı anahtarla ikinci istek ilk şablonu döner). Anahtar çevrimiçi denemede de gider: yanıt
+  kaybolup işlem kuyruğa düşerse ikinci şablon açılmaz.
+- Çevrimdışı oluşturulan şablon geçici (negatif) kimlik taşır; onunla çevrimdışı antrenman başlatılabilir,
+  gönderilince kimlik kuyruğun geri kalanında gerçeğiyle değişir. `useTemplate` geçici kimlikte istek atmaz,
+  detay listedeki kopyadan gelir; geçici şablonun formunda paylaşım bölümü gösterilmez.
+- Ad çakışmasını (sunucuda 409, büyük/küçük harf duyarsız) çevrimdışı cihaz yakalar ve işlemi kuyruğa
+  yazmaz. Sunucu kuyruktaki oluşturmayı yine de reddederse, o şablonla başlatılmış antrenman şablonsuz
+  gönderilir — antrenman kaybolmaz (`sablonuBirak`).
+- Henüz gönderilmemiş şablonu düzenlemek bekleyen oluşturmaya katlanır; silmek onun bütün işlemlerini düşürür.
 
 ## Dilimler
 
 1. Kalıcı önbellek, bağlantı durumu (Karar 1-3), sağlık ucu, ekran uyarıları.
 2. Çevrimdışı antrenman (Karar 4) — tamamlandı.
-3. Çevrimdışı şablon oluşturma (Karar 5).
+3. Çevrimdışı şablon oluşturma, düzenleme, silme, sıralama, sabitleme (Karar 5) — tamamlandı.
 
 ## Kapsam dışı
 

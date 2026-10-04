@@ -386,6 +386,8 @@ export const tr = {
   },
   sablonlar: {
     baslik: 'Şablonlar',
+    // #174: cevrimdisi olusturmada ad cakismasini sunucu yerine cihaz yakalar.
+    adZatenVar: "'{{ad}}' adında bir şablonun zaten var.",
     baslaBasligi: 'Şablonla başla',
     antrenmanaBasla: 'Antrenmana başla',
     sablonlarim: 'Şablonlarım',

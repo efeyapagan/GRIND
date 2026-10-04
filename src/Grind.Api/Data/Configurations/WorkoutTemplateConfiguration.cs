@@ -42,5 +42,9 @@ public class WorkoutTemplateConfiguration : IEntityTypeConfiguration<WorkoutTemp
         // Liste sorgusunun sırası (#344): OrderIndex, Name. TemplateExercise'daki
         // (WorkoutTemplateId, OrderIndex) index'iyle aynı gerekçe.
         builder.HasIndex(t => new { t.UserId, t.OrderIndex });
+        // #174: kuyruktan tekrar gelen oluşturma ikinci şablon açmasın.
+        builder.HasIndex(t => new { t.UserId, t.ClientRequestId })
+            .IsUnique()
+            .HasFilter("\"ClientRequestId\" IS NOT NULL");
     }
 }

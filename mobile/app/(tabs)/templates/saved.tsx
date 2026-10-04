@@ -1,7 +1,7 @@
 import { ScrollView, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { useDeleteTemplate, useSablonuSabitle, useTemplates, type Sablon } from '@grind/shared/api/queries';
+import { useTemplates, type Sablon } from '@grind/shared/api/queries';
 import { usePageTitle } from '@grind/shared/pageTitle';
 import { sablonlariAyir } from '@grind/shared/lib/kaydedilenSablonlar';
 import { sablonOzeti } from '@grind/shared/lib/sablonOzeti';
@@ -9,7 +9,7 @@ import KaydedilenSablonKaruseli from '../../../src/components/KaydedilenSablonKa
 import SablonMenusu from '../../../src/components/SablonMenusu';
 import { useSablonMenusu } from '../../../src/components/useSablonMenusu';
 import { KART_ARALIGI, useVitrinKartGenisligi } from '../../../src/ui/SablonVitrinKarti';
-import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
+import { useKuyrukluDeleteTemplate, useKuyrukluSablonuSabitle } from '../../../src/kuyruk/kuyrukluMutasyonlar';
 import { useAltMenuPayi } from '../../../src/ui/KabukTabBar';
 
 /**
@@ -26,10 +26,9 @@ export default function KaydedilenSablonlarScreen() {
   usePageTitle(t('sablonlar.kaydedilenlerEkranBasligi'));
   const kartGenisligi = useVitrinKartGenisligi();
   const { data: sablonlar, isLoading, isError } = useTemplates();
-  const silme = useDeleteTemplate();
-  const sabitleme = useSablonuSabitle();
-  // #174: sablon duzenleme, silme ve sabitleme cevrimdisi calismaz, uyari cikar.
-  const cevrimici = useCevrimiciEylem();
+  // #174 dilim 3: silme ve sabitleme cevrimdisi de calisir (kuyruga yazilir).
+  const silme = useKuyrukluDeleteTemplate();
+  const sabitleme = useKuyrukluSablonuSabitle();
   const { menu, menuyuAc, menuyuKapat, kartRef } = useSablonMenusu();
 
   const { kaydedilen } = sablonlariAyir(sablonlar ?? []);
@@ -49,11 +48,11 @@ export default function KaydedilenSablonlarScreen() {
           sablonlar={kaydedilen}
           kartGenisligi={kartGenisligi}
           aralik={KART_ARALIGI}
-          onKart={cevrimici((sablon: Sablon) => router.push(`/templates/${sablon.id}`))}
+          onKart={(sablon: Sablon) => router.push(`/templates/${sablon.id}`)}
           onMenu={menuyuAc}
           kartRef={kartRef}
           disabled={false}
-          onSabitle={cevrimici((sablon: Sablon) => sabitleme.mutate({ id: sablon.id, isPinned: !sablon.isPinned }))}
+          onSabitle={(sablon: Sablon) => sabitleme.mutate({ id: sablon.id, isPinned: !sablon.isPinned })}
         />
       )}
 
@@ -64,14 +63,14 @@ export default function KaydedilenSablonlarScreen() {
           kartGenisligi={kartGenisligi}
           kaynak={menu.kaynak}
           onKapat={menuyuKapat}
-          onDuzenle={cevrimici(() => {
+          onDuzenle={() => {
             menuyuKapat();
             router.push(`/templates/${menu.sablon.id}`);
-          })}
-          onSil={cevrimici(() => {
+          }}
+          onSil={() => {
             silme.mutate(menu.sablon.id);
             menuyuKapat();
-          })}
+          }}
         />
       )}
     </ScrollView>

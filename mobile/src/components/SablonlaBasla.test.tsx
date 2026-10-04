@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { act, render, screen, fireEvent, within } from '@testing-library/react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { useTemplates, useDeleteTemplate, useSablonlariSirala } from '@grind/shared/api/queries';
@@ -9,6 +8,11 @@ jest.mock('@grind/shared/api/queries', () => ({
   useTemplates: jest.fn(),
   useDeleteTemplate: jest.fn(),
   useSablonlariSirala: jest.fn(),
+}));
+// #174 dilim 3: ekran kuyruklu hook'lari kullanir; kuyruk kendi testlerinde -- burada paylasilan mock'lara yonlenir.
+jest.mock('../kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluDeleteTemplate: () => jest.requireMock('@grind/shared/api/queries').useDeleteTemplate(),
+  useKuyrukluSablonlariSirala: () => jest.requireMock('@grind/shared/api/queries').useSablonlariSirala(),
 }));
 
 // #606: figurun kendisi (SVG + surekli animasyon) bu testlerin konusu degil; yalnizca karuselin ona
@@ -124,9 +128,8 @@ test('basili tutunca acilan menudeki Duzenle sablon formuna gider, antrenmani ba
   expect(onBasla).not.toHaveBeenCalled();
 });
 
-/** #174 (kullanici karari): sablon duzenleme cevrimdisi calismaz -- forma gidilmez, uyari cikar. */
-test('cevrimdisiyken menudeki Duzenle forma gitmez, internete baglan uyarisi verir', async () => {
-  const uyari = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+/** #174 dilim 3 (kullanici karari): telefondaki sablon cevrimdisi de duzenlenir -- menu forma gider. */
+test('cevrimdisiyken menudeki Duzenle forma gider', async () => {
   await render(
     <BaglantiBaglami.Provider value>
       <SablonlaBasla onBasla={jest.fn()} bekliyor={false} />
@@ -136,9 +139,7 @@ test('cevrimdisiyken menudeki Duzenle forma gitmez, internete baglan uyarisi ver
   await menuyuAc(0);
   await fireEvent.press(screen.getByRole('button', { name: 'Şablonu düzenle' }));
 
-  expect(mockPush).not.toHaveBeenCalled();
-  expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
-  uyari.mockRestore();
+  expect(mockPush).toHaveBeenCalledWith('/templates/7');
 });
 
 /** Silme geri alinamaz: menudeki Sil once onay sorar, onayla O sablon silinir. */

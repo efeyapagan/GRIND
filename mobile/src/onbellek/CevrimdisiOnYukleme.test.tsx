@@ -4,7 +4,7 @@ import { request } from '@grind/shared/api/client';
 import { trBugundenOnce } from '@grind/shared/lib/format';
 import { onbelleklenecekTakvimAraliklari } from '@grind/shared/lib/takvim';
 import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
-import TakvimOnYuklemesi from './TakvimOnYuklemesi';
+import CevrimdisiOnYukleme from './CevrimdisiOnYukleme';
 
 jest.mock('@grind/shared/api/client', () => ({ request: jest.fn() }));
 jest.mock('../auth/AuthContext', () => ({ useAuth: () => ({ username: 'ada' }) }));
@@ -15,14 +15,16 @@ const BOS_TAKVIM = {
   weeklyTargetDays: null, currentTargetStreak: null,
 };
 
-beforeEach(() => requestMock.mockReset().mockResolvedValue(BOS_TAKVIM));
+beforeEach(() =>
+  requestMock.mockReset().mockImplementation(async (yol: string) => (yol.startsWith('/stats/calendar') ? BOS_TAKVIM : [])),
+);
 
 function ciz(cevrimdisi: boolean) {
   const queryClient = new QueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <BaglantiBaglami.Provider value={cevrimdisi}>
-        <TakvimOnYuklemesi />
+        <CevrimdisiOnYukleme />
       </BaglantiBaglami.Provider>
     </QueryClientProvider>,
   );
@@ -35,7 +37,18 @@ test('cevrimiciyken bu ay ve onceki ayin takvim araliklari onceden cekilir', asy
   const beklenen = onbelleklenecekTakvimAraliklari(trBugundenOnce(0)).map(
     ({ from, to }) => `/stats/calendar?From=${from}&To=${to}`,
   );
-  await waitFor(() => expect(requestMock.mock.calls.map(([yol]) => yol).sort()).toEqual([...beklenen].sort()));
+  await waitFor(() =>
+    expect(requestMock.mock.calls.map(([yol]) => yol).filter((yol) => yol.startsWith('/stats')).sort()).toEqual(
+      [...beklenen].sort(),
+    ),
+  );
+});
+
+/** #174 dilim 3: sablon ve hareket listesi de onden cekilir -- salonda ilk kez sablon olusturan hareket secebilsin. */
+test('cevrimiciyken sablonlar ve hareket listesi onceden cekilir', async () => {
+  await ciz(false);
+
+  await waitFor(() => expect(requestMock.mock.calls.map(([yol]) => yol)).toEqual(expect.arrayContaining(['/templates', '/exercises'])));
 });
 
 test('cevrimdisiyken hicbir sey cekilmez', async () => {

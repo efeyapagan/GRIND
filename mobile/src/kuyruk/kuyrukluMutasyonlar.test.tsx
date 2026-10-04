@@ -3,14 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import { ApiError } from '@grind/shared/api/problem';
-import { queryKeys, type AcikOturum, type GecmisSayfasi, type SetKaydi, type TakvimOzeti } from '@grind/shared/api/queries';
+import { queryKeys, type AcikOturum, type GecmisSayfasi, type Sablon, type SetKaydi, type TakvimOzeti } from '@grind/shared/api/queries';
 import { trBugundenOnce } from '@grind/shared/lib/format';
 import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import KuyrukSaglayici, { kuyrukAnahtari } from './KuyrukSaglayici';
 import {
   useKuyrukluAddSet,
+  useKuyrukluCreateTemplate,
+  useKuyrukluDeleteTemplate,
   useKuyrukluFinishSession,
+  useKuyrukluSablonlariSirala,
   useKuyrukluStartSession,
+  useKuyrukluUpdateTemplate,
 } from './kuyrukluMutasyonlar';
 import type { BekleyenIslem } from './kuyruk';
 
@@ -195,4 +199,129 @@ test('baglanti gelince kuyruk sirayla gonderilir ve bosalir', async () => {
     '/sessions',
     '/sessions/501/sets',
   ]);
+});
+
+
+function sablonKancalari() {
+  return {
+    olustur: useKuyrukluCreateTemplate(),
+    guncelle: useKuyrukluUpdateTemplate(),
+    sil: useKuyrukluDeleteTemplate(),
+    sirala: useKuyrukluSablonlariSirala(),
+    baslat: useKuyrukluStartSession(),
+  };
+}
+
+const LEG_DAY = { name: 'Leg Day', exercises: [{ exerciseId: 1, plannedSets: 4, restSeconds: 120 }] };
+
+/** #174 dilim 3: cevrimdisi olusturulan sablon listede hemen gorunur, anahtariyla kuyruga yazilir. */
+test('cevrimdisi sablon olusturma listeye hemen ekler ve kuyruga yazar', async () => {
+  const { result } = await renderHook(sablonKancalari, { wrapper: sarmalayici(true) });
+
+  await act(async () => {
+    await result.current.olustur.mutateAsync(LEG_DAY);
+  });
+
+  const liste = queryClient.getQueryData<Sablon[]>(queryKeys.templates)!;
+  expect(liste.map((s) => s.name)).toEqual(['Push Day', 'Leg Day']);
+  expect(liste[1].id).toBeLessThan(0);
+  expect(liste[1].exercises[0]).toMatchObject({ exerciseName: 'Bench Press', plannedSets: 4 });
+  const kuyruk = await diskKuyrugu();
+  expect(kuyruk).toEqual([expect.objectContaining({ tur: 'sablonOlustur', sablonId: liste[1].id, name: 'Leg Day' })]);
+  expect(requestMock).not.toHaveBeenCalled();
+});
+
+/** Sunucu ayni adi 409 ile reddeder; cevrimdisi cihaz yakalar, kuyruga yazmaz (yoksa sablon sonra kaybolurdu). */
+test('cevrimdisi ayni adla olusturma reddedilir, kuyruga yazilmaz', async () => {
+  const { result } = await renderHook(sablonKancalari, { wrapper: sarmalayici(true) });
+
+  let hata: unknown;
+  await act(async () => {
+    await result.current.olustur.mutateAsync({ ...LEG_DAY, name: '  push day ' }).catch((e: unknown) => {
+      hata = e;
+    });
+  });
+
+  expect(hata).toBeInstanceOf(ApiError);
+  expect((hata as ApiError).status).toBe(409);
+  expect(queryClient.getQueryData<Sablon[]>(queryKeys.templates)).toHaveLength(1);
+  expect(await diskKuyrugu()).toEqual([]);
+});
+
+/** Cevrimiciyken sunucunun reddi ekrana gider; ag hatasi gibi kuyruga dusmez. Anahtar cevrimici istekte de gider. */
+test('cevrimici ApiError kuyruga yazilmaz, istek istemci anahtarini tasir', async () => {
+  requestMock.mockRejectedValue(new ApiError(409, 'cakisma'));
+  const { result } = await renderHook(sablonKancalari, { wrapper: sarmalayici(false) });
+
+  await act(async () => {
+    await result.current.olustur.mutateAsync(LEG_DAY).catch(() => undefined);
+  });
+
+  expect(JSON.parse(requestMock.mock.calls[0][1].body).clientRequestId).toMatch(/^[0-9a-f-]{36}$/);
+  expect(await diskKuyrugu()).toEqual([]);
+});
+
+/** Kullanici karari: telefondaki sablon cevrimdisi duzenlenir, siralanir ve silinir. */
+test('cevrimdisi duzenleme, siralama ve silme listeye hemen yansir', async () => {
+  queryClient.setQueryData(queryKeys.templates, [SABLON, { ...SABLON, id: 8, name: 'Pull Day' }]);
+  queryClient.setQueryData(queryKeys.template(7), SABLON);
+  const { result } = await renderHook(sablonKancalari, { wrapper: sarmalayici(true) });
+
+  await act(async () => {
+    await result.current.guncelle.mutateAsync({ id: 7, girdi: { ...LEG_DAY, name: 'Push B' } });
+  });
+  expect(queryClient.getQueryData<Sablon>(queryKeys.template(7))?.name).toBe('Push B');
+
+  await act(async () => {
+    await result.current.sirala.mutateAsync([8, 7]);
+  });
+  expect(queryClient.getQueryData<Sablon[]>(queryKeys.templates)!.map((s) => s.id)).toEqual([8, 7]);
+
+  await act(async () => {
+    await result.current.sil.mutateAsync(8);
+  });
+  expect(queryClient.getQueryData<Sablon[]>(queryKeys.templates)!.map((s) => s.name)).toEqual(['Push B']);
+  expect((await diskKuyrugu()).map((islem) => islem.tur)).toEqual(['sablonGuncelle', 'sablonSirala', 'sablonSil']);
+  expect(requestMock).not.toHaveBeenCalled();
+});
+
+/**
+ * Uctan uca: cevrimdisi olusturulan sablonla antrenman yapilir; internet gelince sablon once olusur, antrenman
+ * sunucunun verdigi gercek sablon kimligiyle baslar.
+ */
+test('cevrimdisi yeni sablonla antrenman, baglanti gelince sablon gercek kimligiyle gider', async () => {
+  let cevrimdisi = true;
+  function Degisken({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <BaglantiBaglami.Provider value={cevrimdisi}>
+          <KuyrukSaglayici>{children}</KuyrukSaglayici>
+        </BaglantiBaglami.Provider>
+      </QueryClientProvider>
+    );
+  }
+  const { result, rerender } = await renderHook(() => ({ ...sablonKancalari(), ...kancalar() }), { wrapper: Degisken });
+
+  await act(async () => {
+    const sablon = await result.current.olustur.mutateAsync(LEG_DAY);
+    const oturum = await result.current.baslat.mutateAsync(sablon.id);
+    expect(oturum.templateName).toBe('Leg Day');
+    await result.current.setEkle.mutateAsync({ sessionId: oturum.id, exerciseId: 1, weight: 100, reps: 5, rir: null, durationSeconds: null });
+    await result.current.bitir.mutateAsync({ sessionId: oturum.id, zorluk: null });
+  });
+
+  requestMock.mockImplementation(async (yol: string) => {
+    if (yol === '/templates') return { id: 70 };
+    if (yol === '/sessions') return { id: 501 };
+    if (yol === '/sessions/501/sets') return { id: 900 };
+    return {};
+  });
+  cevrimdisi = false;
+  await rerender({});
+
+  await waitFor(async () => expect(await diskKuyrugu()).toEqual([]));
+  const gidenler = requestMock.mock.calls.filter(([, secenek]) => secenek?.method).map(([yol]) => yol);
+  expect(gidenler).toEqual(['/templates', '/sessions', '/sessions/501/sets', '/sessions/501/finish']);
+  const baslatma = requestMock.mock.calls.find(([yol]) => yol === '/sessions')!;
+  expect(JSON.parse(baslatma[1].body).templateId).toBe(70);
 });

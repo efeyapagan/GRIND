@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCevrimdisi } from './BaglantiSaglayici';
 
 /**
- * #174: cevrimdisi izin verilmeyen bir eylemi (sifre degistir, sablon duzenle/sil/sirala/sabitle/paylas,
+ * #174: cevrimdisi izin verilmeyen bir eylemi (sifre degistir, sablon paylas,
  * gecmiste set duzenle/sil) sarar -- cevrimdisiyken eylem calismaz, "Internete baglan" uyarisi cikar.
  */
 export function useCevrimiciEylem() {
