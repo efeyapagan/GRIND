@@ -99,6 +99,7 @@ public class UsersController(
     /// <summary>#628: gönderdiğim isteği geri çek — idempotent.</summary>
     [HttpDelete("{username}/friend-request")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> WithdrawFriendRequest(string username, CancellationToken cancellationToken)
     {
@@ -109,6 +110,7 @@ public class UsersController(
     /// <summary>#628: bana gelen isteği kabul et — iki taraf karşılıklı takip eder. İstek yoksa 404.</summary>
     [HttpPost("{username}/friend-request/accept")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AcceptFriendRequest(string username, CancellationToken cancellationToken)
     {
@@ -119,6 +121,7 @@ public class UsersController(
     /// <summary>#628: bana gelen isteği reddet — takipler değişmez. İstek yoksa 404.</summary>
     [HttpPost("{username}/friend-request/reject")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RejectFriendRequest(string username, CancellationToken cancellationToken)
     {
@@ -132,6 +135,7 @@ public class UsersController(
     /// </summary>
     [HttpDelete("{username}/follower")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveFollower(string username, CancellationToken cancellationToken)
     {

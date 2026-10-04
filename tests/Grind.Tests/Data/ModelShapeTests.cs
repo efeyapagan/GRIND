@@ -6,7 +6,7 @@ namespace Grind.Tests.Data;
 public class ModelShapeTests
 {
     [Fact]
-    public void Model_tam_olarak_on_uc_entity_icerir()
+    public void Model_tam_olarak_beklenen_entity_kumesini_icerir()
     {
         var actual = TestModel.Model.GetEntityTypes()
             .Select(e => e.ClrType.Name)

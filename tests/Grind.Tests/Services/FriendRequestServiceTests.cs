@@ -113,7 +113,7 @@ public class FriendRequestServiceTests
     }
 
     /// <summary>
-    /// Kabul: eksik takip satırları eklenir (var olan tekrar eklenmez — Review Focus 2), çiftin TÜM
+    /// Kabul: eksik takip satırları eklenir (var olan takip tekrar eklenmez), çiftin TÜM
     /// istekleri (karşı yöndeki bekleyen ve reddedilmişler dahil) silinir.
     /// </summary>
     [Fact]

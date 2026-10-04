@@ -40,6 +40,12 @@ public class FollowService(
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         });
 
+        // Karşı takip arkadaşlık kurar: bekleyen/reddedilmiş istek satırları artık anlamsız, aynı kayıtta silinir
+        // (aksi hâlde hedefte hayalet bir "istek" bildirimi kalırdı).
+        if (await followRepository.GetAsync(target.Id, currentUser.UserId, cancellationToken) is not null)
+            foreach (var request in await friendRequestRepository.GetPairAsync(currentUser.UserId, target.Id, cancellationToken))
+                friendRequestRepository.Remove(request);
+
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -65,6 +71,8 @@ public class FollowService(
     public async Task RemoveFollowerAsync(string username, CancellationToken cancellationToken = default)
     {
         var follower = await userRepository.GetActiveByUsernameOrThrowAsync(username, cancellationToken);
+        if (follower.Id == currentUser.UserId)
+            throw new ValidationException("Kendini takipçilerinden çıkaramazsın.");
         var follow = await followRepository.GetAsync(follower.Id, currentUser.UserId, cancellationToken);
         if (follow is null)
             return;
@@ -95,10 +103,10 @@ public class FollowService(
         var self = target.Id == me;
         var friendRequest = self || relation == FollowRelation.Friends
             ? FriendRequestState.None
-            : await friendRequestRepository.GetPendingAsync(me, target.Id, cancellationToken) is not null
-                ? FriendRequestState.Sent
-                : await friendRequestRepository.GetPendingAsync(target.Id, me, cancellationToken) is not null
-                    ? FriendRequestState.Received
+            : await friendRequestRepository.GetPendingAsync(target.Id, me, cancellationToken) is not null
+                ? FriendRequestState.Received
+                : await friendRequestRepository.GetPendingAsync(me, target.Id, cancellationToken) is not null
+                    ? FriendRequestState.Sent
                     : FriendRequestState.None;
         var canSend = !self
             && await friendRequestRepository.CountRejectedAsync(me, target.Id, cancellationToken)

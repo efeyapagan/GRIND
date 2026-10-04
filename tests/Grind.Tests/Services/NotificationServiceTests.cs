@@ -391,22 +391,25 @@ public class NotificationServiceTests
     [Fact]
     public async Task Sessize_alinan_kisiden_hicbir_bildirim_gelmez()
     {
-        var (context, users, transaction) = await CreateAsync(2);
+        var (context, users, transaction) = await CreateAsync(3);
         await using (transaction)
         {
-            var (ben, ali) = (users[0], users[1]);
+            var (ben, ali, veli) = (users[0], users[1], users[2]);
             var benim = await TakipAsync(context, ben, ali, Simdi.AddHours(-5));
             await TakipAsync(context, ali, ben, Simdi.AddHours(-4));
             var hareket = await HareketAsync(context, ali, "Bench");
             await AntrenmanAsync(context, ali, Simdi.AddHours(-1), (hareket, 100, 5, RecordType.Weight));
             context.Add(new FriendRequest { RequesterId = ali.Id, TargetId = ben.Id, CreatedAt = Simdi.AddHours(-3) });
             await context.SaveChangesAsync();
-            Assert.Equal(3, (await ServiceFor(context, ben).GetAsync()).Count);
+            await TakipAsync(context, veli, ben, Simdi.AddHours(-2));
+            Assert.Equal(4, (await ServiceFor(context, ben).GetAsync()).Count);
 
             benim.NotificationsMuted = true;
             await context.SaveChangesAsync();
 
-            Assert.Empty(await ServiceFor(context, ben).GetAsync());
+            // Sessize alma yalnızca o kişiyi susturur: üçüncü kişinin bildirimi hâlâ gelir.
+            var kalan = Assert.Single(await ServiceFor(context, ben).GetAsync());
+            Assert.Equal(veli.Username, kalan.Actor.Username);
         }
     }
 }

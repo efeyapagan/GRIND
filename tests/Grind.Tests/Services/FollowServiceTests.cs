@@ -367,7 +367,7 @@ public class FollowServiceTests
         }
     }
 
-    /// <summary>Review Focus 3: sessize alma takip satırında yaşar — bırakıp yeniden takip edince sıfırdan başlar.</summary>
+    /// <summary>Sessize alma takip satırında yaşar — bırakıp yeniden takip edince sıfırdan başlar.</summary>
     [Fact]
     public async Task Sessize_alma_profilde_gorunur_yeniden_takipte_sifirlanir()
     {
@@ -404,6 +404,61 @@ public class FollowServiceTests
 
             var bGozuyle = await ServiceFor(context, b).GetProfileAsync(a.Username);
             Assert.Equal((FriendRequestState.Received, false), (bGozuyle.FriendRequest, bGozuyle.CanSendFriendRequest));
+        }
+    }
+
+    /// <summary>
+    /// Bekleyen isteğe yanıt vermek yerine doğrudan karşı takip arkadaşlık kurar: çiftin TÜM istek satırları
+    /// (bekleyen + reddedilmiş) aynı kayıtta silinir, hedefte "istek" bildirimi kalmaz.
+    /// </summary>
+    [Fact]
+    public async Task Karsi_takip_arkadas_yapinca_ciftin_istekleri_silinir()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            await ServiceFor(context, a).FollowAsync(b.Username);
+            context.Add(new FriendRequest { RequesterId = a.Id, TargetId = b.Id, CreatedAt = An });
+            context.Add(new FriendRequest { RequesterId = a.Id, TargetId = b.Id, CreatedAt = An, RejectedAt = An });
+            await context.SaveChangesAsync();
+            Assert.Single(await new NotificationRepository(context)
+                .GetFriendRequestEventsAsync(b.Id, An.AddDays(-1), 10));
+
+            await ServiceFor(context, b).FollowAsync(a.Username);
+
+            Assert.Empty(await context.FriendRequests.Where(r =>
+                (r.RequesterId == a.Id && r.TargetId == b.Id) || (r.RequesterId == b.Id && r.TargetId == a.Id)).ToListAsync());
+            Assert.Empty(await new NotificationRepository(context)
+                .GetFriendRequestEventsAsync(b.Id, An.AddDays(-1), 10));
+        }
+    }
+
+    /// <summary>İki yönde de bekleyen istek varsa her iki taraf da "yanıtla" görür (Received, Sent'ten önce).</summary>
+    [Fact]
+    public async Task Capraz_bekleyen_isteklerde_iki_taraf_da_Received_gorur()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (a, b) = (users[0], users[1]);
+            context.Add(new FriendRequest { RequesterId = a.Id, TargetId = b.Id, CreatedAt = An });
+            context.Add(new FriendRequest { RequesterId = b.Id, TargetId = a.Id, CreatedAt = An });
+            await context.SaveChangesAsync();
+
+            Assert.Equal(FriendRequestState.Received, (await ServiceFor(context, a).GetProfileAsync(b.Username)).FriendRequest);
+            Assert.Equal(FriendRequestState.Received, (await ServiceFor(context, b).GetProfileAsync(a.Username)).FriendRequest);
+        }
+    }
+
+    [Fact]
+    public async Task Kendini_takipciden_cikarma_400()
+    {
+        var (context, users, transaction) = await CreateAsync(1);
+        await using (transaction)
+        {
+            await Assert.ThrowsAsync<ValidationException>(
+                () => ServiceFor(context, users[0]).RemoveFollowerAsync(users[0].Username));
         }
     }
 }
