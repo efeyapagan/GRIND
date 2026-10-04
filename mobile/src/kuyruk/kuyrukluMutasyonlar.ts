@@ -18,10 +18,12 @@ import {
   type Sablon,
   type SetDuzeltmesi,
   type SetKaydi,
+  type TakvimOzeti,
   type YeniSetGirdisi,
   type Zorluk,
 } from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
+import { trBugundenOnce } from '@grind/shared/lib/format';
 import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useKuyruk } from './KuyrukSaglayici';
 import { tekilAnahtar } from './kuyruk';
@@ -34,6 +36,7 @@ import {
   setEkleIyimser,
   setSilIyimser,
   siralaIyimser,
+  takvimeIsle,
   yeniSetKaydi,
 } from './iyimser';
 
@@ -72,6 +75,31 @@ function yazAcikOturum(queryClient: QueryClient, oturum: AcikOturum, setler?: Se
   queryClient.setQueryData(queryKeys.openSession, oturum);
   if (setler) {
     queryClient.setQueryData(queryKeys.sessionSets(oturum.id), setler);
+  }
+}
+
+/** TR takviminde bu haftanin pazartesisi ("YYYY-MM-DD"); seri ve hedef haftalari Pazartesi-Pazar. */
+function buHaftaninPazartesisi(): string {
+  const bugun = trBugundenOnce(0);
+  const haftaninGunu = new Date(`${bugun}T12:00:00Z`).getUTCDay();
+  return trBugundenOnce((haftaninGunu + 6) % 7);
+}
+
+/**
+ * Cevrimdisi bitirilen antrenmani onbellekteki TUM takvim araliklarina isler (kullanici karari: takvimde ve
+ * haftalik hedefte hemen gorunur). Antrenmanin gunu baslangicinin TR gunudur (CLAUDE.md kurali).
+ */
+function takvimlereIsle(queryClient: QueryClient, startedAt: string, setSayisi: number) {
+  const gun = trBugundenOnce(0, new Date(startedAt));
+  const takvimler = queryClient.getQueriesData<TakvimOzeti>({ queryKey: queryKeys.calendarAll });
+  const yeniGun = !takvimler.some(([, ozet]) => ozet?.days.some((g) => g.date === gun));
+  const buHaftaMi = gun >= buHaftaninPazartesisi();
+  for (const [anahtar, ozet] of takvimler) {
+    if (!ozet) {
+      continue;
+    }
+    const [, from, to] = anahtar as [string, string, string];
+    queryClient.setQueryData(anahtar, takvimeIsle(ozet, { from, to }, { gun, setSayisi, yeniGun, buHaftaMi }));
   }
 }
 
@@ -309,8 +337,9 @@ export function useKuyrukluReorderSessionExercises() {
 }
 
 /**
- * Bitirme. Cevrimdisi (kullanici karari): antrenman gecmiste HEMEN gorunur -- ozeti gecmisin ilk sayfasinin
- * basina yazilir; gonderilince sunucunun kaydiyla degisir. Donen oturumun `durationSeconds`i cihazda hesaplanir.
+ * Bitirme. Cevrimdisi (kullanici karari): antrenman gecmiste, takvimde ve haftalik hedefte HEMEN gorunur --
+ * ozeti gecmisin ilk sayfasinin basina yazilir, takvim araliklarina islenir (setsiz antrenman sayilmaz, sunucu
+ * gibi); gonderilince hepsi sunucunun degerleriyle sabitlenir. Donen oturumun `durationSeconds`i cihazda hesaplanir.
  */
 export function useKuyrukluFinishSession() {
   const queryClient = useQueryClient();
@@ -327,6 +356,9 @@ export function useKuyrukluFinishSession() {
           const endedAt = new Date().toISOString();
           const oturum = acikOturum(queryClient) as AcikOturum;
           const ozet = gecmisOzeti(oturum, oturumSetleri(queryClient, oturum.id), endedAt);
+          if (ozet.setCount > 0) {
+            takvimlereIsle(queryClient, oturum.startedAt, ozet.setCount);
+          }
           queryClient.setQueryData<InfiniteData<GecmisSayfasi>>(queryKeys.historyInfinite, (onceki) =>
             onceki && onceki.pages.length > 0
               ? {

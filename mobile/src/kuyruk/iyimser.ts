@@ -5,6 +5,7 @@ import type {
   HareketIlerlemesi,
   Sablon,
   SetKaydi,
+  TakvimOzeti,
 } from '@grind/shared/api/queries';
 
 /**
@@ -164,5 +165,32 @@ export function gecmisOzeti(oturum: AcikOturum, setler: SetKaydi[], endedAt: str
     setCount: setler.length,
     durationSeconds: Math.max(0, Math.round((Date.parse(endedAt) - Date.parse(oturum.startedAt)) / 1000)),
     sets: setler,
+  };
+}
+
+/**
+ * Cevrimdisi bitirilen antrenmani bir takvim araligina isler (kullanici karari: takvimde ve haftalik hedefte
+ * hemen gorunur; gonderilince sunucunun degerleriyle sabitlenir). Gun aralikta ise gunun kaydi eklenir ya da
+ * artar; `yeniGun` (o gun daha once antrenman yoksa) aralikli antrenman gun sayisini, `buHaftaMi` ile
+ * birlikte bu haftanin gun sayisini (haftalik hedef) artirir. Seriler onceki haftalara bagli sunucu
+ * hesabidir -- burada degismez, gonderilince guncellenir.
+ */
+export function takvimeIsle(
+  ozet: TakvimOzeti,
+  aralik: { from: string; to: string },
+  { gun, setSayisi, yeniGun, buHaftaMi }: { gun: string; setSayisi: number; yeniGun: boolean; buHaftaMi: boolean },
+): TakvimOzeti {
+  const araliktaMi = gun >= aralik.from && gun <= aralik.to;
+  let days = ozet.days;
+  if (araliktaMi) {
+    days = ozet.days.some((g) => g.date === gun)
+      ? ozet.days.map((g) => (g.date === gun ? { ...g, sessionCount: g.sessionCount + 1, setCount: g.setCount + setSayisi } : g))
+      : [...ozet.days, { date: gun, sessionCount: 1, setCount: setSayisi }].sort((a, b) => a.date.localeCompare(b.date));
+  }
+  return {
+    ...ozet,
+    days,
+    trainedDayCount: ozet.trainedDayCount + (araliktaMi && yeniGun ? 1 : 0),
+    thisWeekTrainedDays: ozet.thisWeekTrainedDays + (buHaftaMi && yeniGun ? 1 : 0),
   };
 }

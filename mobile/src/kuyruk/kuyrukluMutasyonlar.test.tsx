@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import { ApiError } from '@grind/shared/api/problem';
-import { queryKeys, type AcikOturum, type GecmisSayfasi, type SetKaydi } from '@grind/shared/api/queries';
+import { queryKeys, type AcikOturum, type GecmisSayfasi, type SetKaydi, type TakvimOzeti } from '@grind/shared/api/queries';
+import { trBugundenOnce } from '@grind/shared/lib/format';
 import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import KuyrukSaglayici, { kuyrukAnahtari } from './KuyrukSaglayici';
 import {
@@ -146,6 +147,33 @@ test('cevrimdisi bitirilen antrenman gecmisin en ustunde hemen gorunur', async (
   expect(gecmis.pages[0].items[0]).toMatchObject({ sessionId: oturumId, templateName: 'Push Day', setCount: 1, totalVolume: 480 });
   expect(gecmis.pages[0].items[1]).toMatchObject({ templateName: 'Eski' });
   expect((await diskKuyrugu()).map((islem) => islem.tur)).toEqual(['oturumBaslat', 'setEkle', 'oturumBitir']);
+});
+
+/** Kullanici karari: cevrimdisi bitirilen antrenman takvimde ve haftalik hedefte de hemen gorunur. */
+test('cevrimdisi bitirilen antrenman takvime ve haftalik hedefe hemen islenir', async () => {
+  const bugun = trBugundenOnce(0);
+  const bos: TakvimOzeti = {
+    days: [], trainedDayCount: 0, currentWeekStreak: 2, longestWeekStreak: 5, thisWeekTrainedDays: 0,
+    weeklyTargetDays: 3, currentTargetStreak: 0,
+  };
+  queryClient.setQueryData(queryKeys.calendar(bugun, bugun), bos);
+  const { result } = await renderHook(kancalar, { wrapper: sarmalayici(true) });
+  await act(async () => {
+    await result.current.baslat.mutateAsync(7);
+  });
+  await act(async () => {
+    await result.current.setEkle.mutateAsync({ exerciseId: 1, weight: 60, reps: 8, rir: null, durationSeconds: null });
+  });
+  const oturumId = queryClient.getQueryData<AcikOturum>(queryKeys.openSession)!.id;
+
+  await act(async () => {
+    await result.current.bitir.mutateAsync({ sessionId: oturumId, zorluk: null });
+  });
+
+  const takvim = queryClient.getQueryData<TakvimOzeti>(queryKeys.calendar(bugun, bugun))!;
+  expect(takvim.days).toEqual([{ date: bugun, sessionCount: 1, setCount: 1 }]);
+  expect(takvim.trainedDayCount).toBe(1);
+  expect(takvim.thisWeekTrainedDays).toBe(1);
 });
 
 /** Baglanti gelince kuyruk sirayla gonderilir (gecici kimlikler gercekle eslenir) ve bosalir. */
