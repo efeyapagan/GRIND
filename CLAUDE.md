@@ -87,7 +87,8 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   **saklanmaz**: `Follow` / `WorkoutSession` / `SetEntry`'den sorgu anında türetilir (`INotificationSource`
   başına bir tür); okundu durumu tek alan `User.NotificationsSeenAt`, ekran açılınca `POST
   /api/notifications/seen`. Son 30 gün, en fazla 50. Push, hedef/seri hatırlatması ve GRINDY bildirimi kapsam
-  dışı; saklanması gereken bir tür gelirse o türe özel tablo + kaynak eklenir. Ayrıntı:
+  dışı; saklanması gereken bir tür gelirse o türe özel tablo + kaynak eklenir. #628: sessize alınan kişiden
+  (`Follow.NotificationsMuted`) hiçbir tür gelmez; süzgeç `NotificationRepository`'de tek yerde. Ayrıntı:
   [docs/superpowers/specs/2026-09-26-bildirimler-design.md](docs/superpowers/specs/2026-09-26-bildirimler-design.md).
 - **Ağırlıksız hareketler (2026-09-27, #346)** — `Exercise.Measurement` setin neyle ölçüldüğünü söyler:
   `WeightReps` (bugünkü), `Reps` (crunch, leg raise — kilo isteğe bağlı "ek ağırlık", RIR yok) ve `Duration`
@@ -123,6 +124,16 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   düzenlenir, silinir, sıralanır ve sabitlenir (aynı kuyruk, `WorkoutTemplate.ClientRequestId`); yalnızca
   paylaşım internet ister. Ayrıntı:
   [docs/superpowers/specs/2026-10-03-cevrimdisi-design.md](docs/superpowers/specs/2026-10-03-cevrimdisi-design.md).
+- **Kişi menüsü + arkadaşlık isteği (#628, 2026-10-03)** — yalnızca mobil: başkasının profilinde Instagram
+  düzeni — solda "Takiptesin ⌄" (kişi menüsü: arkadaşlık · Sessize al · Takibi bırak), sağda arkadaşlık
+  düğmesi. Arkadaşlık hâlâ karşılıklı takiptir; **arkadaşlık isteği** kabul edilince eksik takip satırları
+  açılır (iki taraf arkadaş olur), ret takipleri değiştirmez, aynı kişiye üst üste 3 retten sonra istek
+  gönderilemez (geri çekilen sayılmaz; bekleyen istek "İsteği geri çek" ile geri alınır). Arkadaşlıktan çıkar
+  = onu takipçilerimden çıkarmak (ben takipte kalırım, arkadaşlığa özel olanlar kapanır; "Takipçiden çıkar"la
+  aynı uç); Takibi bırak benim takibimi siler. Sessize al (`Follow.NotificationsMuted`) o kişiden gelen TÜM
+  bildirimleri kapatır. Kendi takip listelerinde satır başına Arkadaşlıktan çıkar / Takibi bırak /
+  Takipçiden çıkar. Kısıtla sonraki dilim.
+  Ayrıntı: [docs/superpowers/specs/2026-10-03-kisi-menusu-arkadaslik-istegi-design.md](docs/superpowers/specs/2026-10-03-kisi-menusu-arkadaslik-istegi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -383,7 +394,13 @@ Object Reference) açığıdır.
 - **AiInsightTranslation** (#199): `Id`, `AiInsightId` (FK, CASCADE), `Language` (dil kodu,
   `varchar(8)`), `Content`; `(AiInsightId, Language)` benzersiz — bir üretimin bir dildeki metni
 - **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
-  `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak
+  `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak,
+  `NotificationsMuted` (#628 — takip edenin bu kişiden bildirim istemediği; takip satırıyla yaşar, takibi
+  bırakınca kalkar)
+- **FriendRequest** (#628): `Id`, `RequesterId` (FK → User, RESTRICT), `TargetId` (FK → User, RESTRICT),
+  `CreatedAt`, `RejectedAt` (nullable — `null` = bekliyor, dolu = reddedildi; ret sınırı bu satırlardan
+  sayılır, sayaç saklanmaz) — çift başına tek bekleyen istek (kısmi benzersiz indeks), kendine istek CHECK ile
+  yasak; kabulde çiftin tüm satırları silinir
 
 > Karar (takip ve arkadaşlık — #281, 2026-09-23): takip **doğrudan**dır (istek/onay yok), satırın
 > varlığı takibin kendisidir. **Arkadaş = karşılıklı takip** ve SAKLANMAZ: iki `Follow` satırından
@@ -392,7 +409,9 @@ Object Reference) açığıdır.
 > aramada görünmez, profilleri 404'tür; satırları silinmez, hesap geri açılınca ilişki geri gelir.
 > `/api/users/{username}/...` uçları yalnızca herkese açık başlık bilgisi (ad, sayaçlar, bakanın
 > ilişkisi) döner — antrenman verisi paylaşmaz; istisna arkadaşa salt-okunur geçmiş/rekor uçlarıdır
-> (#282, bkz. Yetkilendirme Kuralı istisnası).
+> (#282, bkz. Yetkilendirme Kuralı istisnası). #628: takip hâlâ doğrudandır; arkadaşlık isteği onu
+> DEĞİŞTİRMEZ, yalnızca iki kişiyi tek adımda karşılıklı takibe getirir (kabulde eksik `Follow` satırları
+> açılır). İstek bir bildirim türüdür (`FriendRequest`) — saklanan ilk tür; kaynağı istek tablosudur.
 
 > Karar: Çoklu kullanıcı desteği en baştan ekleniyor. Basit bir username + password (hash'lenmiş)
 > + JWT authentication yeterli — OAuth/üçüncü parti login gerekmiyor (KISS).

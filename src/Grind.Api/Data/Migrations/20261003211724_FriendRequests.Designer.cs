@@ -3,6 +3,7 @@ using System;
 using Grind.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Grind.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003211724_FriendRequests")]
+    partial class FriendRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2086,9 +2089,6 @@ namespace Grind.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid?>("ClientRequestId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2119,11 +2119,9 @@ namespace Grind.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExerciseId", "WorkoutSessionId");
+                    b.HasIndex("WorkoutSessionId");
 
-                    b.HasIndex("WorkoutSessionId", "ClientRequestId")
-                        .IsUnique()
-                        .HasFilter("\"ClientRequestId\" IS NOT NULL");
+                    b.HasIndex("ExerciseId", "WorkoutSessionId");
 
                     b.ToTable("SetEntries", t =>
                         {
@@ -2272,9 +2270,6 @@ namespace Grind.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid?>("ClientRequestId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Difficulty")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -2298,10 +2293,6 @@ namespace Grind.Api.Data.Migrations
 
                     b.HasIndex("TemplateId");
 
-                    b.HasIndex("UserId", "ClientRequestId")
-                        .IsUnique()
-                        .HasFilter("\"ClientRequestId\" IS NOT NULL");
-
                     b.HasIndex("UserId", "StartedAt");
 
                     b.ToTable("WorkoutSessions", t =>
@@ -2317,9 +2308,6 @@ namespace Grind.Api.Data.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<Guid?>("ClientRequestId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2348,10 +2336,6 @@ namespace Grind.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SavedFromUserId");
-
-                    b.HasIndex("UserId", "ClientRequestId")
-                        .IsUnique()
-                        .HasFilter("\"ClientRequestId\" IS NOT NULL");
 
                     b.HasIndex("UserId", "Name")
                         .IsUnique();

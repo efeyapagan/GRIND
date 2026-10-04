@@ -6,6 +6,11 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 // Fotograf kimlikli bir fetch'le gelir; bu testlerin konusu degil.
 jest.mock('./ProfilFotografi', () => () => null);
+const mockYanit = jest.fn();
+jest.mock('@grind/shared/api/queries', () => ({
+  useArkadaslikYaniti: () => ({ mutate: mockYanit, isPending: false, isError: false }),
+}));
+jest.mock('../baglanti/useCevrimiciEylem', () => ({ useCevrimiciEylem: () => (f: unknown) => f }));
 
 const ali = { username: 'ali', displayName: 'Ali Kaya', hasAvatar: false, avatarVersion: null };
 
@@ -16,7 +21,10 @@ function takip(relation: Bildirim['actor']['relation'], displayName: string | nu
   };
 }
 
-beforeEach(() => mockPush.mockReset());
+beforeEach(() => {
+  mockPush.mockReset();
+  mockYanit.mockReset();
+});
 
 test('takip bildirimi metni; dokununca profile gider', async () => {
   await render(<BildirimSatiri bildirim={takip('FollowedBy')} />);
@@ -91,4 +99,23 @@ test('haftalik hedef bildirimi metni; dokununca profile gider', async () => {
 
   await fireEvent.press(screen.getByTestId('bildirim-WeeklyGoal-ali'));
   expect(mockPush).toHaveBeenCalledWith('/profile/u/ali');
+});
+
+/** #628: arkadaslik istegi satir icinde Kabul et / Reddet ile yanitlanir. */
+test('arkadaslik isteginde kabul ve reddet dugmeleri yaniti gonderir', async () => {
+  const bildirim: Bildirim = {
+    kind: 'FriendRequest',
+    occurredAt: new Date().toISOString(),
+    isUnread: true,
+    actor: { ...ali, relation: 'None' },
+    records: [],
+  };
+  await render(<BildirimSatiri bildirim={bildirim} />);
+  expect(screen.getByText(/sana arkadaşlık isteği gönderdi/)).toBeTruthy();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Kabul et' }));
+  expect(mockYanit).toHaveBeenCalledWith({ kullaniciAdi: 'ali', kabul: true });
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Reddet' }));
+  expect(mockYanit).toHaveBeenCalledWith({ kullaniciAdi: 'ali', kabul: false });
 });

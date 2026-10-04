@@ -24,6 +24,7 @@ function kur(haftalar: unknown[]) {
       return {
         username: 'efeypgn', displayName: 'Efe Yapağan', age: null, hasAvatar: false, avatarVersion: null,
         friendCount: 0, followerCount: 0, followingCount: 0, relation: 'Self', privacyLevel: 'Kisitli',
+        friendRequest: 'None', canSendFriendRequest: false, notificationsMuted: false,
       };
     }
     if (path === '/stats/weekly') return { weeks: haftalar };

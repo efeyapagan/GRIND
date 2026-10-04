@@ -7,5 +7,8 @@ public enum NotificationKind
     Records,
 
     /// <summary>Arkadaş haftalık hedefini tamamladı (#419).</summary>
-    WeeklyGoal
+    WeeklyGoal,
+
+    /// <summary>Bana gelen, bekleyen arkadaşlık isteği (#628) — kabul/ret edilince kaybolur.</summary>
+    FriendRequest
 }

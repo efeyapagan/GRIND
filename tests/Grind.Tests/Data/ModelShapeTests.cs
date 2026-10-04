@@ -6,7 +6,7 @@ namespace Grind.Tests.Data;
 public class ModelShapeTests
 {
     [Fact]
-    public void Model_tam_olarak_on_uc_entity_icerir()
+    public void Model_tam_olarak_beklenen_entity_kumesini_icerir()
     {
         var actual = TestModel.Model.GetEntityTypes()
             .Select(e => e.ClrType.Name)
@@ -14,12 +14,13 @@ public class ModelShapeTests
             .ToArray();
 
         // SessionExercise: antrenmanin hareket listesi (#60/#62). Follow: takip sistemi (#281).
+        // FriendRequest: arkadaslik istegi (#628).
         // UserAvatar: profil fotografi (#280). AiInsightTranslation: yorumun dil basina metni (#199).
         string[] expected =
         [
             "AiInsight", "AiInsightTranslation", "BodyWeightLog", "Exercise", "ExerciseMedia", "Follow",
-            "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar", "WorkoutSession",
-            "WorkoutTemplate"
+            "FriendRequest", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
+            "WorkoutSession", "WorkoutTemplate"
         ];
 
         Assert.Equal(expected, actual);
