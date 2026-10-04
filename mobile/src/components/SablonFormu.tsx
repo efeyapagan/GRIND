@@ -4,10 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { ClipboardList, Plus, Trash2, X } from 'lucide-react-native';
 import {
-  useCreateTemplate,
-  useDeleteTemplate,
   useExercises,
-  useUpdateTemplate,
   useUpdateTemplateSharing,
   type Egzersiz,
   type Sablon,
@@ -28,6 +25,13 @@ import HareketSecici, { LISTE_YUKSEKLIGI } from '../ui/HareketSecici';
 import SecimKutusu from '../ui/SecimKutusu';
 import SurukleSiraliListe from '../ui/SurukleSiraliListe';
 import { useIkonRenk } from '../ui/renkler';
+import { useCevrimiciEylem } from '../baglanti/useCevrimiciEylem';
+import { geciciMi } from '../kuyruk/kuyruk';
+import {
+  useKuyrukluCreateTemplate,
+  useKuyrukluDeleteTemplate,
+  useKuyrukluUpdateTemplate,
+} from '../kuyruk/kuyrukluMutasyonlar';
 
 /** Satirlar arasi bosluk (Tailwind gap-3); surukleme hesabi da bunu bilmeli. */
 const SATIR_ARALIGI = 12;
@@ -69,10 +73,12 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
   const ikonRenk = useIkonRenk();
   const router = useRouter();
   const { data: egzersizler } = useExercises();
-  const olusturMutasyonu = useCreateTemplate();
-  const guncelleMutasyonu = useUpdateTemplate();
-  const silMutasyonu = useDeleteTemplate();
+  // #174 dilim 3: olusturma, duzenleme ve silme cevrimdisi de calisir (kuyruga yazilir); paylasim internet ister.
+  const olusturMutasyonu = useKuyrukluCreateTemplate();
+  const guncelleMutasyonu = useKuyrukluUpdateTemplate();
+  const silMutasyonu = useKuyrukluDeleteTemplate();
   const paylasimMutasyonu = useUpdateTemplateSharing();
+  const cevrimici = useCevrimiciEylem();
 
   const siraliEgzersizler = adaGoreSirala(egzersizler ?? []);
 
@@ -229,7 +235,8 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
         hata={adHatasi ?? undefined}
       />
 
-      {sablon && (
+      {/* Cevrimdisi olusturulup henuz gonderilmemis sablon sunucuda yok: paylasimi gonderilince acilir. */}
+      {sablon && !geciciMi(sablon.id) && (
         <View className="flex-col gap-2">
           <Text className="text-heading text-fg">{t('sablonlar.paylasBasligi')}</Text>
           {/* #540: uc kademe -- herkes / arkadaslar (karsilikli takip) / kimse. Isaretli olan ETKIN
@@ -252,7 +259,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
                   accessibilityRole="button"
                   accessibilityState={{ selected: secili }}
                   disabled={paylasimMutasyonu.isPending}
-                  onPress={() => paylasimMutasyonu.mutate({ id: sablon.id, visibility: secenek.deger })}
+                  onPress={cevrimici(() => paylasimMutasyonu.mutate({ id: sablon.id, visibility: secenek.deger }))}
                   className={`h-11 flex-1 items-center justify-center rounded-xl ${secili ? 'bg-accent' : 'bg-surface-3'}`}
                 >
                   <Text className={`text-label ${secili ? 'text-on-accent' : 'text-fg'}`}>{secenek.etiket}</Text>

@@ -5,6 +5,7 @@
 export const tr = {
   ortak: {
     yukleniyor: 'Yükleniyor...',
+    sayfaGostergesi: 'Sayfa {{no}} / {{toplam}}',
     cevrimdisi: 'Çevrimdışı',
     internetBaglan: 'İnternete bağlan',
     internetGerekiyor: 'Bu bölüm internet bağlantısı gerektiriyor.',
@@ -403,6 +404,8 @@ export const tr = {
   },
   sablonlar: {
     baslik: 'Şablonlar',
+    // #174: cevrimdisi olusturmada ad cakismasini sunucu yerine cihaz yakalar.
+    adZatenVar: "'{{ad}}' adında bir şablonun zaten var.",
     baslaBasligi: 'Şablonla başla',
     antrenmanaBasla: 'Antrenmana başla',
     sablonlarim: 'Şablonlarım',
@@ -546,6 +549,16 @@ export const tr = {
     tumHareketler: 'Tüm hareketler',
     hareketteHaftaYok: 'Bu hareketin henüz tamamlanmış bir haftası yok.',
     kiloluHareketYok: 'Tahmini 1RM için kilolu bir hareket kaydet.',
+  },
+  // #176: İlerleme sekmesinin üstündeki aşırı yüklenme kartı.
+  asiriYuklenme: {
+    baslik: 'Aşırı yüklenme sinyali',
+    rozet: 'Deload önerisi',
+    dususSatiri: '{{hareket}} · {{onceki}} → {{son}} kg (−{{yuzde}}%)',
+    rirSatiri: 'Ortalama RIR {{onceki}} → {{son}}',
+    zorlukSatiri: 'Son 2 haftada {{zor}}/{{toplam}} antrenman Zor ya da Maksimal',
+    oneri:
+      "Bu hafta deload yap: aynı hareketler, setlerin yaklaşık yarısı ve ağırlıkta ~%10 azaltma — ya da 2–3 gün aktif dinlenme. GRINDY'den yorum istersen bu sinyali ayrıntılı açıklar.",
   },
   olcumler: {
     kiloGerekli: 'Kilo gerekli.',

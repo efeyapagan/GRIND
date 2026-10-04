@@ -105,13 +105,24 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   hacim kartı varsayılan olarak toplamı gösterir, başlıktan kilolu bir hareket seçilebilir
   (`?exerciseId=`, görünmeyen harekette 404); iki kartın hareket seçimi pencerede (`HareketSecimKutusu`). Ayrıntı:
   [docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md](docs/superpowers/specs/2026-09-30-asamali-yuklenme-design.md).
-- **Çevrimdışı kullanım dilim 1 (#174, 2026-10-03)** — yalnızca mobil: "çevrimdışı" = sunucuya ulaşılamamak
+- **Aşırı yüklenme sinyali (2026-10-04, #176)** — kural tabanlı, saklanmaz (`OverreachingDetector`, plato deseni):
+  son 14 günde en az 2 kilolu harekette tahmini 1RM önceki 28 güne göre ≥ %5 düşük VE efor arttı (RIR ≥ 1 düştü,
+  her dönemde ≥ 2 RIR'lı set; ya da son dönemde ≥ 2 işaretli oturumun en az yarısı Zor/Maksimal). Yanarsa İlerleme
+  sekmesinin en üstünde kapatılamaz bir deload kartı; `GET /api/stats/overreaching`. AI'a ayrı akış yok: sinyal
+  export metninde bölüm olarak yer alır, GRINDY yorumu onu görür. Ayrıntı:
+  [docs/superpowers/specs/2026-10-04-asiri-yuklenme-design.md](docs/superpowers/specs/2026-10-04-asiri-yuklenme-design.md).
+- **Çevrimdışı kullanım (#174, 2026-10-03 — dilim 3 ile 2026-10-04'te tamamlandı)** — yalnızca mobil: "çevrimdışı" = sunucuya ulaşılamamak
   (cihazın ağ durumu değil; ölçüt `request()`'in her istek sonucu, `GET /api/health` yoklaması). 5 sn
   kesintisiz ulaşılamazsa üstte kırmızı "Çevrimdışı" şeridi; ön plana dönüşte ilk 3 sn gösterilmez. Sorgu
   önbelleği cihaza kalıcı yazılır (AsyncStorage, kullanıcıya bağlı, çıkışta silinir); veri varken hata
   kutusu çıkmaz. Önbellekten gösterilmeyen bölümler `CevrimdisiKapisi`, izin verilmeyen eylemler
-  `useCevrimiciEylem` ile "İnternete bağlan" der; ekran ekran kapsam issue #174'te. Çevrimdışı antrenman
-  (kuyruk) dilim 2, şablon oluşturma dilim 3. Ayrıntı:
+  `useCevrimiciEylem` ile "İnternete bağlan" der; ekran ekran kapsam issue #174'te. **Dilim 2:** çevrimdışı
+  antrenman bekleyen işlemler kuyruğuyla (`mobile/src/kuyruk/`, ekranlar `useKuyruklu*` hook'larını kullanır);
+  kuyruk sırayla, `clientRequestId` + istemci zamanıyla gönderilir. **Kullanıcı kararıyla istisna:** gönderilmeyi
+  bekleyen antrenmanın set sayacı, set sayısı, süresi ve hacmi cihazda hesaplanır (gönderilince sunucununkiyle
+  değişir); PR asla cihazda hesaplanmaz. **Dilim 3:** telefondaki şablonlar çevrimdışı oluşturulur,
+  düzenlenir, silinir, sıralanır ve sabitlenir (aynı kuyruk, `WorkoutTemplate.ClientRequestId`); yalnızca
+  paylaşım internet ister. Ayrıntı:
   [docs/superpowers/specs/2026-10-03-cevrimdisi-design.md](docs/superpowers/specs/2026-10-03-cevrimdisi-design.md).
 - **Kişi menüsü + arkadaşlık isteği (#628, 2026-10-03)** — yalnızca mobil: başkasının profilinde Instagram
   düzeni — solda "Takiptesin ⌄" (kişi menüsü: arkadaşlık · Sessize al · Takibi bırak), sağda arkadaşlık
@@ -136,6 +147,12 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
 | Mobil (aktif istemci) | React Native + Expo (`mobile/`), expo-router, NativeWind, TanStack Query, i18next; testler jest-expo |
 | Ortak paket | `packages/shared` (npm workspace — API sorguları, i18n kataloğu, yardımcılar); testler vitest |
 | Frontend (web — DONDURULDU, #326) | React + Vite + TypeScript, PWA (`web/`); sunucu durumu TanStack Query, yönlendirme React Router; stil Tailwind CSS v4, ikonlar lucide-react, uygulamaya gömülü Inter fontu, çeviri i18next + react-i18next |
+
+## Bilgi Grafiği (graphify) — ZORUNLU
+- Repoda `graphify-out/graph.json` ve `GRAPH_REPORT.md` bulunur (kapsam: `src/`, `mobile/`, `packages/`, `tests/`, `docs/`). Kod tabanı hakkında bir soru ("X nerede kullanılıyor?", "Y akışı hangi servislerden geçiyor?") geldiğinde önce `graphify query "<soru>"` ile grafikten yanıt ara, sonra kaynak dosyada doğrula.
+- Yeni bir iş başlamadan önce ilgili alanı grafikte incele (`graphify explain` / `graphify path`); bağımlılıkları tahmin etmek yerine grafikten oku.
+- Büyük bir değişiklikten sonra grafik eskir; `graphify update` ile yeniden üret ve grafiği ayrı bir commit'te güncelle.
+- Kurulum ve kullanım adımları, bilinen sınırlar: [docs/graphify.md](docs/graphify.md).
 
 ## Kod Prensipleri — ZORUNLU
 Her yeni sınıf, servis veya endpoint yazılırken **SOLID, DRY ve KISS** prensiplerine uyulacak.

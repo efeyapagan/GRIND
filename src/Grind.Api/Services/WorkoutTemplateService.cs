@@ -41,6 +41,15 @@ public class WorkoutTemplateService(
     public async Task<TemplateResponse> CreateAsync(
         CreateTemplateRequest request, CancellationToken cancellationToken = default)
     {
+        // #174: kuyruktan tekrar gelen oluşturma (yanıtı kaybolmuş) ilk şablonu döner -- ad kontrolüne de
+        // takılmaz, yoksa kendi adıyla 409 alıp kuyruktan atılırdı.
+        if (request.ClientRequestId is { } anahtar
+            && await templateRepository.GetByClientRequestIdAsync(currentUser.UserId, anahtar, cancellationToken)
+                is { } onceki)
+        {
+            return await ToResponseAsync(await OwnedOrThrowAsync(onceki.Id, cancellationToken), cancellationToken);
+        }
+
         var name = RequireTrimmedName(request.Name);
         await EnsureNameFreeAsync(name, excludeId: null, cancellationToken);
 
@@ -48,7 +57,8 @@ public class WorkoutTemplateService(
         {
             UserId = currentUser.UserId,
             Name = name,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ClientRequestId = request.ClientRequestId
         };
 
         templateRepository.Add(template);

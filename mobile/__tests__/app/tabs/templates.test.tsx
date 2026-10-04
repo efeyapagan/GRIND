@@ -10,6 +10,11 @@ jest.mock('@grind/shared/api/queries', () => ({
   useOpenSession: jest.fn(),
 }));
 
+// #174 dilim 3: ekran kuyruklu hook'lari kullanir; kuyruk kendi testlerinde -- burada paylasilan mock'lara yonlenir.
+jest.mock('../../../src/kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluSablonlariSirala: () => jest.requireMock('@grind/shared/api/queries').useSablonlariSirala(),
+}));
+
 const mockNavigate = jest.fn();
 jest.mock('expo-router', () => {
   const { Text } = require('react-native');

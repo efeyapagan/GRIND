@@ -24,6 +24,8 @@ type WeeklyStatsResponse = components['schemas']['WeeklyStatsResponse'];
 type WeeklyStatsRow = components['schemas']['WeeklyStatsRow'];
 type ExerciseVolumeResponseVolumeSummaryResponse = components['schemas']['ExerciseVolumeResponseVolumeSummaryResponse'];
 type ExerciseVolumeResponse = components['schemas']['ExerciseVolumeResponse'];
+type OverreachingResponse = components['schemas']['OverreachingResponse'];
+type ExerciseDropResponse = components['schemas']['ExerciseDropResponse'];
 type PlateauResponse = components['schemas']['PlateauResponse'];
 type TemplateResponse = components['schemas']['TemplateResponse'];
 type TemplateExerciseResponse = components['schemas']['TemplateExerciseResponse'];
@@ -78,6 +80,8 @@ export const queryKeys = {
   plateaus: ['records', 'plateaus'] as const,
   // #184: Ilerleme sekmesi. Set eklenince/silinince tazelenir (bkz. setDegistiTazele).
   weeklyStats: ['weeklyStats'] as const,
+  // #176: asiri yuklenme sinyali (Ilerleme sekmesinin en ustu).
+  overreaching: ['overreaching'] as const,
   volumeByExerciseAll: ['volumeByExercise'] as const,
   volumeByExercise: (from: string | null) => [...queryKeys.volumeByExerciseAll, from ?? 'tum'] as const,
   historyAll: ['history'] as const,
@@ -453,18 +457,25 @@ export function useSessionSets(sessionId: number | null) {
       const yanit = await request<SetEntryResponse[]>(`/sessions/${sessionId}/sets`);
       return yanit.map(dogrulanmisSet);
     },
-    enabled: sessionId !== null,
+    // #174: negatif kimlik cevrimdisi baslatilmis (henuz sunucuda olmayan) antrenmandir -- setleri yalnizca
+    // cihazdaki onbellektedir, sunucuya sorulmaz.
+    enabled: sessionId !== null && sessionId > 0,
   });
 }
 
-export function useExercises() {
-  return useQuery({
+/** Sorgu tanimi disari acik: mobil cevrimdisi kullanim icin onden ceker (#174). */
+export function egzersizlerSorgusu() {
+  return {
     queryKey: queryKeys.exercises,
     queryFn: async (): Promise<Egzersiz[]> => {
       const yanit = await request<ExerciseResponse[]>('/exercises');
       return yanit.map(dogrulanmisEgzersiz);
     },
-  });
+  };
+}
+
+export function useExercises() {
+  return useQuery(egzersizlerSorgusu());
 }
 
 /**
@@ -670,11 +681,18 @@ function dogrulanmisTakvim(yanit: CalendarResponse): TakvimOzeti {
  * Takvim (#81): `from`-`to` araligindaki antrenman gunleri ve seriler. Seriler araliktan bagimsiz, tum
  * gecmisten sunucuda hesaplanir; istemci yeniden saymaz.
  */
-export function useCalendar(from: string, to: string) {
-  return useQuery({
+/** Takvim sorgusunun anahtari ve getiricisi -- `useCalendar` ve onden cekme (#174) ayni tanimi kullanir. */
+export function takvimSorgusu(from: string, to: string) {
+  return {
     queryKey: queryKeys.calendar(from, to),
     queryFn: async (): Promise<TakvimOzeti> =>
       dogrulanmisTakvim(await request<CalendarResponse>(`/stats/calendar?From=${from}&To=${to}`)),
+  };
+}
+
+export function useCalendar(from: string, to: string) {
+  return useQuery({
+    ...takvimSorgusu(from, to),
     // Ay/hafta degisince onceki izgara yeni veri gelene kadar yerinde kalir (useExerciseProgress ile ayni).
     placeholderData: keepPreviousData,
   });
@@ -876,6 +894,65 @@ export function useVolumeByExercise(from: string | null, enabled = true) {
   });
 }
 
+export interface HareketDususu {
+  exerciseId: number;
+  exerciseName: string;
+  previousBest: number;
+  recentBest: number;
+  dropPercent: number;
+}
+
+/** #176: yanan sinyal; RIR ortalamalari yalnizca RIR kurali degerlendirilebildiyse dolu. */
+export interface AsiriYuklenmeSinyali {
+  drops: HareketDususu[];
+  rirBefore: number | null;
+  rirRecent: number | null;
+  hardSessions: number;
+  ratedSessions: number;
+}
+
+function dogrulanmisDusus(yanit: ExerciseDropResponse): HareketDususu {
+  if (
+    yanit.exerciseId === undefined ||
+    !yanit.exerciseName ||
+    yanit.previousBest === undefined ||
+    yanit.recentBest === undefined ||
+    yanit.dropPercent === undefined
+  ) {
+    throw new Error('Sunucudan eksik dusus satiri alindi.');
+  }
+  return {
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    previousBest: yanit.previousBest,
+    recentBest: yanit.recentBest,
+    dropPercent: yanit.dropPercent,
+  };
+}
+
+/** #176: `GET /api/stats/overreaching` -- sinyal yoksa `null`. */
+export function useOverreaching() {
+  return useQuery({
+    queryKey: queryKeys.overreaching,
+    queryFn: async (): Promise<AsiriYuklenmeSinyali | null> => {
+      const sinyal = (await request<OverreachingResponse>('/stats/overreaching')).signal;
+      if (!sinyal) {
+        return null;
+      }
+      if (sinyal.hardSessions === undefined || sinyal.ratedSessions === undefined) {
+        throw new Error('Sunucudan eksik asiri yuklenme sinyali alindi.');
+      }
+      return {
+        drops: (sinyal.drops ?? []).map(dogrulanmisDusus),
+        rirBefore: sinyal.rirBefore ?? null,
+        rirRecent: sinyal.rirRecent ?? null,
+        hardSessions: sinyal.hardSessions,
+        ratedSessions: sinyal.ratedSessions,
+      };
+    },
+  });
+}
+
 /** #346: hangi alanlarin dolu oldugu hareketin olcum tipine bagli (`lib/setGirdisi`); `null` = gonderilmedi. */
 export interface YeniSetGirdisi {
   exerciseId: number;
@@ -941,6 +1018,8 @@ export function setDegistiTazele(
   // #184: Ilerleme sekmesinin haftalik satirlari ve 1RM kartinin varsayilan hareketi setlerden turer.
   void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
   void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
+  // #176: sinyal setlerden turer.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
 }
 
 export interface SetDuzeltmesi {
@@ -1019,6 +1098,8 @@ export function useFinishSession() {
 export function oturumBittiTazele(queryClient: QueryClient): void {
   queryClient.setQueryData(queryKeys.openSession, null);
   void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+  // #176: zorluk bitirirken isaretlenir, sinyalin efor kuralina girer.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
 }
 
 /**
@@ -1118,6 +1199,7 @@ export function oturumSilindiTazele(queryClient: QueryClient, sessionId: number)
   // #184: Ilerleme sekmesi silinen oturumun setlerini gostermeye devam etmesin.
   void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
   void queryClient.invalidateQueries({ queryKey: queryKeys.volumeByExerciseAll });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.overreaching });
   // Silinen oturumun set sorgusu artik 404 verir; invalidate ETMEK yerine KALDIRILIR,
   // aksi halde bayat girdi yeniden cekilmeye calisilir ve gereksiz bir hata uretir.
   queryClient.removeQueries({ queryKey: queryKeys.sessionSets(sessionId) });
@@ -1250,36 +1332,48 @@ export interface SablonGirdisi {
   exercises: { exerciseId: number; plannedSets: number; restSeconds: number }[];
 }
 
-export function useTemplates() {
-  return useQuery({
+/** Sorgu tanimi disari acik: mobil cevrimdisi kullanim icin onden ceker (#174). */
+export function sablonlarSorgusu() {
+  return {
     queryKey: queryKeys.templates,
     queryFn: async (): Promise<Sablon[]> => {
       const yanit = await request<TemplateResponse[]>('/templates');
       return yanit.map(dogrulanmisSablon);
     },
-  });
+  };
 }
 
+export function useTemplates() {
+  return useQuery(sablonlarSorgusu());
+}
+
+/**
+ * #174: cevrimdisi olusturulan (negatif, gecici kimlikli) sablon sunucuda yok -- istek atilmaz, detay listedeki
+ * kopyadan gelir. Liste, onbellekteki detay yokken de (cevrimdisi soguk acilis) ekrani hemen doldurur.
+ */
 export function useTemplate(id: number | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.template(id ?? 0),
     queryFn: async (): Promise<Sablon> =>
       dogrulanmisSablon(await request<TemplateResponse>(`/templates/${id}`)),
-    enabled: id !== null,
+    enabled: id !== null && id > 0,
+    placeholderData: () => queryClient.getQueryData<Sablon[]>(queryKeys.templates)?.find((sablon) => sablon.id === id),
   });
 }
 
-function sablonGovdesi(girdi: SablonGirdisi): string {
-  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises };
+function sablonGovdesi(girdi: SablonGirdisi, clientRequestId?: string): string {
+  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises, clientRequestId };
   return JSON.stringify(govde);
 }
 
 export function useCreateTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (girdi: SablonGirdisi): Promise<Sablon> =>
+    // `clientRequestId` (#174): ayni olusturma cevrimdisi kuyruktan tekrar giderse sunucu ikinci sablon acmaz.
+    mutationFn: async ({ clientRequestId, ...girdi }: SablonGirdisi & { clientRequestId?: string }): Promise<Sablon> =>
       dogrulanmisSablon(
-        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi) }),
+        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi, clientRequestId) }),
       ),
     onSuccess: (sablon) => {
       queryClient.setQueryData(queryKeys.template(sablon.id), sablon);

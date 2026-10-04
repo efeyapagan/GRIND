@@ -63,6 +63,8 @@ public class ExportService(
             calendar.LongestWeekStreak,
             volumeByExercise.Items);
 
+        var overreaching = await statsService.GetOverreachingAsync(cancellationToken);
+
         return new ExportResponse(
             timeProvider.GetUtcNow().UtcDateTime,
             query.From,
@@ -71,7 +73,8 @@ public class ExportService(
             HistoryMapping.ToSessionResponses(sessions, sets, volumeRecordIds),
             bodyWeights.Select(b => new BodyWeightLogResponse(
                 b.Id, b.Weight, b.HeightCm, b.BodyFatPercent, b.WaistCm, b.HipCm, b.RecordedAt)).ToList(),
-            records);
+            records,
+            overreaching.Signal);
     }
 
     public async Task<string> GetTextAsync(

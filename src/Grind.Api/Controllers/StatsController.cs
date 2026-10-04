@@ -81,6 +81,15 @@ public class StatsController(IStatsService statsService, IExerciseProgressServic
         => Ok(await statsService.GetWeeklyAsync(exerciseId, cancellationToken));
 
     /// <summary>
+    /// #176: aşırı yüklenme sinyali (İlerleme sekmesi). Bugüne göre, aralıktan bağımsız; sinyal yoksa
+    /// <c>signal</c> null.
+    /// </summary>
+    [HttpGet("overreaching")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OverreachingResponse>> GetOverreaching(CancellationToken cancellationToken)
+        => Ok(await statsService.GetOverreachingAsync(cancellationToken));
+
+    /// <summary>
     /// Bir hareketin oturum başına en ağır seti, hacmi ve tahmini 1RM'i, eskiden yeniye (dilim 3).
     /// Egzersiz görünmüyorsa nötr 404.
     /// </summary>

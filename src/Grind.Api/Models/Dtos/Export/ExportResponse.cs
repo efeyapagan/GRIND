@@ -1,6 +1,7 @@
 using Grind.Api.Models.Dtos.BodyWeight;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Record;
+using Grind.Api.Models.Dtos.Stats;
 
 namespace Grind.Api.Models.Dtos.Export;
 
@@ -11,6 +12,7 @@ namespace Grind.Api.Models.Dtos.Export;
 /// <see cref="GeneratedAt"/> UTC'dir. <see cref="From"/>/<see cref="To"/> istekteki TR günleridir
 /// (null = o yönde sınır yok). <see cref="AllTimeRecords"/> ARALIKTAN BAĞIMSIZDIR (spec Karar 2).
 /// Listeler eskiden yeniye sıralıdır (spec Karar 7).
+/// <see cref="Overreaching"/> (#176) bugüne göre aşırı yüklenme sinyali, aralıktan BAĞIMSIZ; yoksa null.
 /// </summary>
 public record ExportResponse(
     DateTime GeneratedAt,
@@ -19,4 +21,5 @@ public record ExportResponse(
     ExportSummaryResponse Summary,
     IReadOnlyList<HistorySessionResponse> Sessions,
     IReadOnlyList<BodyWeightLogResponse> BodyWeights,
-    IReadOnlyList<ExerciseRecordResponse> AllTimeRecords);
+    IReadOnlyList<ExerciseRecordResponse> AllTimeRecords,
+    OverreachingSignalResponse? Overreaching = null);

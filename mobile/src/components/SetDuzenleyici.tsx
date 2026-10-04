@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react-native';
-import { useUpdateSet, type SetKaydi } from '@grind/shared/api/queries';
+import type { SetKaydi } from '@grind/shared/api/queries';
+import { useKuyrukluUpdateSet } from '../kuyruk/kuyrukluMutasyonlar';
 import { apiHatasiniAyir } from '@grind/shared/lib/apiErrors';
 import {
   SET_ALANLARI,
@@ -38,7 +39,8 @@ interface Props {
 export default function SetDuzenleyici({ kayit, sira, onKapat, onSil }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
-  const duzeltme = useUpdateSet();
+  // #174 dilim 2: cevrimdisiyken duzeltme kuyruga girer, set hemen guncellenir.
+  const duzeltme = useKuyrukluUpdateSet();
   const agirlikIbaresi = useAgirlikIbaresi(kayit.exerciseId);
   const olcum = kayit.measurement;
   const [girdi, setGirdi] = useState(() => setGirdisiMetni(kayit));

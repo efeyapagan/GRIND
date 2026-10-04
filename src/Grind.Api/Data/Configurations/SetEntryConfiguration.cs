@@ -27,6 +27,10 @@ public class SetEntryConfiguration : IEntityTypeConfiguration<SetEntry>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(s => new { s.ExerciseId, s.WorkoutSessionId });
+        // #174: kuyruktan tekrar gelen istek seti iki kez yazmasın.
+        builder.HasIndex(s => new { s.WorkoutSessionId, s.ClientRequestId })
+            .IsUnique()
+            .HasFilter("\"ClientRequestId\" IS NOT NULL");
 
         builder.ToTable(t =>
         {

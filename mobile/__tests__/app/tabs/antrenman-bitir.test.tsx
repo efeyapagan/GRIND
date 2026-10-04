@@ -4,6 +4,7 @@ import { oturumBittiTazele, useFinishSession, useOpenSession, useTemplate } from
 import { PageTitleProvider } from '@grind/shared/pageTitle';
 import { dinlenmeBaslat, duraklatildiMi, kalanMs, type Dinlenme } from '@grind/shared/lib/dinlenme';
 import AntrenmanBitirScreen from '../../../app/(tabs)/antrenman-bitir';
+import { BaglantiBaglami } from '../../../src/baglanti/BaglantiSaglayici';
 
 // #477: ekran, dinlenme sayacini odaklandiginda duraklatip biraktiginda surduruyor.
 let mockDinlenme: Dinlenme | null = null;
@@ -30,6 +31,12 @@ function bitenOturum(gecersizler: Record<string, unknown> = {}) {
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+// #174 dilim 2: ekran kuyruklu bitirmeyi kullanir; bu testin konusu ekranin akisi, kuyruk degil (kuyruk
+// kendi testlerinde) -- kuyruklu hook paylasilan hook'un mock'una yonlenir.
+jest.mock('../../../src/kuyruk/kuyrukluMutasyonlar', () => ({
+  useKuyrukluFinishSession: () => jest.requireMock('@grind/shared/api/queries').useFinishSession(),
+}));
+
 jest.mock('expo-router', () => ({
   // Odak kazanma/birakma: geri cagrinin dondurdugu temizleyici "ekrandan cikildi" demektir.
   useFocusEffect: (geriCagri: () => (() => void) | void) => {
@@ -56,12 +63,14 @@ const ACIK_OTURUM = {
   progress: [],
 };
 
-function ekraniOlustur() {
+function ekraniOlustur(cevrimdisi = false) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <PageTitleProvider>
-        <AntrenmanBitirScreen />
-      </PageTitleProvider>
+      <BaglantiBaglami.Provider value={cevrimdisi}>
+        <PageTitleProvider>
+          <AntrenmanBitirScreen />
+        </PageTitleProvider>
+      </BaglantiBaglami.Provider>
     </QueryClientProvider>,
   );
 }
@@ -351,6 +360,21 @@ describe('bitince paylasim karti', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Kapat' }));
 
     await waitFor(() => expect(screen.getByText('Şablon olarak kaydedilsin mi?')).toBeTruthy());
+  });
+
+  /**
+   * #174 (kullanici karari): internet yokken paylasim penceresi hic acilmaz; sablon sorusu ise gelir (dilim 3:
+   * sablon cevrimdisi de olusturulur).
+   */
+  test('cevrimdisi paylasim penceresi acilmaz, sablon sorusu cikar', async () => {
+    bitir(bitenOturum({ durationSeconds: 2880 }));
+    await ekraniOlustur(true);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Atla' }));
+
+    expect(screen.queryByText('Galeriye kaydet')).toBeNull();
+    expect(await screen.findByText('Şablon olarak kaydedilsin mi?')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   /** Suresiz (ya da setsiz) antrenmanin karti anlamsizdir: pencere hic acilmaz, akis eskisi gibi. */

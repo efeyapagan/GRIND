@@ -39,6 +39,12 @@ public class WorkoutTemplate
     /// </summary>
     public bool IsPinned { get; set; }
 
+    /// <summary>
+    /// #174: çevrimdışı oluşturulan şablonun cihazda üretilen tekil anahtarı -- kuyruktan tekrar gelen istek
+    /// ikinci şablon açmasın (kullanıcı başına benzersiz). Anahtarsız oluşturmalarda null.
+    /// </summary>
+    public Guid? ClientRequestId { get; set; }
+
     public User User { get; set; } = null!;
     public User? SavedFromUser { get; set; }
     public ICollection<TemplateExercise> TemplateExercises { get; set; } = [];

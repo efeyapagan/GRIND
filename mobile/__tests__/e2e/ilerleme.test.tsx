@@ -28,6 +28,7 @@ function kur(haftalar: unknown[]) {
       };
     }
     if (path === '/stats/weekly') return { weeks: haftalar };
+    if (path === '/stats/overreaching') return { signal: null };
     if (path.startsWith('/stats/volume/by-exercise')) return { from: null, to: null, totalVolume: 0, items: [] };
     return sahteRequest(path, init as never);
   });

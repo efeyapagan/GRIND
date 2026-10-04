@@ -185,6 +185,14 @@ public class StatsService(
         return new WeeklyStatsResponse(WeeklyStatsCalculator.Build(sets, today));
     }
 
+    public async Task<OverreachingResponse> GetOverreachingAsync(CancellationToken cancellationToken = default)
+    {
+        var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
+        var (fromUtc, _) = TurkeyDay.RangeForLocalDate(OverreachingDetector.WindowStart(today));
+        var rows = await setEntryRepository.GetOverreachingRowsAsync(currentUser.UserId, fromUtc, cancellationToken);
+        return new OverreachingResponse(OverreachingDetector.Detect(rows, today));
+    }
+
     /// <summary>
     /// Oturum toplamlarını TR günlerine yerleştirir. Gruplama BELLEKTE: gün sınırı politikası
     /// <see cref="TurkeyDay"/>'de yaşıyor ve SQL'de <c>AT TIME ZONE</c> ile ikinci bir kopyası

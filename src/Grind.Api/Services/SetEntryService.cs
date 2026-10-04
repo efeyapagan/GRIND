@@ -2,6 +2,7 @@ using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Progress;
 using Grind.Api.Common.Rest;
 using Grind.Api.Common.Security;
+using Grind.Api.Common.Time;
 using Grind.Api.Common.Validation;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Set;
@@ -22,6 +23,7 @@ public class SetEntryService(
 {
     private const string SetNotFound = "Set bulunamadı.";
     private const string SessionNotFound = "Oturum bulunamadı.";
+    private const string FutureSet = "Set zamanı gelecekte olamaz.";
 
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
     private const string ExerciseNotFound = "Egzersiz bulunamadı.";
@@ -71,12 +73,34 @@ public class SetEntryService(
                       ?? throw new NotFoundException(SessionNotFound);
 
         var exercise = await ValidatedExerciseAsync(request, cancellationToken);
-
-        // Kapsam (#564): yalnızca antrenmanda zaten seti olan hareket -- yeni hareket eklemek bitmiş
-        // antrenmanın hareket listesini değiştirirdi (#62: liste yalnızca açık antrenmanda düzenlenir).
         var sessionSets = await setEntryRepository.GetForSessionAsync(sessionId, currentUser.UserId, cancellationToken);
-        var lastOfExercise = sessionSets.LastOrDefault(s => s.ExerciseId == exercise.Id)
-                             ?? throw new ValidationException("Bu antrenmanda bu hareketin seti yok.");
+
+        // #174: kuyruktan tekrar gelen istek (yanıtı kaybolmuş) seti iki kez yazmaz, ilk seti döner.
+        if (request.ClientRequestId is { } anahtar && sessionSets.FirstOrDefault(s => s.ClientRequestId == anahtar) is { } onceki)
+        {
+            return await ToResponseAsync(onceki, cancellationToken);
+        }
+
+        DateTime createdAt;
+        if (session.EndedAt is null)
+        {
+            // #174: AÇIK antrenmana kimliğiyle ekleme (çevrimdışı kuyruk) canlı ekleme gibidir: hareket listede
+            // yoksa sona hedefsiz girer (#62), zaman cihazın gerçek zamanıdır -- geç gönderilen setin dinlenmesi
+            // ve antrenmanın süresi bozulmasın.
+            await sessionService.EnsureExerciseAsync(session, exercise.Id, cancellationToken);
+            createdAt = ClientTimestamp.Resolve(request.ClientCreatedAt, timeProvider, FutureSet);
+        }
+        else
+        {
+            // Kapsam (#564): bitmiş antrenmanda yalnızca zaten seti olan hareket -- yeni hareket eklemek bitmiş
+            // antrenmanın hareket listesini değiştirirdi (#62: liste yalnızca açık antrenmanda düzenlenir).
+            var lastOfExercise = sessionSets.LastOrDefault(s => s.ExerciseId == exercise.Id)
+                                 ?? throw new ValidationException("Bu antrenmanda bu hareketin seti yok.");
+            // Rekor ve dinlenme CreatedAt sırasıyla hesaplanır: "şimdi" yazılsaydı geçmişe eklenen set en
+            // yeni set sayılırdı. Hareketin son setinin hemen arkasına yerleşir (dinlenmesi ~0 görünür;
+            // uydurma bir süreden iyidir).
+            createdAt = lastOfExercise.CreatedAt.AddMilliseconds(1);
+        }
 
         var set = new SetEntry
         {
@@ -86,10 +110,8 @@ public class SetEntryService(
             Reps = request.Reps,
             DurationSeconds = request.DurationSeconds,
             Rir = request.Rir,
-            // Rekor ve dinlenme CreatedAt sırasıyla hesaplanır: "şimdi" yazılsaydı geçmişe eklenen set en
-            // yeni set sayılırdı. Hareketin son setinin hemen arkasına yerleşir (dinlenmesi ~0 görünür;
-            // uydurma bir süreden iyidir).
-            CreatedAt = lastOfExercise.CreatedAt.AddMilliseconds(1)
+            CreatedAt = createdAt,
+            ClientRequestId = request.ClientRequestId
         };
 
         setEntryRepository.Add(set);

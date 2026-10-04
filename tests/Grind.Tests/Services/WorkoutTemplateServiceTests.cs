@@ -467,6 +467,28 @@ public class WorkoutTemplateServiceTests
         }
     }
 
+    /// <summary>
+    /// #174 dilim 3: çevrimdışı oluşturulan şablon kuyruktan gönderilir; yanıtı kaybolan isteğin tekrarı ikinci
+    /// şablon açmaz (aynı adla 409 da vermez), ilk şablonu döner.
+    /// </summary>
+    [Fact]
+    public async Task Ayni_istemci_anahtariyla_ikinci_olusturma_ilk_sablonu_doner()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var anahtar = Guid.NewGuid();
+            var ad = UniqueName();
+            CreateTemplateRequest Istek() => new() { Name = ad, Exercises = [Satir(1)], ClientRequestId = anahtar };
+
+            var ilk = await service.CreateAsync(Istek());
+            var ikinci = await service.CreateAsync(Istek());
+
+            Assert.Equal(ilk.Id, ikinci.Id);
+            Assert.Equal(1, await context.Set<WorkoutTemplate>().CountAsync(t => t.UserId == user.Id && t.Name == ad));
+        }
+    }
+
     // ---- LastUsedAt ----
 
     [Fact]

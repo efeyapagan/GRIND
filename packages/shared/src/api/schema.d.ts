@@ -3149,6 +3149,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats/overreaching": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OverreachingResponse"];
+                        "application/json": components["schemas"]["OverreachingResponse"];
+                        "text/json": components["schemas"]["OverreachingResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/exercises/{exerciseId}/progress": {
         parameters: {
             query?: never;
@@ -4819,10 +4856,16 @@ export interface components {
             rir?: number | null;
             /** Format: int32 */
             durationSeconds?: number | null;
+            /** Format: date-time */
+            clientCreatedAt?: string | null;
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         CreateTemplateRequest: {
             name: string;
             exercises: components["schemas"]["TemplateExerciseRequest"][];
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         DailyBodyWeightResponse: {
             /** Format: date */
@@ -4870,6 +4913,17 @@ export interface components {
         };
         /** @enum {string} */
         ExerciseCategory: "Push" | "Pull" | "Legs" | "Other";
+        ExerciseDropResponse: {
+            /** Format: int64 */
+            exerciseId?: number;
+            exerciseName?: string | null;
+            /** Format: double */
+            previousBest?: number;
+            /** Format: double */
+            recentBest?: number;
+            /** Format: double */
+            dropPercent?: number;
+        };
         /** @enum {string} */
         ExerciseEquipment: "Barbell" | "Dumbbell" | "Machine" | "Cable" | "Bodyweight" | "Other";
         /** @enum {string} */
@@ -4975,6 +5029,7 @@ export interface components {
             sessions?: components["schemas"]["HistorySessionResponse"][] | null;
             bodyWeights?: components["schemas"]["BodyWeightLogResponse"][] | null;
             allTimeRecords?: components["schemas"]["ExerciseRecordResponse"][] | null;
+            overreaching?: components["schemas"]["OverreachingSignalResponse"];
         };
         ExportSummaryResponse: {
             /** Format: int32 */
@@ -4993,6 +5048,8 @@ export interface components {
         };
         FinishSessionRequest: {
             difficulty?: components["schemas"]["SessionDifficulty"];
+            /** Format: date-time */
+            clientEndedAt?: string | null;
         };
         /** @enum {string} */
         FollowRelation: "Self" | "None" | "Following" | "FollowedBy" | "Friends";
@@ -5099,6 +5156,20 @@ export interface components {
             isUnread?: boolean;
             actor?: components["schemas"]["UserSummaryResponse"];
             records?: components["schemas"]["NotificationRecordResponse"][] | null;
+        };
+        OverreachingResponse: {
+            signal?: components["schemas"]["OverreachingSignalResponse"];
+        };
+        OverreachingSignalResponse: {
+            drops?: components["schemas"]["ExerciseDropResponse"][] | null;
+            /** Format: double */
+            rirBefore?: number | null;
+            /** Format: double */
+            rirRecent?: number | null;
+            /** Format: int32 */
+            hardSessions?: number;
+            /** Format: int32 */
+            ratedSessions?: number;
         };
         PatchBodyWeightRequest: {
             /** Format: double */
@@ -5264,6 +5335,8 @@ export interface components {
             notes?: string | null;
             /** Format: date-time */
             startedAt?: string | null;
+            /** Format: uuid */
+            clientRequestId?: string | null;
         };
         TemplateExerciseRequest: {
             /** Format: int64 */

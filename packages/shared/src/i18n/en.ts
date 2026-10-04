@@ -6,6 +6,7 @@ export const en: Katalog = {
     internetBaglan: 'Connect to the internet',
     internetGerekiyor: 'This section needs an internet connection.',
     yukleniyor: 'Loading...',
+    sayfaGostergesi: 'Page {{no}} of {{toplam}}',
     kaydet: 'Save',
     kapat: 'Close',
     vazgec: 'Cancel',
@@ -396,6 +397,7 @@ export const en: Katalog = {
   },
   sablonlar: {
     baslik: 'Templates',
+    adZatenVar: "You already have a template named '{{ad}}'.",
     baslaBasligi: 'Start with a template',
     antrenmanaBasla: 'Start workout',
     sablonlarim: 'My templates',
@@ -535,6 +537,15 @@ export const en: Katalog = {
     tumHareketler: 'All exercises',
     hareketteHaftaYok: 'This exercise has no completed week yet.',
     kiloluHareketYok: 'Log a weighted exercise to see your estimated 1RM.',
+  },
+  asiriYuklenme: {
+    baslik: 'Overreaching signal',
+    rozet: 'Deload suggested',
+    dususSatiri: '{{hareket}} · {{onceki}} → {{son}} kg (−{{yuzde}}%)',
+    rirSatiri: 'Average RIR {{onceki}} → {{son}}',
+    zorlukSatiri: 'Last 2 weeks: {{zor}}/{{toplam}} workouts Hard or Maximal',
+    oneri:
+      'Take a deload week: same exercises, about half the sets and ~10% less weight — or 2–3 days of active rest. Ask GRINDY for an insight and it will explain this signal in detail.',
   },
   olcumler: {
     kiloGerekli: 'Weight is required.',

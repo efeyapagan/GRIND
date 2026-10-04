@@ -49,4 +49,10 @@ public interface IStatsService
     /// görünmüyorsa nötr 404.
     /// </summary>
     Task<WeeklyStatsResponse> GetWeeklyAsync(long? exerciseId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #176: aşırı yüklenme sinyali — son 14 gün önceki 28 günle karşılaştırılır; yoksa <c>Signal</c> null.
+    /// Bugüne göre, aralıktan bağımsız. Kural <c>OverreachingDetector</c>'da.
+    /// </summary>
+    Task<OverreachingResponse> GetOverreachingAsync(CancellationToken cancellationToken = default);
 }

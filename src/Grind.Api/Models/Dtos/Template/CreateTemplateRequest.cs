@@ -20,4 +20,7 @@ public class CreateTemplateRequest
     /// </summary>
     [Required(ErrorMessage = "Egzersiz listesi zorunlu.")]
     public List<TemplateExerciseRequest>? Exercises { get; set; }
+
+    /// <summary>#174: kuyruktan tekrar denenen oluşturma ikinci şablon açmasın diye cihazda üretilen anahtar.</summary>
+    public Guid? ClientRequestId { get; set; }
 }
