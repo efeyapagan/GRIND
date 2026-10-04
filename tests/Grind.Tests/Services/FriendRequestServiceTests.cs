@@ -46,8 +46,13 @@ public class FriendRequestServiceTests
     private static Task<bool> TakipVarMi(AppDbContext context, User a, User b)
         => context.Follows.AnyAsync(f => f.FollowerId == a.Id && f.FolloweeId == b.Id);
 
-    private static Task<List<FriendRequest>> Istekler(AppDbContext context)
-        => context.FriendRequests.AsNoTracking().ToListAsync();
+    /// <summary>Yalnızca verilen kullanıcıların satırları: paylaşılan test veritabanında entegrasyon testlerinin kalıcı istekleri de var.</summary>
+    private static Task<List<FriendRequest>> Istekler(AppDbContext context, params User[] users)
+    {
+        var ids = users.Select(u => u.Id).ToArray();
+        return context.FriendRequests.AsNoTracking()
+            .Where(r => ids.Contains(r.RequesterId) || ids.Contains(r.TargetId)).ToListAsync();
+    }
 
     [Fact]
     public async Task Istek_bekleyen_satir_acar_ikinci_istek_noop()
@@ -59,7 +64,7 @@ public class FriendRequestServiceTests
             await ServiceFor(context, ben).SendAsync(ali.Username);
             await ServiceFor(context, ben).SendAsync(ali.Username);
 
-            var istek = Assert.Single(await Istekler(context));
+            var istek = Assert.Single(await Istekler(context, ben, ali));
             Assert.Equal((ben.Id, ali.Id, (DateTime?)null), (istek.RequesterId, istek.TargetId, istek.RejectedAt));
         }
     }
@@ -78,7 +83,7 @@ public class FriendRequestServiceTests
 
             await ServiceFor(context, ben).SendAsync(ali.Username);
 
-            Assert.Empty(await Istekler(context));
+            Assert.Empty(await Istekler(context, ben, ali));
         }
     }
 
@@ -134,7 +139,7 @@ public class FriendRequestServiceTests
             Assert.True(await TakipVarMi(context, ben, ali));
             Assert.True(await TakipVarMi(context, ali, ben));
             Assert.Equal(1, await context.Follows.CountAsync(f => f.FollowerId == ali.Id && f.FolloweeId == ben.Id));
-            Assert.Empty(await Istekler(context));
+            Assert.Empty(await Istekler(context, ben, ali));
         }
     }
 
@@ -151,7 +156,7 @@ public class FriendRequestServiceTests
 
             Assert.False(await TakipVarMi(context, ben, ali));
             Assert.False(await TakipVarMi(context, ali, ben));
-            Assert.Equal(An, Assert.Single(await Istekler(context)).RejectedAt);
+            Assert.Equal(An, Assert.Single(await Istekler(context, ben, ali)).RejectedAt);
         }
     }
 
