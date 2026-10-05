@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.Auth;
+using Grind.Api.Models.Dtos.Settings;
 using Grind.Api.Models.Dtos.Social;
 using Grind.Api.Models.Enums;
 using Grind.Api.Models.Entities;
@@ -43,6 +44,30 @@ public class FriendStandingPeriodEndpointsTests(GrindApiFactory factory) : IClas
 
         Assert.Equal(1, satir.TrainedDays);
         Assert.Equal(60m * 5, satir.Volume);
+    }
+
+    /// <summary>
+    /// #654: arkadaş hedefini bu hafta 3'ten 5'e çıkardı; geçen haftanın satırı o haftanın hedefini (3)
+    /// gösterir, bu haftanınki yenisini.
+    /// </summary>
+    [Fact]
+    public async Task Gecmis_donemin_hedefi_o_haftada_gecerli_olandir()
+    {
+        var (ben, benimAd, _) = await KayitliAsync(factory);
+        var (arkadas, arkadasAd, arkadasId) = await KayitliAsync(factory);
+        await ArkadasYapAsync(ben, benimAd, arkadas, arkadasAd);
+        await HedefYazAsync(arkadasId, 3);
+        Assert.Equal(HttpStatusCode.NoContent, (await arkadas.PutAsJsonAsync(
+            "/api/settings/weekly-target", new UpdateWeeklyTargetRequest { WeeklyTargetDays = 5 })).StatusCode);
+
+        var gecenHaftaBasi = StreakCalculator.WeekStart(Bugun()).AddDays(-7);
+        var gecenHafta = (await DonemdeListeleAsync(ben, gecenHaftaBasi, gecenHaftaBasi.AddDays(6)))
+            .Single(s => s.Username == arkadasAd);
+        var buHafta = (await DonemdeListeleAsync(ben, gecenHaftaBasi.AddDays(7), gecenHaftaBasi.AddDays(13)))
+            .Single(s => s.Username == arkadasAd);
+
+        Assert.Equal(3, gecenHafta.WeeklyTargetDays);
+        Assert.Equal(5, buHafta.WeeklyTargetDays);
     }
 
     /// <summary>Aylık dönem, farklı haftalara düşen günlerin hepsini sayar.</summary>

@@ -20,6 +20,7 @@ public class ModelShapeTests
         [
             "AiInsight", "AiInsightTranslation", "BodyWeightLog", "Exercise", "ExerciseMedia", "Follow",
             "FriendRequest", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
+            "WeeklyTargetChange",
             "WorkoutSession", "WorkoutTemplate"
         ];
 

@@ -105,4 +105,33 @@ public class StreakCalculatorTests
 
         Assert.Equal((1, 1), StreakCalculator.Calculate(gunler, Bugun, minDaysPerWeek: 2));
     }
+
+    /// <summary>
+    /// #654: her hafta KENDİ hedefiyle değerlendirilir. Geçen hafta hedef 3 (3 gün yapıldı, tuttu), bu hafta
+    /// 4 (3 gün yapıldı, henüz tutmadı): seri geçen haftadan sayılır, 1.
+    /// </summary>
+    [Fact]
+    public void Hedef_serisinde_her_hafta_kendi_hedefiyle_degerlendirilir()
+    {
+        var gunler = new[]
+        {
+            new DateOnly(2026, 3, 2), new DateOnly(2026, 3, 3), new DateOnly(2026, 3, 4),
+            new DateOnly(2026, 3, 9), new DateOnly(2026, 3, 10), new DateOnly(2026, 3, 11),
+        };
+
+        var seri = StreakCalculator.Calculate(gunler, Bugun, hafta => hafta >= new DateOnly(2026, 3, 9) ? 4 : 3);
+
+        Assert.Equal((1, 1), seri);
+    }
+
+    /// <summary>#654 (kullanıcı kararı): hedefin kaldırıldığı hafta tutulmuş sayılmaz, seriyi kırar.</summary>
+    [Fact]
+    public void Hedefsiz_hafta_hedef_serisini_kirar()
+    {
+        var gunler = new[] { new DateOnly(2026, 2, 23), new DateOnly(2026, 3, 2), new DateOnly(2026, 3, 9) };
+
+        var seri = StreakCalculator.Calculate(gunler, Bugun, hafta => hafta == new DateOnly(2026, 3, 2) ? null : 1);
+
+        Assert.Equal((1, 1), seri);
+    }
 }

@@ -13,6 +13,7 @@ public class StatsService(
     ISetEntryRepository setEntryRepository,
     IBodyWeightLogRepository bodyWeightRepository,
     IUserRepository userRepository,
+    IWeeklyTargetChangeRepository targetChangeRepository,
     IExerciseRepository exerciseRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IStatsService
@@ -66,11 +67,28 @@ public class StatsService(
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
         var (current, longest) = StreakCalculator.Calculate(trainedDays, today);
 
-        // #97: hedef JWT'de değil, kullanıcının GÜNCEL kaydında (CLAUDE.md JWT kararı).
-        var target = (await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken))?.WeeklyTargetDays;
-        int? targetStreak = target is { } targetDays
-            ? StreakCalculator.Calculate(trainedDays, today, targetDays).Current
-            : null;
+        // #654: hedef kartı GÖSTERİLEN dönemi izler -- hedef alanları aralığın son gününün haftasına
+        // (bugünü aşmaz) aittir; aralık verilmezse ya da bugünü kapsıyorsa bu haftadır.
+        var reference = query.To is { } to && to < today ? to : today;
+        var referenceWeek = StreakCalculator.WeekStart(reference);
+        var trainedInWeek = StreakCalculator.TrainedDaysInWeekOf(trainedDays, reference);
+
+        // #97: hedef JWT'de değil, kullanıcının GÜNCEL kaydında (CLAUDE.md JWT kararı). #654: her hafta
+        // o haftada geçerli hedefle değerlendirilir.
+        var user = await userRepository.GetByIdAsync(currentUser.UserId, cancellationToken);
+        var changes = await targetChangeRepository.GetForUsersAsync([currentUser.UserId], cancellationToken);
+        var history = new WeeklyTargetHistory(
+            user?.WeeklyTargetDays, changes.Select(c => (c.EffectiveFromWeek, c.TargetDays)));
+
+        var target = history.For(referenceWeek);
+        int? targetStreak = target switch
+        {
+            null => null,
+            // Bitmiş ve hedefi tutmamış bir haftada seri yoktur; "hafta henüz bitmedi" hoşgörüsü
+            // (bkz. StreakCalculator) yalnızca içinde bulunulan hafta içindir.
+            { } gereken when referenceWeek < StreakCalculator.WeekStart(today) && trainedInWeek < gereken => 0,
+            _ => StreakCalculator.Calculate(trainedDays, reference, history.For).Current,
+        };
 
         return new CalendarResponse(
             query.From,
@@ -79,7 +97,7 @@ public class StatsService(
             days.Count,
             current,
             longest,
-            StreakCalculator.TrainedDaysInWeekOf(trainedDays, today),
+            trainedInWeek,
             target,
             targetStreak);
     }
