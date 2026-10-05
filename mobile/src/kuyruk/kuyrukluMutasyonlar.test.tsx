@@ -161,6 +161,9 @@ test('cevrimdisi bitirilen antrenman takvime ve haftalik hedefe hemen islenir', 
     weeklyTargetDays: 3, currentTargetStreak: 0,
   };
   queryClient.setQueryData(queryKeys.calendar(bugun, bugun), bos);
+  // #654: gecmis bir donemin hedef alanlari o donemin son haftasina aittir.
+  const [eskiBas, eskiSon] = [trBugundenOnce(40), trBugundenOnce(34)];
+  queryClient.setQueryData(queryKeys.calendar(eskiBas, eskiSon), { ...bos, thisWeekTrainedDays: 2 });
   const { result } = await renderHook(kancalar, { wrapper: sarmalayici(true) });
   await act(async () => {
     await result.current.baslat.mutateAsync(7);
@@ -178,6 +181,7 @@ test('cevrimdisi bitirilen antrenman takvime ve haftalik hedefe hemen islenir', 
   expect(takvim.days).toEqual([{ date: bugun, sessionCount: 1, setCount: 1 }]);
   expect(takvim.trainedDayCount).toBe(1);
   expect(takvim.thisWeekTrainedDays).toBe(1);
+  expect(queryClient.getQueryData<TakvimOzeti>(queryKeys.calendar(eskiBas, eskiSon))!.thisWeekTrainedDays).toBe(2);
 });
 
 /** Baglanti gelince kuyruk sirayla gonderilir (gecici kimlikler gercekle eslenir) ve bosalir. */

@@ -24,11 +24,21 @@ public static class StreakCalculator
         IEnumerable<DateOnly> trainedDays, DateOnly today, int minDaysPerWeek = 1)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(minDaysPerWeek, 1);
+        return Calculate(trainedDays, today, _ => minDaysPerWeek);
+    }
 
+    /// <summary>
+    /// Hedef serisi (#654): her haftanın gereken gün sayısı o haftanın KENDİ hedefidir
+    /// (<paramref name="minDaysForWeek"/>, haftanın Pazartesisiyle sorulur). Hedefi olmayan
+    /// (<c>null</c>) hafta sayılmaz ve seriyi kırar — hedefsiz hafta "tutuldu" sayılamaz.
+    /// </summary>
+    public static (int Current, int Longest) Calculate(
+        IEnumerable<DateOnly> trainedDays, DateOnly today, Func<DateOnly, int?> minDaysForWeek)
+    {
         var weeks = trainedDays
             .Distinct()
             .GroupBy(WeekStart)
-            .Where(week => week.Count() >= minDaysPerWeek)
+            .Where(week => minDaysForWeek(week.Key) is { } gereken && week.Count() >= gereken)
             .Select(week => week.Key)
             .ToHashSet();
 

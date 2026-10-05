@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from './ozetKartlari';
+import { hedefCubugu, hedefTuttuMu, rekordaMi, seriCubugu } from './ozetKartlari';
 
 /**
  * #544 (kullanici karari): ana sayfadaki iki ozet kartinin dikey cubugu. Seri cubugu mevcut seriyi
@@ -24,11 +24,6 @@ test('hedef cubugu bu haftaki gunu hedefe oranlar, hedefi asmak cubugu tasirmaz'
 /** Hedef koymamis kullanicinin karsilastiracak bir seyi yok: cubuk yok (0 degil). */
 test('hedef yoksa hedef cubugu yoktur', () => {
   expect(hedefCubugu(2, null)).toBeNull();
-});
-
-test('hedefe kalan gun sifirin altina inmez', () => {
-  expect(hedefKalan(1, 4)).toBe(3);
-  expect(hedefKalan(5, 4)).toBe(0);
 });
 
 /**

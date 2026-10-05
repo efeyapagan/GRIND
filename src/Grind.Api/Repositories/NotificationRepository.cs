@@ -59,7 +59,6 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                 from f in context.Set<Follow>()
                 where f.FollowerId == userId && !f.NotificationsMuted
                       && f.Followee.DeletedAt == null
-                      && f.Followee.WeeklyTargetDays != null
                       && f.Followee.PrivacyLevel != PrivacyLevel.Gizli
                       // Karsilikli takip = arkadaslik (#281): tek yonlu takip bildirim uretmez.
                       && context.Set<Follow>().Any(g => g.FollowerId == f.FolloweeId && g.FolloweeId == userId)
@@ -68,7 +67,7 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                 select new FriendSessionDayRow(
                     s.Id,
                     s.StartedAt,
-                    f.Followee.WeeklyTargetDays!.Value,
+                    f.Followee.WeeklyTargetDays,
                     new UserRef(f.Followee.Id, f.Followee.Username, f.Followee.DisplayName)))
             .ToListAsync(cancellationToken);
 

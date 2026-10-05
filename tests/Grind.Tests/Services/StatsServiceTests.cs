@@ -42,7 +42,8 @@ public class StatsServiceTests
         var saat = new SahteSaat(Bugun);
         var service = new StatsService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
-            new BodyWeightLogRepository(context), new UserRepository(context), new ExerciseRepository(context),
+            new BodyWeightLogRepository(context), new UserRepository(context),
+            new WeeklyTargetChangeRepository(context), new ExerciseRepository(context),
             new StubCurrentUser(user.Id), saat);
 
         return (context, user, exercise, service, saat, transaction);
@@ -333,6 +334,83 @@ public class StatsServiceTests
             // #97: hedef koymamış kullanıcıda hedef alanları boş.
             Assert.Null(takvim.WeeklyTargetDays);
             Assert.Null(takvim.CurrentTargetStreak);
+        }
+    }
+
+    /// <summary>
+    /// #654: hedef değişikliği yapıldığı haftadan (dahil) ileriye geçerlidir. Geçen hafta hedef 2'ydi ve
+    /// 2 günle tutuldu; bu hafta 3'e çıktı ve 3 gün yapıldı -> seri 2. Eski davranışta geçen hafta da 3
+    /// sayılır, seri 1 çıkardı.
+    /// </summary>
+    [Fact]
+    public async Task Hedef_degisince_gecmis_haftalar_eski_hedefleriyle_degerlendirilir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            user.WeeklyTargetDays = 3;
+            context.AddRange(
+                new WeeklyTargetChange { UserId = user.Id, EffectiveFromWeek = DateOnly.MinValue, TargetDays = 2 },
+                new WeeklyTargetChange { UserId = user.Id, EffectiveFromWeek = new DateOnly(2026, 3, 9), TargetDays = 3 });
+            Seed(context, user, exercise, Bugun, (100m, 8));                 // 12 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-1), (100m, 8));     // 11 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-2), (100m, 8));     // 10 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));     // 5 Mart, geçen hafta
+            Seed(context, user, exercise, Bugun.AddDays(-8), (100m, 8));     // 4 Mart
+            await context.SaveChangesAsync();
+
+            var takvim = await service.GetCalendarAsync(new StatsRangeQuery());
+
+            Assert.Equal(3, takvim.WeeklyTargetDays);
+            Assert.Equal(2, takvim.CurrentTargetStreak);
+        }
+    }
+
+    /// <summary>
+    /// #654: hedef kartı gösterilen dönemi izler. Geçmiş bir hafta istenince gün sayısı, hedef ve hedef
+    /// serisi O haftaya aittir; haftalık seri bugüne göre kalır.
+    /// </summary>
+    [Fact]
+    public async Task Gecmis_hafta_istenince_hedef_alanlari_o_haftaya_aittir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            user.WeeklyTargetDays = 3;
+            context.AddRange(
+                new WeeklyTargetChange { UserId = user.Id, EffectiveFromWeek = DateOnly.MinValue, TargetDays = 2 },
+                new WeeklyTargetChange { UserId = user.Id, EffectiveFromWeek = new DateOnly(2026, 3, 9), TargetDays = 3 });
+            Seed(context, user, exercise, Bugun, (100m, 8));                 // bu hafta 1 gün
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));     // 5 Mart
+            Seed(context, user, exercise, Bugun.AddDays(-8), (100m, 8));     // 4 Mart
+            await context.SaveChangesAsync();
+
+            var gecenHafta = await service.GetCalendarAsync(
+                new StatsRangeQuery { From = new DateOnly(2026, 3, 2), To = new DateOnly(2026, 3, 8) });
+
+            Assert.Equal(2, gecenHafta.ThisWeekTrainedDays);
+            Assert.Equal(2, gecenHafta.WeeklyTargetDays);
+            Assert.Equal(1, gecenHafta.CurrentTargetStreak);
+        }
+    }
+
+    /// <summary>#654: bitmiş ve hedefi tutmamış haftada seri 0'dır ("hafta bitmedi" hoşgörüsü yalnız bu haftaya).</summary>
+    [Fact]
+    public async Task Gecmiste_hedefi_tutmayan_haftanin_hedef_serisi_sifirdir()
+    {
+        var (context, user, exercise, service, _, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            user.WeeklyTargetDays = 2;
+            Seed(context, user, exercise, Bugun.AddDays(-7), (100m, 8));     // geçen hafta 1 gün
+            Seed(context, user, exercise, Bugun.AddDays(-14), (100m, 8));    // önceki hafta 2 gün (tuttu)
+            Seed(context, user, exercise, Bugun.AddDays(-15), (100m, 8));
+            await context.SaveChangesAsync();
+
+            var gecenHafta = await service.GetCalendarAsync(
+                new StatsRangeQuery { From = new DateOnly(2026, 3, 2), To = new DateOnly(2026, 3, 8) });
+
+            Assert.Equal(0, gecenHafta.CurrentTargetStreak);
         }
     }
 

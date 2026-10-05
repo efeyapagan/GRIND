@@ -22,7 +22,7 @@ public record RecordSetRow(
 /// TAMAMLADIĞI burada değil <c>WeeklyGoalCompletion</c>'da karara bağlanır -- sorgu yalnızca ham
 /// satırları getirir (hedef de satırla birlikte gelir ki kişi başına ikinci sorgu gerekmesin).
 /// </summary>
-public record FriendSessionDayRow(long SessionId, DateTime StartedAt, int WeeklyTargetDays, UserRef Actor);
+public record FriendSessionDayRow(long SessionId, DateTime StartedAt, int? WeeklyTargetDays, UserRef Actor);
 
 /// <summary>Bana gelen bekleyen arkadaşlık isteği (#628); <see cref="OccurredAt"/> = <c>CreatedAt</c>.</summary>
 public record FriendRequestEvent(long RequestId, DateTime OccurredAt, UserRef Actor);

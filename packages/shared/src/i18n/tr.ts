@@ -398,9 +398,8 @@ export const tr = {
     haftaBirimi_other: 'hafta',
     gunBirimi_one: 'gün',
     gunBirimi_other: 'gün',
-    hedefKalan_one: '{{count}} gün kaldı',
-    hedefKalan_other: '{{count}} gün kaldı',
-    hedefTamam: 'Hedef tamam',
+    hedefSerisiDegeri_one: 'Hedef serisi: {{count}} hafta',
+    hedefSerisiDegeri_other: 'Hedef serisi: {{count}} hafta',
   },
   sablonlar: {
     baslik: 'Şablonlar',

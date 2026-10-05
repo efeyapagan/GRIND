@@ -28,6 +28,7 @@ public class FriendWeeklyService(
     IUserRepository userRepository,
     IWorkoutSessionRepository sessionRepository,
     IUserAvatarRepository avatarRepository,
+    IWeeklyTargetChangeRepository targetChangeRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IFriendWeeklyService
 {
@@ -62,7 +63,18 @@ public class FriendWeeklyService(
 
         var kisiBasi = oturumlar.ToLookup(o => o.UserId);
 
+        // #654: hedef, gösterilen dönemin son haftasında (bugünü aşmaz) geçerli olandır -- takvimdeki hedef
+        // kartıyla aynı kural; kişi hedefini sonradan değiştirse de geçmiş dönemin satırı değişmez.
+        var hedefHaftasi = StreakCalculator.WeekStart(donemSonu < bugun ? donemSonu : bugun);
+        var degisiklikler = (await targetChangeRepository.GetForUsersAsync(idler, cancellationToken))
+            .ToLookup(d => d.UserId, d => (d.EffectiveFromWeek, d.TargetDays));
+
         return satirSahipleri
+            .Select(kisi => kisi with
+            {
+                WeeklyTargetDays = new WeeklyTargetHistory(kisi.WeeklyTargetDays, degisiklikler[kisi.Id])
+                    .For(hedefHaftasi),
+            })
             .Select(kisi => Satir(kisi, kisiBasi[kisi.Id], bugun, avatarlar, kisi.Id == currentUser.UserId))
             .ToList();
     }
