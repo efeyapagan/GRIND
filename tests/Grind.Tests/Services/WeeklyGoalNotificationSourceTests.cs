@@ -68,7 +68,7 @@ public class WeeklyGoalNotificationSourceTests
     }
 
     private static Task<IReadOnlyList<NotificationItem>> BildirimlerAsync(AppDbContext context, User ben)
-        => new WeeklyGoalNotificationSource(new NotificationRepository(context))
+        => new WeeklyGoalNotificationSource(new NotificationRepository(context), new WeeklyTargetChangeRepository(context))
             .GetAsync(ben.Id, Simdi.AddDays(-30), 50);
 
     [Fact]
@@ -89,6 +89,34 @@ public class WeeklyGoalNotificationSourceTests
             Assert.Equal(arkadas.Username, bildirim.Actor.Username);
             // Hedefi TAMAMLAYAN oturumun anı: ikinci gün.
             Assert.Equal(SaatOnda(Carsamba.AddDays(-1)), bildirim.OccurredAt);
+        }
+    }
+
+    /// <summary>
+    /// #654: arkadaş hedefini bu hafta 2'den 5'e çıkardı. Geçen hafta 2 günle tuttuğu hedefin bildirimi
+    /// durur -- eski davranışta geçen hafta da 5 sayılır, bildirim kaybolurdu.
+    /// </summary>
+    [Fact]
+    public async Task Hedef_sonradan_degisse_de_gecen_haftanin_bildirimi_eski_hedefe_gore_kalir()
+    {
+        var (context, users, transaction) = await KurAsync(2);
+        await using (transaction)
+        {
+            var (ben, arkadas) = (users[0], users[1]);
+            await ArkadasAsync(context, ben, arkadas, Simdi.AddDays(-20));
+            context.AddRange(
+                new WeeklyTargetChange { UserId = arkadas.Id, EffectiveFromWeek = DateOnly.MinValue, TargetDays = 2 },
+                new WeeklyTargetChange
+                {
+                    UserId = arkadas.Id, EffectiveFromWeek = StreakCalculator.WeekStart(Carsamba), TargetDays = 5,
+                });
+            await HedefAsync(context, arkadas, 5);
+            await AntrenmanAsync(context, arkadas, Carsamba.AddDays(-8));
+            await AntrenmanAsync(context, arkadas, Carsamba.AddDays(-7));
+
+            var bildirim = Assert.Single(await BildirimlerAsync(context, ben));
+
+            Assert.Equal(SaatOnda(Carsamba.AddDays(-7)), bildirim.OccurredAt);
         }
     }
 

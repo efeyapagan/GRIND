@@ -199,23 +199,14 @@ test('hedef yokken hedef cubugu dolmaz', async () => {
   expect(screen.queryByTestId('hedef-cubugu-dolu')).toBeNull();
 });
 
-/** Gorseldeki durum satirinin hedef kartindaki karsiligi: kalan gun ya da hedefin tamamlandigi. */
-test('hedef kartinin durum satiri kalan gunu ya da tamamlandigini soyler', async () => {
-  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 2, weeklyTargetDays: 4 }));
-  const { rerender } = await render(
-    <TakvimDonemiProvider bugun={BUGUN}>
-      <Takvim />
-    </TakvimDonemiProvider>,
-  );
-  expect(screen.getByText('2 gün kaldı')).toBeTruthy();
+/** #654 (kullanici karari): hedef kartinin alt satiri hedef serisidir; kalan gun ve "Hedef tamam" yazmaz. */
+test('hedef kartinin alt satiri hedef serisini soyler', async () => {
+  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 4, weeklyTargetDays: 4, currentTargetStreak: 3 }));
+  await cizTakvim();
 
-  useCalendarMock.mockReturnValue(ozet([], { thisWeekTrainedDays: 4, weeklyTargetDays: 4 }));
-  await rerender(
-    <TakvimDonemiProvider bugun={BUGUN}>
-      <Takvim />
-    </TakvimDonemiProvider>,
-  );
-  expect(screen.getByText('Hedef tamam')).toBeTruthy();
+  expect(screen.getByText('Hedef serisi: 3 hafta')).toBeTruthy();
+  expect(screen.queryByText('Hedef tamam')).toBeNull();
+  expect(screen.queryByText(/gün kaldı/)).toBeNull();
 });
 
 /**

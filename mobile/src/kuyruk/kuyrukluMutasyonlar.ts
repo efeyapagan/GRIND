@@ -107,12 +107,14 @@ function takvimlereIsle(queryClient: QueryClient, startedAt: string, setSayisi: 
   const gun = trBugundenOnce(0, new Date(startedAt));
   const takvimler = queryClient.getQueriesData<TakvimOzeti>({ queryKey: queryKeys.calendarAll });
   const yeniGun = !takvimler.some(([, ozet]) => ozet?.days.some((g) => g.date === gun));
-  const buHaftaMi = gun >= buHaftaninPazartesisi();
+  const pazartesi = buHaftaninPazartesisi();
   for (const [anahtar, ozet] of takvimler) {
     if (!ozet) {
       continue;
     }
     const [, from, to] = anahtar as [string, string, string];
+    // #654: hedef alanlari araligin SON haftasina aittir -- gecmis donemin kartina bu haftanin gunu yazilmaz.
+    const buHaftaMi = gun >= pazartesi && to >= pazartesi;
     queryClient.setQueryData(anahtar, takvimeIsle(ozet, { from, to }, { gun, setSayisi, yeniGun, buHaftaMi }));
   }
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { LayoutAnimationConfig, SlideInLeft, SlideInRight } from 'react-native-reanimated';
-import { CalendarDays, Check, CircleCheck, Flame, Target, type LucideIcon } from 'lucide-react-native';
+import { CalendarDays, Check, Flame, Target, type LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useDil } from '@grind/shared/i18n';
@@ -18,7 +18,7 @@ import {
   haftaGunleri,
   kaydir,
 } from '@grind/shared/lib/takvim';
-import { hedefCubugu, hedefKalan, hedefTuttuMu, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
+import { hedefCubugu, hedefTuttuMu, rekordaMi, seriCubugu } from '@grind/shared/lib/ozetKartlari';
 import CamIkonDugmesi from '../ui/CamIkonDugmesi';
 import CamKart from '../ui/CamKart';
 import DikeyCubuk from '../ui/DikeyCubuk';
@@ -227,19 +227,11 @@ export default function Takvim() {
                       {t('takvim.gunBirimi', { count: ozet.weeklyTargetDays })}
                     </Text>
                   </View>
-                  {/* Gorseldeki durum satirinin karsiligi: kalan gun ya da hedefin tamamlandigi. */}
-                  {hedefKalan(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays) > 0 ? (
-                    <Text className="text-label text-muted">
-                      {t('takvim.hedefKalan', {
-                        count: hedefKalan(ozet.thisWeekTrainedDays, ozet.weeklyTargetDays),
-                      })}
-                    </Text>
-                  ) : (
-                    <View className="flex-row items-center gap-1">
-                      <CircleCheck color={ikonRenk.success} size={16} />
-                      <Text className="text-label text-success">{t('takvim.hedefTamam')}</Text>
-                    </View>
-                  )}
+                  {/* #654: hedefin art arda kac hafta tutuldugu. Kalan gun ve "tamam" satiri kalkti
+                      (kullanici karari): ikisi de x/hedef ve dart isaretinden okunuyor. */}
+                  <Text className="text-label text-muted">
+                    {t('takvim.hedefSerisiDegeri', { count: ozet.currentTargetStreak ?? 0 })}
+                  </Text>
                 </>
               )}
             </OzetKarti>

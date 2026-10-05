@@ -22,11 +22,6 @@ export function hedefCubugu(gun: number, hedef: number | null): number | null {
   return Math.min(1, gun / hedef);
 }
 
-/** Hedefe kalan gun; hedef asilmissa 0. */
-export function hedefKalan(gun: number, hedef: number): number {
-  return Math.max(0, hedef - gun);
-}
-
 /**
  * Seri REKORDA mi (#547): mevcut seri en uzun seriye esit -- kullanici her hafta rekorunu tazeliyor.
  * Hic seri yokken (0 = 0) rekor yoktur. Haftalik hedeften bagimsizdir (kullanici karari).

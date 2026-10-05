@@ -134,6 +134,13 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   bildirimleri kapatır. Kendi takip listelerinde satır başına Arkadaşlıktan çıkar / Takibi bırak /
   Takipçiden çıkar. Kısıtla sonraki dilim.
   Ayrıntı: [docs/superpowers/specs/2026-10-03-kisi-menusu-arkadaslik-istegi-design.md](docs/superpowers/specs/2026-10-03-kisi-menusu-arkadaslik-istegi-design.md).
+- **Haftalık hedef geçmişi (2026-10-05, #654)** — hedef değişince geçmiş haftalar eski hedefleriyle kalır
+  (`WeeklyTargetChange`, bkz. Domain Modeli). `GET /api/stats/calendar`'ın hedef alanları (`thisWeekTrainedDays`,
+  `weeklyTargetDays`, `currentTargetStreak`) GÖSTERİLEN dönemi izler: aralığın son gününün haftasına (bugünü
+  aşmaz) aittir — takvimde geçmiş haftaya/aya kaydırınca hedef kartı o haftayı gösterir; bitmiş ve hedefi
+  tutmamış haftada seri 0. Haftalık seri (`currentWeekStreak`) bugüne göre kalır. Arkadaş sıralaması
+  (`FriendWeeklyService`) aynı kuralla dönemin hedefini gösterir. Kartın alt satırı
+  "Hedef serisi: x hafta" (kalan gün ve "Hedef tamam" kalktı).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -393,6 +400,14 @@ Object Reference) açığıdır.
   `AiInsightTranslation`'da
 - **AiInsightTranslation** (#199): `Id`, `AiInsightId` (FK, CASCADE), `Language` (dil kodu,
   `varchar(8)`), `Content`; `(AiInsightId, Language)` benzersiz — bir üretimin bir dildeki metni
+- **WeeklyTargetChange** (#654): `Id`, `UserId` (FK, CASCADE), `EffectiveFromWeek` (`date`, TR haftasının
+  Pazartesisi), `TargetDays` (nullable 1–7, `null` = hedef kaldırıldı); `(UserId, EffectiveFromWeek)` benzersiz —
+  haftalık hedefin geçmişi. Değişiklik yapıldığı haftadan (DAHİL) ileriye geçerlidir, aynı hafta ikinci
+  değişiklik satırı günceller. Hedef serisi ve "hedefini tamamladı" bildirimi her haftayı o haftanın hedefiyle
+  değerlendirir (`WeeklyTargetHistory`); hedefsiz hafta seriyi kırar. Güncel değer `User.WeeklyTargetDays`'te de
+  durur (yalnızca bugünü okuyan sorgular için) ve aynı `SaveChangesAsync`'te yazılır; hiç satırı olmayan
+  kullanıcıda güncel değer tüm geçmişe uygulanır, ilk değişiklikte eski değer `DateOnly.MinValue` satırıyla
+  sabitlenir (veri taşıyan migration yok)
 - **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
   `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak,
   `NotificationsMuted` (#628 — takip edenin bu kişiden bildirim istemediği; takip satırıyla yaşar, takibi

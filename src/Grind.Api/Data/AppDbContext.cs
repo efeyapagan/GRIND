@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Follow> Follows => Set<Follow>();
     public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
     public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
+    public DbSet<WeeklyTargetChange> WeeklyTargetChanges => Set<WeeklyTargetChange>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
