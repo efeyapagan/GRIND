@@ -609,8 +609,9 @@ export const en: Katalog = {
     uyarilar: 'Watch out',
     tavsiyeler: 'Suggestions',
     maskotEtiketi: 'GRINDY, your training coach',
-    aciklama:
-      "GRINDY reviews up to your last 30 days of workout data. Choosing a specific range isn't possible yet.",
+    aciklama: 'GRINDY reviews up to your last 30 days of workout data.',
+    kilitSebebi_one: 'You need at least 5 logged workouts before asking GRINDY. You have {{count}} so far.',
+    kilitSebebi_other: 'You need at least 5 logged workouts before asking GRINDY. You have {{count}} so far.',
     yorumIste: 'Ask GRINDY',
     hazirlaniyor: 'GRINDY is thinking... This can take a few minutes.',
     iptalEdildi: 'You stopped waiting. The insight may still be generated; it may appear in the list in a few minutes.',

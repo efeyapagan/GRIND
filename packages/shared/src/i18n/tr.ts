@@ -623,8 +623,9 @@ export const tr = {
     uyarilar: 'Dikkat',
     tavsiyeler: 'Öneriler',
     maskotEtiketi: 'GRINDY, antrenman koçun',
-    aciklama:
-      'GRINDY son 30 güne kadarki antrenman verine bakıp yorumlar. Belirli bir aralık seçmek şimdilik mümkün değil.',
+    aciklama: 'GRINDY son 30 güne kadarki antrenman verine bakıp yorumlar.',
+    kilitSebebi_one: "GRINDY'den yorum isteyebilmek için en az 5 antrenman kaydetmen gerekiyor. Şu an {{count}} antrenmanın var.",
+    kilitSebebi_other: "GRINDY'den yorum isteyebilmek için en az 5 antrenman kaydetmen gerekiyor. Şu an {{count}} antrenmanın var.",
     yorumIste: "GRINDY'ye sor",
     hazirlaniyor: 'GRINDY düşünüyor... Bu birkaç dakika sürebilir.',
     iptalEdildi: 'Beklemeyi durdurdun. Yorum yine de oluşturuluyor olabilir; birkaç dakika sonra listede görünebilir.',
