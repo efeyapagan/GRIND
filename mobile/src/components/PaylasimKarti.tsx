@@ -21,35 +21,22 @@ interface Props {
 }
 
 const BEYAZ = '#FFFFFF';
-const SIYAH = '#000000';
-
-/** #598: RN `Text` dis cizgi (stroke) desteklemez; beyaz yazinin etrafina siyah bir kenarlik, 8 kayma ile. */
-const KENAR_KAYMALARI: [number, number][] = [
-  [-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5],
-  [-1.06, -1.06], [1.06, -1.06], [-1.06, 1.06], [1.06, 1.06],
-];
 
 /**
- * #598 (kullanici karari): beyaz, harfleri siyah cerceveli yazi -- story fotografinin ustunde her zeminde
- * okunsun. Siyah kopyalar ust yaziyla ayni genislikte durur (left/right), boylece uzun ad alt satira
- * gectiginde kenar da ayni satirlardan gecer.
+ * #651 (kullanici karari): beyaz yazi story fotografinin ustunde okunsun diye yalnizca cok hafif,
+ * yumusak bir golge. (#598'deki 8 siyah kopyalik kalin cerceve cok agirdi.)
  */
-function CerceveliYazi({ testID, style, children }: { testID: string; style: TextStyle; children: React.ReactNode }) {
+const GOLGE: TextStyle = {
+  textShadowColor: 'rgba(0, 0, 0, 0.45)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 3,
+};
+
+function GolgeliYazi({ testID, style, children }: { testID: string; style: TextStyle; children: React.ReactNode }) {
   return (
-    <View>
-      {KENAR_KAYMALARI.map(([x, y]) => (
-        <Text
-          key={`${x}:${y}`}
-          testID={`${testID}-kenar`}
-          style={[style, { color: SIYAH, position: 'absolute', left: x, right: -x, top: y, bottom: -y }]}
-        >
-          {children}
-        </Text>
-      ))}
-      <Text testID={testID} style={[style, { color: BEYAZ }]}>
-        {children}
-      </Text>
-    </View>
+    <Text testID={testID} style={[style, GOLGE, { color: BEYAZ }]}>
+      {children}
+    </Text>
   );
 }
 
@@ -76,44 +63,44 @@ const PaylasimKarti = forwardRef<View, Props>(function PaylasimKarti(
   return (
     <View ref={ref} collapsable={false} style={stil.kart}>
       {templateName !== null && (
-        <CerceveliYazi testID="paylasim-baslik" style={stil.isim}>
+        <GolgeliYazi testID="paylasim-baslik" style={stil.isim}>
           {templateName}
-        </CerceveliYazi>
+        </GolgeliYazi>
       )}
 
-      {/* #598: rakam beyaz-cerceveli, birim turuncu -- ayni satirda, ayni taban cizgisinde. */}
+      {/* #598: rakam beyaz-golgeli, birim turuncu -- ayni satirda, ayni taban cizgisinde. */}
       <View style={stil.detaySatiri}>
-        <CerceveliYazi testID="paylasim-set-sayisi" style={stil.detay}>
+        <GolgeliYazi testID="paylasim-set-sayisi" style={stil.detay}>
           {setCount}
-        </CerceveliYazi>
+        </GolgeliYazi>
         <Text style={stil.birim}>{t('gecmis.setBirimi')}</Text>
       </View>
       <View style={stil.detaySatiri}>
         {saat > 0 && (
           <>
-            <CerceveliYazi testID="paylasim-saat" style={stil.detay}>
+            <GolgeliYazi testID="paylasim-saat" style={stil.detay}>
               {saat}
-            </CerceveliYazi>
+            </GolgeliYazi>
             <Text style={[stil.birim, stil.saatBirimi]}>{t('gecmis.saatBirimi')}</Text>
           </>
         )}
-        <CerceveliYazi testID="paylasim-dakika" style={stil.detay}>
+        <GolgeliYazi testID="paylasim-dakika" style={stil.detay}>
           {dakika}
-        </CerceveliYazi>
+        </GolgeliYazi>
         <Text style={stil.birim}>{t('gecmis.dakikaBirimi')}</Text>
       </View>
 
       <View style={stil.markaSatiri}>
         <Dumbbell color={renkler.accent} size={18} strokeWidth={2} />
-        <CerceveliYazi testID="paylasim-marka" style={stil.marka}>
+        <GolgeliYazi testID="paylasim-marka" style={stil.marka}>
           GRIND
-        </CerceveliYazi>
+        </GolgeliYazi>
       </View>
 
       {volumePr && (
-        <CerceveliYazi testID="paylasim-hacim-rekoru" style={stil.hacimRekoru}>
+        <GolgeliYazi testID="paylasim-hacim-rekoru" style={stil.hacimRekoru}>
           {t('paylasim.hacimRekoru')}
-        </CerceveliYazi>
+        </GolgeliYazi>
       )}
     </View>
   );
