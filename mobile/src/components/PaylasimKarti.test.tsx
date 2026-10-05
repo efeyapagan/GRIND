@@ -42,20 +42,25 @@ test('sablon adi azami genislikle sinirlidir ve satir sayisi kisitlanmaz', async
 const renk = (eleman: ReturnType<typeof screen.getByTestId>) => StyleSheet.flatten(eleman.props.style)?.color;
 
 /**
- * #598 (kullanici karari): sablon adi, set sayisi, sure ve GRIND beyaz, harfleri siyah cerceveli --
- * story fotografinin ustunde her zeminde okunsun. Cerceve 8 siyah kopyadan olusur.
+ * #651 (kullanici karari): yazilar beyaz, etraflarinda yalnizca cok hafif bir golge var --
+ * kalin siyah cerceve (#598) kaldirildi.
  */
-test.each(['paylasim-baslik', 'paylasim-set-sayisi', 'paylasim-saat', 'paylasim-dakika', 'paylasim-marka'])(
-  '%s beyaz ve siyah cercevelidir',
-  async (testID) => {
-    await render(<PaylasimKarti templateName="Push Day" setCount={6} durationSeconds={4500} />);
+test.each([
+  'paylasim-baslik',
+  'paylasim-set-sayisi',
+  'paylasim-saat',
+  'paylasim-dakika',
+  'paylasim-marka',
+])('%s beyaz ve hafif golgelidir, cerceve yoktur', async (testID) => {
+  await render(<PaylasimKarti templateName="Push Day" setCount={6} durationSeconds={4500} />);
 
-    expect(renk(screen.getByTestId(testID))).toBe('#FFFFFF');
-    const kenarlar = screen.getAllByTestId(`${testID}-kenar`);
-    expect(kenarlar).toHaveLength(8);
-    kenarlar.forEach((kenar) => expect(renk(kenar)).toBe('#000000'));
-  },
-);
+  const stilNesnesi = StyleSheet.flatten(screen.getByTestId(testID).props.style);
+  expect(stilNesnesi.color).toBe('#FFFFFF');
+  expect(stilNesnesi.textShadowColor).toBe('rgba(0, 0, 0, 0.45)');
+  expect(Math.abs(stilNesnesi.textShadowOffset.height)).toBeLessThanOrEqual(1);
+  expect(stilNesnesi.textShadowRadius).toBeLessThanOrEqual(3);
+  expect(screen.queryAllByTestId(`${testID}-kenar`)).toHaveLength(0);
+});
 
 /** #598 (kullanici karari): birimler (SET / SA / DK) soluk turuncu (`accent-soft`); dumbbell turuncu kalir. */
 test('birimler soluk turuncudur', async () => {
