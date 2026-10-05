@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Brain, ChevronDown, ChevronRight, Lightbulb, Sparkles, Trash2, TriangleAlert, Trophy } from 'lucide-react-native';
 import { useDil, type Dil } from '@grind/shared/i18n';
 import {
+  useAntrenmanSayisi,
   useDeleteInsight,
   useGenerateInsight,
   useInfiniteInsights,
@@ -45,6 +46,9 @@ export default function InsightsScreen() {
   );
 }
 
+// #648: GRINDY'den yorum istemek icin gereken en az antrenman sayisi.
+const GRINDY_MIN_ANTRENMAN = 5;
+
 function InsightsIcerigi() {
   const ikonRenk = useIkonRenk();
   const altMenuPayi = useAltMenuPayi();
@@ -56,6 +60,9 @@ function InsightsIcerigi() {
   // degisse de yasayan MutationCache'ten okunur.
   const { uretiliyor, iptalEt: uretimiIptalEt } = useInsightGenerationState();
   const silMutasyonu = useDeleteInsight();
+  // Yukleniyor/hata durumunda kilit KONMAZ (sayi bilinmiyorken kullaniciyi bosuna engellemeyiz); backend kuralini yine uygular.
+  const { data: antrenmanSayisi } = useAntrenmanSayisi();
+  const kilitli = antrenmanSayisi !== undefined && antrenmanSayisi < GRINDY_MIN_ANTRENMAN;
 
   const [durum, setDurum] = useState<'bos' | 'iptal-edildi' | 'bilgi' | 'hata'>('bos');
   const [bilgiMesaji, setBilgiMesaji] = useState<string | null>(null);
@@ -140,10 +147,17 @@ function InsightsIcerigi() {
 
           <CamKart testID="yorum-iste-karti" className="flex-col gap-3 p-4">
             {!uretiliyor && (
-              <BirincilDugme yukseklik="normal" onPress={yorumIste}>
-                <Sparkles color={ikonRenk.onAccent} size={20} />
-                <Text className="text-body-lg font-bold text-on-accent">{t('yorumlar.yorumIste')}</Text>
-              </BirincilDugme>
+              <View className="flex-col gap-2">
+                <BirincilDugme yukseklik="normal" onPress={yorumIste} disabled={kilitli}>
+                  <Sparkles color={ikonRenk.onAccent} size={20} />
+                  <Text className="text-body-lg font-bold text-on-accent">{t('yorumlar.yorumIste')}</Text>
+                </BirincilDugme>
+                {kilitli && (
+                  <Text testID="yorum-iste-kilit-sebebi" className="text-label text-muted">
+                    {t('yorumlar.kilitSebebi', { count: antrenmanSayisi })}
+                  </Text>
+                )}
+              </View>
             )}
 
             {uretiliyor && (

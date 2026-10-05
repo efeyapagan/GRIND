@@ -1,6 +1,7 @@
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  useAntrenmanSayisi,
   useDeleteInsight,
   useGenerateInsight,
   useInfiniteInsights,
@@ -28,12 +29,14 @@ jest.mock('@grind/shared/api/queries', () => ({
   // Saf bir yardimci: sahtesi gercegini taklit etmek yerine gercegi kullanilir.
   yorumMetni: jest.requireActual('@grind/shared/api/queries').yorumMetni,
   useGenerateInsight: jest.fn(),
+  useAntrenmanSayisi: jest.fn(),
   useDeleteInsight: jest.fn(),
   useInfiniteInsights: jest.fn(),
   useInsightGenerationState: jest.fn(),
 }));
 
 const useGenerateInsightMock = useGenerateInsight as jest.Mock;
+const useAntrenmanSayisiMock = useAntrenmanSayisi as jest.Mock;
 const useDeleteInsightMock = useDeleteInsight as jest.Mock;
 const useInfiniteInsightsMock = useInfiniteInsights as jest.Mock;
 const useInsightGenerationStateMock = useInsightGenerationState as jest.Mock;
@@ -82,6 +85,7 @@ function ekraniOlustur() {
 }
 
 beforeEach(() => {
+  useAntrenmanSayisiMock.mockReturnValue({ data: 12 });
   useGenerateInsightMock.mockReturnValue({ mutate: jest.fn(), isPending: false });
   useDeleteInsightMock.mockReturnValue({ mutate: jest.fn() });
   useInfiniteInsightsMock.mockReturnValue(sonsuzSorguSonucu([sayfa([], { totalPages: 0 })]));
@@ -472,4 +476,34 @@ test('yorum iste kutusu cam yuzeydedir', async () => {
   const sinif: string = screen.getByTestId('yorum-iste-karti').props.className;
   expect(sinif).toContain('rounded-3xl');
   expect(sinif).not.toMatch(/bg-surface/);
+});
+
+// ---- #648: ilk 5 antrenman kilidi ----
+
+/** #648: 5'ten az antrenmanda "GRINDY'ye sor" kilitli, altinda sebep ve mevcut sayi yazar. */
+test('5 antrenmandan azsa GRINDYye sor kilitli ve sebebi yazar', async () => {
+  useAntrenmanSayisiMock.mockReturnValue({ data: 3 });
+
+  await ekraniOlustur();
+
+  expect(screen.getByRole('button', { name: "GRINDY'ye sor" }).props.accessibilityState?.disabled).toBe(true);
+  expect(screen.getByTestId('yorum-iste-kilit-sebebi')).toHaveTextContent(/en az 5 antrenman.*3 antrenmanın var/);
+});
+
+/** #648: tam 5 antrenmanda kilit acilir ve sebep yazisi kalkar. */
+test('5 antrenmanda GRINDYye sor acik ve sebep yazisi yok', async () => {
+  useAntrenmanSayisiMock.mockReturnValue({ data: 5 });
+
+  await ekraniOlustur();
+
+  expect(screen.getByRole('button', { name: "GRINDY'ye sor" }).props.accessibilityState?.disabled).not.toBe(true);
+  expect(screen.queryByTestId('yorum-iste-kilit-sebebi')).toBeNull();
+});
+
+/** #648: aciklama metninden "belirli aralik secmek mumkun degil" cumlesi kaldirildi. */
+test('aciklama belirli aralik cumlesini icermez', async () => {
+  await ekraniOlustur();
+
+  expect(screen.queryByText(/Belirli bir aralık/)).toBeNull();
+  expect(screen.getByText(/son 30 güne kadarki antrenman verine bakıp yorumlar/)).toBeTruthy();
 });

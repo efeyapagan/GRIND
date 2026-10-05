@@ -91,6 +91,8 @@ export const queryKeys = {
   historyInfinite: ['history', 'infinite'] as const,
   // Takvimde secilen gunun oturumlari (#90); `historyAll` oneki altinda, set degisince o da tazelenir.
   historyDay: (gun: string | null) => [...queryKeys.historyAll, 'gun', gun] as const,
+  // #648: toplam antrenman sayisi (GRINDY kilidi); `historyAll` oneki altinda, set degisince o da tazelenir.
+  workoutCount: ['history', 'sayac'] as const,
   templates: ['templates'] as const,
   // BILEREK `templates`in oneki DEGIL: liste invalidate edilince acik duzenleyicinin detayi yeniden
   // cekilmesin (silmeden hemen sonra 404'e dusmesin).
@@ -487,6 +489,17 @@ export function useExercises() {
  * kaydirma). Bu hook mobil `history.tsx` hala Onceki/Sonraki dugmeleriyle calistigi icin
  * BILEREK duruyor -- mobil kendi sonsuz kaydirma isini yapinca kaldirilacak.
  */
+/** #648: toplam kayitli antrenman sayisi -- yalnizca `totalCount` icin tek kayitlik sayfa istenir. */
+export function useAntrenmanSayisi() {
+  return useQuery({
+    queryKey: queryKeys.workoutCount,
+    queryFn: async (): Promise<number> => {
+      const yanit = await request<HistorySessionResponsePagedResponse>('/history?Page=1&PageSize=1');
+      return dogrulanmisGecmisSayfasi(yanit).totalCount;
+    },
+  });
+}
+
 export function useHistory(page: number) {
   return useQuery({
     queryKey: queryKeys.history(page),
