@@ -24,9 +24,19 @@ test('takip menusu yalnizca takip ederken acilir', () => {
     .toEqual(['Following', 'Friends']);
 });
 
-test('liste satiri eylemi yalnizca kendi listende, listeye gore', () => {
-  expect(listeSatiriEylemi('friends', true)).toBe('arkadasliktanCikar');
-  expect(listeSatiriEylemi('following', true)).toBe('takibiBirak');
-  expect(listeSatiriEylemi('followers', true)).toBe('takipcidenCikar');
-  expect(listeSatiriEylemi('followers', false)).toBeNull();
+// #646: ayni islem (onun takibini sil) listeye degil iliskiye gore adlanir -- arkadassa "Arkadasliktan cikar".
+describe('listeSatiriEylemi (#628, #646)', () => {
+  test.each([
+    ['friends', true, 'Friends', 'arkadasliktanCikar'],
+    ['following', true, 'Following', 'takibiBirak'],
+    ['following', true, 'Friends', 'takibiBirak'],
+    ['followers', true, 'Friends', 'arkadasliktanCikar'],
+    ['followers', true, 'FollowedBy', 'takipcidenCikar'],
+    ['friends', false, 'Friends', null],
+    ['following', false, 'Following', null],
+    ['followers', false, 'Friends', null],
+    ['followers', false, 'FollowedBy', null],
+  ] as const)('%s, kendi listem=%s, %s -> %s', (liste, kendiListem, iliski, beklenen) => {
+    expect(listeSatiriEylemi(liste, kendiListem, iliski)).toBe(beklenen);
+  });
 });

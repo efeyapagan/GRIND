@@ -136,9 +136,10 @@ beforeEach(async () => {
 });
 
 /** İlk test rotaları soğuk derler (profil.test.tsx ile aynı gerekçe) -- süre ona göre. */
-// #628: kendi takipçi listemde her satırın sağında "Takipçiden çıkar" durur (onay ister); "Arkadaş" rozeti ve
+// #628: kendi takipçi listemde her satırın sağında bir çıkarma eylemi durur (onay ister); "Arkadaş" rozeti ve
 // "Geri takip et" kendi listemde yoktur -- onlar başkasının listesinde ve profil başlığında kalır.
-test('Takipciler sayaci listeyi acar; her satirda Takipciden cikar, onaydan sonra satir kaybolur', async () => {
+// #646: etiket ilişkiye göre seçilir -- arkadaş (ayse) "Arkadaşlıktan çıkar", yalnızca takipçi (can) "Takipçiden çıkar".
+test('Takipciler sayaci listeyi acar; etiket iliskiye gore, onaydan sonra satir kaybolur', async () => {
   const istekler = takipBackendiKur();
   jest.spyOn(Alert, 'alert').mockImplementation((_b, _m, dugmeler) => dugmeler?.[1]?.onPress?.());
 
@@ -148,7 +149,7 @@ test('Takipciler sayaci listeyi acar; her satirda Takipciden cikar, onaydan sonr
 
   const ayse = within(await screen.findByTestId('kullanici-satiri-ayse'));
   expect(ayse.getByText('Ayşe Kaya')).toBeTruthy();
-  expect(ayse.getByRole('button', { name: 'Takipçiden çıkar' })).toBeTruthy();
+  expect(ayse.getByRole('button', { name: 'Arkadaşlıktan çıkar' })).toBeTruthy();
   expect(ayse.queryByText('Arkadaş')).toBeNull();
 
   await fireEvent.press(within(screen.getByTestId('kullanici-satiri-can')).getByRole('button', { name: 'Takipçiden çıkar' }));
