@@ -1,30 +1,29 @@
-import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { Egzersiz } from '@grind/shared/api/queries';
-import HareketSecici from '../ui/HareketSecici';
+import HareketSecimPenceresi from '../ui/HareketSecimPenceresi';
 
 interface Props {
+  acik: boolean;
   egzersizler: readonly Egzersiz[];
   onSec: (exerciseId: number) => void;
   onKapat: () => void;
 }
 
-/** web/src/components/HareketEklePaneli.tsx ile ayni (#62). */
-export default function HareketEklePaneli({ egzersizler, onSec, onKapat }: Props) {
+/**
+ * Antrenmana hareket ekleme (#62). Eskiden alt alandaki kartin icinde satir ici bir liste (`HareketSecici`)
+ * aciliyordu: sayfanin ScrollView'inda mutlak konumlu oldugu icin kaydirirken ya da klavye inerken arama
+ * alani odagi kaybedip listeyi kapatiyordu. Artik ilerleme kartlariyla ayni PENCERE (`HareketSecimPenceresi`).
+ * Liste cagiranin verdigi hareketlerdir -- antrenmanda zaten olanlar orada olmaz.
+ */
+export default function HareketEklePaneli({ acik, egzersizler, onSec, onKapat }: Props) {
+  const { t } = useTranslation();
   return (
-    // Panelin TEK icerigi arama satiri: uzerinde bir baslik satiri varken yukari acilan liste onu
-    // ortuyor ve "duzgun acilmiyor" gorunumu veriyordu (kullanici bulgusu). Kapatma dugmesi de bu
-    // yuzden basliga degil, arama alaninin ICINE konuldu -- liste orayi ASLA ortmez.
-    <View className="flex-col gap-2">
-      <HareketSecici
-        id="hareket-ekle"
-        egzersizler={egzersizler}
-        secilenId={0}
-        secilenAd=""
-        onSec={onSec}
-        otomatikOdak
-        listeYukari
-        onKapat={onKapat}
-      />
-    </View>
+    <HareketSecimPenceresi
+      acik={acik}
+      onKapat={onKapat}
+      baslik={t('antrenman.hareketEkle')}
+      egzersizler={egzersizler}
+      onSec={onSec}
+    />
   );
 }

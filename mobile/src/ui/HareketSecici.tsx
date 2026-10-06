@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
-import { Check, Search, X } from 'lucide-react-native';
+import { Check, Search } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
 import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
@@ -36,7 +36,6 @@ interface Props {
   secilenAd: string;
   devreDisiIdler?: ReadonlySet<number>;
   onSec: (exerciseId: number) => void;
-  otomatikOdak?: boolean;
   listeYukari?: boolean;
   /**
    * #559 (kullanici karari): liste ASAGI acar (listeYukari ile KARISTIRILMAZ) ama bu alan
@@ -54,12 +53,6 @@ interface Props {
   sonSatirMi?: boolean;
   /** #559: `sonSatirMi` ile birlikte -- liste acilip kapandikca cagiran tarafa bildirir. */
   onAcikDegisti?: (acik: boolean) => void;
-  /**
-   * Verilirse alanin SAG icinde bir kapatma dugmesi cizilir. Yukari acilan liste alanin ustundeki
-   * her seyi (panel basligi dahil) ortuyor; kapatma dugmesi bu yuzden basliga degil, listenin ASLA
-   * ortemedigi tek yere -- alanin kendi satirina -- konur.
-   */
-  onKapat?: () => void;
 }
 
 /**
@@ -74,11 +67,9 @@ export default function HareketSecici({
   secilenAd,
   devreDisiIdler,
   onSec,
-  otomatikOdak = false,
   listeYukari = false,
   sonSatirMi = false,
   onAcikDegisti,
-  onKapat,
 }: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
@@ -149,7 +140,6 @@ export default function HareketSecici({
           testID={id}
           autoCapitalize="none"
           autoCorrect={false}
-          autoFocus={otomatikOdak}
           value={acik ? sorgu : secilenAd}
           placeholder={yerTutucu}
           placeholderTextColor={ikonRenk.muted}
@@ -163,20 +153,8 @@ export default function HareketSecici({
             setSorgu(metin);
             setAcik(true);
           }}
-          className={`h-12 w-full rounded-lg bg-inset pl-10 text-body-lg text-fg focus:bg-surface-3 ${
-            onKapat ? 'pr-12' : 'pr-4'
-          }`}
+          className="h-12 w-full rounded-lg bg-inset pl-10 pr-4 text-body-lg text-fg focus:bg-surface-3"
         />
-        {onKapat && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('antrenman.hareketEklemeyiKapat')}
-            onPress={onKapat}
-            className="absolute right-1 z-10 size-10 items-center justify-center rounded-lg"
-          >
-            <X color={ikonRenk.muted} size={20} />
-          </Pressable>
-        )}
       </View>
 
       {acik && (

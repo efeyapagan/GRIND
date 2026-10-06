@@ -309,7 +309,6 @@ export const en: Katalog = {
     hareketKaldirildi: 'Exercise removed',
     hareketiKaldir: 'Remove exercise',
     hareketEkle: 'Add exercise',
-    hareketEklemeyiKapat: 'Close add exercise',
     hareketAra: 'Search exercise',
     kartiKapat: 'Close card',
     duzenlemeyiKapat: 'Close editor',
