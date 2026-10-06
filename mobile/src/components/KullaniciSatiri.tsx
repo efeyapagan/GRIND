@@ -20,7 +20,7 @@ const EYLEM_METNI = {
 /**
  * web/src/components/KullaniciSatiri.tsx ile ayni (#284): fotograf, ad, gorunen isim ve iliskiye gore
  * dugme; arkadasa dugme yerine gosterge. Satira dokunmak profili acar.
- * #628: kendi listende (`eylem`) satirin saginda listeye gore bir eylem durur, onay ister.
+ * #628: kendi listende (`eylem`) satirin saginda listeye ve iliskiye gore (#646) bir eylem durur, onay ister.
  */
 export default function KullaniciSatiri({
   kisi,

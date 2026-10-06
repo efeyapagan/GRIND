@@ -28,14 +28,15 @@ export default function TakipListesi({ liste }: { liste: TakipListesiTuru }) {
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useTakipListesi(ad, liste);
   const { username: ben } = useAuth();
   const kendiListem = ben !== null && ad.toLowerCase() === ben.toLowerCase();
-  const eylem = listeSatiriEylemi(liste, kendiListem);
   const kisiler = data?.pages.flatMap((sayfa) => sayfa.items) ?? [];
 
   return (
     <FlatList
       data={kisiler}
       keyExtractor={(kisi) => kisi.username}
-      renderItem={({ item }) => <KullaniciSatiri kisi={item} eylem={eylem} />}
+      renderItem={({ item }) => (
+        <KullaniciSatiri kisi={item} eylem={listeSatiriEylemi(liste, kendiListem, item.relation)} />
+      )}
       ItemSeparatorComponent={() => <View className="h-2" />}
       contentContainerClassName="px-4 pt-2"
       contentContainerStyle={{ paddingBottom: altMenuPayi }}

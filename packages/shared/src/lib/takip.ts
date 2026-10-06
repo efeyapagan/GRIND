@@ -55,7 +55,17 @@ const LISTE_EYLEMI = {
   followers: 'takipcidenCikar',
 } as const satisfies Record<TakipListesiTuru, ListeSatiriEylemi>;
 
-/** Kendi takip listemde satırın sağındaki eylem (#628); başkasının listesinde bugünkü takip düğmesi kalır. */
-export function listeSatiriEylemi(liste: TakipListesiTuru, kendiListem: boolean): ListeSatiriEylemi | null {
-  return kendiListem ? LISTE_EYLEMI[liste] : null;
+/**
+ * Kendi takip listemde satırın sağındaki eylem (#628); başkasının listesinde bugünkü takip düğmesi kalır.
+ * #646: "Arkadaşlıktan çıkar" ile "Takipçiden çıkar" aynı işlemdir (onun takibini sil), bu yüzden etiket
+ * listeye değil ilişkiye göre seçilir: takipçiler listesindeki arkadaş satırı da "Arkadaşlıktan çıkar" der.
+ */
+export function listeSatiriEylemi(
+  liste: TakipListesiTuru,
+  kendiListem: boolean,
+  iliski: TakipIliskisi,
+): ListeSatiriEylemi | null {
+  if (!kendiListem) return null;
+  if (liste === 'followers' && iliski === 'Friends') return 'arkadasliktanCikar';
+  return LISTE_EYLEMI[liste];
 }
