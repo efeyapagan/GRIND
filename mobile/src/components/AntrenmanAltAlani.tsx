@@ -48,16 +48,7 @@ export default function AntrenmanAltAlani({
     <View className="pb-2">
       {/* #589: cam yuzey (spec Karar 9). `CamKart` icerigi kirpmaz -- hareket ekleme listesi tasabilir (#559). */}
       <CamKart testID="antrenman-alt-alani" className="flex-col gap-2 p-3">
-        {acik ? (
-          <HareketEklePaneli
-            egzersizler={egzersizler}
-            onSec={(exerciseId) => {
-              onAcikDegis(false);
-              onHareketEkle(exerciseId);
-            }}
-            onKapat={() => onAcikDegis(false)}
-          />
-        ) : bitirCagrisi ? (
+        {bitirCagrisi ? (
           <BirincilDugme yukseklik="normal" onPress={bitirCagrisi.onBitir}>
             <CircleCheck color={ikonRenk.onAccent} size={20} />
             <Text className="text-body-lg font-bold text-on-accent">{t('antrenman.bitir')}</Text>
@@ -75,6 +66,13 @@ export default function AntrenmanAltAlani({
           </Pressable>
         ) : null}
       </CamKart>
+      {/* Pencere kartin disinda: kartin icinde acilan liste kaydirmada/klavyede kapaniyordu. */}
+      <HareketEklePaneli
+        acik={acik}
+        egzersizler={egzersizler}
+        onSec={onHareketEkle}
+        onKapat={() => onAcikDegis(false)}
+      />
     </View>
   );
 }
