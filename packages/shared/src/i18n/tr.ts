@@ -316,7 +316,6 @@ export const tr = {
     hareketKaldirildi: 'Hareket kaldırıldı',
     hareketiKaldir: 'Hareketi kaldır',
     hareketEkle: 'Hareket ekle',
-    hareketEklemeyiKapat: 'Hareket eklemeyi kapat',
     hareketAra: 'Hareket ara',
     kartiKapat: 'Kartı kapat',
     duzenlemeyiKapat: 'Düzenlemeyi kapat',
