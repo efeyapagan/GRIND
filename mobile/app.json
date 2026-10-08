@@ -33,7 +33,15 @@
       "@react-native-community/datetimepicker",
       "expo-localization",
       "./plugins/withGrindIos",
-      "expo-widgets"
+      "expo-widgets",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/dinlenme-bitti.wav"
+          ]
+        }
+      ]
     ]
   }
 }
