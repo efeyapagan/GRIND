@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { KeyRound, LogOut } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -10,6 +10,7 @@ import HaftalikHedefSatiri from '../../../src/components/HaftalikHedefSatiri';
 import AntrenmanHedefiSecici from '../../../src/components/AntrenmanHedefiSecici';
 import GizlilikSeviyesiSecici from '../../../src/components/GizlilikSeviyesiSecici';
 import TemaSecici from '../../../src/components/TemaSecici';
+import SesliBildirimSecici from '../../../src/components/SesliBildirimSecici';
 import DilSecici from '../../../src/components/DilSecici';
 import SifreDegistirPenceresi from '../../../src/components/SifreDegistirPenceresi';
 import { useCevrimiciEylem } from '../../../src/baglanti/useCevrimiciEylem';
@@ -42,6 +43,8 @@ export default function AccountScreen() {
         <GizlilikSeviyesiSecici />
         <TemaSecici />
         <DilSecici />
+        {/* #414: simdilik yalnizca iOS (Android'in sayac bildirimi sonraki dilim). */}
+        {Platform.OS === 'ios' && <SesliBildirimSecici />}
       </CamKart>
       <SifreDegistirDugmesi />
       <CamKart

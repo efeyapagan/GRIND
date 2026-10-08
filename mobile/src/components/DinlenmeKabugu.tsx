@@ -18,6 +18,7 @@ import { useIkonRenk, useRenkPaleti } from '../ui/renkler';
 import CamKatmanlari from '../ui/CamKatmanlari';
 import CamDolgu from '../ui/CamDolgu';
 import { useDinlenmeAdasi } from '../ada/useDinlenmeAdasi';
+import { useDinlenmeSesi } from '../bildirim/dinlenmeSesi';
 
 /**
  * Sure dolduktan sonra bitis isaretinin (ziplayan saat) ekranda kaldigi sure -- yalnizca kullanici
@@ -50,6 +51,7 @@ export default function DinlenmeKabugu() {
   const { metin, bitti, oran } = useKalanSure(dinlenme);
   const calisiyor = dinlenme !== null && !bitti;
   useDinlenmeAdasi(dinlenme, bitti);
+  useDinlenmeSesi(dinlenme, bitti);
   const bipCalar = useAudioPlayer(require('../../assets/sounds/dinlenme-bitti.wav'));
 
   // #414: uygulama arka plandayken kullanici antrenman ekranini GORMUYOR -- sure o sirada dolarsa bitis isareti

@@ -147,7 +147,10 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   ikonu kalır, sayaç temizlenince ada kapanır. Arka planda dolan sayacın bitiş işareti uygulamaya dönülene kadar
   bekler. Ada modülü Expo Go'da ŞARTLI yüklenmez — günlük geliştirme Expo Go ile sürer. `mobile/ios/` üretilir,
   repoda durmaz; iOS 27 açılışı ve push yetkisi düzeltmeleri `mobile/plugins/withGrindIos.js`'te, kişiye özel
-  uygulama kimliği `mobile/.env.local`'de (`app.config.js`). Sesli bildirim ve Android sonraki dilimler. Ayrıntı
+  uygulama kimliği `mobile/.env.local`'de (`app.config.js`). **Dilim 2 (sesli bildirim):** Hesap ayarlarından
+  açılır (varsayılan kapalı, tercih cihazda `grind.dinlenmeSesi`); bitiş anına yalnızca SES çalan yerel bir
+  bildirim kurulur (başlık/metin yok, izin yalnızca ses — kutu çıkmaz), uygulama açıkken susar
+  (`mobile/src/bildirim/dinlenmeSesi.ts`). Android sonraki dilim. Ayrıntı
   ve build adımları:
   [docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md](docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
