@@ -141,6 +141,15 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   tutmamış haftada seri 0. Haftalık seri (`currentWeekStreak`) bugüne göre kalır. Arkadaş sıralaması
   (`FriendWeeklyService`) aynı kuralla dönemin hedefini gösterir. Kartın alt satırı
   "Hedef serisi: x hafta" (kalan gün ve "Hedef tamam" kalktı).
+- **Dinlenme adası (2026-10-08, #414 dilim 1)** — yalnızca iOS, yalnızca kendi build'imizde: dinlenme sayacı
+  Dynamic Island'da görünür (`mobile/src/ada/`, `expo-widgets`). Push/sunucu yok: uygulama arka planda adayı
+  güncelleyemediği için kalan süreyi ve bitişi SİSTEM çizer (`timerInterval`, `staleDate`); süre dolunca saat
+  ikonu kalır, sayaç temizlenince ada kapanır. Arka planda dolan sayacın bitiş işareti uygulamaya dönülene kadar
+  bekler. Ada modülü Expo Go'da ŞARTLI yüklenmez — günlük geliştirme Expo Go ile sürer. `mobile/ios/` üretilir,
+  repoda durmaz; iOS 27 açılışı ve push yetkisi düzeltmeleri `mobile/plugins/withGrindIos.js`'te, kişiye özel
+  uygulama kimliği `mobile/.env.local`'de (`app.config.js`). Sesli bildirim ve Android sonraki dilimler. Ayrıntı
+  ve build adımları:
+  [docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md](docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 

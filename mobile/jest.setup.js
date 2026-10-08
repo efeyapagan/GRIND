@@ -35,3 +35,10 @@ require('@grind/shared/i18n').i18nBaslat('tr');
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// #414: Dynamic Island modulu yerel koda (expo-widgets, @expo/ui) dayanir; testte yuklenemez. Davranisi
+// src/ada/useDinlenmeAdasi.test.tsx bu mock uzerinden sinar.
+jest.mock('./src/ada/DinlenmeAdasi', () => ({
+  __esModule: true,
+  default: { start: jest.fn(), getInstances: jest.fn(() => []) },
+}));

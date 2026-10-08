@@ -31,7 +31,9 @@
       "expo-status-bar",
       "expo-audio",
       "@react-native-community/datetimepicker",
-      "expo-localization"
+      "expo-localization",
+      "./plugins/withGrindIos",
+      "expo-widgets"
     ]
   }
 }
