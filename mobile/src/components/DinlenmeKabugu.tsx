@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Vibration } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, View, Text, Pressable, StyleSheet, Vibration } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
@@ -17,6 +17,7 @@ import { ANTRENMAN_BARI_YUKSEKLIGI } from '../ui/olculer';
 import { useIkonRenk, useRenkPaleti } from '../ui/renkler';
 import CamKatmanlari from '../ui/CamKatmanlari';
 import CamDolgu from '../ui/CamDolgu';
+import { useDinlenmeAdasi } from '../ada/useDinlenmeAdasi';
 
 /**
  * Sure dolduktan sonra bitis isaretinin (ziplayan saat) ekranda kaldigi sure -- yalnizca kullanici
@@ -48,9 +49,17 @@ export default function DinlenmeKabugu() {
   const { dinlenme, setDinlenme, genis, setGenis } = useRestTimerGorunumu();
   const { metin, bitti, oran } = useKalanSure(dinlenme);
   const calisiyor = dinlenme !== null && !bitti;
+  useDinlenmeAdasi(dinlenme, bitti);
   const bipCalar = useAudioPlayer(require('../../assets/sounds/dinlenme-bitti.wav'));
 
-  const antrenmandaMi = usePathname() === ANTRENMAN_YOLU;
+  // #414: uygulama arka plandayken kullanici antrenman ekranini GORMUYOR -- sure o sirada dolarsa bitis isareti
+  // (ve Dynamic Island'daki saat) "baska ekrandaydi" kuraliyla bekler, uygulamaya donulunce kalkar.
+  const [onPlanda, setOnPlanda] = useState(AppState.currentState !== 'background');
+  useEffect(() => {
+    const abonelik = AppState.addEventListener('change', (durum) => setOnPlanda(durum !== 'background'));
+    return () => abonelik.remove();
+  }, []);
+  const antrenmandaMi = usePathname() === ANTRENMAN_YOLU && onPlanda;
   // Sure dolduğu ANDA kullanici antrenman ekraninda miydi? Iki temizleme kurali bununla ayrilir.
   const antrenmandaMiRef = useRef(antrenmandaMi);
   antrenmandaMiRef.current = antrenmandaMi;

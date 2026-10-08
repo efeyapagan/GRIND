@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { AppState, Text, type AppStateStatus } from 'react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { useOpenSession } from '@grind/shared/api/queries';
 import { RestTimerProvider, useRestTimer } from '@grind/shared/restTimer';
 import { dinlenmeBaslat, duraklat } from '@grind/shared/lib/dinlenme';
@@ -117,4 +118,47 @@ test('genis panel cam yuzeydedir ve ilerleme cizgisi SVG ile cizilir', async () 
   expect(screen.getByTestId('dinlenme-bandi').props.className).not.toMatch(/bg-surface/);
   expect(screen.getByTestId('cam-kenar')).toBeTruthy();
   expect(screen.getByTestId('dinlenme-ilerleme')).toBeTruthy();
+});
+
+// ---- Uygulama arka plandayken dolan sayac (#414) ----
+
+/** Suresi coktan dolmus bir sayac kurar ve sayacin durup durmadigini yazar. */
+function DolmusSayac() {
+  const [dinlenme, setDinlenme] = useRestTimer();
+  useEffect(() => {
+    setDinlenme({ bitisMs: Date.now() - 1000, toplamMs: 90_000 });
+  }, [setDinlenme]);
+  return <Text>{dinlenme ? 'sayac-var' : 'sayac-yok'}</Text>;
+}
+
+/**
+ * #414: sure, uygulama arka plandayken dolarsa kullanici bitis isaretini GORMEMISTIR -- isaret (ve Dynamic
+ * Island'daki saat) birkac saniye sonra kendiliginden kalkmaz, uygulamaya donulunce kalkar. Eski davranista
+ * antrenman ekrani acik sayildigi icin 7 sn sonra siliniyor, ada da onunla kapaniyordu.
+ */
+test('arka planda dolan sayac uygulamaya donulene kadar bekler, donulunce kalkar', async () => {
+  useOpenSessionMock.mockReturnValue({ data: { id: 7, isOpen: true }, isSuccess: true });
+  mockPathname = '/antrenman';
+  // AppState'i baska dinleyenler de var (or. sorgu istemcisi); hepsine haber verilir.
+  const dinleyenler: ((durum: AppStateStatus) => void)[] = [];
+  // Jest'teki AppState'in `currentState`i yok; test suresince tanimlanir.
+  Object.defineProperty(AppState, 'currentState', { value: 'background', configurable: true });
+  const dinleyici = jest.spyOn(AppState, 'addEventListener').mockImplementation((_olay, geriCagri) => {
+    dinleyenler.push(geriCagri);
+    return { remove: jest.fn() } as never;
+  });
+
+  await render(
+    <RestTimerProvider>
+      <DolmusSayac />
+      <DinlenmeKabugu />
+    </RestTimerProvider>,
+  );
+  expect(screen.getByText('sayac-var')).toBeTruthy();
+
+  await act(async () => dinleyenler.forEach((dinleyen) => dinleyen('active')));
+
+  expect(screen.getByText('sayac-yok')).toBeTruthy();
+  dinleyici.mockRestore();
+  delete (AppState as { currentState?: string }).currentState;
 });
