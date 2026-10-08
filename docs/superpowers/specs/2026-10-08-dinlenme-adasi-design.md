@@ -28,6 +28,26 @@ kalan süreyi de bittiğini de göremiyor.
    (`Constants.executionEnvironment`), Expo Go'da ve Android'de sayaç adasız çalışır. Günlük geliştirme
    Expo Go ile sürer; ada yalnızca kendi build'imizde görünür.
 
+## Dilim 2 — sesli bildirim
+
+Ada sessizdir; müzik dinlerken ekrana bakmayan kullanıcı bitişi kaçırır. Çözüm push DEĞİL, telefonun kendi
+kurduğu yerel bildirimdir (`mobile/src/bildirim/dinlenmeSesi.ts`, `expo-notifications`):
+
+- **Yalnızca ses.** Bildirim başlık/metin taşımaz ve izin yalnızca ses için istenir (`allowAlert: false`):
+  ekranda bildirim kutusu çıkmaz. Titreşimi iOS, sesle birlikte telefonun kendi ayarına göre verir.
+- **Opsiyonel, varsayılan KAPALI (kullanıcı kararı).** Hesap ayarları → "Sesli bildirim". Tercih cihazda
+  durur (`grind.dinlenmeSesi`); bildirim izni yalnızca özelliği açana sorulur. İzin verilmezse tercih kapalı
+  kalır ve izni telefon ayarlarından açmak gerektiği yazılır.
+- **Sayaçla birlikte yaşar.** Sayaç başlayınca bitiş anına kurulur; süre değişince taşınır; sayaç
+  temizlenince, duraklatılınca ya da dolunca iptal edilir.
+- **Uygulama açıkken susar** (`setNotificationHandler`): bugünkü uygulama içi bip çalar ve bu tercihten
+  bağımsızdır.
+- **Ses dosyası.** Kendi build'imizde uygulamanın zil sesi (`assets/sounds/dinlenme-bitti.wav`,
+  expo-notifications `sounds`); Expo Go'da sistemin varsayılan bildirim sesi.
+- `expo-notifications` da push yetkisi ekler; `withGrindIos` onu da siler (bu yüzden `plugins` dizisinde
+  ikisinden de ÖNCE durur).
+- Şimdilik yalnızca iOS; Android'in üst panel sayacı dilim 3.
+
 ## Kendi iOS build'imiz
 
 `mobile/ios/` üretilir ve repoda durmaz (`.gitignore`). Kurulum:
@@ -63,5 +83,6 @@ Bilinenler:
 ## Doğrulama durumu
 
 Simülatörde (iPhone 17 Pro, iOS 26.5) görüldü: kompakt görünüm, geri sayım, bitişte ikonun kalması, uygulamaya
-dönünce kapanma, Expo Go'da uygulamanın açılması. **Görülmedi:** müzikle küçük daire, kilit ekranı görünümü,
+dönünce kapanma, Expo Go'da uygulamanın açılması. Dilim 2: tercih açılınca izin sorusu, bitiş anında yerel bildirimin tetiklenmesi (sistem kaydı) ve ekranda kutu çıkmaması görüldü; zilin SESİ simülatörden dinlenemedi.
+**Görülmedi:** müzikle küçük daire, kilit ekranı görünümü,
 iOS 27'li telefonda açılış (düzeltme çökme kaydına göre yazıldı).
