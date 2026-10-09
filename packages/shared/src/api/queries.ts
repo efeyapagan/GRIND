@@ -41,6 +41,8 @@ type CalendarResponse = components['schemas']['CalendarResponse'];
 type CalendarDayResponse = components['schemas']['CalendarDayResponse'];
 type UpdateWeeklyTargetRequest = components['schemas']['UpdateWeeklyTargetRequest'];
 type UpdatePrivacyLevelRequest = components['schemas']['UpdatePrivacyLevelRequest'];
+type NotificationCategoriesResponse = components['schemas']['NotificationCategoriesResponse'];
+type UpdateNotificationCategoryRequest = components['schemas']['UpdateNotificationCategoryRequest'];
 type AiInsightResponse = components['schemas']['AiInsightResponse'];
 type AiInsightResponsePagedResponse = components['schemas']['AiInsightResponsePagedResponse'];
 type BodyWeightLogResponse = components['schemas']['BodyWeightLogResponse'];
@@ -151,6 +153,8 @@ export const queryKeys = {
   bildirimlerAll: ['bildirimler'] as const,
   bildirimler: ['bildirimler', 'liste'] as const,
   okunmamisBildirim: ['bildirimler', 'okunmamis'] as const,
+  // #410: `bildirimlerAll` onekinin DISINDA -- takip degisince eskimez, yalnizca kendi ayariyla degisir.
+  bildirimKategorileri: ['bildirimKategorileri'] as const,
   // #467: bir kullanicinin paylasilan sablonlari; onek sayesinde kaydetme/paylasim degisikligi
   // hem listeyi hem detayi tazeler.
   /** Tüm kullanıcıların paylaşılan şablon sorguları -- takip/arkadaşlık değişince topluca eskir (#628). */
@@ -2291,6 +2295,47 @@ export function useOkunmamisBildirimSayisi(etkin: boolean) {
         throw new Error('Sunucudan eksik bildirim sayisi alindi.');
       }
       return yanit.count;
+    },
+  });
+}
+
+/** Bildirim ayarlarindaki kategoriler (#410); sunucudaki `NotificationCategory` ile ayni adlar. */
+export type BildirimKategorisi = NonNullable<UpdateNotificationCategoryRequest['category']>;
+
+/** KAPALI kategoriler (#410); listede olmayan her kategori aciktir. */
+export function useBildirimKategorileri() {
+  return useQuery({
+    queryKey: queryKeys.bildirimKategorileri,
+    queryFn: async (): Promise<BildirimKategorisi[]> =>
+      (await request<NotificationCategoriesResponse>('/settings/notification-categories')).mutedCategories ?? [],
+  });
+}
+
+/**
+ * Bir kategoriyi acar/kapatir (#410). Anahtar HEMEN doner (iyimser), sunucu reddederse eski haline alinir.
+ * Basarida bildirim listesi ve rozet tazelenir: kapatilan kategori ikisinden de duser.
+ */
+export function useBildirimKategorisiAyarla() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (govde: { category: BildirimKategorisi; enabled: boolean }): Promise<void> => {
+      const istek: UpdateNotificationCategoryRequest = govde;
+      await request<void>('/settings/notification-categories', { method: 'PUT', body: JSON.stringify(istek) });
+    },
+    onMutate: async ({ category, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.bildirimKategorileri });
+      const onceki = queryClient.getQueryData<BildirimKategorisi[]>(queryKeys.bildirimKategorileri);
+      queryClient.setQueryData<BildirimKategorisi[]>(queryKeys.bildirimKategorileri, (kapalilar = []) =>
+        enabled ? kapalilar.filter((kapali) => kapali !== category) : [...new Set([...kapalilar, category])],
+      );
+      return { onceki };
+    },
+    onError: (_hata, _govde, baglam) => {
+      queryClient.setQueryData(queryKeys.bildirimKategorileri, baglam?.onceki);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bildirimKategorileri });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bildirimlerAll });
     },
   });
 }

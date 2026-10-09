@@ -46,6 +46,7 @@ public class NotificationServiceTests
         return new NotificationService(
             [new FollowNotificationSource(repository), new RecordNotificationSource(repository), new FriendRequestNotificationSource(repository)],
             new UserRepository(context),
+            new MutedNotificationCategoryRepository(context),
             new UserSummaryBuilder(new FollowRepository(context), new UserAvatarRepository(context), currentUser),
             new UnitOfWork(context), currentUser, new SahteSaat());
     }
@@ -410,6 +411,82 @@ public class NotificationServiceTests
             // Sessize alma yalnızca o kişiyi susturur: üçüncü kişinin bildirimi hâlâ gelir.
             var kalan = Assert.Single(await ServiceFor(context, ben).GetAsync());
             Assert.Equal(veli.Username, kalan.Actor.Username);
+        }
+    }
+
+    // ---- Bildirim kategorileri (#410) ----
+
+    private static async Task KapatAsync(AppDbContext context, User kullanici, NotificationCategory kategori)
+    {
+        context.Add(new MutedNotificationCategory { UserId = kullanici.Id, Category = kategori });
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Kapatılan kategorinin bildirimleri listede de okunmamış sayısında da yoktur; açık kalan kategori etkilenmez.
+    /// Bildirimler türetildiği için kategori yeniden açılınca hepsi geri gelir.
+    /// </summary>
+    [Fact]
+    public async Task Kapatilan_kategori_listeden_ve_sayidan_duser_acilinca_geri_gelir()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (ben, ali) = (users[0], users[1]);
+            await TakipAsync(context, ali, ben, Simdi.AddHours(-2));
+            await TakipAsync(context, ben, ali, Simdi.AddDays(-3));
+            var bench = await HareketAsync(context, ali, "Bench");
+            await AntrenmanAsync(context, ali, Simdi.AddHours(-1), (bench, 100m, 5, RecordType.Weight));
+            await KapatAsync(context, ben, NotificationCategory.Records);
+
+            var servis = ServiceFor(context, ben);
+            var bildirim = Assert.Single(await servis.GetAsync());
+            Assert.Equal(NotificationKind.Follow, bildirim.Kind);
+            Assert.Equal(1, (await servis.GetUnreadCountAsync()).Count);
+
+            context.RemoveRange(context.MutedNotificationCategories.Where(m => m.UserId == ben.Id));
+            await context.SaveChangesAsync();
+            Assert.Equal(2, (await ServiceFor(context, ben).GetAsync()).Count);
+        }
+    }
+
+    /// <summary>
+    /// Kullanıcı kararı: arkadaşlık isteği yalnızca bildirim listesinden kabul edilir, bu yüzden kategorisi
+    /// kapalıyken de LİSTEDE kalır ama okunmamış sayılmaz (rozet yanmaz). Aynı kategorideki takip bildirimi gizlenir.
+    /// </summary>
+    [Fact]
+    public async Task Kategori_kapaliyken_arkadaslik_istegi_listede_kalir_ama_sayilmaz()
+    {
+        var (context, users, transaction) = await CreateAsync(3);
+        await using (transaction)
+        {
+            var (ben, ali, veli) = (users[0], users[1], users[2]);
+            await TakipAsync(context, veli, ben, Simdi.AddHours(-2));
+            context.Add(new FriendRequest { RequesterId = ali.Id, TargetId = ben.Id, CreatedAt = Simdi.AddHours(-1) });
+            await context.SaveChangesAsync();
+            await KapatAsync(context, ben, NotificationCategory.FollowsAndFriends);
+
+            var servis = ServiceFor(context, ben);
+            var bildirim = Assert.Single(await servis.GetAsync());
+
+            Assert.Equal(NotificationKind.FriendRequest, bildirim.Kind);
+            Assert.False(bildirim.IsUnread);
+            Assert.Equal(0, (await servis.GetUnreadCountAsync()).Count);
+        }
+    }
+
+    /// <summary>Ayar kişiye özeldir: başkasının kapattığı kategori benim bildirimlerimi etkilemez.</summary>
+    [Fact]
+    public async Task Baskasinin_kapattigi_kategori_beni_etkilemez()
+    {
+        var (context, users, transaction) = await CreateAsync(2);
+        await using (transaction)
+        {
+            var (ben, ali) = (users[0], users[1]);
+            await TakipAsync(context, ali, ben, Simdi.AddHours(-2));
+            await KapatAsync(context, ali, NotificationCategory.FollowsAndFriends);
+
+            Assert.Single(await ServiceFor(context, ben).GetAsync());
         }
     }
 }

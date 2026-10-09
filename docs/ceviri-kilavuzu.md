@@ -87,6 +87,7 @@ ve o dosyanın hangi katalog grubunu kullandığını gösterir; yeni bir ekran 
 | `app/(tabs)/profile/measurements.tsx` | `olcumler.*`, `ortak.*` |
 | `app/(tabs)/profile/account.tsx` | `profil.*`, `dil.*` |
 | `app/(tabs)/profile/edit.tsx` | `profil.*`, `ortak.*` |
+| `app/(tabs)/profile/notifications.tsx` | `bildirimAyarlari.*`, `profil.bildirimAyarlari` |
 | `app/(tabs)/templates/*.tsx` | `sablonlar.*` |
 | `src/components/SablonFormu.tsx` | `sablonlar.*`, `ortak.*` |
 | `src/components/HareketGecmisi.tsx` | `hareketGecmisi.*` |
