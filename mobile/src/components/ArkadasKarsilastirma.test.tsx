@@ -259,6 +259,20 @@ test('kendi satirinin vurgusu dusuk opakliktadir, baskasininki yoktur', async ()
   expect(within(screen.getByLabelText('ali profilini aç')).queryByTestId('kendi-satir-vurgusu')).toBeNull();
 });
 
+/**
+ * #668: `CamKart` icerigini kirpmaz; dikdortgen vurgu kendi kabinda kartin kosesine kirpilmali. Kirpilmayinca
+ * acik temada (`fg` koyu) alt koseler koyu ve dik acili gorunuyordu.
+ */
+test('kendi satirinin vurgusu kartin yuvarlak kosesine kirpilir', async () => {
+  veriVer([arkadas('ben', { isSelf: true, trainedDays: 1, weeklyTargetDays: 3 })]);
+  await ciz();
+
+  const kap = within(screen.getByLabelText('ben profilini aç')).getByTestId('kendi-satir-vurgusu-kabi');
+  expect(kap.props.className).toEqual(expect.stringContaining('overflow-hidden'));
+  expect(kap.props.className).toEqual(expect.stringContaining('rounded-3xl'));
+  expect(within(kap).getByTestId('kendi-satir-vurgusu')).toBeTruthy();
+});
+
 /** Hedef cubugu NativeWind View degil SVG: ray tam genisliktedir, dolgu oran kadar (2/3 gun -> %67). */
 test('hedef cubugu svg cizilir: ray tam, dolgu orana gore', async () => {
   veriVer([arkadas('ali', { trainedDays: 2, weeklyTargetDays: 3 })]);

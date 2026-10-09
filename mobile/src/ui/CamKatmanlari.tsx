@@ -29,7 +29,7 @@ export default function CamKatmanlari({ koseSinifi = 'rounded-3xl', vurguluKenar
   const palet = useRenkPaleti();
   return (
     <View pointerEvents="none" className={`absolute inset-0 overflow-hidden ${koseSinifi}`}>
-      <CamYuzey />
+      <CamYuzey koseSinifi={koseSinifi} />
       <Svg style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="cam-parilti" x1="0" y1="0" x2="0" y2="1">
