@@ -52,7 +52,7 @@ export default function DinlenmeKabugu() {
   const calisiyor = dinlenme !== null && !bitti;
   useDinlenmeAdasi(dinlenme, bitti);
   useDinlenmeSesi(dinlenme, bitti);
-  const bipCalar = useAudioPlayer(require('../../assets/sounds/dinlenme-bitti.wav'));
+  const bipCalar = useAudioPlayer(require('../../assets/sounds/dinlenme_bitti.wav'));
 
   // #414: uygulama arka plandayken kullanici antrenman ekranini GORMUYOR -- sure o sirada dolarsa bitis isareti
   // (ve Dynamic Island'daki saat) "baska ekrandaydi" kuraliyla bekler, uygulamaya donulunce kalkar.

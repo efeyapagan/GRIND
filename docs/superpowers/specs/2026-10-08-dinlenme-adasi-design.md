@@ -42,11 +42,38 @@ kurduğu yerel bildirimdir (`mobile/src/bildirim/dinlenmeSesi.ts`, `expo-notific
   temizlenince, duraklatılınca ya da dolunca iptal edilir.
 - **Uygulama açıkken susar** (`setNotificationHandler`): bugünkü uygulama içi bip çalar ve bu tercihten
   bağımsızdır.
-- **Ses dosyası.** Kendi build'imizde uygulamanın zil sesi (`assets/sounds/dinlenme-bitti.wav`,
+- **Ses dosyası.** Kendi build'imizde uygulamanın zil sesi (`assets/sounds/dinlenme_bitti.wav`,
   expo-notifications `sounds`); Expo Go'da sistemin varsayılan bildirim sesi.
 - `expo-notifications` da push yetkisi ekler; `withGrindIos` onu da siler (bu yüzden `plugins` dizisinde
   ikisinden de ÖNCE durur).
-- Şimdilik yalnızca iOS; Android'in üst panel sayacı dilim 3.
+- Ayar bir anahtardır (RN `Switch`).
+
+## Dilim 3 — Android
+
+Dynamic Island'ın karşılığı üst paneldeki bildirimdir:
+
+- **Geri sayım.** Kalan süreyi SİSTEMİN akıttığı (`setUsesChronometer` + `setChronometerCountDown`) kalıcı,
+  sessiz bir bildirim. `expo-notifications` bunu desteklemediği için küçük bir yerel Expo modülü var:
+  `mobile/modules/dinlenme-sayaci` (Kotlin, yalnızca Android, otomatik bağlanır). Süre dolunca bildirim
+  kendiliğinden kalkar (`setTimeoutAfter`) — uygulama o sırada uyuyor olabilir. Bildirime dokunmak uygulamayı açar.
+- **Bitiş.** Başlıklı ("Dinlenme bitti"), yüksek önemli kanalda, zil sesli bir bildirim; `expo-notifications`
+  ile bitiş anına kurulur (Android'de başlıksız bildirim boş göründüğü için iOS'taki "yalnızca ses" burada yok).
+- **Tam zamanlı alarm.** Android, izin yokken zamanlanmış bildirimi "yaklaşık" kurar; 90 sn'lik sayaçta uyarı
+  bir dakikadan fazla gecikiyordu (emülatörde görüldü). `USE_EXACT_ALARM` / `SCHEDULE_EXACT_ALARM` izinleri
+  (`app.json`) ile `expo-notifications` tam zamanlı alarm kurar.
+- **Süre dolunca iptal yok.** Kurulu bildirim `bitti` anında iptal edilmez (geç tetiklenen bildirimle yarışıp
+  zili yutardı); sayaç temizlenince iptal edilir. Süresi çoktan dolmuş (geri yüklenen) sayaç için geçmişe
+  bildirim kurulmaz. iOS için de geçerli.
+- **İkon.** Bildirimler uygulamanın tek renkli ikonunu kullanır (expo-notifications `icon`; yerel modül aynı
+  kaynağı `notification_icon` adıyla bulur).
+- **Tek tercih.** Android'de her bildirim izin ister; bu yüzden geri sayım da bitiş uyarısı da aynı tercihe
+  bağlıdır (Android'de adı "Dinlenme bildirimi"), varsayılan kapalı.
+- **Expo Go.** Yerel modül Expo Go'da yoktur (`requireOptionalNativeModule` → `null`): geri sayım görünmez,
+  bitiş uyarısı çalışır.
+- Android kaynak adları tire kabul etmediği için zil dosyası `dinlenme_bitti.wav` oldu.
+- Emülatörde API'ye ulaşmak için `adb reverse tcp:5098 tcp:5098` gerekir (Metro'nunki otomatik kurulur).
+- Build: `ANDROID_HOME` ayarlıyken `npx expo prebuild -p android && npx expo run:android`
+  (`mobile/android/` da üretilir, repoda durmaz; paket adı `GRIND_ANDROID_PACKAGE`, varsayılan `com.grind.mobile`).
 
 ## Kendi iOS build'imiz
 
@@ -84,5 +111,6 @@ Bilinenler:
 
 Simülatörde (iPhone 17 Pro, iOS 26.5) görüldü: kompakt görünüm, geri sayım, bitişte ikonun kalması, uygulamaya
 dönünce kapanma, Expo Go'da uygulamanın açılması. Dilim 2: tercih açılınca izin sorusu, bitiş anında yerel bildirimin tetiklenmesi (sistem kaydı) ve ekranda kutu çıkmaması görüldü; zilin SESİ simülatörden dinlenemedi.
+Dilim 3 (Android emülatörü, Android 15): anahtar ve izin sorusu, üst panelde akan geri sayım, sürenin dolunca kendiliğinden kalkması, bitiş bildiriminin tam zamanında gelmesi görüldü; sesi dinlenemedi, ekrana düşen uyarı kutusu görüntüde yakalanamadı, gerçek Android telefonda denenmedi.
 **Görülmedi:** müzikle küçük daire, kilit ekranı görünümü,
 iOS 27'li telefonda açılış (düzeltme çökme kaydına göre yazıldı).
