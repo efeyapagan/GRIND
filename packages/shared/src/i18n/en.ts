@@ -580,7 +580,6 @@ export const en: Katalog = {
     guncellenemedi: 'Could not update the measurement',
   },
   bildirimAyarlari: {
-    aciklama: "Notifications from a category you turn off won't appear in the list or count on the bell.",
     alinamadi: "Couldn't load notification settings.",
     kaydedilemedi: "Couldn't save the setting. Try again.",
     takipVeArkadaslik: 'Follows and friends',

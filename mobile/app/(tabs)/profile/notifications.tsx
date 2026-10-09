@@ -35,7 +35,6 @@ export default function BildirimAyarlariScreen() {
 
   return (
     <EkranKaydirici contentContainerClassName="gap-4 px-4 pt-2 pb-4">
-      <Text className="text-body text-muted">{t('bildirimAyarlari.aciklama')}</Text>
       {isError && !kapalilar && (
         <Text accessibilityRole="alert" className="text-body text-danger">
           {t('bildirimAyarlari.alinamadi')}
