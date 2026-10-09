@@ -150,7 +150,9 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   uygulama kimliği `mobile/.env.local`'de (`app.config.js`). **Dilim 2 (sesli bildirim):** Hesap ayarlarından
   açılır (varsayılan kapalı, tercih cihazda `grind.dinlenmeSesi`); bitiş anına yalnızca SES çalan yerel bir
   bildirim kurulur (başlık/metin yok, izin yalnızca ses — kutu çıkmaz), uygulama açıkken susar
-  (`mobile/src/bildirim/dinlenmeSesi.ts`). Android sonraki dilim. Ayrıntı
+  (`mobile/src/bildirim/dinlenmeSesi.ts`). **Dilim 3 (Android):** aynı tercih açıkken üst panelde sistemin
+  akıttığı geri sayan kalıcı bildirim (yerel Expo modülü `mobile/modules/dinlenme-sayaci` — expo-notifications
+  desteklemiyor; Expo Go'da yok) ve bitişte başlıklı, zil sesli bildirim. Ayrıntı
   ve build adımları:
   [docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md](docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,

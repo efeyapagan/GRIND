@@ -13,12 +13,11 @@ beforeEach(() => {
 
 async function ac() {
   await render(<SesliBildirimSecici />);
-  await act(async () => fireEvent.press(screen.getByText('Kapalı')));
-  await act(async () => fireEvent.press(screen.getByText('Açık')));
+  await act(async () => fireEvent(screen.getByRole('switch', { name: 'Sesli bildirim' }), 'valueChange', true));
 }
 
 /** #414: hesap ayarlarindan acilir; ne ise yaradigi altinda yazar. */
-test('Acik secilince tercih acilir', async () => {
+test('anahtar acilinca tercih acilir', async () => {
   ayarla.mockResolvedValue(true);
 
   await ac();

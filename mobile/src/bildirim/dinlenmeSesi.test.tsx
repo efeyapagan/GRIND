@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
@@ -11,8 +12,13 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(() => Promise.resolve('kimlik')),
   cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
   SchedulableTriggerInputTypes: { DATE: 'date' },
+  AndroidImportance: { HIGH: 'high' },
 }));
+// Android'in geri sayan bildirimi yerel bir moduldur (modules/dinlenme-sayaci).
+const mockSayac = { goster: jest.fn(), kapat: jest.fn() };
+jest.mock('expo', () => ({ requireOptionalNativeModule: () => mockSayac }));
 
 const izinIste = Notifications.requestPermissionsAsync as jest.Mock;
 const kur = Notifications.scheduleNotificationAsync as jest.Mock;
@@ -44,7 +50,7 @@ test('tercih acikken sayac baslayinca bitis anina sessiz-kutulu tek zil kurulur'
 
   await waitFor(() => expect(kur).toHaveBeenCalledTimes(1));
   const [istek] = kur.mock.calls[0];
-  expect(istek.content).toEqual({ sound: 'dinlenme-bitti.wav' });
+  expect(istek.content).toEqual({ sound: 'dinlenme_bitti.wav' });
   expect(istek.trigger).toEqual({ type: 'date', date: new Date(SIMDI + 90_000) });
 });
 
@@ -74,6 +80,31 @@ test.each([
 
   await waitFor(() => expect(iptal).toHaveBeenCalledTimes(1));
   expect(kur).toHaveBeenCalledTimes(1);
+});
+
+/**
+ * Sure doldugu an bildirim ya caldi ya calmak uzere (Android gec tetikleyebilir): o anda iptal edilirse zil
+ * yutulur. Iptal, sayac temizlenince olur.
+ */
+test('sure dolunca kurulu zil iptal edilmez', async () => {
+  await act(async () => void (await sesliBildirimiAyarla(true)));
+  const { rerender } = await kanca(SAYAC);
+  await waitFor(() => expect(kur).toHaveBeenCalledTimes(1));
+  iptal.mockClear();
+
+  await rerender({ d: SAYAC, b: true });
+
+  expect(iptal).not.toHaveBeenCalled();
+});
+
+/** Uygulama yeniden acilinca geri yuklenen, suresi coktan dolmus sayac icin gecmise zil kurulmaz. */
+test('suresi dolmus sayacla baslaninca zil kurulmaz', async () => {
+  await act(async () => void (await sesliBildirimiAyarla(true)));
+
+  await kanca(SAYAC, true);
+
+  await waitFor(() => expect(iptal).toHaveBeenCalled());
+  expect(kur).not.toHaveBeenCalled();
 });
 
 /** Varsayilan KAPALI: kullanici istemedikce ne zil kurulur ne izin sorulur. */
@@ -121,4 +152,47 @@ test('izin verilmezse tercih kapali kalir', async () => {
   expect(oldu).toBe(false);
   expect(result.current).toBe(false);
   expect(yaz).not.toHaveBeenCalled();
+});
+
+// ---- Android: ust panelde geri sayim + bitiste baslikli bildirim (dilim 3) ----
+
+describe('Android', () => {
+  let platform: jest.ReplaceProperty<typeof Platform.OS>;
+  beforeEach(() => {
+    platform = jest.replaceProperty(Platform, 'OS', 'android');
+  });
+  afterEach(() => platform.restore());
+
+  /** Dynamic Island'in karsiligi: kalan sureyi sistemin akittigi kalici bildirim; bitiste zil sesli uyari. */
+  test('sayac baslayinca ust panelde geri sayim gosterilir ve bitis uyarisi baslikla kurulur', async () => {
+    await act(async () => void (await sesliBildirimiAyarla(true)));
+
+    await kanca(SAYAC);
+
+    expect(mockSayac.goster).toHaveBeenCalledWith(SIMDI + 90_000, 'Dinlenme');
+    await waitFor(() => expect(kur).toHaveBeenCalledTimes(1));
+    const [istek] = kur.mock.calls[0];
+    expect(istek.content).toEqual({ title: 'Dinlenme bitti', sound: 'dinlenme_bitti.wav' });
+    expect(istek.trigger).toMatchObject({ date: new Date(SIMDI + 90_000), channelId: 'dinlenme-bitti' });
+  });
+
+  test('sayac temizlenince geri sayim kapanir ve bitis uyarisi iptal edilir', async () => {
+    await act(async () => void (await sesliBildirimiAyarla(true)));
+    const { rerender } = await kanca(SAYAC);
+    await waitFor(() => expect(kur).toHaveBeenCalledTimes(1));
+    iptal.mockClear();
+
+    await rerender({ d: null, b: false });
+
+    expect(mockSayac.kapat).toHaveBeenCalled();
+    await waitFor(() => expect(iptal).toHaveBeenCalledTimes(1));
+  });
+
+  /** Android'de her bildirim izin ister: tercih kapaliyken geri sayim da gosterilmez. */
+  test('tercih kapaliyken geri sayim gosterilmez', async () => {
+    await kanca(SAYAC);
+
+    expect(mockSayac.goster).not.toHaveBeenCalled();
+    expect(kur).not.toHaveBeenCalled();
+  });
 });

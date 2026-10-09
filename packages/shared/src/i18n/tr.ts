@@ -186,8 +186,8 @@ export const tr = {
     yeniSifreTekrariniGoster: 'Yeni şifre tekrarını göster',
     // #414: dinlenme bitince arka planda zil (yerel, yalnizca sesli bildirim).
     sesliBildirim: 'Sesli bildirim',
-    sesliBildirimAcik: 'Açık',
-    sesliBildirimKapali: 'Kapalı',
+    dinlenmeBildirimi: 'Dinlenme bildirimi',
+    dinlenmeBildirimiAciklama: 'Dinlenme sürerken üst panelde geri sayım görünür; süre dolunca zil sesiyle bildirim gelir.',
     sesliBildirimAciklama: 'Dinlenme süresi dolunca, uygulama arka plandayken de zil çalar.',
     sesliBildirimIzinYok: 'Bildirim izni verilmedi. Telefonun ayarlarından GRIND için bildirimlere izin verebilirsin.',
     tema: 'Tema',
