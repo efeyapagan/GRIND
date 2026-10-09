@@ -11,6 +11,7 @@ import { session } from '../src/session';
 import { API_BASE_URL } from '../src/apiConfig';
 import { odakDinleyicisiniKur } from '../src/queryOdak';
 import { AuthProvider } from '../src/auth/AuthContext';
+import { ilkKurulumTemizligi } from '../src/ilkKurulum';
 import { TemaProvider, useTema } from '../src/ui/TemaContext';
 import { DilProvider, baslangicDili } from '../src/ui/DilContext';
 import { YorumDiliProvider } from '../src/ui/YorumDiliContext';
@@ -47,7 +48,11 @@ export default function RootLayout() {
     // #175: RN'de `visibilitychange` yok -- odak takibi AppState'e baglanmadan uygulama on plana
     // dondugunde hicbir sorgu tazelenmez.
     odakDinleyicisiniKur();
-    session.hydrate().finally(() => setHazir(true));
+    // #663: yeni kurulumda onceki kurulumdan kalan anahtar zinciri kayitlari (tema, dil, oturum) once silinir;
+    // saglayicilar ve oturum ancak ondan sonra okunur.
+    ilkKurulumTemizligi()
+      .then(() => session.hydrate())
+      .finally(() => setHazir(true));
   }, []);
 
   if (!hazir) {

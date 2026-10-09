@@ -42,3 +42,8 @@ jest.mock('./src/ada/DinlenmeAdasi', () => ({
   __esModule: true,
   default: { start: jest.fn(), getInstances: jest.fn(() => []) },
 }));
+
+// #663: yeni kurulum temizligi anahtar zincirini siler; her test bos AsyncStorage ile ("yeni kurulum" gibi)
+// basladigi icin testlerin hazirladigi oturumu da silerdi. Varsayilan olarak devre disi; davranisi
+// src/ilkKurulum.test.ts gercek modulle sinar.
+jest.mock('./src/ilkKurulum', () => ({ ilkKurulumTemizligi: jest.fn(() => Promise.resolve()) }));
