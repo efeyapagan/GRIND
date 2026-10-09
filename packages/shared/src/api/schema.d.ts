@@ -5003,6 +5003,8 @@ export interface components {
             exercises: components["schemas"]["TemplateExerciseRequest"][];
             /** Format: uuid */
             clientRequestId?: string | null;
+            /** Format: int64 */
+            sessionId?: number | null;
         };
         DailyBodyWeightResponse: {
             /** Format: date */

@@ -476,7 +476,16 @@ export function useKuyrukluCreateTemplate() {
             egzersizler: queryClient.getQueryData<Egzersiz[]>(queryKeys.exercises) ?? [],
           });
           yazSablonlar(queryClient, yeni);
-          ekle({ tur: 'sablonOlustur', anahtar, sablonId, name, exercises: girdi.exercises });
+          // #662: antrenmandan kaydedildiyse acik antrenman hemen bu sablona baglanir (kisayol kalkar, bitirince
+          // yeniden sorulmaz); sunucudaki bag kuyrukla gider.
+          const oturum = acikOturum(queryClient);
+          if (girdi.sessionId !== undefined && oturum?.id === girdi.sessionId) {
+            yazAcikOturum(queryClient, { ...oturum, templateId: sablonId, templateName: name });
+          }
+          ekle({
+            tur: 'sablonOlustur', anahtar, sablonId, name, exercises: girdi.exercises,
+            baglananOturumId: girdi.sessionId,
+          });
           return yeni[yeni.length - 1];
         },
       );

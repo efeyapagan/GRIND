@@ -34,6 +34,30 @@ public class WorkoutTemplateService(
         return templates.Select(t => TemplateMapper.ToResponse(t, LastUsedOrNull(lastUsed, t.Id))).ToList();
     }
 
+    /// <summary>
+    /// #662: şablon açık bir antrenmandan kaydedildiyse antrenmanı ona bağlar; kayıt çağıranın tek
+    /// <c>SaveChangesAsync</c>'iyle birlikte yazılır. Antrenman çağıranın değilse/yoksa 404 (sahiplik sızmaz),
+    /// bitmişse 409 — geçmiş antrenmanın şablonu sonradan değiştirilmez (yalnızca açık antrenman düzenlenir).
+    /// Antrenmanın hareket listesi (<c>SessionExercise</c>) değişmez: o zaten şablondan bağımsız bir kopyadır.
+    /// </summary>
+    private async Task LinkOpenSessionAsync(
+        long? sessionId, WorkoutTemplate template, CancellationToken cancellationToken)
+    {
+        if (sessionId is not { } id)
+        {
+            return;
+        }
+
+        var session = await sessionRepository.GetOwnedByIdAsync(id, currentUser.UserId, cancellationToken)
+                      ?? throw new NotFoundException("Antrenman bulunamadı.");
+        if (session.EndedAt is not null)
+        {
+            throw new ConflictException("Bitmiş bir antrenman şablona bağlanamaz.");
+        }
+
+        session.Template = template;
+    }
+
     public async Task<TemplateResponse> GetByIdAsync(
         long id, CancellationToken cancellationToken = default)
         => await ToResponseAsync(await OwnedOrThrowAsync(id, cancellationToken), cancellationToken);
@@ -62,6 +86,7 @@ public class WorkoutTemplateService(
         };
 
         templateRepository.Add(template);
+        await LinkOpenSessionAsync(request.SessionId, template, cancellationToken);
         // request.Exercises! : [ApiController] model doğrulaması bu action'dan ÖNCE çalışır;
         // [Required] alanı JSON'dan eksik veya null geldiğinde isteği zaten 400 ile reddeder,
         // bu satıra hiçbir zaman null ulaşmaz (bkz. CreateTemplateRequest.Exercises doc'u).

@@ -489,6 +489,77 @@ public class WorkoutTemplateServiceTests
         }
     }
 
+    // ---- Açık antrenmandan kaydetme (#662) ----
+
+    /// <summary>
+    /// Antrenman sırasında "Şablon olarak kaydet": açık antrenman yeni şablona bağlanır. İstemci bu alana
+    /// bakarak düğmeyi gizler ve bitirince "şablon kaydedilsin mi?" diye yeniden sormaz.
+    /// </summary>
+    [Fact]
+    public async Task Acik_antrenmandan_kaydedilen_sablon_antrenmana_baglanir()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = new WorkoutSession { UserId = user.Id, StartedAt = DateTime.UtcNow.AddMinutes(-20) };
+            context.Add(oturum);
+            await context.SaveChangesAsync();
+
+            var sablon = await service.CreateAsync(
+                new CreateTemplateRequest { Name = UniqueName(), Exercises = [Satir(1)], SessionId = oturum.Id });
+
+            await context.Entry(oturum).ReloadAsync();
+            Assert.Equal(sablon.Id, oturum.TemplateId);
+        }
+    }
+
+    /// <summary>IDOR: başkasının antrenmanına şablon bağlanamaz; nötr 404 ve şablon da oluşmaz.</summary>
+    [Fact]
+    public async Task Baskasinin_antrenmanina_baglanamaz_ve_sablon_olusmaz()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var baskasi = TestDatabase.NewUser();
+            context.Add(baskasi);
+            await context.SaveChangesAsync();
+            var oturum = new WorkoutSession { UserId = baskasi.Id, StartedAt = DateTime.UtcNow.AddMinutes(-20) };
+            context.Add(oturum);
+            await context.SaveChangesAsync();
+            var ad = UniqueName();
+
+            await Assert.ThrowsAsync<NotFoundException>(() => service.CreateAsync(
+                new CreateTemplateRequest { Name = ad, Exercises = [Satir(1)], SessionId = oturum.Id }));
+
+            context.ChangeTracker.Clear();
+            Assert.Null((await context.Set<WorkoutSession>().SingleAsync(s => s.Id == oturum.Id)).TemplateId);
+            Assert.False(await context.Set<WorkoutTemplate>().AnyAsync(t => t.UserId == user.Id && t.Name == ad));
+        }
+    }
+
+    /// <summary>Geçmiş antrenmanın şablonu sonradan değiştirilmez: bitmiş antrenman 409, şablon oluşmaz.</summary>
+    [Fact]
+    public async Task Bitmis_antrenmana_baglanamaz()
+    {
+        var (context, user, service, transaction) = await CreateAsync();
+        await using (transaction)
+        {
+            var oturum = new WorkoutSession
+            {
+                UserId = user.Id, StartedAt = DateTime.UtcNow.AddHours(-2), EndedAt = DateTime.UtcNow.AddHours(-1),
+            };
+            context.Add(oturum);
+            await context.SaveChangesAsync();
+            var ad = UniqueName();
+
+            await Assert.ThrowsAsync<ConflictException>(() => service.CreateAsync(
+                new CreateTemplateRequest { Name = ad, Exercises = [Satir(1)], SessionId = oturum.Id }));
+
+            context.ChangeTracker.Clear();
+            Assert.False(await context.Set<WorkoutTemplate>().AnyAsync(t => t.UserId == user.Id && t.Name == ad));
+        }
+    }
+
     // ---- LastUsedAt ----
 
     [Fact]
