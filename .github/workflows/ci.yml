@@ -29,7 +29,9 @@ jobs:
     # gelistirme verisinin icine yazmaz, yerelde de CI'da da ayni ad kullanilir.
     services:
       postgres:
-        image: postgres:17-alpine
+        # Docker Hub'in kimliksiz istek siniri CI'i kod calismadan dusuruyordu ("toomanyrequests").
+        # Ayni resmi imaj, AWS'deki herkese acik aynadan cekilir; yereldeki docker-compose degismedi.
+        image: public.ecr.aws/docker/library/postgres:17-alpine
         env:
           POSTGRES_DB: grind_test
           POSTGRES_USER: grind
