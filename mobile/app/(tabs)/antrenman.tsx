@@ -308,7 +308,12 @@ export default function AntrenmanScreen() {
   function sablonOlarakKaydet() {
     router.push({
       pathname: '/templates/new',
-      params: { donus: '/antrenman', hareketler: JSON.stringify(oturumdanSablonHareketleri(gorunenIlerleme)) },
+      params: {
+        donus: '/antrenman',
+        hareketler: JSON.stringify(oturumdanSablonHareketleri(gorunenIlerleme)),
+        // #662: kaydedilen sablon bu (acik) antrenmana baglanir; kisayol kalkar, bitirince yeniden sorulmaz.
+        ...(gorunenOturum ? { oturumId: String(gorunenOturum.id) } : {}),
+      },
     });
   }
 

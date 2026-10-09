@@ -37,7 +37,16 @@ export type BekleyenIslem =
   | { tur: 'oturumBitir'; anahtar: string; oturumId: number; zorluk: Zorluk | null; endedAt: string }
   | { tur: 'oturumIptal'; anahtar: string; oturumId: number }
   // #174 dilim 3: sablon islemleri (paylasim ayari HARIC -- o internet ister).
-  | { tur: 'sablonOlustur'; anahtar: string; sablonId: number; name: string; exercises: SablonHareketGirdisi[] }
+  // `baglananOturumId` (#662): sablon ACIK antrenmandan kaydedildiyse o antrenman; sunucu antrenmani yeni sablona
+  // baglar. Adi bilerek `oturumId` DEGIL: antrenmanin kendi islemi sayilip iptalde sablonla birlikte dusmesin.
+  | {
+      tur: 'sablonOlustur';
+      anahtar: string;
+      sablonId: number;
+      name: string;
+      exercises: SablonHareketGirdisi[];
+      baglananOturumId?: number;
+    }
   | { tur: 'sablonGuncelle'; anahtar: string; sablonId: number; name: string; exercises: SablonHareketGirdisi[] }
   | { tur: 'sablonSil'; anahtar: string; sablonId: number }
   | { tur: 'sablonSirala'; anahtar: string; templateIds: number[] }
@@ -96,11 +105,19 @@ export function kuyrugaEkle(
       const dusenSetler = new Set(
         kuyruk.flatMap((aday) => (aday.tur === 'setEkle' && aday.oturumId === islem.oturumId ? [aday.setId] : [])),
       );
-      return kuyruk.filter(
-        (aday) =>
-          !('oturumId' in aday && aday.oturumId === islem.oturumId) &&
-          !('setId' in aday && dusenSetler.has(aday.setId)),
-      );
+      return kuyruk
+        .filter(
+          (aday) =>
+            !('oturumId' in aday && aday.oturumId === islem.oturumId) &&
+            !('setId' in aday && dusenSetler.has(aday.setId)),
+        )
+        // #662: o antrenmandan kaydedilen sablon KALIR (kullanici onu kaydetti); yalnizca hic olusmayacak
+        // antrenmana baglanmaz.
+        .map((aday) =>
+          aday.tur === 'sablonOlustur' && aday.baglananOturumId === islem.oturumId
+            ? { ...aday, baglananOturumId: undefined }
+            : aday,
+        );
     }
   }
 
@@ -157,6 +174,9 @@ export function kimlikEsle(
     }
     if (tur === 'oturum' && 'oturumId' in islem && islem.oturumId === gecici) {
       return { ...islem, oturumId: gercek };
+    }
+    if (tur === 'oturum' && islem.tur === 'sablonOlustur' && islem.baglananOturumId === gecici) {
+      return { ...islem, baglananOturumId: gercek };
     }
     if (tur === 'set' && 'setId' in islem && islem.setId === gecici) {
       return { ...islem, setId: gercek };

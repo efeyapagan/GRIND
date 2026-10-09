@@ -80,7 +80,12 @@ async function gonder(islem: BekleyenIslem): Promise<KimlikEslemesi | null> {
     case 'sablonOlustur': {
       const yanit = await request<{ id: number }>('/templates', {
         method: 'POST',
-        ...govde({ name: islem.name, exercises: islem.exercises, clientRequestId: islem.anahtar }),
+        ...govde({
+          name: islem.name,
+          exercises: islem.exercises,
+          clientRequestId: islem.anahtar,
+          sessionId: islem.baglananOturumId,
+        }),
       });
       return { tur: 'sablon', gecici: islem.sablonId, gercek: yanit.id };
     }

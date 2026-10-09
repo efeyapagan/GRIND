@@ -329,3 +329,25 @@ test('cevrimdisi yeni sablonla antrenman, baglanti gelince sablon gercek kimligi
   const baslatma = requestMock.mock.calls.find(([yol]) => yol === '/sessions')!;
   expect(JSON.parse(baslatma[1].body).templateId).toBe(70);
 });
+
+/**
+ * #662: cevrimdisi "Sablon olarak kaydet" -- acik antrenman hemen yeni sablona baglanir (kisayol kalkar,
+ * bitirince yeniden sorulmaz) ve bag kuyruga antrenmanin kimligiyle yazilir.
+ */
+test('cevrimdisi antrenmandan kaydedilen sablon acik antrenmana hemen baglanir', async () => {
+  const { result } = await renderHook(() => ({ ...sablonKancalari(), ...kancalar() }), { wrapper: sarmalayici(true) });
+  await act(async () => {
+    await result.current.baslat.mutateAsync(null);
+  });
+  const oturumId = queryClient.getQueryData<AcikOturum>(queryKeys.openSession)!.id;
+
+  await act(async () => {
+    await result.current.olustur.mutateAsync({ ...LEG_DAY, sessionId: oturumId });
+  });
+
+  const oturum = queryClient.getQueryData<AcikOturum>(queryKeys.openSession)!;
+  expect(oturum.templateId).toBeLessThan(0);
+  expect(oturum.templateName).toBe('Leg Day');
+  const olusturma = (await diskKuyrugu()).find((islem) => islem.tur === 'sablonOlustur');
+  expect(olusturma).toMatchObject({ baglananOturumId: oturumId, sablonId: oturum.templateId });
+});

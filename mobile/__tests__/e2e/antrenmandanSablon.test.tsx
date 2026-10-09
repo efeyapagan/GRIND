@@ -66,6 +66,11 @@ test('kullanıcı açık antrenmanın hareketlerini set girmeden şablon olarak 
     exercises: [{ exerciseId: 1, plannedSets: 3, restSeconds: 90 }],
   });
   expect(state.setler).toHaveLength(0);
+
+  // #662: kaydedilen sablon bu antrenmana baglanir -- antrenman ekranina donulunce kisayol artik yoktur
+  // (bitirme ekranindaki soru da ayni alana bakar, yeniden sormaz).
+  expect(state.acikOturum.templateId).toBe(state.sablonlar[0].id);
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Şablon olarak kaydet' })).toBeNull());
 }, 20_000);
 
 /**

@@ -61,6 +61,8 @@ interface Props {
   donusYolu: string;
   /** #209/#186: antrenmandan gelen yeni sablonun baslangic satirlari; `sablon` doluysa yok sayilir. */
   baslangicHareketleri?: SablonTaslakHareketi[];
+  /** #662: yeni sablon ACIK bir antrenmandan kaydediliyorsa o antrenman; sablon ona baglanir. */
+  oturumId?: number;
 }
 
 /**
@@ -68,7 +70,7 @@ interface Props {
  * satiri basili tutup surukleyerek degisir (`SurukleSiraliListe`, antrenman kartlariyla ayni);
  * yukari/asagi dugmeleri kaldirildi.
  */
-export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }: Props) {
+export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri, oturumId }: Props) {
   const { t } = useTranslation();
   const ikonRenk = useIkonRenk();
   const router = useRouter();
@@ -195,7 +197,7 @@ export default function SablonFormu({ sablon, donusYolu, baslangicHareketleri }:
       if (sablon) {
         await guncelleMutasyonu.mutateAsync({ id: sablon.id, girdi });
       } else {
-        await olusturMutasyonu.mutateAsync(girdi);
+        await olusturMutasyonu.mutateAsync({ ...girdi, sessionId: oturumId });
       }
       router.replace(donusYolu as never);
     } catch (hata) {

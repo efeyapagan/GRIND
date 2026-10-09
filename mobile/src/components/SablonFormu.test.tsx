@@ -227,3 +227,26 @@ test('hareket secilmeden kaydedilmeye calisilirsa hata gosterilir, API cagrilmaz
   expect(screen.getByText('Bir hareket seç.')).toBeTruthy();
   expect(olustur).not.toHaveBeenCalled();
 });
+
+/**
+ * #662: form acik bir antrenmandan acildiysa (`oturumId`) olusturma o antrenmanin kimligiyle gider; sunucu
+ * antrenmani yeni sablona baglar. Antrenmansiz olusturmada kimlik gitmez.
+ */
+test('antrenmandan acilan form sablonu antrenmanin kimligiyle olusturur', async () => {
+  (useExercises as jest.Mock).mockReturnValue({ data: [{ id: 1, name: 'Bench Press', category: 'Push' }] });
+  const olustur = jest.fn().mockResolvedValue({ id: 9 });
+  (useCreateTemplate as jest.Mock).mockReturnValue({ mutateAsync: olustur, isPending: false });
+  await render(
+    <SablonFormu
+      sablon={null}
+      donusYolu="/antrenman"
+      oturumId={41}
+      baslangicHareketleri={[{ exerciseId: 1, exerciseName: 'Bench Press', plannedSets: 3, restSeconds: 90 }]}
+    />,
+  );
+
+  await fireEvent.changeText(screen.getByLabelText('Şablon adı'), 'Bugünkü');
+  await fireEvent.press(screen.getByText('Kaydet'));
+
+  expect(olustur).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bugünkü', sessionId: 41 }));
+});

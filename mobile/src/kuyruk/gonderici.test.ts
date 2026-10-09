@@ -134,3 +134,14 @@ test('reddedilen sablon olusturma antrenmani kaybettirmez, baslatma sablonsuz gi
   expect(requestMock.mock.calls.map(([yol]) => yol)).toEqual(['/templates', '/sessions', '/sessions/501/finish']);
   expect(JSON.parse(requestMock.mock.calls[1][1].body)).toMatchObject({ templateId: null });
 });
+
+/** #662: antrenmandan kaydedilen sablon antrenmanin kimligiyle gider; sunucu antrenmani sablona baglar. */
+test('antrenmandan kaydedilen sablon antrenman kimligiyle gonderilir', async () => {
+  requestMock.mockResolvedValue({ id: 12 });
+
+  await kuyruguGonder([
+    { tur: 'sablonOlustur', anahtar: 't1', sablonId: -50, name: 'Bugunku', exercises: [], baglananOturumId: 501 },
+  ]);
+
+  expect(JSON.parse(requestMock.mock.calls[0][1].body)).toMatchObject({ sessionId: 501, clientRequestId: 't1' });
+});
