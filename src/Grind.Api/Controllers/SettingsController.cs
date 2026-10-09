@@ -57,4 +57,25 @@ public class SettingsController(ISettingsService settingsService) : ControllerBa
 
         return NoContent();
     }
+
+    /// <summary>Kapalı bildirim kategorileri (#410); listede olmayan her kategori açıktır.</summary>
+    [HttpGet("notification-categories")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<NotificationCategoriesResponse>> GetNotificationCategories(
+        CancellationToken cancellationToken)
+        => Ok(await settingsService.GetNotificationCategoriesAsync(cancellationToken));
+
+    /// <summary>Bir bildirim kategorisini açar ya da kapatır (#410). İdempotent.</summary>
+    [HttpPut("notification-categories")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> PutNotificationCategory(
+        UpdateNotificationCategoryRequest request, CancellationToken cancellationToken)
+    {
+        await settingsService.SetNotificationCategoryAsync(request, cancellationToken);
+
+        return NoContent();
+    }
 }

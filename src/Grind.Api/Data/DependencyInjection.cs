@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
         services.AddScoped<IUserAvatarRepository, UserAvatarRepository>();
         services.AddScoped<IWeeklyTargetChangeRepository, WeeklyTargetChangeRepository>();
+        services.AddScoped<IMutedNotificationCategoryRepository, MutedNotificationCategoryRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

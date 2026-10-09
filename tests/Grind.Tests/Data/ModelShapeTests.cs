@@ -19,7 +19,7 @@ public class ModelShapeTests
         string[] expected =
         [
             "AiInsight", "AiInsightTranslation", "BodyWeightLog", "Exercise", "ExerciseMedia", "Follow",
-            "FriendRequest", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
+            "FriendRequest", "MutedNotificationCategory", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
             "WeeklyTargetChange",
             "WorkoutSession", "WorkoutTemplate"
         ];

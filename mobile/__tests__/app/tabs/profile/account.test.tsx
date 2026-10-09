@@ -18,7 +18,8 @@ jest.mock('@grind/shared/api/queries', () => ({
   useSetTrainingGoal: () => ({ mutate: jest.fn(), isPending: false, isError: false }),
 }));
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 const updateProfile = jest.fn();
 
@@ -114,4 +115,13 @@ test('cevrimdisiyken sifre degistir pencere acmaz, internete baglan uyarisi veri
   expect(screen.queryByTestId('profil-yeni-sifre')).toBeNull();
   expect(uyari).toHaveBeenCalledWith('İnternete bağlan', 'Bu bölüm internet bağlantısı gerektiriyor.');
   uyari.mockRestore();
+});
+
+/** #410: bildirim kategorileri kendi ekraninda; hesap ayarlarindaki dugme onu acar. */
+test('Bildirim ayarlari dugmesi bildirim ayarlari ekranini acar', async () => {
+  await ekraniOlustur();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Bildirim ayarları' }));
+
+  expect(mockPush).toHaveBeenCalledWith('/profile/notifications');
 });

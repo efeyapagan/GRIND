@@ -155,6 +155,15 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   desteklemiyor; Expo Go'da yok) ve bitişte başlıklı, zil sesli bildirim. Ayrıntı
   ve build adımları:
   [docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md](docs/superpowers/specs/2026-10-08-dinlenme-adasi-design.md).
+- **Bildirim ayarları (2026-10-09, #410)** — yalnızca mobil: Hesap ayarları → "Bildirim ayarları"
+  (`/profile/notifications`), kategori başına bir anahtar (`AnahtarSatiri`). Kapatılan kategorinin bildirimleri
+  listede görünmez ve zilde sayılmaz; süzgeç SUNUCUDA (`NotificationService`), çünkü rozet sayısı da oradan
+  gelir. Kategoriler `NotificationCategory`; tür → kategori eşlemesi tek yerde (`NotificationCategories.Of`).
+  Ekranda üçü çizilir: Takip ve arkadaşlık (`Follow` + `FriendRequest`), Rekorlar, Haftalık hedefler.
+  `Interactions` / `Reminders` / `System` altyapıdır, bildirim türleri olmadığı için ÇİZİLMEZ (kullanıcı kararı).
+  **İstisna (kullanıcı kararı):** arkadaşlık isteği kategorisi kapalıyken de listede kalır (yalnızca oradan kabul
+  edilir) ama okunmamış sayılmaz. Tercih hesaba bağlıdır (`MutedNotificationCategory`), çevrimdışı değiştirilemez.
+  Dinlenme zili (#414) bu ekrana TAŞINMADI: cihaza özel bir tercih, Hesap ayarlarında durur.
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -422,6 +431,10 @@ Object Reference) açığıdır.
   durur (yalnızca bugünü okuyan sorgular için) ve aynı `SaveChangesAsync`'te yazılır; hiç satırı olmayan
   kullanıcıda güncel değer tüm geçmişe uygulanır, ilk değişiklikte eski değer `DateOnly.MinValue` satırıyla
   sabitlenir (veri taşıyan migration yok)
+- **MutedNotificationCategory** (#410): `Id`, `UserId` (FK, CASCADE), `Category` (enum `NotificationCategory`,
+  adıyla saklanır); `(UserId, Category)` benzersiz — kullanıcının KAPATTIĞI bildirim kategorisi. Satırın varlığı
+  "kapalı" demektir (`Follow` deseni): satırı olmayan kategori açıktır, yeni kullanıcıda hepsi açık. Bildirimler
+  saklanmadığı için kapatmak hiçbir şeyi silmez. `GET/PUT /api/settings/notification-categories` (PUT idempotent)
 - **Follow** (#281): `Id`, `FollowerId` (FK → User, RESTRICT), `FolloweeId` (FK → User, RESTRICT),
   `CreatedAt` — tek yönlü takip; `(FollowerId, FolloweeId)` benzersiz, kendini takip CHECK ile yasak,
   `NotificationsMuted` (#628 — takip edenin bu kişiden bildirim istemediği; takip satırıyla yaşar, takibi
