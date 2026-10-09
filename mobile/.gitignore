@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Yerel Expo modullerinin derleme ciktilari (#414)
+/modules/*/android/build/
