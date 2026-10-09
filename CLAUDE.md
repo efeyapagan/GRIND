@@ -716,6 +716,12 @@ isim değil, açıklama + renk + sıralama da taşıyorsa), ayrı bir lookup tab
   katmanında yerel saate (TR, UTC+3) çevrilerek yapılır — aksi halde gece geç saatteki bir
   antrenman yanlış güne düşebilir.
 - **Swagger/OpenAPI**: geliştirme sırasında endpoint'leri test etmek için baştan açık tutulur.
+- **Yeni kurulum temizliği (mobil, #663)**: iOS'ta anahtar zinciri (SecureStore) uygulama silinince
+  TEMİZLENMEZ; yeniden kuran kullanıcı önceki kurulumun temasını, dilini ve açık hesabını geri buluyordu.
+  Uygulama açılışta, sağlayıcılar okumadan ÖNCE `ilkKurulumTemizligi` (`mobile/src/ilkKurulum.ts`) çalıştırır:
+  AsyncStorage bomboşsa (yeni kurulum) anahtar zincirindeki tüm kayıtlarını siler — tema sistemi izler, dil
+  cihazdan gelir, giriş ekranı açılır. SecureStore'a yeni bir kayıt eklenirse `ANAHTAR_ZINCIRI_KAYITLARI`'na da
+  eklenir. Tema belirsizken (ilk kare) varsayılan artık "koyu" değil cihazın teması (`Appearance`).
 - **Secrets**: JWT imzalama anahtarı ve connection string `appsettings.json`'a değil,
   user-secrets / ortam değişkenlerine yazılır — repoya commit edilmez.
 - **Username case-insensitive olmalı**: karşılaştırma/uniqueness case-insensitive yapılır

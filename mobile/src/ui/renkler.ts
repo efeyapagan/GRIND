@@ -1,3 +1,4 @@
+import { Appearance } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { renklerAcik, renklerKoyu, type RenkPaleti } from '@grind/shared/designTokens';
 
@@ -9,11 +10,13 @@ import { renklerAcik, renklerKoyu, type RenkPaleti } from '@grind/shared/designT
  * modul seviyesindeki `isLightMode` degiskeni yeniden cizim tetiklemedigi icin ikonlar eski
  * temada kaliyordu.
  *
- * `colorScheme` ilk karede belirsiz olabiliyor; uygulama bugune kadar koyu oldugu icin
- * belirsizlikte koyuya duseriz (acik bir kare parlamasin).
+ * `colorScheme` ilk karede belirsiz olabiliyor. #663: belirsizlikte artik "koyu"ya DEGIL cihazin kendi
+ * temasina dusulur (`Appearance`, senkron) -- varsayilan tercih "sistem" oldugu icin, sistemi acik olan
+ * cihazda ilk karenin koyu cizilmesi yanlisti. Cihaz da bilmiyorsa koyu kalir.
  */
 export function useEtkinTema(): 'acik' | 'koyu' {
-  return useColorScheme().colorScheme === 'light' ? 'acik' : 'koyu';
+  const { colorScheme } = useColorScheme();
+  return (colorScheme ?? Appearance.getColorScheme()) === 'light' ? 'acik' : 'koyu';
 }
 
 export function useRenkPaleti(): RenkPaleti {

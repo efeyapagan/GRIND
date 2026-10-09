@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
-const DEPO_ANAHTARI = 'grind.oturum';
+/** Disa acik: yeni kurulum temizligi anahtar zincirindeki bu kaydi da siler (#663, bkz. ilkKurulum.ts). */
+export const DEPO_ANAHTARI = 'grind.oturum';
 
 interface OturumVerisi {
   token: string;
