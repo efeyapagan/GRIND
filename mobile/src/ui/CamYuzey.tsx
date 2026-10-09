@@ -1,8 +1,12 @@
 import { View, Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { cssInterop } from 'nativewind';
 import { useEtkinTema } from './renkler';
 
 const IOS = Platform.OS === 'ios';
+
+// `BlurView` ucuncu parti bir bilesen: NativeWind sinifini (kose yaricapi) stile cevirmesi icin kaydedilir.
+cssInterop(BlurView, { className: 'style' });
 
 /**
  * "Liquid glass" yuzey (#338 alt menu, #350 set paneli): kapsayicinin arkasina serilen cam katman.
@@ -14,8 +18,13 @@ const IOS = Platform.OS === 'ios';
  * bulaniklik YOK, perde neredeyse opak: `expo-blur`un Android yolu icerigin bir `BlurTargetView` ile
  * sarilmasini ister ve emulatorde denendiginde bulanik yerine acik gri bir yuzey cizdi (#338) --
  * guvenilir olmayan bir efekt yerine tutarli bir yuzey secildi.
+ *
+ * #668: `koseSinifi` bulanikligin KENDISINE de verilir. iOS, ic ice camda (cam kartin icindeki cam kart --
+ * or. Arkadaslar kartindaki kisi satirlari) icteki bulanikligi kapsayicinin `overflow-hidden`iyla KIRPMIYOR:
+ * satirin cevresinde kare koseli bir bant kaliyordu (acik temada belirgin). Bulaniklik kendi kosesiyle
+ * kirpilinca bant kalkar. Kosesiz kullanimlarda (alt menu) verilmez, davranis degismez.
  */
-export default function CamYuzey() {
+export default function CamYuzey({ koseSinifi = '' }: { koseSinifi?: string }) {
   // #271: `tint` sabit "dark" kalirsa acik temada cam, altindaki acik yuzeyi koyultur ve
   // uzerindeki perde griye doner -- alt menunun acik temada "kirli gri" gorunmesinin sebebi buydu.
   const etkinTema = useEtkinTema();
@@ -25,6 +34,8 @@ export default function CamYuzey() {
         <BlurView
           tint={etkinTema === 'acik' ? 'light' : 'dark'}
           intensity={40}
+          testID="cam-bulaniklik"
+          className={`overflow-hidden ${koseSinifi}`}
           style={StyleSheet.absoluteFill}
         />
       )}
