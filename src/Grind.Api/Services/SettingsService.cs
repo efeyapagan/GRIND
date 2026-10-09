@@ -15,6 +15,7 @@ namespace Grind.Api.Services;
 public class SettingsService(
     IUserRepository userRepository,
     IWeeklyTargetChangeRepository targetChangeRepository,
+    IMutedNotificationCategoryRepository mutedCategoryRepository,
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : ISettingsService
@@ -73,6 +74,43 @@ public class SettingsService(
                    ?? throw new UnauthorizedException("Oturum geçersiz.");
 
         user.TrainingGoal = request.TrainingGoal;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<NotificationCategoriesResponse> GetNotificationCategoriesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var kapalilar = await mutedCategoryRepository.GetForUserAsync(currentUser.UserId, cancellationToken);
+        return new NotificationCategoriesResponse(kapalilar.Select(k => k.Category).Order().ToList());
+    }
+
+    /// <summary>
+    /// #410: satırın varlığı "kapalı" demektir. İdempotent: zaten kapalı kategoriyi kapatmak ya da zaten açık
+    /// olanı açmak hiçbir şey yapmaz (takip/bırak ile aynı).
+    /// </summary>
+    public async Task SetNotificationCategoryAsync(
+        UpdateNotificationCategoryRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(request.Category))
+        {
+            throw new ValidationException("Geçersiz bildirim kategorisi.");
+        }
+
+        var kapalilar = await mutedCategoryRepository.GetForUserAsync(currentUser.UserId, cancellationToken);
+        var satir = kapalilar.FirstOrDefault(k => k.Category == request.Category);
+
+        if (request.Enabled && satir is not null)
+        {
+            mutedCategoryRepository.Remove(satir);
+        }
+        else if (!request.Enabled && satir is null)
+        {
+            mutedCategoryRepository.Add(new MutedNotificationCategory
+            {
+                UserId = currentUser.UserId, Category = request.Category,
+            });
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

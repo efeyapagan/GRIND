@@ -2,6 +2,7 @@ using Grind.Api.Common.Security;
 using Grind.Api.Data;
 using Grind.Api.Models.Dtos.Settings;
 using Grind.Api.Models.Entities;
+using Grind.Api.Models.Enums;
 using Grind.Api.Repositories;
 using Grind.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +39,8 @@ public class SettingsServiceTests
         await context.SaveChangesAsync();
         // TR Perşembe 12 Mart 2026; haftanın Pazartesisi 9 Mart.
         var service = new SettingsService(
-            new UserRepository(context), new WeeklyTargetChangeRepository(context), new UnitOfWork(context),
+            new UserRepository(context), new WeeklyTargetChangeRepository(context),
+            new MutedNotificationCategoryRepository(context), new UnitOfWork(context),
             new StubCurrentUser(user.Id), new SahteSaat(new DateTime(2026, 3, 12, 17, 0, 0, DateTimeKind.Utc)));
 
         await service.SetWeeklyTargetAsync(new UpdateWeeklyTargetRequest { WeeklyTargetDays = 4 });
@@ -50,5 +52,34 @@ public class SettingsServiceTests
             [(DateOnly.MinValue, (int?)3), (new DateOnly(2026, 3, 9), 5)],
             kayitlar.Select(k => (k.EffectiveFromWeek, k.TargetDays)));
         Assert.Equal(5, user.WeeklyTargetDays);
+    }
+
+    /// <summary>
+    /// #410: kategori kapatma/açma idempotenttir (satırın varlığı "kapalı"dır): iki kez kapatmak tek satır
+    /// bırakır, açmak satırı siler. Hiç ayar yapmamış kullanıcıda kapalı kategori yoktur.
+    /// </summary>
+    [Fact]
+    public async Task Bildirim_kategorisi_kapatilir_acilir_ve_islem_idempotenttir()
+    {
+        await using var context = TestDatabase.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var user = TestDatabase.NewUser();
+        context.Add(user);
+        await context.SaveChangesAsync();
+        var service = new SettingsService(
+            new UserRepository(context), new WeeklyTargetChangeRepository(context),
+            new MutedNotificationCategoryRepository(context), new UnitOfWork(context),
+            new StubCurrentUser(user.Id), new SahteSaat(new DateTime(2026, 3, 12, 17, 0, 0, DateTimeKind.Utc)));
+        var kapat = new UpdateNotificationCategoryRequest { Category = NotificationCategory.Records, Enabled = false };
+
+        Assert.Empty((await service.GetNotificationCategoriesAsync()).MutedCategories);
+
+        await service.SetNotificationCategoryAsync(kapat);
+        await service.SetNotificationCategoryAsync(kapat);
+        Assert.Equal([NotificationCategory.Records], (await service.GetNotificationCategoriesAsync()).MutedCategories);
+
+        await service.SetNotificationCategoryAsync(
+            new UpdateNotificationCategoryRequest { Category = NotificationCategory.Records, Enabled = true });
+        Assert.Empty((await service.GetNotificationCategoriesAsync()).MutedCategories);
     }
 }

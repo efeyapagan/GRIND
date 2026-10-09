@@ -13,4 +13,9 @@ public interface ISettingsService
 
     /// <summary>Antrenman hedefini ayarlar; <c>null</c> hedefi kaldırır (#444).</summary>
     Task SetTrainingGoalAsync(UpdateTrainingGoalRequest request, CancellationToken cancellationToken = default);
+
+    Task<NotificationCategoriesResponse> GetNotificationCategoriesAsync(CancellationToken cancellationToken = default);
+
+    Task SetNotificationCategoryAsync(
+        UpdateNotificationCategoryRequest request, CancellationToken cancellationToken = default);
 }

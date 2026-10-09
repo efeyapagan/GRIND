@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
-import { KeyRound, LogOut } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { BellRing, KeyRound, LogOut } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { usePageTitle } from '@grind/shared/pageTitle';
@@ -30,6 +31,7 @@ export default function AccountScreen() {
   const { t } = useTranslation();
   usePageTitle(t('ortak.hesapAyarlari'));
   const { logout } = useAuth();
+  const router = useRouter();
 
   return (
     <EkranKaydirici contentContainerClassName="gap-6 px-4 pt-2 pb-4">
@@ -44,6 +46,16 @@ export default function AccountScreen() {
         <TemaSecici />
         <DilSecici />
         <SesliBildirimSecici />
+      </CamKart>
+      {/* #410: bildirim kategorileri kendi ekraninda (her biri bir anahtar). */}
+      <CamKart
+        onPress={() => router.push('/profile/notifications')}
+        accessibilityLabel={t('profil.bildirimAyarlari')}
+        koseSinifi="rounded-xl"
+        className="min-h-12 flex-row items-center justify-center gap-2 p-4"
+      >
+        <BellRing color={ikonRenk.fg} size={18} />
+        <Text className="text-label text-fg">{t('profil.bildirimAyarlari')}</Text>
       </CamKart>
       <SifreDegistirDugmesi />
       <CamKart

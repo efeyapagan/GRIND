@@ -14,8 +14,9 @@ public class ColumnMappingTests
 
         // Sayı bilerek sabit: yeni bir enum kolonu eklemek bu testi kırar ve dönüşümün/uzunluğun
         // atlanmadığını görmeye zorlar. #444'te User.TrainingGoal ile 7'den 8'e, #346'da
-        // Exercise.Measurement ile 9'a, #540'ta WorkoutTemplate.Visibility ile 10'a çıktı.
-        Assert.Equal(10, enumProperties.Length);
+        // Exercise.Measurement ile 9'a, #540'ta WorkoutTemplate.Visibility ile 10'a, #410'da
+        // MutedNotificationCategory.Category ile 11'e çıktı.
+        Assert.Equal(11, enumProperties.Length);
 
         foreach (var property in enumProperties)
         {

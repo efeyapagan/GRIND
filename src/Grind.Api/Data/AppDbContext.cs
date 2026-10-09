@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
     public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
     public DbSet<WeeklyTargetChange> WeeklyTargetChanges => Set<WeeklyTargetChange>();
+    public DbSet<MutedNotificationCategory> MutedNotificationCategories => Set<MutedNotificationCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

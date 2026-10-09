@@ -162,6 +162,7 @@ export const tr = {
     guncellenemedi: 'Güncellenemedi',
     mevcutSifreGerekli: 'Mevcut şifre gerekli.',
     mevcutSifreYanlis: 'Mevcut şifre yanlış.',
+    bildirimAyarlari: 'Bildirim ayarları',
     sifreDegistir: 'Şifre değiştir',
     sifreGerekli: 'Şifre gerekli.',
     sifreEnAz8: 'Şifre en az 8 karakter olmalı.',
@@ -591,6 +592,18 @@ export const tr = {
     cakismaYerineKaydet: 'Ölçümü değiştir',
     cakismaEkstraOlcum: 'Ekstra ölçüm',
     guncellenemedi: 'Ölçü güncellenemedi',
+  },
+  // #410: hesap ayarlarindan acilan bildirim kategorileri ekrani.
+  bildirimAyarlari: {
+    aciklama: 'Kapattığın kategorinin bildirimleri listede görünmez ve zilde sayılmaz.',
+    alinamadi: 'Bildirim ayarları alınamadı.',
+    kaydedilemedi: 'Ayar kaydedilemedi. Tekrar dene.',
+    takipVeArkadaslik: 'Takip ve arkadaşlık',
+    takipVeArkadaslikAciklama: 'Biri seni takip ettiğinde. Arkadaşlık istekleri kapalıyken de listede kalır, yalnızca zilde sayılmaz.',
+    rekorlar: 'Rekorlar',
+    rekorlarAciklama: 'Takip ettiğin biri antrenmanda rekor kırdığında.',
+    haftalikHedefler: 'Haftalık hedefler',
+    haftalikHedeflerAciklama: 'Bir arkadaşın haftalık hedefini tamamladığında.',
   },
   bildirimler: {
     bos: 'Henüz bildirim yok',
