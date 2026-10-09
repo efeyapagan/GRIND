@@ -10,4 +10,8 @@ module.exports = ({ config }) => ({
     bundleIdentifier: process.env.GRIND_IOS_BUNDLE_ID ?? 'com.grind.mobile',
     ...(process.env.GRIND_APPLE_TEAM_ID ? { appleTeamId: process.env.GRIND_APPLE_TEAM_ID } : {}),
   },
+  android: {
+    ...config.android,
+    package: process.env.GRIND_ANDROID_PACKAGE ?? 'com.grind.mobile',
+  },
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, Text } from 'react-native';
+import { Text } from 'react-native';
 import { KeyRound, LogOut } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -43,8 +43,7 @@ export default function AccountScreen() {
         <GizlilikSeviyesiSecici />
         <TemaSecici />
         <DilSecici />
-        {/* #414: simdilik yalnizca iOS (Android'in sayac bildirimi sonraki dilim). */}
-        {Platform.OS === 'ios' && <SesliBildirimSecici />}
+        <SesliBildirimSecici />
       </CamKart>
       <SifreDegistirDugmesi />
       <CamKart
