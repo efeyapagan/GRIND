@@ -1,3 +1,4 @@
+import { Appearance } from 'react-native';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renderHook } from '@testing-library/react-native';
@@ -65,9 +66,22 @@ test('useIkonRenk acik temada okunur muted, koyuda acik muted verir', async () =
   expect((await renderHook(() => useIkonRenk())).result.current.muted).toBe('#c5c6c8');
 });
 
-test('tema belirsizken koyu paletle cizilir', async () => {
-  // NativeWind ilk karede colorScheme'i null verebiliyor; uygulama bugune kadar koyuydu,
-  // belirsizlikte koyuya dusmek "beyaz ekran parlamasi"ndan iyidir.
+/**
+ * #663: NativeWind ilk karede colorScheme'i belirsiz verebiliyor. Varsayilan tercih "sistem" oldugu icin o anda
+ * cihazin kendi temasina dusulur -- sistemi acik olan cihazda ilk kare koyu cizilmez.
+ */
+test('tema belirsizken cihazin temasina dusulur', async () => {
   useColorSchemeMock.mockReturnValue({ colorScheme: undefined, setColorScheme: jest.fn() });
+  const cihaz = jest.spyOn(Appearance, 'getColorScheme');
+
+  cihaz.mockReturnValue('light');
+  expect((await renderHook(() => useRenkPaleti())).result.current).toBe(renklerAcik);
+
+  cihaz.mockReturnValue('dark');
   expect((await renderHook(() => useRenkPaleti())).result.current).toBe(renklerKoyu);
+
+  // Cihaz da bilmiyorsa koyu kalir.
+  cihaz.mockReturnValue(null);
+  expect((await renderHook(() => useRenkPaleti())).result.current).toBe(renklerKoyu);
+  cihaz.mockRestore();
 });
