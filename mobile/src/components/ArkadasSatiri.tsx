@@ -47,10 +47,19 @@ export default function ArkadasSatiri({ arkadas, gorunum, lider }: Props) {
     >
       {/* #425: kendi satiri hemen bulunsun. Cam uzerinde hafif `fg` dolgusu, opaklik SVG ozelliginde
           (spec Karar 9): `bg-fg opacity-5` sinifi uygulanmayip satiri tam acik gri dolduruyordu. */}
+      {/* #668: `CamKart` icerigini KIRPMAZ (#559; yalnizca cam katmanlari kirpilir). Dikdortgen dolgu bu yuzden
+          kendi kirpma kabinda durur -- yoksa koseleri kartin yuvarlak kosesini asiyor, acik temada (`fg` koyu)
+          koyu kare koseler olarak gorunuyordu. Kose sinifi `CamKart`in varsayilaniyla ayni. */}
       {kendisi && (
-        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Rect testID="kendi-satir-vurgusu" width="100%" height="100%" fill={ikonRenk.fg} fillOpacity={0.06} />
-        </Svg>
+        <View
+          testID="kendi-satir-vurgusu-kabi"
+          pointerEvents="none"
+          className="absolute inset-0 overflow-hidden rounded-3xl"
+        >
+          <Svg style={StyleSheet.absoluteFill}>
+            <Rect testID="kendi-satir-vurgusu" width="100%" height="100%" fill={ikonRenk.fg} fillOpacity={0.06} />
+          </Svg>
+        </View>
       )}
       <ProfilFotografi
         profil={{
