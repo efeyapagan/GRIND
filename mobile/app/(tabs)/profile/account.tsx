@@ -45,6 +45,9 @@ export default function AccountScreen() {
         <GizlilikSeviyesiSecici />
         <TemaSecici />
         <DilSecici />
+      </CamKart>
+      {/* #673 (kullanici karari): dinlenme zili kendi kartinda. */}
+      <CamKart className="p-4">
         <SesliBildirimSecici />
       </CamKart>
       {/* #410: bildirim kategorileri kendi ekraninda (her biri bir anahtar). */}

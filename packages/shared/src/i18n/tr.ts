@@ -595,7 +595,6 @@ export const tr = {
   },
   // #410: hesap ayarlarindan acilan bildirim kategorileri ekrani.
   bildirimAyarlari: {
-    aciklama: 'Kapattığın kategorinin bildirimleri listede görünmez ve zilde sayılmaz.',
     alinamadi: 'Bildirim ayarları alınamadı.',
     kaydedilemedi: 'Ayar kaydedilemedi. Tekrar dene.',
     takipVeArkadaslik: 'Takip ve arkadaşlık',
