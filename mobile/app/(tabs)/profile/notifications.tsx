@@ -40,20 +40,19 @@ export default function BildirimAyarlariScreen() {
           {t('bildirimAyarlari.alinamadi')}
         </Text>
       )}
-      {kapalilar && (
-        <CamKart className="flex-col gap-4 p-4">
-          {KATEGORILER.map(({ kategori, anahtar }) => (
+      {/* Her kategori kendi kartinda (kullanici karari, #673). */}
+      {kapalilar &&
+        KATEGORILER.map(({ kategori, anahtar }) => (
+          <CamKart key={kategori} className="p-4">
             <AnahtarSatiri
-              key={kategori}
               etiket={t(`bildirimAyarlari.${anahtar}`)}
               aciklama={t(`bildirimAyarlari.${anahtar}Aciklama`)}
               hata={ayarla.isError && ayarla.variables?.category === kategori ? t('bildirimAyarlari.kaydedilemedi') : null}
               deger={!kapalilar.includes(kategori)}
               onDegistir={cevrimici((enabled: boolean) => ayarla.mutate({ category: kategori, enabled }))}
             />
-          ))}
-        </CamKart>
-      )}
+          </CamKart>
+        ))}
     </EkranKaydirici>
   );
 }
