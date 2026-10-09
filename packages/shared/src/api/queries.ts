@@ -1347,6 +1347,11 @@ export interface SablonGirdisi {
   name: string;
   // Sira dizideki konumdur; sunucu `OrderIndex`i buradan turetir (istemci gondermez).
   exercises: { exerciseId: number; plannedSets: number; restSeconds: number }[];
+  /**
+   * #662: sablon ACIK bir antrenmandan kaydediliyorsa o antrenman. Sunucu antrenmani yeni sablona baglar;
+   * yalnizca OLUSTURMADA anlamlidir (duzenlemede gonderilmez).
+   */
+  sessionId?: number;
 }
 
 /** Sorgu tanimi disari acik: mobil cevrimdisi kullanim icin onden ceker (#174). */
@@ -1379,8 +1384,16 @@ export function useTemplate(id: number | null) {
   });
 }
 
-function sablonGovdesi(girdi: SablonGirdisi, clientRequestId?: string): string {
-  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises, clientRequestId };
+function sablonGovdesi(girdi: SablonGirdisi): string {
+  const govde: CreateTemplateRequest = { name: girdi.name, exercises: girdi.exercises };
+  return JSON.stringify(govde);
+}
+
+/** Olusturma govdesi: antrenmandan kaydediliyorsa antrenmanin kimligi de gider (#662). */
+function sablonOlusturmaGovdesi(girdi: SablonGirdisi, clientRequestId?: string): string {
+  const govde: CreateTemplateRequest = {
+    name: girdi.name, exercises: girdi.exercises, clientRequestId, sessionId: girdi.sessionId,
+  };
   return JSON.stringify(govde);
 }
 
@@ -1390,11 +1403,16 @@ export function useCreateTemplate() {
     // `clientRequestId` (#174): ayni olusturma cevrimdisi kuyruktan tekrar giderse sunucu ikinci sablon acmaz.
     mutationFn: async ({ clientRequestId, ...girdi }: SablonGirdisi & { clientRequestId?: string }): Promise<Sablon> =>
       dogrulanmisSablon(
-        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonGovdesi(girdi, clientRequestId) }),
+        await request<TemplateResponse>('/templates', { method: 'POST', body: sablonOlusturmaGovdesi(girdi, clientRequestId) }),
       ),
-    onSuccess: (sablon) => {
+    onSuccess: (sablon, girdi) => {
       queryClient.setQueryData(queryKeys.template(sablon.id), sablon);
       void queryClient.invalidateQueries({ queryKey: queryKeys.templates });
+      // #662: antrenmandan kaydedildiyse antrenman artik bu sablona bagli -- "Sablon olarak kaydet" kisayolu
+      // ve bitirme ekranindaki soru acik oturumun `templateId`sine bakar.
+      if (girdi.sessionId !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+      }
     },
   });
 }

@@ -141,3 +141,25 @@ test('gecici sablon kimligi gercekle degisince baslatma, siralama ve sablon isle
   expect(kuyruk[1]).toMatchObject({ templateIds: [7, 12] });
   expect(kuyruk[2]).toMatchObject({ sablonId: 12 });
 });
+
+// ---- Antrenmandan kaydedilen sablon (#662) ----
+
+const antrenmandanSablon: BekleyenIslem = {
+  tur: 'sablonOlustur', anahtar: 't9', sablonId: -70, name: 'Bugunku', exercises: [], baglananOturumId: -1,
+};
+
+/** Cevrimdisi baslatilan antrenmandan kaydedilen sablon, antrenman sunucuda olusunca GERCEK kimligine baglanir. */
+test('gecici antrenman kimligi gercekle degisince ondan kaydedilen sablon gercek antrenmana baglanir', () => {
+  const kuyruk = kimlikEsle([antrenmandanSablon], 'oturum', -1, 501);
+
+  expect(kuyruk[0]).toMatchObject({ tur: 'sablonOlustur', baglananOturumId: 501 });
+});
+
+/** Antrenman iptal edilse de kullanicinin kaydettigi sablon KALIR; yalnizca hic olusmayacak antrenmana baglanmaz. */
+test('cevrimdisi antrenman iptal edilince ondan kaydedilen sablon kalir, bagi duser', () => {
+  const kuyruk = kuyrugaEkle([baslat, setEkle(-10), antrenmandanSablon], { tur: 'oturumIptal', anahtar: 'i1', oturumId: -1 });
+
+  expect(kuyruk).toHaveLength(1);
+  expect(kuyruk[0]).toMatchObject({ tur: 'sablonOlustur', sablonId: -70 });
+  expect((kuyruk[0] as { baglananOturumId?: number }).baglananOturumId).toBeUndefined();
+});

@@ -26,7 +26,13 @@ function hareketleriAyristir(ham: string | undefined): SablonTaslakHareketi[] | 
 export default function YeniSablonScreen() {
   const { t } = useTranslation();
   usePageTitle(t('sablonlar.yeniSablon'));
-  const { donus, hareketler } = useLocalSearchParams<{ donus?: string; hareketler?: string }>();
+  // `oturumId` (#662): acik antrenmandan gelindiyse kaydedilen sablon o antrenmana baglanir.
+  const { donus, hareketler, oturumId } = useLocalSearchParams<{
+    donus?: string;
+    hareketler?: string;
+    oturumId?: string;
+  }>();
+  const oturum = Number(oturumId);
 
   return (
     <EkranKaydirici contentContainerClassName="gap-5 px-4 pt-2 pb-4">
@@ -34,6 +40,7 @@ export default function YeniSablonScreen() {
         sablon={null}
         donusYolu={donus ?? '/templates'}
         baslangicHareketleri={hareketleriAyristir(hareketler)}
+        oturumId={oturumId && Number.isInteger(oturum) ? oturum : undefined}
       />
     </EkranKaydirici>
   );

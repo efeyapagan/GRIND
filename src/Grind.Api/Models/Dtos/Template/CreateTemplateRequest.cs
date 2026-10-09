@@ -23,4 +23,11 @@ public class CreateTemplateRequest
 
     /// <summary>#174: kuyruktan tekrar denenen oluşturma ikinci şablon açmasın diye cihazda üretilen anahtar.</summary>
     public Guid? ClientRequestId { get; set; }
+
+    /// <summary>
+    /// #662: şablon AÇIK bir antrenmandan kaydediliyorsa o antrenmanın kimliği. Verilirse antrenman aynı
+    /// kayıt işleminde yeni şablona bağlanır (<c>WorkoutSession.TemplateId</c>) — antrenman ekranındaki
+    /// "Şablon olarak kaydet" ve bitirme ekranındaki soru bu alana bakar, kaydedilen antrenman için yeniden sormaz.
+    /// </summary>
+    public long? SessionId { get; set; }
 }

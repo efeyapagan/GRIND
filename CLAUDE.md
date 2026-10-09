@@ -59,7 +59,11 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   Aylık/Haftalık ısı haritası; veri `GET /api/stats/calendar`, backend değişmedi. Ayrıntı PLAN.md'de.
 - **Antrenmandan şablon + boş antrenman (2026-09-22, #209/#186)** — "Şablonla başla" birincil yol, altında
   ikincil "Boş antrenman başlat" (#61 kararı tamamlandı, geri alınmadı); açık antrenmanda "Şablon olarak
-  kaydet" ve şablonsuz antrenmanı bitirince aynı soru, dolu şablon formunu açar. Ayrıntı PLAN.md'de.
+  kaydet" ve şablonsuz antrenmanı bitirince aynı soru, dolu şablon formunu açar. Ayrıntı PLAN.md'de. #662: açık antrenmandan
+  kaydedilen şablon o antrenmana BAĞLANIR (`POST /api/templates` isteğe bağlı `sessionId` alır,
+  `WorkoutSession.TemplateId` aynı `SaveChangesAsync`'te yazılır; başkasının antrenmanı 404, bitmiş antrenman
+  409) — kısayol kalkar, bitirince yeniden sorulmaz; sonradan hareket eklenirse sapma kuralı yine sorar.
+  Çevrimdışı kuyruk bağı `sablonOlustur.baglananOturumId` ile taşır.
 - **Profil başlığı (2026-09-23, #283)** — iki platformda Instagram tarzı başlık (fotoğraf, ad, yaş, üç
   sayaç, "Profili düzenle" · "Hesap ayarları") ve yalnızca ikonlu sekmeler Geçmiş (varsayılan) · Rekorlar ·
   Ölçüler. Hesap artık sekme değil: `/profile/account` ve `/profile/edit` başlıksız alt ekranlardır. Fotoğraf

@@ -70,6 +70,10 @@ export function sahteBackendOlustur({ olcum = 'WeightReps' }: { olcum?: 'WeightR
         })),
       };
       state.sablonlar.push(yeni);
+      // #662: sunucu gibi -- sablon acik antrenmandan kaydedildiyse antrenman ona baglanir.
+      if (govde.sessionId !== undefined && state.acikOturum?.id === govde.sessionId) {
+        state.acikOturum = { ...state.acikOturum, templateId: yeni.id, templateName: yeni.name };
+      }
       return yeni;
     }
 
