@@ -58,8 +58,8 @@ public class PublicActivityServiceTests
             new UserRepository(context),
             new WorkoutHistoryService(
                 new WorkoutSessionRepository(context), new SetEntryRepository(context),
-                new ExerciseRepository(context), current),
-            new PersonalRecordService(new SetEntryRepository(context), current),
+                new ExerciseRepository(context), new CardioEntryRepository(context), current),
+            new PersonalRecordService(new SetEntryRepository(context), new CardioEntryRepository(context), current),
             current);
     }
 

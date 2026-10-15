@@ -1,5 +1,6 @@
 using System.Globalization;
 using Grind.Api.Models.Dtos.BodyWeight;
+using Grind.Api.Models.Dtos.Cardio;
 using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Record;
@@ -30,7 +31,7 @@ public class ExportTextFormatterTests
 
     private static HistorySessionResponse Oturum(
         DateTime startedAt, DateTime? endedAt, params SetEntryResponse[] sets) =>
-        new(1, startedAt, endedAt, null, null, null, null, null, sets.Sum(s => s.Weight * (s.Reps ?? 0)), sets.Length, null, false, sets);
+        new(1, startedAt, endedAt, null, null, null, null, null, sets.Sum(s => s.Weight * (s.Reps ?? 0)), sets.Length, null, false, sets, []);
 
     private static string Formatla(params HistorySessionResponse[] oturumlar) =>
         ExportTextFormatter.Format(Bos() with { Sessions = oturumlar });
@@ -68,9 +69,9 @@ public class ExportTextFormatterTests
                         Set(2, "Overhead Press", 40m, 10, position: 2),
                         Set(2, "Overhead Press", 40m, 10, position: 2),
                         Set(2, "Overhead Press", 40m, 9, position: 2)
-                    ]),
+                    ], []),
                 new HistorySessionResponse(42,
-                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, null, null, 0m, 0, null, false, [])
+                    new DateTime(2026, 3, 4, 4, 10, 0, DateTimeKind.Utc), null, null, null, null, null, null, 0m, 0, null, false, [], [])
             ],
             BodyWeights:
             [
@@ -98,6 +99,7 @@ public class ExportTextFormatterTests
             - [PR: ağırlık] = o egzersizde o ana kadarki en ağır set.
             - [PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.
             - Süreyle ölçülen hareketlerin (plank gibi) setleri saniye olarak yazılır ("45 sn"); [PR: süre] = o ana kadarki en uzun süre.
+            - Kardiyo satırları süre (dk/sn), mesafe (km), hız (km/s), eğim (%), seviye, damper, tempo (/dk), kat, adım, atlama ve ortalama watt taşır (yalnızca girilenler); kardiyo hacme sayılmaz. [PR: süre] / [PR: mesafe] = o makinede o ana kadarki en uzun süre / mesafe.
             - Hareket adının başındaki sayı ("1.", "2."...) o oturumda kaçıncı sırada yapıldığıdır; sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma yaparken dikkate alınmalıdır.
 
             ## Özet
@@ -362,7 +364,7 @@ public class ExportTextFormatterTests
             Sessions =
             [
                 new HistorySessionResponse(1, An, null, null, null, zararli, null, null, 80m, 1, null, false,
-                    [Set(1, zararli, 80m, 8)])
+                    [Set(1, zararli, 80m, 8)], [])
             ],
             AllTimeRecords =
             [
@@ -466,4 +468,18 @@ public class ExportTextFormatterTests
         Assert.Contains("(ısınma)", metin);
         Assert.DoesNotContain("(ısınma)", ExportTextFormatter.Format(Bos()));
     }
+
+    /// <summary>#647: kardiyo kaydı oturumun içinde, yalnızca girilen kutularla ve rekor işaretiyle yazılır.</summary>
+    [Fact]
+    public void Kardiyo_satiri_girilen_kutulari_ve_rekoru_yazar()
+    {
+        var kosu = new CardioEntryResponse(1, 1, 193, "Treadmill", An, 1200,
+            9m, 6m, null, null, 3.2m, null, null, null, null, null, IsDurationRecord: false, IsDistanceRecord: true);
+
+        var metin = Formatla(Oturum(An, null) with { Cardio = [kosu] });
+
+        Assert.Contains("- Kardiyo · Treadmill: 20 dk · 3.2 km · 9 km/s · %6 eğim [PR: mesafe]", metin);
+        Assert.DoesNotContain("(Bu oturumda set girilmedi.)", metin);
+    }
 }
+

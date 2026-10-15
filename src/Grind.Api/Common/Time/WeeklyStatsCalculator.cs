@@ -38,6 +38,7 @@ public static class WeeklyStatsCalculator
                 weekSets.Count(s => s.Category == ExerciseCategory.Push),
                 weekSets.Count(s => s.Category == ExerciseCategory.Pull),
                 weekSets.Count(s => s.Category == ExerciseCategory.Legs),
+                weekSets.Count(s => s.Category == ExerciseCategory.Cardio),
                 weekSets.Count(s => s.Category == ExerciseCategory.Other)));
         }
 

@@ -90,8 +90,9 @@ public class AiInsightServiceTests
             sessions,
             sets,
             bodyWeights,
-            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), currentUser, saat),
-            new PersonalRecordService(sets, currentUser),
+            new CardioEntryRepository(context),
+            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), new CardioEntryRepository(context), currentUser, saat),
+            new PersonalRecordService(sets, new CardioEntryRepository(context), currentUser),
             currentUser,
             saat);
 

@@ -1,6 +1,14 @@
-import { render, screen } from '@testing-library/react-native';
-import type { EgzersizRekoru } from '@grind/shared/api/queries';
+import { render as rtlRender, screen } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { queryKeys, type EgzersizRekoru } from '@grind/shared/api/queries';
 import RekorKarti from './RekorKarti';
+
+// #647: kart kardiyo mesafesinin birimini hareket listesinin onbelleginden okur.
+function render(oge: React.ReactElement, egzersizler: unknown[] = []) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+  queryClient.setQueryData(queryKeys.exercises, egzersizler);
+  return rtlRender(<QueryClientProvider client={queryClient}>{oge}</QueryClientProvider>);
+}
 
 const rekor: EgzersizRekoru = {
   exerciseId: 3,
@@ -13,6 +21,8 @@ const rekor: EgzersizRekoru = {
   bestRepsAt: '2026-09-21T09:00:00Z',
   measurement: 'WeightReps',
   bestDurationSeconds: null,
+  bestDistanceKm: null,
+  bestDistanceAt: null,
 };
 
 /**
@@ -38,3 +48,24 @@ test('rekor olculeri dolgusuzdur, aralarinda tek cizgi vardir', async () => {
   expect(screen.queryAllByTestId('cam-dolgu')).toHaveLength(0);
   expect(screen.getAllByTestId('cam-ayirici')).toHaveLength(1);
 });
+
+/** #647: kardiyoda en uzun sure ve en uzun mesafe; kurek ergometresi (damper + mesafe) mesafeyi metre yazar. */
+test('kardiyo rekorunda en uzun sure ve mesafe gorunur, kurekte mesafe metredir', async () => {
+  const kurek: EgzersizRekoru = {
+    ...rekor,
+    exerciseId: 202,
+    exerciseName: 'Rowing Machine',
+    measurement: 'Cardio',
+    bestDurationSeconds: 1200,
+    bestDistanceKm: 5,
+    bestDistanceAt: '2026-09-22T09:00:00Z',
+  };
+  await render(<RekorKarti rekor={kurek} />, [
+    { id: 202, name: 'Rowing Machine', category: 'Cardio', measurement: 'Cardio', cardioFields: ['Damper', 'Distance', 'Cadence', 'Watts'] },
+  ]);
+
+  expect(screen.getByText('20:00')).toBeTruthy();
+  expect(screen.getByText('5.000 m')).toBeTruthy();
+  expect(screen.queryByText(/tekrar/i)).toBeNull();
+});
+

@@ -1,4 +1,4 @@
-import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
+import type { HareketIlerlemesi, KardiyoKaydi, SetKaydi } from '@grind/shared/api/queries';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
 import SurukleSiraliListe from '../ui/SurukleSiraliListe';
 import CamKart from '../ui/CamKart';
@@ -13,6 +13,10 @@ interface Props {
   onSetDuzenle: (kayit: SetKaydi, sira: number) => void;
   /** #407: antrenmandaki TUM hareketlerin yeni sirasi; kaydi ekran yurutur. */
   onSiraDegis: (exerciseIds: number[]) => void;
+  /** #647: kardiyo hareketlerinin kimlikleri ve antrenmanin kardiyo kayitlari -- bu kartlar kardiyo cizer. */
+  kardiyoHareketleri?: ReadonlySet<number>;
+  kardiyolar?: KardiyoKaydi[];
+  onKardiyoDuzenle?: (kayit: KardiyoKaydi) => void;
 }
 
 /**
@@ -21,7 +25,16 @@ interface Props {
  * kaplayan odak kartinda (`OdakKarti`) gorunur; listede yalnizca baslik + setler kalir. #407: sira,
  * karti basili tutup surukleyerek degisir (odak kartindaki #229 ok dugmelerinin yerine).
  */
-export default function HareketKartlari({ ilerleme, setler, onSec, onSetDuzenle, onSiraDegis }: Props) {
+export default function HareketKartlari({
+  ilerleme,
+  setler,
+  onSec,
+  onSetDuzenle,
+  onSiraDegis,
+  kardiyoHareketleri,
+  kardiyolar = [],
+  onKardiyoDuzenle,
+}: Props) {
   return (
     <SurukleSiraliListe
       ogeler={ilerleme}
@@ -45,6 +58,12 @@ export default function HareketKartlari({ ilerleme, setler, onSec, onSetDuzenle,
               setler={setler.filter((kayit) => kayit.exerciseId === hareket.exerciseId)}
               onSetDuzenle={onSetDuzenle}
               onSec={() => onSec(hareket.exerciseId)}
+              kardiyolar={
+                kardiyoHareketleri?.has(hareket.exerciseId)
+                  ? kardiyolar.filter((kayit) => kayit.exerciseId === hareket.exerciseId)
+                  : undefined
+              }
+              onKardiyoDuzenle={onKardiyoDuzenle}
             />
           </CamKart>
         );

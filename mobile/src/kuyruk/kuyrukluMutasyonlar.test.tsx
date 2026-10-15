@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@grind/shared/api/client';
 import { ApiError } from '@grind/shared/api/problem';
-import { queryKeys, type AcikOturum, type GecmisSayfasi, type Sablon, type SetKaydi, type TakvimOzeti } from '@grind/shared/api/queries';
+import { queryKeys, type AcikOturum, type GecmisSayfasi, type KardiyoKaydi, type Sablon, type SetKaydi, type TakvimOzeti } from '@grind/shared/api/queries';
 import { trBugundenOnce } from '@grind/shared/lib/format';
 import { BaglantiBaglami } from '../baglanti/BaglantiSaglayici';
 import KuyrukSaglayici, { kuyrukAnahtari } from './KuyrukSaglayici';
@@ -12,6 +12,8 @@ import {
   useKuyrukluCreateTemplate,
   useKuyrukluDeleteTemplate,
   useKuyrukluFinishSession,
+  useKuyrukluKardiyoBaslat,
+  useKuyrukluKardiyoDurdur,
   useKuyrukluSablonlariSirala,
   useKuyrukluStartSession,
   useKuyrukluUpdateTemplate,
@@ -351,3 +353,44 @@ test('cevrimdisi antrenmandan kaydedilen sablon acik antrenmana hemen baglanir',
   const olusturma = (await diskKuyrugu()).find((islem) => islem.tur === 'sablonOlustur');
   expect(olusturma).toMatchObject({ baglananOturumId: oturumId, sablonId: oturum.templateId });
 });
+
+/**
+ * #647: cevrimdisi kardiyo gecici kimlikle hemen akar ve kart listesine girer; durdurunca sure cihazda hesaplanir.
+ * Rekor cihazda HESAPLANMAZ (kullanici karari) -- rozet gonderilince sunucudan gelir.
+ */
+test('cevrimdisi kardiyo baslatilir ve durdurulur, rekor cihazda hesaplanmaz', async () => {
+  queryClient.setQueryData(queryKeys.exercises, [
+    { id: 193, name: 'Treadmill', category: 'Cardio', measurement: 'Cardio', cardioFields: ['Speed', 'Incline', 'Distance'] },
+  ]);
+  const { result } = await renderHook(
+    () => ({ baslat: useKuyrukluStartSession(), kardiyo: useKuyrukluKardiyoBaslat(), durdur: useKuyrukluKardiyoDurdur() }),
+    { wrapper: sarmalayici(true) },
+  );
+  await act(async () => {
+    await result.current.baslat.mutateAsync(null);
+  });
+  const oturumId = queryClient.getQueryData<AcikOturum>(queryKeys.openSession)!.id;
+
+  let akan!: KardiyoKaydi;
+  await act(async () => {
+    akan = await result.current.kardiyo.mutateAsync({ sessionId: oturumId, exerciseId: 193, speedKmh: 9 });
+  });
+  expect(akan.id).toBeLessThan(0);
+  expect(akan.durationSeconds).toBeNull();
+  expect(queryClient.getQueryData<AcikOturum>(queryKeys.openSession)!.progress.map((h) => h.exerciseId)).toEqual([193]);
+
+  await act(async () => {
+    await result.current.durdur.mutateAsync({
+      id: akan.id, sessionId: oturumId, speedKmh: 9, inclinePercent: null, level: null, damper: null,
+      distanceKm: 3.2, cadence: null, floors: null, steps: null, jumps: null, watts: null,
+    });
+  });
+
+  const [biten] = queryClient.getQueryData<KardiyoKaydi[]>(queryKeys.sessionCardio(oturumId))!;
+  expect(biten.durationSeconds).toBeGreaterThanOrEqual(1);
+  expect(biten.distanceKm).toBe(3.2);
+  expect([biten.isDurationRecord, biten.isDistanceRecord]).toEqual([false, false]);
+  expect((await diskKuyrugu()).map((islem) => islem.tur)).toEqual(['oturumBaslat', 'kardiyoBaslat', 'kardiyoDurdur']);
+  expect(requestMock).not.toHaveBeenCalled();
+});
+

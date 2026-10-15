@@ -41,4 +41,5 @@ public class Exercise
     public ICollection<TemplateExercise> TemplateExercises { get; set; } = [];
     public ICollection<SessionExercise> SessionExercises { get; set; } = [];
     public ICollection<SetEntry> SetEntries { get; set; } = [];
+    public ICollection<CardioEntry> CardioEntries { get; set; } = [];
 }

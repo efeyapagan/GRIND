@@ -48,11 +48,12 @@ public class SetEntryServiceTests
         var setRepository = new SetEntryRepository(context);
         var sessionRepository = new WorkoutSessionRepository(context);
 
-        var recordService = new PersonalRecordService(setRepository, currentUser);
+        var recordService = new PersonalRecordService(setRepository, new CardioEntryRepository(context), currentUser);
         var sessionService = new WorkoutSessionService(
             sessionRepository, new WorkoutTemplateRepository(context), setRepository,
             new SessionExerciseRepository(context), new ExerciseRepository(context),
-            unitOfWork, currentUser, saat, recordService);
+            unitOfWork, currentUser, saat, recordService,
+            new CardioEntryRepository(context), new CardioRecordService(new CardioEntryRepository(context), currentUser));
 
         var service = new SetEntryService(
             setRepository, new ExerciseRepository(context), sessionRepository,

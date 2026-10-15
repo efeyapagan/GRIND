@@ -2,9 +2,13 @@ import { expect, test } from 'vitest';
 import type { Egzersiz, EgzersizHacmi, HaftalikIstatistik } from '../api/queries';
 import { hacimHaftalari, kasGrubuSatirlari, varsayilanBirTekrarHareketi } from './haftalikIlerleme';
 
-function hafta(weekStart: string, volume: number, sets: [number, number, number, number] = [0, 0, 0, 0]): HaftalikIstatistik {
-  const [pushSets, pullSets, legsSets, otherSets] = sets;
-  return { weekStart, volume, pushSets, pullSets, legsSets, otherSets };
+function hafta(
+  weekStart: string,
+  volume: number,
+  sets: [number, number, number, number, number] = [0, 0, 0, 0, 0],
+): HaftalikIstatistik {
+  const [pushSets, pullSets, legsSets, cardioSets, otherSets] = sets;
+  return { weekStart, volume, pushSets, pullSets, legsSets, cardioSets, otherSets };
 }
 
 // 6 hafta; sonuncusu (2026-03-09) icinde bulunulan, henuz bitmemis hafta.
@@ -13,8 +17,8 @@ const HAFTALAR = [
   hafta('2026-02-09', 200),
   hafta('2026-02-16', 0),
   hafta('2026-02-23', 400),
-  hafta('2026-03-02', 500, [6, 4, 3, 1]),
-  hafta('2026-03-09', 50, [8, 4, 1, 0]),
+  hafta('2026-03-02', 500, [6, 4, 3, 1, 1]),
+  hafta('2026-03-09', 50, [8, 4, 1, 2, 0]),
 ];
 
 /** #184: devam eden hafta grafige girmez -- Pazartesi gunu "Su anki" gerileme gibi okunmasin. */
@@ -36,6 +40,8 @@ test('kas grubu satirlari secili haftanin setlerini ve onceki haftaya farki veri
     { kategori: 'Push', set: 8, fark: 2 },
     { kategori: 'Pull', set: 4, fark: 0 },
     { kategori: 'Legs', set: 1, fark: -2 },
+    // #647: kardiyo Other'dan once, kendi satirinda.
+    { kategori: 'Cardio', set: 2, fark: 1 },
     { kategori: 'Other', set: 0, fark: -1 },
   ]);
 });

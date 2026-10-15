@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkoutSessionRepository, WorkoutSessionRepository>();
         services.AddScoped<ISessionExerciseRepository, SessionExerciseRepository>();
         services.AddScoped<ISetEntryRepository, SetEntryRepository>();
+        services.AddScoped<ICardioEntryRepository, CardioEntryRepository>();
         services.AddScoped<IWorkoutTemplateRepository, WorkoutTemplateRepository>();
         services.AddScoped<IBodyWeightLogRepository, BodyWeightLogRepository>();
         services.AddScoped<IAiInsightRepository, AiInsightRepository>();

@@ -88,4 +88,13 @@ public class IndexTests
     {
         Assert.True(IndexOn<UserAvatar>("UserId").IsUnique);
     }
+
+    /// <summary>#647: bir antrenmanda aynı anda tek akan kardiyo; ikinci Başlat'ı yarışta veritabanı da durdurur.</summary>
+    [Fact]
+    public void Antrenmanda_tek_akan_kardiyo_olabilir()
+    {
+        var akan = IndexOn<CardioEntry>("WorkoutSessionId");
+        Assert.True(akan.IsUnique);
+        Assert.Equal("\"DurationSeconds\" IS NULL", akan.GetFilter());
+    }
 }

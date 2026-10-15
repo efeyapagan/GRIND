@@ -1,3 +1,4 @@
+using Grind.Api.Models.Dtos.Cardio;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Enums;
 
@@ -19,9 +20,10 @@ public record FriendHistorySessionResponse(
     decimal TotalVolume,
     int SetCount,
     int? MedianRestSeconds,
-    IReadOnlyList<SetEntryResponse> Sets)
+    IReadOnlyList<SetEntryResponse> Sets,
+    IReadOnlyList<CardioEntryResponse> Cardio)
 {
     public static FriendHistorySessionResponse From(HistorySessionResponse s) => new(
         s.SessionId, s.StartedAt, s.EndedAt, s.DurationSeconds, s.TemplateName, s.Difficulty,
-        s.TotalVolume, s.SetCount, s.MedianRestSeconds, s.Sets);
+        s.TotalVolume, s.SetCount, s.MedianRestSeconds, s.Sets, s.Cardio);
 }

@@ -20,6 +20,7 @@ type PatchSetRequest = components['schemas']['PatchSetRequest'];
 type HistorySessionResponse = components['schemas']['HistorySessionResponse'];
 type HistorySessionResponsePagedResponse = components['schemas']['HistorySessionResponsePagedResponse'];
 type ExerciseRecordResponse = components['schemas']['ExerciseRecordResponse'];
+type CardioEntryResponse = components['schemas']['CardioEntryResponse'];
 type WeeklyStatsResponse = components['schemas']['WeeklyStatsResponse'];
 type WeeklyStatsRow = components['schemas']['WeeklyStatsRow'];
 type ExerciseVolumeResponseVolumeSummaryResponse = components['schemas']['ExerciseVolumeResponseVolumeSummaryResponse'];
@@ -75,6 +76,8 @@ type UpdateTemplatePinRequest = components['schemas']['UpdateTemplatePinRequest'
 export const queryKeys = {
   openSession: ['openSession'] as const,
   sessionSets: (sessionId: number | null) => ['sessionSets', sessionId] as const,
+  // #647: antrenmanin kardiyo kayitlari (akan kayit dahil).
+  sessionCardio: (sessionId: number | null) => ['sessionCardio', sessionId] as const,
   exercises: ['exercises'] as const,
   records: ['records'] as const,
   // #72: `records` ONEKI altinda -- rekorlari tazeleyen her akis (set ekle/duzelt/sil, oturum sil)
@@ -229,6 +232,65 @@ export interface Egzersiz {
   // #346: set girisinin hangi alanlari cizecegi. `equipment` ile ayni gerekceyle optional; yoksa
   // kilo + tekrar sayilir (bkz. `lib/setOlcumu`).
   measurement?: EgzersizOlcumu;
+  // #647: kardiyo hareketinde sure disinda sorulan kutular (makineye ozel, sunucudan); digerlerinde bos.
+  cardioFields?: KardiyoAlani[];
+}
+
+/** #647: kardiyo kaydinin sure disindaki kutulari. */
+export type KardiyoAlani = components['schemas']['CardioField'];
+
+/** #647: bir kardiyo kaydi. `durationSeconds` null = hala akiyor; sayac `startedAt`ten hesaplanir. */
+export interface KardiyoKaydi {
+  id: number;
+  sessionId: number;
+  exerciseId: number;
+  exerciseName: string;
+  startedAt: string;
+  durationSeconds: number | null;
+  speedKmh: number | null;
+  inclinePercent: number | null;
+  level: number | null;
+  damper: number | null;
+  distanceKm: number | null;
+  cadence: number | null;
+  floors: number | null;
+  steps: number | null;
+  jumps: number | null;
+  watts: number | null;
+  isDurationRecord: boolean;
+  isDistanceRecord: boolean;
+}
+
+/** #647: kutularin degerleri (Baslat, Durdur ve duzeltme ayni sekli tasir); bos kutu `null`. */
+export type KardiyoDegerleri = Pick<
+  KardiyoKaydi,
+  'speedKmh' | 'inclinePercent' | 'level' | 'damper' | 'distanceKm' | 'cadence' | 'floors' | 'steps' | 'jumps' | 'watts'
+>;
+
+export function dogrulanmisKardiyo(yanit: CardioEntryResponse): KardiyoKaydi {
+  if (yanit.id === undefined || yanit.sessionId === undefined || yanit.exerciseId === undefined || !yanit.exerciseName || !yanit.startedAt) {
+    throw new Error('Sunucudan eksik kardiyo yaniti alindi.');
+  }
+  return {
+    id: yanit.id,
+    sessionId: yanit.sessionId,
+    exerciseId: yanit.exerciseId,
+    exerciseName: yanit.exerciseName,
+    startedAt: yanit.startedAt,
+    durationSeconds: yanit.durationSeconds ?? null,
+    speedKmh: yanit.speedKmh ?? null,
+    inclinePercent: yanit.inclinePercent ?? null,
+    level: yanit.level ?? null,
+    damper: yanit.damper ?? null,
+    distanceKm: yanit.distanceKm ?? null,
+    cadence: yanit.cadence ?? null,
+    floors: yanit.floors ?? null,
+    steps: yanit.steps ?? null,
+    jumps: yanit.jumps ?? null,
+    watts: yanit.watts ?? null,
+    isDurationRecord: yanit.isDurationRecord ?? false,
+    isDistanceRecord: yanit.isDistanceRecord ?? false,
+  };
 }
 
 /**
@@ -316,6 +378,7 @@ function dogrulanmisEgzersiz(yanit: ExerciseResponse): Egzersiz {
     category: yanit.category,
     equipment: yanit.equipment ?? null,
     measurement: yanit.measurement ?? 'WeightReps',
+    cardioFields: yanit.cardioFields ?? [],
   };
 }
 
@@ -331,6 +394,8 @@ export interface GecmisOturum {
   // #246: antrenman suresi (sn), sunucudan; acik antrenmanda null.
   durationSeconds: number | null;
   sets: SetKaydi[];
+  // #647: kardiyo kayitlari antrenmanin ICINDE (arkadasin gecmisinde de).
+  cardio: KardiyoKaydi[];
 }
 
 export interface GecmisSayfasi {
@@ -365,6 +430,7 @@ function dogrulanmisGecmisOturum(yanit: HistorySessionResponse): GecmisOturum {
     setCount: yanit.setCount,
     durationSeconds: yanit.durationSeconds ?? null,
     sets: (yanit.sets ?? []).map(dogrulanmisSet),
+    cardio: (yanit.cardio ?? []).map(dogrulanmisKardiyo),
   };
 }
 
@@ -398,6 +464,9 @@ export interface EgzersizRekoru {
   // #346: sureli harekette anlamli alan `bestDurationSeconds`tir (kilo 0, tekrar null).
   measurement: EgzersizOlcumu;
   bestDurationSeconds: number | null;
+  // #647: kardiyoda en uzun mesafe (girildiyse); digerlerinde null.
+  bestDistanceKm: number | null;
+  bestDistanceAt: string | null;
 }
 
 /**
@@ -430,6 +499,8 @@ function dogrulanmisRekor(yanit: ExerciseRecordResponse): EgzersizRekoru {
     bestRepsAt: yanit.bestRepsAt,
     measurement: yanit.measurement,
     bestDurationSeconds: yanit.bestDurationSeconds,
+    bestDistanceKm: yanit.bestDistanceKm ?? null,
+    bestDistanceAt: yanit.bestDistanceAt ?? null,
   };
 }
 
@@ -827,6 +898,8 @@ export interface HaftalikIstatistik {
   pushSets: number;
   pullSets: number;
   legsSets: number;
+  // #647: haftanin kardiyo kaydi sayisi (kas grubu kartinin "Kardiyo" satiri).
+  cardioSets: number;
   otherSets: number;
 }
 
@@ -848,6 +921,7 @@ function dogrulanmisHafta(yanit: WeeklyStatsRow): HaftalikIstatistik {
     pushSets: yanit.pushSets,
     pullSets: yanit.pullSets,
     legsSets: yanit.legsSets,
+    cardioSets: yanit.cardioSets ?? 0,
     otherSets: yanit.otherSets,
   };
 }
@@ -1073,6 +1147,89 @@ export function useUpdateSet() {
  */
 export async function setiSil(id: number): Promise<void> {
   await request<void>(`/sets/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * #647: kardiyo kaydi degisince (baslat, durdur, duzelt, sil) tazelenecekler -- set tazelemesinin kardiyo karsiligi.
+ * Rekor, gecmis, takvim ve haftalik satirlar kardiyodan da turer; ilerleme (tamamlanan kayit) acik oturumdadir.
+ */
+export function kardiyoDegistiTazele(queryClient: QueryClient, sessionId: number): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.openSession });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.sessionCardio(sessionId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.records });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.historyAll });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarAll });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyStats });
+}
+
+export function useSessionCardio(sessionId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.sessionCardio(sessionId),
+    queryFn: async (): Promise<KardiyoKaydi[]> =>
+      (await request<CardioEntryResponse[]>(`/sessions/${sessionId}/cardio`)).map(dogrulanmisKardiyo),
+    // Negatif kimlik cevrimdisi baslatilmis antrenman: kayitlari yalnizca cihazdaki onbellektedir.
+    enabled: sessionId !== null && sessionId > 0,
+  });
+}
+
+export interface KardiyoBaslatmaGirdisi extends Partial<KardiyoDegerleri> {
+  sessionId: number;
+  exerciseId: number;
+}
+
+/** `POST /api/sessions/{id}/cardio` -- Baslat; sure akmaya baslar. */
+export function useStartCardio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sessionId, ...govde }: KardiyoBaslatmaGirdisi): Promise<KardiyoKaydi> =>
+      dogrulanmisKardiyo(
+        await request<CardioEntryResponse>(`/sessions/${sessionId}/cardio`, {
+          method: 'POST',
+          body: JSON.stringify(govde),
+        }),
+      ),
+    onSuccess: (kayit) => kardiyoDegistiTazele(queryClient, kayit.sessionId),
+  });
+}
+
+export interface KardiyoDurdurmaGirdisi extends KardiyoDegerleri {
+  id: number;
+  sessionId: number;
+}
+
+/** `POST /api/cardio/{id}/stop` -- sure yazilir, sonuc kutulari kaydedilir, rekor hesaplanir. */
+export function useStopCardio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, sessionId: _oturum, ...govde }: KardiyoDurdurmaGirdisi): Promise<KardiyoKaydi> =>
+      dogrulanmisKardiyo(
+        await request<CardioEntryResponse>(`/cardio/${id}/stop`, { method: 'POST', body: JSON.stringify(govde) }),
+      ),
+    onSuccess: (kayit) => kardiyoDegistiTazele(queryClient, kayit.sessionId),
+  });
+}
+
+export interface KardiyoDuzeltmesi extends KardiyoDegerleri {
+  id: number;
+  sessionId: number;
+  durationSeconds: number;
+}
+
+/** `PUT /api/cardio/{id}` -- bitmis kaydin tum kutulari ve suresi. */
+export function useUpdateCardio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, sessionId: _oturum, ...govde }: KardiyoDuzeltmesi): Promise<KardiyoKaydi> =>
+      dogrulanmisKardiyo(
+        await request<CardioEntryResponse>(`/cardio/${id}`, { method: 'PUT', body: JSON.stringify(govde) }),
+      ),
+    onSuccess: (kayit) => kardiyoDegistiTazele(queryClient, kayit.sessionId),
+  });
+}
+
+/** `DELETE /api/cardio/{id}`. */
+export async function kardiyoyuSil(id: number): Promise<void> {
+  await request<void>(`/cardio/${id}`, { method: 'DELETE' });
 }
 
 /** #118: antrenman bitiminde secilen zorluk; `null` = kullanici atladi (secim zorunlu degil). */

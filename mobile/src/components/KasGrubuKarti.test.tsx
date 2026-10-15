@@ -4,7 +4,7 @@ import KasGrubuKarti from './KasGrubuKarti';
 
 function hafta(weekStart: string, sets: [number, number, number, number]): HaftalikIstatistik {
   const [pushSets, pullSets, legsSets, otherSets] = sets;
-  return { weekStart, volume: 0, pushSets, pullSets, legsSets, otherSets };
+  return { weekStart, volume: 0, pushSets, pullSets, legsSets, cardioSets: 0, otherSets };
 }
 
 const HAFTALAR = [hafta('2026-02-23', [0, 0, 0, 0]), hafta('2026-03-02', [6, 4, 3, 1]), hafta('2026-03-09', [8, 4, 1, 0])];
@@ -56,3 +56,12 @@ test('hafta listesi kisalip uzasa da cokmez ve bu haftada kalir', async () => {
   expect(screen.getByText('Bu hafta')).toBeTruthy();
   expect(screen.getByLabelText('Push: 1 set')).toBeTruthy();
 });
+
+/** #647: kardiyo kayitlari Other'dan once kendi satirinda sayilir. */
+test('kardiyo kayitlari kendi satirinda gorunur', async () => {
+  await render(<KasGrubuKarti haftalar={[{ ...hafta('2026-03-09', [2, 0, 0, 1]), cardioSets: 3 }]} />);
+
+  const satirlar = screen.getAllByLabelText(/: \d+ set/).map((satir) => satir.props.accessibilityLabel);
+  expect(satirlar).toEqual(['Push: 2 set', 'Pull: 0 set', 'Legs: 0 set', 'Kardiyo: 3 set', 'Diğer: 1 set']);
+});
+

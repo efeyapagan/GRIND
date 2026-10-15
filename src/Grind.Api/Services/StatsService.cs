@@ -1,3 +1,4 @@
+using Grind.Api.Models.Projections;
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Records;
 using Grind.Api.Common.Security;
@@ -15,6 +16,7 @@ public class StatsService(
     IUserRepository userRepository,
     IWeeklyTargetChangeRepository targetChangeRepository,
     IExerciseRepository exerciseRepository,
+    ICardioEntryRepository cardioRepository,
     ICurrentUserService currentUser,
     TimeProvider timeProvider) : IStatsService
 {
@@ -198,7 +200,14 @@ public class StatsService(
             throw new NotFoundException(ExerciseNotFound);
         }
 
-        var sets = await setEntryRepository.GetWeeklySetRowsAsync(currentUser.UserId, exerciseId, cancellationToken);
+        IReadOnlyList<WeeklySetRow> sets = await setEntryRepository.GetWeeklySetRowsAsync(currentUser.UserId, exerciseId, cancellationToken);
+        // #647: kardiyo kayıtları kas grubu kartının "Kardiyo" satırına girer (hacmi 0). Hareket seçili hacim kartı
+        // (#586) yalnızca kilolu hareket gösterir; orada kardiyo yok.
+        if (exerciseId is null)
+        {
+            sets = [.. sets, .. await cardioRepository.GetWeeklyRowsAsync(currentUser.UserId, cancellationToken)];
+        }
+
         var today = TurkeyDay.LocalDateOf(timeProvider.GetUtcNow().UtcDateTime);
         return new WeeklyStatsResponse(WeeklyStatsCalculator.Build(sets, today));
     }

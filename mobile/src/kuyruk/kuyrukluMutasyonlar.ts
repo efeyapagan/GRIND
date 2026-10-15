@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/react-query';
 import {
   hareketiKaldir,
+  kardiyoDegistiTazele,
+  kardiyoyuSil,
   queryKeys,
   setDegistiTazele,
   setiSil,
@@ -15,12 +17,19 @@ import {
   useDeleteTemplate,
   useSablonlariSirala,
   useSablonuSabitle,
+  useStartCardio,
   useStartSession,
+  useStopCardio,
+  useUpdateCardio,
   useUpdateSet,
   useUpdateTemplate,
   type AcikOturum,
   type Egzersiz,
   type GecmisSayfasi,
+  type KardiyoBaslatmaGirdisi,
+  type KardiyoDurdurmaGirdisi,
+  type KardiyoDuzeltmesi,
+  type KardiyoKaydi,
   type Sablon,
   type SablonGirdisi,
   type SetDuzeltmesi,
@@ -31,6 +40,7 @@ import {
 } from '@grind/shared/api/queries';
 import { ApiError } from '@grind/shared/api/problem';
 import { trBugundenOnce } from '@grind/shared/lib/format';
+import { BOS_KARDIYO_DEGERLERI } from '@grind/shared/lib/kardiyo';
 import { useCevrimdisi } from '../baglanti/BaglantiSaglayici';
 import { useKuyruk } from './KuyrukSaglayici';
 import { tekilAnahtar } from './kuyruk';
@@ -83,6 +93,26 @@ function acikOturum(queryClient: QueryClient): AcikOturum | null {
 
 function oturumSetleri(queryClient: QueryClient, oturumId: number): SetKaydi[] {
   return queryClient.getQueryData<SetKaydi[]>(queryKeys.sessionSets(oturumId)) ?? [];
+}
+
+function oturumKardiyolari(queryClient: QueryClient, oturumId: number): KardiyoKaydi[] {
+  return queryClient.getQueryData<KardiyoKaydi[]>(queryKeys.sessionCardio(oturumId)) ?? [];
+}
+
+function kardiyoyuGuncelle(
+  queryClient: QueryClient,
+  oturumId: number,
+  id: number,
+  guncelle: (kayit: KardiyoKaydi) => KardiyoKaydi,
+): KardiyoKaydi | undefined {
+  const liste = oturumKardiyolari(queryClient, oturumId).map((kayit) => (kayit.id === id ? guncelle(kayit) : kayit));
+  queryClient.setQueryData(queryKeys.sessionCardio(oturumId), liste);
+  return liste.find((kayit) => kayit.id === id);
+}
+
+/** #647: sunucudaki `CardioDuration` kurali -- en az 1 sn, en cok 4 saat. */
+function kardiyoSuresi(startedAt: string, stoppedAt: string): number {
+  return Math.min(Math.max(Math.round((Date.parse(stoppedAt) - Date.parse(startedAt)) / 1000), 1), 14400);
 }
 
 function yazAcikOturum(queryClient: QueryClient, oturum: AcikOturum, setler?: SetKaydi[]) {
@@ -371,7 +401,7 @@ export function useKuyrukluFinishSession() {
         () => {
           const endedAt = new Date().toISOString();
           const oturum = acikOturum(queryClient) as AcikOturum;
-          const ozet = gecmisOzeti(oturum, oturumSetleri(queryClient, oturum.id), endedAt);
+          const ozet = gecmisOzeti(oturum, oturumSetleri(queryClient, oturum.id), endedAt, oturumKardiyolari(queryClient, oturum.id));
           if (ozet.setCount > 0) {
             takvimlereIsle(queryClient, oturum.startedAt, ozet.setCount);
           }
@@ -584,3 +614,120 @@ export function useKuyrukluSablonuSabitle() {
       ),
   });
 }
+
+/**
+ * #647: kardiyo Baslat. Cevrimdisi kayit gecici kimlikle akmaya baslar (sayac cihazdaki baslangictan); hareket
+ * listede yoksa sona girer (sunucudaki `EnsureExercise` gibi).
+ */
+export function useKuyrukluKardiyoBaslat() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useStartCardio();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (girdi: KardiyoBaslatmaGirdisi) =>
+      yol(
+        () => cevrimici.mutateAsync(girdi),
+        () => {
+          const { sessionId, exerciseId, ...degerler } = girdi;
+          const startedAt = new Date().toISOString();
+          const kayit: KardiyoKaydi = {
+            ...BOS_KARDIYO_DEGERLERI,
+            ...degerler,
+            id: yeniGeciciKimlik(),
+            sessionId,
+            exerciseId,
+            exerciseName: egzersiz(queryClient, exerciseId)?.name ?? '',
+            startedAt,
+            durationSeconds: null,
+            isDurationRecord: false,
+            isDistanceRecord: false,
+          };
+          queryClient.setQueryData(queryKeys.sessionCardio(sessionId), [...oturumKardiyolari(queryClient, sessionId), kayit]);
+          const oturum = acikOturum(queryClient);
+          if (oturum && oturum.id === sessionId && !oturum.progress.some((hareket) => hareket.exerciseId === exerciseId)) {
+            yazAcikOturum(queryClient, hareketEkleIyimser(oturum, { exerciseId, exerciseName: kayit.exerciseName }));
+          }
+          ekle({ tur: 'kardiyoBaslat', anahtar: tekilAnahtar(), oturumId: sessionId, kardiyoId: kayit.id, exerciseId, degerler, startedAt });
+          return kayit;
+        },
+      ),
+  });
+}
+
+/** #647: kardiyo Durdur. Cevrimdisi sure cihazdaki gercek andan hesaplanir; rekor cihazda HESAPLANMAZ. */
+export function useKuyrukluKardiyoDurdur() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useStopCardio();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (girdi: KardiyoDurdurmaGirdisi) =>
+      yol(
+        () => cevrimici.mutateAsync(girdi),
+        () => {
+          const { id, sessionId, ...degerler } = girdi;
+          const stoppedAt = new Date().toISOString();
+          const kayit = kardiyoyuGuncelle(queryClient, sessionId, id, (onceki) => ({
+            ...onceki,
+            ...degerler,
+            durationSeconds: kardiyoSuresi(onceki.startedAt, stoppedAt),
+          }));
+          ekle({ tur: 'kardiyoDurdur', anahtar: tekilAnahtar(), kardiyoId: id, degerler, stoppedAt });
+          return kayit as KardiyoKaydi;
+        },
+      ),
+  });
+}
+
+/** #647: bitmis kardiyo kaydini duzeltme (tum kutular + sure). */
+export function useKuyrukluKardiyoDuzelt() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+  const cevrimici = useUpdateCardio();
+
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (girdi: KardiyoDuzeltmesi) =>
+      yol(
+        () => cevrimici.mutateAsync(girdi),
+        () => {
+          const { id, sessionId, durationSeconds, ...degerler } = girdi;
+          const kayit = kardiyoyuGuncelle(queryClient, sessionId, id, (onceki) => ({ ...onceki, ...degerler, durationSeconds }));
+          ekle({ tur: 'kardiyoDuzelt', anahtar: tekilAnahtar(), kardiyoId: id, degerler, durationSeconds });
+          return kayit as KardiyoKaydi;
+        },
+      ),
+  });
+}
+
+/** #647: kardiyo kaydini silmenin kuyruklu hali (geri alma suresi dolunca cagrilir). */
+export function useKuyrukluKardiyoSil() {
+  const queryClient = useQueryClient();
+  const { ekle } = useKuyruk();
+  const yol = useKuyrukYolu();
+
+  return useCallback(
+    (kayit: KardiyoKaydi) =>
+      void yol(
+        async () => {
+          await kardiyoyuSil(kayit.id);
+          kardiyoDegistiTazele(queryClient, kayit.sessionId);
+        },
+        () => {
+          queryClient.setQueryData(
+            queryKeys.sessionCardio(kayit.sessionId),
+            oturumKardiyolari(queryClient, kayit.sessionId).filter((aday) => aday.id !== kayit.id),
+          );
+          ekle({ tur: 'kardiyoSil', anahtar: tekilAnahtar(), kardiyoId: kayit.id });
+        },
+      ).catch(() => undefined),
+    [ekle, queryClient, yol],
+  );
+}
+
