@@ -560,6 +560,293 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/sessions/{sessionId}/cardio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardioEntryResponse"][];
+                        "application/json": components["schemas"]["CardioEntryResponse"][];
+                        "text/json": components["schemas"]["CardioEntryResponse"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["StartCardioRequest"];
+                    "text/json": components["schemas"]["StartCardioRequest"];
+                    "application/*+json": components["schemas"]["StartCardioRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardioEntryResponse"];
+                        "application/json": components["schemas"]["CardioEntryResponse"];
+                        "text/json": components["schemas"]["CardioEntryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cardio/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["StopCardioRequest"];
+                    "text/json": components["schemas"]["StopCardioRequest"];
+                    "application/*+json": components["schemas"]["StopCardioRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardioEntryResponse"];
+                        "application/json": components["schemas"]["CardioEntryResponse"];
+                        "text/json": components["schemas"]["CardioEntryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cardio/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCardioRequest"];
+                    "text/json": components["schemas"]["UpdateCardioRequest"];
+                    "application/*+json": components["schemas"]["UpdateCardioRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardioEntryResponse"];
+                        "application/json": components["schemas"]["CardioEntryResponse"];
+                        "text/json": components["schemas"]["CardioEntryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/exercises": {
         parameters: {
             query?: never;
@@ -4963,6 +5250,43 @@ export interface components {
             /** Format: int32 */
             currentTargetStreak?: number | null;
         };
+        CardioEntryResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            sessionId?: number;
+            /** Format: int64 */
+            exerciseId?: number;
+            exerciseName?: string | null;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: int32 */
+            durationSeconds?: number | null;
+            /** Format: double */
+            speedKmh?: number | null;
+            /** Format: double */
+            inclinePercent?: number | null;
+            /** Format: int32 */
+            level?: number | null;
+            /** Format: int32 */
+            damper?: number | null;
+            /** Format: double */
+            distanceKm?: number | null;
+            /** Format: int32 */
+            cadence?: number | null;
+            /** Format: int32 */
+            floors?: number | null;
+            /** Format: int32 */
+            steps?: number | null;
+            /** Format: int32 */
+            jumps?: number | null;
+            /** Format: int32 */
+            watts?: number | null;
+            isDurationRecord?: boolean;
+            isDistanceRecord?: boolean;
+        };
+        /** @enum {string} */
+        CardioField: "Speed" | "Incline" | "Level" | "Damper" | "Distance" | "Cadence" | "Floors" | "Steps" | "Jumps" | "Watts";
         CreateBodyWeightRequest: {
             /** Format: double */
             weight: number;
@@ -5051,7 +5375,7 @@ export interface components {
             likelyForgottenCount?: number;
         };
         /** @enum {string} */
-        ExerciseCategory: "Push" | "Pull" | "Legs" | "Other";
+        ExerciseCategory: "Push" | "Pull" | "Legs" | "Cardio" | "Other";
         ExerciseDropResponse: {
             /** Format: int64 */
             exerciseId?: number;
@@ -5066,7 +5390,7 @@ export interface components {
         /** @enum {string} */
         ExerciseEquipment: "Barbell" | "Dumbbell" | "Machine" | "Cable" | "Bodyweight" | "Other";
         /** @enum {string} */
-        ExerciseMeasurement: "WeightReps" | "Reps" | "Duration";
+        ExerciseMeasurement: "WeightReps" | "Reps" | "Duration" | "Cardio";
         ExerciseMediaResponse: {
             /** Format: int64 */
             id?: number;
@@ -5126,6 +5450,10 @@ export interface components {
             measurement?: components["schemas"]["ExerciseMeasurement"];
             /** Format: int32 */
             bestDurationSeconds?: number | null;
+            /** Format: double */
+            bestDistanceKm?: number | null;
+            /** Format: date-time */
+            bestDistanceAt?: string | null;
         };
         ExerciseResponse: {
             /** Format: int64 */
@@ -5138,6 +5466,7 @@ export interface components {
             isArchived?: boolean;
             isGlobal?: boolean;
             media?: components["schemas"]["ExerciseMediaResponse"][] | null;
+            cardioFields?: components["schemas"]["CardioField"][] | null;
         };
         ExerciseVolumeResponse: {
             /** Format: int64 */
@@ -5210,6 +5539,7 @@ export interface components {
             /** Format: int32 */
             medianRestSeconds?: number | null;
             sets?: components["schemas"]["SetEntryResponse"][] | null;
+            cardio?: components["schemas"]["CardioEntryResponse"][] | null;
         };
         FriendHistorySessionResponsePagedResponse: {
             items?: components["schemas"]["FriendHistorySessionResponse"][] | null;
@@ -5252,6 +5582,7 @@ export interface components {
             medianRestSeconds?: number | null;
             isVolumeRecord?: boolean;
             sets?: components["schemas"]["SetEntryResponse"][] | null;
+            cardio?: components["schemas"]["CardioEntryResponse"][] | null;
         };
         HistorySessionResponsePagedResponse: {
             items?: components["schemas"]["HistorySessionResponse"][] | null;
@@ -5292,6 +5623,8 @@ export interface components {
             durationSeconds?: number | null;
             recordType?: components["schemas"]["RecordType"];
             measurement?: components["schemas"]["ExerciseMeasurement"];
+            /** Format: double */
+            distanceKm?: number | null;
         };
         NotificationResponse: {
             kind?: components["schemas"]["NotificationKind"];
@@ -5384,7 +5717,7 @@ export interface components {
             trainingGoal?: components["schemas"]["TrainingGoal"];
         };
         /** @enum {string} */
-        RecordType: "None" | "Weight" | "Reps" | "Duration";
+        RecordType: "None" | "Weight" | "Reps" | "Duration" | "Distance";
         RegisterRequest: {
             username: string;
             password: string;
@@ -5473,6 +5806,34 @@ export interface components {
             volume?: number;
             isSelf?: boolean;
         };
+        StartCardioRequest: {
+            /** Format: double */
+            speedKmh?: number | null;
+            /** Format: double */
+            inclinePercent?: number | null;
+            /** Format: int32 */
+            level?: number | null;
+            /** Format: int32 */
+            damper?: number | null;
+            /** Format: double */
+            distanceKm?: number | null;
+            /** Format: int32 */
+            cadence?: number | null;
+            /** Format: int32 */
+            floors?: number | null;
+            /** Format: int32 */
+            steps?: number | null;
+            /** Format: int32 */
+            jumps?: number | null;
+            /** Format: int32 */
+            watts?: number | null;
+            /** Format: int64 */
+            exerciseId: number;
+            /** Format: date-time */
+            clientStartedAt?: string | null;
+            /** Format: uuid */
+            clientRequestId?: string | null;
+        };
         StartSessionRequest: {
             /** Format: int64 */
             templateId?: number | null;
@@ -5481,6 +5842,30 @@ export interface components {
             startedAt?: string | null;
             /** Format: uuid */
             clientRequestId?: string | null;
+        };
+        StopCardioRequest: {
+            /** Format: double */
+            speedKmh?: number | null;
+            /** Format: double */
+            inclinePercent?: number | null;
+            /** Format: int32 */
+            level?: number | null;
+            /** Format: int32 */
+            damper?: number | null;
+            /** Format: double */
+            distanceKm?: number | null;
+            /** Format: int32 */
+            cadence?: number | null;
+            /** Format: int32 */
+            floors?: number | null;
+            /** Format: int32 */
+            steps?: number | null;
+            /** Format: int32 */
+            jumps?: number | null;
+            /** Format: int32 */
+            watts?: number | null;
+            /** Format: date-time */
+            clientStoppedAt?: string | null;
         };
         TemplateExerciseRequest: {
             /** Format: int64 */
@@ -5525,6 +5910,30 @@ export interface components {
         UnreadNotificationCountResponse: {
             /** Format: int32 */
             count?: number;
+        };
+        UpdateCardioRequest: {
+            /** Format: double */
+            speedKmh?: number | null;
+            /** Format: double */
+            inclinePercent?: number | null;
+            /** Format: int32 */
+            level?: number | null;
+            /** Format: int32 */
+            damper?: number | null;
+            /** Format: double */
+            distanceKm?: number | null;
+            /** Format: int32 */
+            cadence?: number | null;
+            /** Format: int32 */
+            floors?: number | null;
+            /** Format: int32 */
+            steps?: number | null;
+            /** Format: int32 */
+            jumps?: number | null;
+            /** Format: int32 */
+            watts?: number | null;
+            /** Format: int32 */
+            durationSeconds: number;
         };
         UpdateExerciseRequest: {
             name: string;
@@ -5623,6 +6032,8 @@ export interface components {
             pullSets?: number;
             /** Format: int32 */
             legsSets?: number;
+            /** Format: int32 */
+            cardioSets?: number;
             /** Format: int32 */
             otherSets?: number;
         };

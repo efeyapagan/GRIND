@@ -80,7 +80,7 @@ public class WorkoutSessionRepository(AppDbContext context)
         // #558: oturum HENÜZ BİTMEMİŞKEN (EndedAt == null) girilen bir set, kullanıcı antrenmanı
         // kaydetmeden önce takvim/seri sayısını şişiriyordu -- yalnızca SetEntries.Any() yetersizdi.
         var rows = await FilterByRange(userId, fromUtcInclusive, toUtcExclusive)
-            .Where(s => s.EndedAt != null && s.SetEntries.Any())
+            .Where(s => s.EndedAt != null && (s.SetEntries.Any() || s.CardioEntries.Any()))
             .Select(s => new
             {
                 s.Id,
@@ -98,8 +98,9 @@ public class WorkoutSessionRepository(AppDbContext context)
     public async Task<IReadOnlyList<DateTime>> GetTrainedSessionStartsAsync(
         long userId, CancellationToken cancellationToken = default)
         // #558: aynı gerekçe -- açık bir oturumun seti seriyi/takvim gününü şişirmemeli.
+        // #647: yalnızca kardiyo yapılmış antrenman da antrenmandır (takvim, seri, geçmiş, arkadaş sıralaması).
         => await Set
-            .Where(s => s.UserId == userId && s.EndedAt != null && s.SetEntries.Any())
+            .Where(s => s.UserId == userId && s.EndedAt != null && (s.SetEntries.Any() || s.CardioEntries.Any()))
             .Select(s => s.StartedAt)
             .ToListAsync(cancellationToken);
 
@@ -150,11 +151,11 @@ public class WorkoutSessionRepository(AppDbContext context)
         long userId, DateTime? fromUtcInclusive, DateTime? toUtcExclusive, long? exerciseId)
     {
         var query = FilterByRange(userId, fromUtcInclusive, toUtcExclusive)
-            .Where(s => s.EndedAt != null && s.SetEntries.Any());
+            .Where(s => s.EndedAt != null && (s.SetEntries.Any() || s.CardioEntries.Any()));
 
         if (exerciseId is { } id)
         {
-            query = query.Where(s => s.SetEntries.Any(e => e.ExerciseId == id));
+            query = query.Where(s => s.SetEntries.Any(e => e.ExerciseId == id) || s.CardioEntries.Any(c => c.ExerciseId == id));
         }
 
         return query;
@@ -183,7 +184,7 @@ public class WorkoutSessionRepository(AppDbContext context)
                         && s.StartedAt >= fromUtcInclusive
                         && s.StartedAt < toUtcExclusive
                         && s.EndedAt != null
-                        && s.SetEntries.Any())
+                        && (s.SetEntries.Any() || s.CardioEntries.Any()))
             .Select(s => new
             {
                 s.UserId,

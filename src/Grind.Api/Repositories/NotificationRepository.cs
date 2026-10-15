@@ -33,7 +33,9 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                 where f.FollowerId == userId && !f.NotificationsMuted && f.Followee.DeletedAt == null
                 join s in context.Set<WorkoutSession>() on f.FolloweeId equals s.UserId
                 where s.EndedAt != null && s.EndedAt > f.CreatedAt && s.EndedAt >= since
-                      && s.SetEntries.Any(e => e.RecordType != RecordType.None)
+                      && (s.SetEntries.Any(e => e.RecordType != RecordType.None)
+                          // #647: kardiyo rekoru da rekorlu antrenmandır.
+                          || s.CardioEntries.Any(c => c.IsDurationRecord || c.IsDistanceRecord))
                 orderby s.EndedAt descending, s.Id descending
                 select new RecordSessionEvent(
                     s.Id, s.EndedAt!.Value, new UserRef(f.Followee.Id, f.Followee.Username, f.Followee.DisplayName)))
@@ -42,7 +44,8 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
 
     public async Task<IReadOnlyList<RecordSetRow>> GetRecordSetsAsync(
         IReadOnlyCollection<long> sessionIds, CancellationToken cancellationToken = default)
-        => await context.Set<SetEntry>()
+    {
+        var sets = await context.Set<SetEntry>()
             .Where(e => sessionIds.Contains(e.WorkoutSessionId) && e.RecordType != RecordType.None)
             .Select(e => new RecordSetRow(
                 e.WorkoutSessionId, e.ExerciseId, e.Exercise.Name, e.Weight, e.Reps, e.DurationSeconds, e.RecordType, e.CreatedAt,
@@ -52,6 +55,23 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                     .FirstOrDefault(),
                 e.Exercise.Measurement))
             .ToListAsync(cancellationToken);
+
+        // #647: kardiyo rekorları aynı satır biçiminde (kilo 0); mesafe rekoru varsa onu öne çıkarır.
+        var cardio = await context.Set<CardioEntry>()
+            .Where(c => sessionIds.Contains(c.WorkoutSessionId) && (c.IsDurationRecord || c.IsDistanceRecord))
+            .Select(c => new RecordSetRow(
+                c.WorkoutSessionId, c.ExerciseId, c.Exercise.Name, 0m, null, c.DurationSeconds,
+                c.IsDistanceRecord ? RecordType.Distance : RecordType.Duration, c.StartedAt,
+                c.WorkoutSession.SessionExercises
+                    .Where(x => x.ExerciseId == c.ExerciseId)
+                    .Select(x => (int?)x.OrderIndex)
+                    .FirstOrDefault(),
+                c.Exercise.Measurement,
+                c.DistanceKm))
+            .ToListAsync(cancellationToken);
+
+        return [.. sets, .. cardio];
+    }
 
     public async Task<IReadOnlyList<FriendSessionDayRow>> GetFriendGoalSessionsAsync(
         long userId, DateTime since, CancellationToken cancellationToken = default)
@@ -63,7 +83,7 @@ public class NotificationRepository(AppDbContext context) : INotificationReposit
                       // Karsilikli takip = arkadaslik (#281): tek yonlu takip bildirim uretmez.
                       && context.Set<Follow>().Any(g => g.FollowerId == f.FolloweeId && g.FolloweeId == userId)
                 join s in context.Set<WorkoutSession>() on f.FolloweeId equals s.UserId
-                where s.StartedAt >= since && s.StartedAt > f.CreatedAt && s.SetEntries.Any()
+                where s.StartedAt >= since && s.StartedAt > f.CreatedAt && (s.SetEntries.Any() || s.CardioEntries.Any())
                 select new FriendSessionDayRow(
                     s.Id,
                     s.StartedAt,

@@ -12,13 +12,14 @@ namespace Grind.Tests.Data;
 public class DatabaseSmokeTests
 {
     [Fact]
-    public async Task Yuzdoksaniki_global_egzersiz_veritabaninda_mevcut()
+    public async Task Ikiyuzbes_global_egzersiz_veritabaninda_mevcut()
     {
         await using var context = TestDatabase.CreateContext();
 
         var globals = await context.Exercises.Where(e => e.UserId == null).ToListAsync();
 
-        Assert.Equal(192, globals.Count);
+        Assert.Equal(205, globals.Count);
+        Assert.Contains(globals, e => e.Name == "Treadmill");
         Assert.Contains(globals, e => e.Name == "Bench Press");
         Assert.Contains(globals, e => e.Name == "Russian Twist");
         Assert.Contains(globals, e => e.Name == "Plank" && e.Measurement == ExerciseMeasurement.Duration);

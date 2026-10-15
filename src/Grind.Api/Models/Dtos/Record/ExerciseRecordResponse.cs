@@ -11,6 +11,11 @@ namespace Grind.Api.Models.Dtos.Record;
 /// ve anlamlı alan <paramref name="BestDurationSeconds"/>'tır; kilo alanları 0, tekrar alanları <c>null</c>,
 /// tarihler en uzun setin tarihidir. Diğer tiplerde <paramref name="BestDurationSeconds"/> <c>null</c>.
 /// İstemci gösterimi <paramref name="Measurement"/>'a göre seçer.
+///
+/// #647: kardiyo (<see cref="ExerciseMeasurement.Cardio"/>) harekette özet bitmiş kardiyo kayıtlarından kurulur:
+/// <paramref name="BestDurationSeconds"/> en uzun süre (tarihi <paramref name="BestWeightAt"/>),
+/// <paramref name="BestDistanceKm"/> en uzun mesafe (tarihi <paramref name="BestDistanceAt"/>; mesafe girilmediyse
+/// ikisi de <c>null</c>). Diğer tiplerde mesafe alanları <c>null</c>.
 /// </summary>
 public record ExerciseRecordResponse(
     long ExerciseId,
@@ -23,4 +28,6 @@ public record ExerciseRecordResponse(
     decimal BestRepsWeight,
     DateTime BestRepsAt,
     ExerciseMeasurement Measurement,
-    int? BestDurationSeconds);
+    int? BestDurationSeconds,
+    decimal? BestDistanceKm = null,
+    DateTime? BestDistanceAt = null);

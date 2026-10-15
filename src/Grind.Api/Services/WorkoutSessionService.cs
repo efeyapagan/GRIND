@@ -17,7 +17,9 @@ public class WorkoutSessionService(
     IUnitOfWork unitOfWork,
     ICurrentUserService currentUser,
     TimeProvider timeProvider,
-    IPersonalRecordService recordService) : IWorkoutSessionService
+    IPersonalRecordService recordService,
+    ICardioEntryRepository cardioRepository,
+    ICardioRecordService cardioRecordService) : IWorkoutSessionService
 {
     private const string SessionNotFound = "Oturum bulunamadı.";
     private const string OpenSessionNotFound = "Bugüne ait açık bir oturum yok.";
@@ -188,6 +190,21 @@ public class WorkoutSessionService(
             setEntryRepository.Remove(set);
         }
 
+        // #647: kardiyo kartı kaldırılınca o hareketin bu antrenmandaki kardiyo kayıtları da gider.
+        var cardioEntries = (await cardioRepository.GetForSessionAsync(session.Id, currentUser.UserId, cancellationToken))
+            .Where(c => c.ExerciseId == exerciseId)
+            .ToList();
+        foreach (var entry in cardioEntries)
+        {
+            cardioRepository.Remove(entry);
+        }
+
+        if (cardioEntries.Count > 0)
+        {
+            await cardioRecordService.RecalculateAsync(
+                exerciseId, excludeSessionId: session.Id, cancellationToken: cancellationToken);
+        }
+
         // excludeSessionId ZORUNLU: silinen setler commit'e kadar sorguda hâlâ görünür. Hesap tek
         // hareket üzerinden yapıldığı için yalnızca BU hareketin bu antrenmandaki setleri hariç kalır.
         await recordService.RecalculateAsync(
@@ -280,6 +297,14 @@ public class WorkoutSessionService(
         }
 
         session.EndedAt = endedAt;
+
+        // #647 arka kapı: antrenman doğrudan bitirilirse akan kardiyo bitiş anında kapanır; rekoru aynı commit'te.
+        if (await cardioRepository.GetRunningForSessionAsync(session.Id, cancellationToken) is { } running)
+        {
+            running.DurationSeconds = CardioDuration.Between(running.StartedAt, endedAt);
+            await cardioRecordService.RecalculateAsync(running.ExerciseId, cancellationToken: cancellationToken);
+        }
+
         // Zorluk YALNIZCA burada yazılır — ayrı bir güncelleme ucu yok, bu yüzden bitmiş bir
         // oturumun zorluğu bir daha asla değişmez.
         session.Difficulty = request.Difficulty;
@@ -308,6 +333,7 @@ public class WorkoutSessionService(
         // ayrı ayrı DEĞİL — performans ve DRY).
         var affectedExerciseIds = await setEntryRepository.GetDistinctExerciseIdsForSessionAsync(
             id, cancellationToken);
+        var affectedCardioIds = await cardioRepository.GetDistinctExerciseIdsForSessionAsync(id, cancellationToken);
 
         sessionRepository.Remove(session);
 
@@ -317,6 +343,12 @@ public class WorkoutSessionService(
             // setleri sorguda hâlâ geri geliyor. Hariç tutulmazsa silinen setler hesaba
             // katılır ve kalan setler rekora terfi etmez.
             await recordService.RecalculateAsync(
+                exerciseId, excludeSessionId: id, cancellationToken: cancellationToken);
+        }
+
+        foreach (var exerciseId in affectedCardioIds)
+        {
+            await cardioRecordService.RecalculateAsync(
                 exerciseId, excludeSessionId: id, cancellationToken: cancellationToken);
         }
 
@@ -390,13 +422,16 @@ public class WorkoutSessionService(
         }
 
         var completed = await setEntryRepository.GetCompletedSetCountsAsync(session.Id, cancellationToken);
+        // #647: kardiyo hareketinde "tamamlanan set" bitmiş kardiyo kaydı sayısıdır — istemcinin "boş antrenman"
+        // ve ilerleme hesabı kardiyoyu ayrıca bilmeden doğru kalır. Bir hareket ya set ya kardiyo taşır.
+        var cardioCounts = await cardioRepository.GetFinishedCountsAsync(session.Id, cancellationToken);
 
         return exercises
             .Select(se => new SessionProgressResponse(
                 se.ExerciseId,
                 se.Exercise.Name,
                 se.PlannedSets,
-                completed.GetValueOrDefault(se.ExerciseId),
+                completed.GetValueOrDefault(se.ExerciseId) + cardioCounts.GetValueOrDefault(se.ExerciseId),
                 se.RestSeconds))
             .ToList();
     }

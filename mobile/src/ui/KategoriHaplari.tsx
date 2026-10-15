@@ -6,7 +6,8 @@ import type { EgzersizKategorisi } from '@grind/shared/api/queries';
  * Kategori haplari. Etiket katalogdan gelir (`antrenman.kategori.*`): Push/Pull/Legs Ingilizce
  * kategori adlaridir ve iki dilde de ayni, "Diğer" ve "Tümü" cevrilir.
  */
-const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Other'];
+// #647: Kardiyo, Other'dan once.
+const KATEGORILER: (EgzersizKategorisi | null)[] = [null, 'Push', 'Pull', 'Legs', 'Cardio', 'Other'];
 
 interface Props {
   secili: EgzersizKategorisi | null;

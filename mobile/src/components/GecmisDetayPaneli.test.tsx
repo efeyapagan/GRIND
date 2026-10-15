@@ -38,6 +38,7 @@ const OTURUM: GecmisOturum = {
   setCount: 1,
   totalVolume: 480,
   durationSeconds: 3600,
+  cardio: [],
   sets: [KAYIT],
 };
 

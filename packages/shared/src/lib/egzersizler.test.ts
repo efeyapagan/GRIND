@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { adaGoreSirala, aramaIcinSadelestir, egzersizAra, egzersizOner } from './egzersizler';
+import { adaGoreSirala, aramaIcinSadelestir, egzersizAra, egzersizGorunenAdi, egzersizOner } from './egzersizler';
 import type { Egzersiz } from '../api/queries';
 
 const HAVUZ: Egzersiz[] = [
@@ -120,3 +120,25 @@ test('kategori filtresi onerilere de uygulanir', () => {
   expect(oneriAdlari('sqaut', 'Legs')).toContain('Squat');
   expect(oneriAdlari('sqaut', 'Push')).toEqual([]);
 });
+
+const treadmill: Egzersiz = { id: 193, name: 'Treadmill', alternateName: 'Koşu bandı', category: 'Cardio' };
+
+/** #647: Turkce adla arayan "Treadmill (Koşu bandı)" gorur, Ingilizce adla arayan yalnizca "Treadmill". */
+test('kardiyo Turkce adla bulununca parantezli, Ingilizce adla bulununca yalin yazilir', () => {
+  expect(egzersizAra([treadmill], 'koşu bandı')).toEqual([treadmill]);
+  expect(egzersizGorunenAdi(treadmill, 'koşu bandı')).toBe('Treadmill (Koşu bandı)');
+  expect(egzersizGorunenAdi(treadmill, 'tread')).toBe('Treadmill');
+  expect(egzersizGorunenAdi(treadmill, '')).toBe('Treadmill');
+});
+
+test('Turkce harf ve buyuk-kucuk harf farki aramayi bozmaz', () => {
+  expect(egzersizAra([treadmill], 'KOSU BANDI')).toEqual([treadmill]);
+  expect(egzersizGorunenAdi(treadmill, 'KOSU')).toBe('Treadmill (Koşu bandı)');
+});
+
+/** Diger kategorilerin takma adi (#335) Ingilizce esanlamdir; parantez yalnizca kardiyoda. */
+test('kardiyo olmayan hareketin takma adi parantezle yazilmaz', () => {
+  const pecDeck: Egzersiz = { id: 83, name: 'Pec Deck', alternateName: 'Chest Fly Machine', category: 'Push' };
+  expect(egzersizGorunenAdi(pecDeck, 'chest fly')).toBe('Pec Deck');
+});
+

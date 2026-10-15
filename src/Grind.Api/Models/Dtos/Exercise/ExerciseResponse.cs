@@ -30,6 +30,10 @@ namespace Grind.Api.Models.Dtos.Exercise;
 /// Setlerin neyle ölçüldüğü (#346): kilo + tekrar, yalnızca tekrar ya da süre. İstemci set girişinde hangi
 /// alanları çizeceğini buna göre seçer.
 /// </param>
+/// <param name="CardioFields">
+/// #647: kardiyo hareketinde süre dışında sorulan kutular (makineye özel, <c>CardioFieldCatalog</c>); kardiyo
+/// olmayan harekette boş.
+/// </param>
 public record ExerciseResponse(
     long Id,
     string Name,
@@ -39,4 +43,5 @@ public record ExerciseResponse(
     ExerciseMeasurement Measurement,
     bool IsArchived,
     bool IsGlobal,
-    IReadOnlyList<ExerciseMediaResponse> Media);
+    IReadOnlyList<ExerciseMediaResponse> Media,
+    IReadOnlyList<CardioField> CardioFields);

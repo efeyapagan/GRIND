@@ -20,6 +20,7 @@ public class ExportService(
     IWorkoutSessionRepository sessionRepository,
     ISetEntryRepository setEntryRepository,
     IBodyWeightLogRepository bodyWeightRepository,
+    ICardioEntryRepository cardioRepository,
     IStatsService statsService,
     IPersonalRecordService personalRecordService,
     ICurrentUserService currentUser,
@@ -41,6 +42,8 @@ public class ExportService(
         // yepyeni bir oturumda yazılan bir set, HistoryMapping'in GetValueOrDefault'u tarafından
         // sessizce elenip export'tan eksik kalabilir. Kabul edilebilir bir ihtimal.
         var sets = await setEntryRepository.GetInRangeAsync(userId, fromUtc, toUtc, cancellationToken);
+        // #647: kardiyo kayıtları oturumlarının içinde (aynı oturum listesi; geçmişle aynı eşleme).
+        var cardio = await cardioRepository.GetForSessionsAsync(sessions.Select(s => s.Id).ToList(), userId, cancellationToken);
 
         var volumeRecordIds = VolumeRecordCalculator.RecordSessionIds(
             await sessionRepository.GetTemplateSessionVolumesAsync(
@@ -70,7 +73,7 @@ public class ExportService(
             query.From,
             query.To,
             summary,
-            HistoryMapping.ToSessionResponses(sessions, sets, volumeRecordIds),
+            HistoryMapping.ToSessionResponses(sessions, sets, cardio, volumeRecordIds),
             bodyWeights.Select(b => new BodyWeightLogResponse(
                 b.Id, b.Weight, b.HeightCm, b.BodyFatPercent, b.WaistCm, b.HipCm, b.RecordedAt)).ToList(),
             records,

@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react-native';
-import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
+import type { HareketIlerlemesi, KardiyoKaydi, SetKaydi } from '@grind/shared/api/queries';
 import HareketGecmisi from './HareketGecmisi';
 import HareketKartiGovdesi from './HareketKartiGovdesi';
 import CamKatmanlari from '../ui/CamKatmanlari';
@@ -17,6 +17,9 @@ interface Props {
   onKaldir: () => void;
   /** #357: karti ve set panelini birlikte kapatir. */
   onKapat: () => void;
+  /** #647: kardiyo hareketinde bu hareketin kardiyo kayitlari; hareket gecmisi grafigi cizilmez. */
+  kardiyolar?: KardiyoKaydi[];
+  onKardiyoDuzenle?: (kayit: KardiyoKaydi) => void;
 }
 
 /**
@@ -24,7 +27,16 @@ interface Props {
  * glass" yuzey (#350; #590 ile uc katmanli `CamKatmanlari`). Kendisine verilen yuksekligi doldurur, icerigi (setler, hareket
  * gecmisi, kaldirma; sira #407 ile listede surukleyerek degisir) kendi icinde kayar.
  */
-export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onKaldir, onKapat }: Props) {
+export default function OdakKarti({
+  hareket,
+  idler,
+  setler,
+  onSetDuzenle,
+  onKaldir,
+  onKapat,
+  kardiyolar,
+  onKardiyoDuzenle,
+}: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const sira = idler.indexOf(hareket.exerciseId);
@@ -32,8 +44,16 @@ export default function OdakKarti({ hareket, idler, setler, onSetDuzenle, onKald
     <View testID="odak-karti" className="flex-1 overflow-hidden rounded-xl">
       <CamKatmanlari koseSinifi="rounded-xl" />
       <ScrollView contentContainerClassName="flex-col gap-3 p-4" keyboardShouldPersistTaps="handled">
-        <HareketKartiGovdesi hareket={hareket} sira={sira} setler={setler} onSetDuzenle={onSetDuzenle} onKapat={onKapat} />
-        <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />
+        <HareketKartiGovdesi
+          hareket={hareket}
+          sira={sira}
+          setler={setler}
+          onSetDuzenle={onSetDuzenle}
+          onKapat={onKapat}
+          kardiyolar={kardiyolar}
+          onKardiyoDuzenle={onKardiyoDuzenle}
+        />
+        {!kardiyolar && <HareketGecmisi exerciseId={hareket.exerciseId} exerciseName={hareket.exerciseName} />}
         <Pressable onPress={onKaldir} className="h-12 flex-row items-center justify-center gap-2 rounded-xl">
           <Trash2 color={ikonRenk.danger} size={18} />
           <Text className="text-label text-danger">{t('antrenman.hareketiKaldir')}</Text>

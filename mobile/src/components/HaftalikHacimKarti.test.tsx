@@ -12,7 +12,7 @@ jest.mock('@grind/shared/api/client', () => {
 const requestMock = request as jest.Mock;
 
 function hafta(weekStart: string, volume: number): HaftalikIstatistik {
-  return { weekStart, volume, pushSets: 0, pullSets: 0, legsSets: 0, otherSets: 0 };
+  return { weekStart, volume, pushSets: 0, pullSets: 0, legsSets: 0, cardioSets: 0, otherSets: 0 };
 }
 
 const BENCH = { id: 1, name: 'Bench Press', category: 'Push', measurement: 'WeightReps', isArchived: false, isGlobal: true, media: [] };

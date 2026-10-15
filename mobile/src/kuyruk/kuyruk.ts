@@ -1,4 +1,4 @@
-import type { Zorluk } from '@grind/shared/api/queries';
+import type { KardiyoDegerleri, Zorluk } from '@grind/shared/api/queries';
 
 /**
  * #174 dilim 2: cevrimdisi yapilan antrenman islemleri. Her islem cihazda uretilen tekil bir `anahtar`
@@ -36,6 +36,19 @@ export type BekleyenIslem =
   | { tur: 'hareketSirala'; anahtar: string; oturumId: number; exerciseIds: number[] }
   | { tur: 'oturumBitir'; anahtar: string; oturumId: number; zorluk: Zorluk | null; endedAt: string }
   | { tur: 'oturumIptal'; anahtar: string; oturumId: number }
+  // #647: kardiyo kaydi. Baslat ve Durdur istemci zamaniyla gider (sure cihazdaki gercek andan hesaplanir).
+  | {
+      tur: 'kardiyoBaslat';
+      anahtar: string;
+      oturumId: number;
+      kardiyoId: number;
+      exerciseId: number;
+      degerler: Partial<KardiyoDegerleri>;
+      startedAt: string;
+    }
+  | { tur: 'kardiyoDurdur'; anahtar: string; kardiyoId: number; degerler: KardiyoDegerleri; stoppedAt: string }
+  | { tur: 'kardiyoDuzelt'; anahtar: string; kardiyoId: number; degerler: KardiyoDegerleri; durationSeconds: number }
+  | { tur: 'kardiyoSil'; anahtar: string; kardiyoId: number }
   // #174 dilim 3: sablon islemleri (paylasim ayari HARIC -- o internet ister).
   // `baglananOturumId` (#662): sablon ACIK antrenmandan kaydedildiyse o antrenman; sunucu antrenmani yeni sablona
   // baglar. Adi bilerek `oturumId` DEGIL: antrenmanin kendi islemi sayilip iptalde sablonla birlikte dusmesin.
@@ -57,6 +70,8 @@ export interface SablonHareketGirdisi {
   plannedSets: number;
   restSeconds: number;
 }
+
+export type KimlikTuru = 'oturum' | 'set' | 'sablon' | 'kardiyo';
 
 export function geciciMi(kimlik: number): boolean {
   return kimlik < 0;
@@ -83,7 +98,7 @@ export function kuyrugaEkle(
     const ekleme = kuyruk.find((aday) => aday.tur === 'setEkle' && aday.setId === islem.setId && beklemede(aday));
     if (ekleme) {
       return kuyruk.map((aday) =>
-        aday === ekleme
+        aday === ekleme && aday.tur === 'setEkle'
           ? { ...aday, weight: islem.weight, reps: islem.reps, rir: islem.rir, durationSeconds: islem.durationSeconds }
           : aday,
       );
@@ -97,6 +112,16 @@ export function kuyrugaEkle(
     }
   }
 
+  // #647: gonderilmemis kardiyo silinince Baslat'i ve sonraki islemleri duser (hic olusmayacak).
+  if (islem.tur === 'kardiyoSil' && geciciMi(islem.kardiyoId)) {
+    const baslatma = kuyruk.find(
+      (aday) => aday.tur === 'kardiyoBaslat' && aday.kardiyoId === islem.kardiyoId && beklemede(aday),
+    );
+    if (baslatma) {
+      return kuyruk.filter((aday) => !('kardiyoId' in aday && aday.kardiyoId === islem.kardiyoId));
+    }
+  }
+
   if (islem.tur === 'oturumIptal' && geciciMi(islem.oturumId)) {
     const baslatma = kuyruk.find(
       (aday) => aday.tur === 'oturumBaslat' && aday.oturumId === islem.oturumId && beklemede(aday),
@@ -105,11 +130,15 @@ export function kuyrugaEkle(
       const dusenSetler = new Set(
         kuyruk.flatMap((aday) => (aday.tur === 'setEkle' && aday.oturumId === islem.oturumId ? [aday.setId] : [])),
       );
+      const dusenKardiyolar = new Set(
+        kuyruk.flatMap((aday) => (aday.tur === 'kardiyoBaslat' && aday.oturumId === islem.oturumId ? [aday.kardiyoId] : [])),
+      );
       return kuyruk
         .filter(
           (aday) =>
             !('oturumId' in aday && aday.oturumId === islem.oturumId) &&
-            !('setId' in aday && dusenSetler.has(aday.setId)),
+            !('setId' in aday && dusenSetler.has(aday.setId)) &&
+            !('kardiyoId' in aday && dusenKardiyolar.has(aday.kardiyoId)),
         )
         // #662: o antrenmandan kaydedilen sablon KALIR (kullanici onu kaydetti); yalnizca hic olusmayacak
         // antrenmana baglanmaz.
@@ -156,10 +185,10 @@ export function sablonuBirak(kuyruk: readonly BekleyenIslem[], sablonId: number)
   });
 }
 
-/** Gecici kimligi (antrenman ya da set) sunucunun verdigi gercek kimlikle degistirir. */
+/** Gecici kimligi (antrenman, set, sablon ya da kardiyo) sunucunun verdigi gercek kimlikle degistirir. */
 export function kimlikEsle(
   kuyruk: readonly BekleyenIslem[],
-  tur: 'oturum' | 'set' | 'sablon',
+  tur: KimlikTuru,
   gecici: number,
   gercek: number,
 ): BekleyenIslem[] {
@@ -180,6 +209,9 @@ export function kimlikEsle(
     }
     if (tur === 'set' && 'setId' in islem && islem.setId === gecici) {
       return { ...islem, setId: gercek };
+    }
+    if (tur === 'kardiyo' && 'kardiyoId' in islem && islem.kardiyoId === gecici) {
+      return { ...islem, kardiyoId: gercek };
     }
     return islem;
   });

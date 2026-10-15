@@ -19,6 +19,7 @@
     "./lib/grafik": "./src/lib/grafik.ts",
     "./lib/kaydedilenSablonlar": "./src/lib/kaydedilenSablonlar.ts",
     "./lib/kartHizalama": "./src/lib/kartHizalama.ts",
+    "./lib/kardiyo": "./src/lib/kardiyo.ts",
     "./lib/rekor": "./src/lib/rekor.ts",
     "./lib/fotografKirpma": "./src/lib/fotografKirpma.ts",
     "./lib/profilFotografi": "./src/lib/profilFotografi.ts",

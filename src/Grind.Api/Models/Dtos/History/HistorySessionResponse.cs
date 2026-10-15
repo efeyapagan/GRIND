@@ -1,3 +1,4 @@
+using Grind.Api.Models.Dtos.Cardio;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Enums;
 
@@ -44,4 +45,5 @@ public record HistorySessionResponse(
     int SetCount,
     int? MedianRestSeconds,
     bool IsVolumeRecord,
-    IReadOnlyList<SetEntryResponse> Sets);
+    IReadOnlyList<SetEntryResponse> Sets,
+    IReadOnlyList<CardioEntryResponse> Cardio);

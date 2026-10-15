@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, Search } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
-import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
+import { egzersizAra, egzersizGorunenAdi, egzersizOner } from '@grind/shared/lib/egzersizler';
 import Modal from './Modal';
 import KategoriHaplari from './KategoriHaplari';
 import { useIkonRenk } from './renkler';
@@ -76,7 +76,7 @@ export default function HareketSecimPenceresi({ acik, onKapat, baslik, egzersizl
         {sonuclar.map((egzersiz) => (
           <SecimSatiri
             key={egzersiz.id}
-            ad={egzersiz.name}
+            ad={egzersizGorunenAdi(egzersiz, sorgu)}
             secili={egzersiz.id === secilenId}
             onPress={() => sec(() => onSec(egzersiz.id))}
           />

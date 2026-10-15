@@ -12,6 +12,7 @@ public class WorkoutHistoryService(
     IWorkoutSessionRepository sessionRepository,
     ISetEntryRepository setEntryRepository,
     IExerciseRepository exerciseRepository,
+    ICardioEntryRepository cardioRepository,
     ICurrentUserService currentUser) : IWorkoutHistoryService
 {
     /// <summary>Id İÇERMEZ — hangi id'nin var olduğunu söylemek tarama imkânı verirdi.</summary>
@@ -46,14 +47,15 @@ public class WorkoutHistoryService(
 
         // Setler oturum başına değil, sayfanın tamamı için TEK sorguda çekilir (N+1 yok). Hareket filtresi
         // BİLEREK sorguda değil eşlemede uygulanır: dinlenme (#71) oturumun tüm setlerinden hesaplanmalı.
-        var sets = await setEntryRepository.GetForSessionsAsync(
-            sessions.Select(s => s.Id).ToList(), userId, cancellationToken);
+        var sessionIds = sessions.Select(s => s.Id).ToList();
+        var sets = await setEntryRepository.GetForSessionsAsync(sessionIds, userId, cancellationToken);
+        var cardio = await cardioRepository.GetForSessionsAsync(sessionIds, userId, cancellationToken);
 
         var volumeRecordIds = VolumeRecordCalculator.RecordSessionIds(
             await sessionRepository.GetTemplateSessionVolumesAsync(
                 userId, sessions.Where(s => s.TemplateId != null).Select(s => s.TemplateId!.Value).Distinct().ToList(),
                 cancellationToken));
-        var items = HistoryMapping.ToSessionResponses(sessions, sets, volumeRecordIds, query.ExerciseId);
+        var items = HistoryMapping.ToSessionResponses(sessions, sets, cardio, volumeRecordIds, query.ExerciseId);
 
         return new PagedResponse<HistorySessionResponse>(
             items, query.Page, query.PageSize, totalCount);

@@ -23,6 +23,7 @@ function ornekOturum(gecersizler: Partial<GecmisSayfasi['items'][number]> = {}) 
     setCount: 3,
     durationSeconds: null,
     sets: [],
+    cardio: [],
     ...gecersizler,
   };
 }

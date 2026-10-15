@@ -41,11 +41,12 @@ public class WorkoutSessionServiceTests
         var saat = new SahteSaat(an ?? VarsayilanAn);
         var currentUser = new StubCurrentUser(user.Id);
         var setRepository = new SetEntryRepository(context);
-        var recordService = new PersonalRecordService(setRepository, currentUser);
+        var recordService = new PersonalRecordService(setRepository, new CardioEntryRepository(context), currentUser);
         var service = new WorkoutSessionService(
             new WorkoutSessionRepository(context), new WorkoutTemplateRepository(context),
             setRepository, new SessionExerciseRepository(context), new ExerciseRepository(context),
-            new UnitOfWork(context), currentUser, saat, recordService);
+            new UnitOfWork(context), currentUser, saat, recordService,
+            new CardioEntryRepository(context), new CardioRecordService(new CardioEntryRepository(context), currentUser));
 
         return (context, user, service, saat, transaction);
     }

@@ -169,6 +169,7 @@ export default function GecmisDetayPaneli({ oturum, onKapat, onSil }: Props) {
               <SetList
                 varyant="gecmis"
                 sets={oturum.sets}
+                kardiyolar={oturum.cardio}
                 bosDurumMetni={t('gecmis.bosDurumMetni')}
                 onSetMenu={onSil ? cevrimici((kayit: SetKaydi, sira: number) => setSetMenusu({ kayit, sira })) : undefined}
                 onSetEkle={

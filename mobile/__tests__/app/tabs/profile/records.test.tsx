@@ -9,6 +9,8 @@ jest.mock('@grind/shared/api/queries', () => ({
   useRecords: jest.fn(),
   useGuncelTakvimOzeti: jest.fn(),
   usePlatolar: jest.fn(),
+  // #647: rekor karti kardiyo mesafesinin birimini hareket listesinden okur.
+  useExercises: () => ({ data: [] }),
 }));
 
 function rekor(exerciseId: number, exerciseName: string) {

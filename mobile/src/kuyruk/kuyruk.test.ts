@@ -163,3 +163,35 @@ test('cevrimdisi antrenman iptal edilince ondan kaydedilen sablon kalir, bagi du
   expect(kuyruk[0]).toMatchObject({ tur: 'sablonOlustur', sablonId: -70 });
   expect((kuyruk[0] as { baglananOturumId?: number }).baglananOturumId).toBeUndefined();
 });
+
+// #647: kardiyo kaydi da gecici kimlikle kuyruga girer.
+const kardiyoBaslat = (kardiyoId: number, oturumId = -1): BekleyenIslem => ({
+  tur: 'kardiyoBaslat', anahtar: `k${kardiyoId}`, oturumId, kardiyoId, exerciseId: 193, degerler: { speedKmh: 9 },
+  startedAt: '2026-10-03T10:00:00Z',
+});
+const kardiyoDurdur = (kardiyoId: number): BekleyenIslem => ({
+  tur: 'kardiyoDurdur', anahtar: `d${kardiyoId}`, kardiyoId, degerler: { ...BOS, speedKmh: 9 }, stoppedAt: '2026-10-03T10:20:00Z',
+});
+const BOS = {
+  speedKmh: null, inclinePercent: null, level: null, damper: null, distanceKm: null,
+  cadence: null, floors: null, steps: null, jumps: null, watts: null,
+};
+
+test('gonderilmemis kardiyo silinince baslatma ve durdurma da duser', () => {
+  const kuyruk = kuyrugaEkle([baslat, kardiyoBaslat(-20), kardiyoDurdur(-20)], { tur: 'kardiyoSil', anahtar: 'ks', kardiyoId: -20 });
+
+  expect(kuyruk.map((islem) => islem.tur)).toEqual(['oturumBaslat']);
+});
+
+test('cevrimdisi antrenman iptal edilince kardiyo islemleri de duser', () => {
+  const kuyruk = kuyrugaEkle([baslat, kardiyoBaslat(-20), kardiyoDurdur(-20)], { tur: 'oturumIptal', anahtar: 'i', oturumId: -1 });
+
+  expect(kuyruk).toEqual([]);
+});
+
+test('kardiyo kimligi gercekle eslenince sonraki islemler onu kullanir', () => {
+  const kuyruk = kimlikEsle([kardiyoDurdur(-20)], 'kardiyo', -20, 77);
+
+  expect(kuyruk[0]).toMatchObject({ tur: 'kardiyoDurdur', kardiyoId: 77 });
+});
+

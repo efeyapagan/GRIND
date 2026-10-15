@@ -106,6 +106,11 @@ export function formatKisaTarihHaftaGunuyle(iso: string, dil: Dil): string {
   return `${haftaGunu}, ${formatKisaTarih(iso, dil)}`;
 }
 
+/** Dile gore sayi ("3,2" / "3.2"); gereksiz sifir yazilmaz. #647: kardiyo kutulari. */
+export function formatSayi(deger: number, dil: Dil, enFazlaOndalik = 2): string {
+  return deger.toLocaleString(SAYI_YERELI[dil], { minimumFractionDigits: 0, maximumFractionDigits: enFazlaOndalik });
+}
+
 export function formatWeight(kg: number, dil: Dil): string {
   // TR ondalik ayraci virgul; gereksiz ",0" eklenmez (80 -> "80"), ama 0 gecerli bir
   // agirlik degeridir ve "0" olarak gosterilir (bos/yok degil). Backend Weight'i

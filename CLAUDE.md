@@ -168,6 +168,18 @@ veriyi bir yapay zeka ajanına yapıştırıp yorumlatabilir.
   **İstisna (kullanıcı kararı):** arkadaşlık isteği kategorisi kapalıyken de listede kalır (yalnızca oradan kabul
   edilir) ama okunmamış sayılmaz. Tercih hesaba bağlıdır (`MutedNotificationCategory`), çevrimdışı değiştirilemez.
   Dinlenme zili (#414) bu ekrana TAŞINMADI: cihaza özel bir tercih, Hesap ayarlarında durur.
+- **Kardiyo (2026-10-15, #647)** — kardiyo makineleri katalogda **hareket**tir: `Category = Cardio` (Other'dan önce),
+  `Measurement = Cardio`; 13 global makine seed'li, Türkçe adı takma adında (`AlternateName`) — arama Türkçe adla da
+  bulur, eşleşme Türkçe addan geldiyse "Treadmill (Koşu bandı)" yazılır. Kayıt set DEĞİL, ayrı tablo `CardioEntry`
+  (bkz. Domain Modeli): rekor, hacim, 1RM, plato kardiyoya dokunmaz. Makine başına isteğe bağlı kutular sunucu kodunda
+  (`CardioFieldCatalog`, hareket yanıtında `cardioFields`). Akış: kartta ayarlar + **Başlat** → süre akar → **Durdur**
+  (süre sunucuya yazılır) → sonuçlar + Kaydet (`PUT`); antrenman doğrudan bitirilirse akan kardiyo bitiş anında
+  kapanır (`FinishAsync`, aynı `SaveChangesAsync`). Rekor: hareket başına en uzun süre ve en uzun mesafe (eşitlik rekor
+  değil), rekor bildirimi kardiyoyu da sayar (`RecordType.Distance` yalnızca bildirimde). İlerlemede kardiyo
+  hareketinin "tamamlanan set"i bitmiş kayıt sayısıdır; yalnızca kardiyo yapılmış antrenman boş değildir (takvim,
+  seri, geçmiş, iptal/bitir). Kas grubu kartında "Kardiyo" satırı (`cardioSets`). Çevrimdışı: Başlat/Durdur/düzelt/sil
+  kuyrukta, rekor cihazda hesaplanmaz. Ayrıntı:
+  [docs/superpowers/specs/2026-10-15-kardiyo-design.md](docs/superpowers/specs/2026-10-15-kardiyo-design.md).
 - Database şeması **Code-First** yaklaşımıyla ilerleyecek: önce C# entity sınıfları yazılır,
   migration'lar bunlardan üretilir. Elle SQL şeması yazılmaz.
 
@@ -289,7 +301,8 @@ Object Reference) açığıdır.
 > `/api/history`, `/api/records` ve yazan her uç hâlâ yalnız `currentUserId` ile çalışır. Paylaşılmayanlar:
 > oturum notu (`FriendHistorySessionResponse`'ta alan olarak yok), ölçüler (hiçbir seviyede paylaşılmaz),
 > AI yorumları, export. Başkasının verisine yeni bir uç açmak bu istisnayı genişletmektir: aynı kapıdan
-> geçer ve buraya yazılır.
+> geçer ve buraya yazılır. #647: kardiyo kayıtları antrenman verisidir — geçmiş ucunda antrenmanın İÇİNDE, aynı kapı ve aynı
+> seviye kuralıyla görünür (yeni uç açılmadı).
 >
 > Bildirimler (#325): `GET /api/notifications`, takip ettiğin kişinin takipten sonra bitirdiği rekorlu
 > antrenmanlarını (bitiş anı; hareket başına en iyi rekor setinin adı, ağırlığı, tekrarı, rekor türü)
@@ -376,8 +389,8 @@ Object Reference) açığıdır.
   açık (profil başlığı), pasif/fotoğrafsızda 404, `ETag` + `Cache-Control: private, no-cache`; profil
   yanıtındaki `avatarVersion` (Unix ms) istemcide önbellek kırıcıdır. Pasif hesabın fotoğrafı silinmez
 - **Exercise**: `Id`, `UserId` (FK, nullable — null ise varsayılan/global egzersiz), `Name`,
-  `Category` (Push / Pull / Legs / Other), `Measurement` (`WeightReps` / `Reps` / `Duration` — setlerin
-  neyle ölçüldüğü, #346; kullanıcı yalnızca oluştururken seçer), `IsArchived` (soft delete — geçmiş kayıtlar
+  `Category` (Push / Pull / Legs / Cardio / Other), `Measurement` (`WeightReps` / `Reps` / `Duration` / `Cardio` —
+  setlerin neyle ölçüldüğü, #346; `Cardio` = kayıtları `CardioEntry`'de, #647; kullanıcı yalnızca oluştururken seçer), `IsArchived` (soft delete — geçmiş kayıtlar
   bozulmasın)
 - **WorkoutTemplate**: `Id`, `UserId` (FK), `Name` (örn. "Push Day A"), `CreatedAt`, `Visibility`
   (nullable enum `Public`/`Friends`/`Hidden`, adıyla saklanır — #540, #467'deki `bool? IsSharedOverride`'ın
@@ -413,6 +426,12 @@ Object Reference) açığıdır.
   0–5, 2.5 = "2–3 arası", 5 = "4+"; iki platformda kaydırıcıdan seçilir, etiketi
   `packages/shared/src/lib/rir.ts`. Eski kayıtlarda 5'ten büyük değer kalabilir, "4+" gösterilir),
   `CreatedAt`
+- **CardioEntry** (#647): `Id`, `WorkoutSessionId` (FK, CASCADE), `ExerciseId` (FK, RESTRICT), `StartedAt` (istemci
+  zamanı), `DurationSeconds` (nullable — `null` = akıyor; antrenmanda aynı anda tek akan kayıt, kısmi benzersiz indeks),
+  isteğe bağlı `SpeedKmh`, `InclinePercent`, `Level`, `Damper`, `DistanceKm`, `Cadence`, `Floors`, `Steps`, `Jumps`,
+  `Watts` (yalnızca hareketin `cardioFields`'ındakiler dolu olabilir), `IsDurationRecord` / `IsDistanceRecord`
+  (kaydedildiği anın görüntüsü, `RecordType` gerekçesi; rekor taraması `CardioRecordTracker`), `CreatedAt`,
+  `ClientRequestId`. Uçlar: `GET/POST /api/sessions/{id}/cardio`, `POST /api/cardio/{id}/stop`, `PUT/DELETE /api/cardio/{id}`
 - **BodyWeightLog**: `Id`, `UserId` (FK), `Weight`, `RecordedAt` — antrenman verisinden
   bağımsız, performansla zaman ekseninde karşılaştırmak için ayrı bir kayıt
 - **ExerciseMedia**: `Id`, `ExerciseId` (FK), `MediaType` (Video / Gif), `Url`, `CreatedAt` —

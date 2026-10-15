@@ -62,6 +62,22 @@ export function egzersizAra(
   );
 }
 
+/**
+ * #647 (kullanici karari): kardiyo hareketi Turkce adiyla (takma ad) bulunduysa ad parantezle yazilir --
+ * "Treadmill (Koşu bandı)"; Ingilizce adiyla bulunduysa ya da arama bossa yalnizca "Treadmill". Diger
+ * kategorilerin takma adi (#335, Ingilizce esanlam) gosterilmez.
+ */
+export function egzersizGorunenAdi(eg: Egzersiz, sorgu: string): string {
+  const aranan = aramaIcinSadelestir(sorgu.trim());
+  if (eg.category !== 'Cardio' || !eg.alternateName || aranan === '') {
+    return eg.name;
+  }
+  const adaUyuyor = aramaIcinSadelestir(eg.name).includes(aranan);
+  return !adaUyuyor && aramaIcinSadelestir(eg.alternateName).includes(aranan)
+    ? `${eg.name} (${eg.alternateName})`
+    : eg.name;
+}
+
 /** Oneri sayisi tavani: "Bunu mu demek istediniz?" altinda uzun bir liste aramanin yerini tutmaz. */
 const ONERI_TAVANI = 3;
 
