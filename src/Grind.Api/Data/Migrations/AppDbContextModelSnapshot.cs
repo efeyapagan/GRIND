@@ -156,6 +156,90 @@ namespace Grind.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Grind.Api.Models.Entities.CardioEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("Cadence")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Damper")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("DistanceKm")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ExerciseId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Floors")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("InclinePercent")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.Property<bool>("IsDistanceRecord")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDurationRecord")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("Jumps")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("SpeedKmh")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Steps")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Watts")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("WorkoutSessionId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkoutSessionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CardioEntries_WorkoutSessionId_Running")
+                        .HasFilter("\"DurationSeconds\" IS NULL");
+
+                    b.HasIndex("ExerciseId", "WorkoutSessionId");
+
+                    b.HasIndex("WorkoutSessionId", "ClientRequestId")
+                        .IsUnique()
+                        .HasFilter("\"ClientRequestId\" IS NOT NULL");
+
+                    b.ToTable("CardioEntries", t =>
+                        {
+                            t.HasCheckConstraint("CK_CardioEntry_Duration_Positive", "\"DurationSeconds\" IS NULL OR \"DurationSeconds\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("Grind.Api.Models.Entities.Exercise", b =>
                 {
                     b.Property<long>("Id")
@@ -1937,6 +2021,136 @@ namespace Grind.Api.Data.Migrations
                             IsArchived = false,
                             Measurement = "Duration",
                             Name = "Wall Sit"
+                        },
+                        new
+                        {
+                            Id = 193L,
+                            AlternateName = "Koşu bandı",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Treadmill"
+                        },
+                        new
+                        {
+                            Id = 194L,
+                            AlternateName = "Yürüyüş bandı",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Walking Pad"
+                        },
+                        new
+                        {
+                            Id = 195L,
+                            AlternateName = "Kondisyon bisikleti",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Stationary Bike"
+                        },
+                        new
+                        {
+                            Id = 196L,
+                            AlternateName = "Yatay bisiklet",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Recumbent Bike"
+                        },
+                        new
+                        {
+                            Id = 197L,
+                            AlternateName = "Spinning bisikleti",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Spin Bike"
+                        },
+                        new
+                        {
+                            Id = 198L,
+                            AlternateName = "Hava bisikleti",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Air Bike"
+                        },
+                        new
+                        {
+                            Id = 199L,
+                            AlternateName = "Eliptik bisiklet",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Elliptical"
+                        },
+                        new
+                        {
+                            Id = 200L,
+                            AlternateName = "Merdiven makinesi",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Stair Climber"
+                        },
+                        new
+                        {
+                            Id = 201L,
+                            AlternateName = "Step aleti",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Stepper"
+                        },
+                        new
+                        {
+                            Id = 202L,
+                            AlternateName = "Kürek makinesi",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Rowing Machine"
+                        },
+                        new
+                        {
+                            Id = 203L,
+                            AlternateName = "Kayak ergometresi",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Ski Erg"
+                        },
+                        new
+                        {
+                            Id = 204L,
+                            AlternateName = "Dikey tırmanma makinesi",
+                            Category = "Cardio",
+                            Equipment = "Machine",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Vertical Climber"
+                        },
+                        new
+                        {
+                            Id = 205L,
+                            AlternateName = "İp atlama",
+                            Category = "Cardio",
+                            Equipment = "Other",
+                            IsArchived = false,
+                            Measurement = "Cardio",
+                            Name = "Jump Rope"
                         });
                 });
 
@@ -2460,6 +2674,25 @@ namespace Grind.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Grind.Api.Models.Entities.CardioEntry", b =>
+                {
+                    b.HasOne("Grind.Api.Models.Entities.Exercise", "Exercise")
+                        .WithMany("CardioEntries")
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Grind.Api.Models.Entities.WorkoutSession", "WorkoutSession")
+                        .WithMany("CardioEntries")
+                        .HasForeignKey("WorkoutSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("WorkoutSession");
+                });
+
             modelBuilder.Entity("Grind.Api.Models.Entities.Exercise", b =>
                 {
                     b.HasOne("Grind.Api.Models.Entities.User", "User")
@@ -2652,6 +2885,8 @@ namespace Grind.Api.Data.Migrations
 
             modelBuilder.Entity("Grind.Api.Models.Entities.Exercise", b =>
                 {
+                    b.Navigation("CardioEntries");
+
                     b.Navigation("Media");
 
                     b.Navigation("SessionExercises");
@@ -2682,6 +2917,8 @@ namespace Grind.Api.Data.Migrations
             modelBuilder.Entity("Grind.Api.Models.Entities.WorkoutSession", b =>
                 {
                     b.Navigation("AiInsights");
+
+                    b.Navigation("CardioEntries");
 
                     b.Navigation("SessionExercises");
 

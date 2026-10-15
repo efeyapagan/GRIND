@@ -10,9 +10,10 @@ public class SeedDataTests
         TestModel.Entity<Exercise>().GetSeedData().ToList();
 
     [Fact]
-    public void Yuzdoksaniki_global_egzersiz_seed_edilmistir()
+    public void Ikiyuzbes_global_egzersiz_seed_edilmistir()
     {
-        Assert.Equal(192, Seed().Count);
+        // #647: 13 kardiyo makinesi (193–205).
+        Assert.Equal(205, Seed().Count);
     }
 
     [Fact]
@@ -28,11 +29,11 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Seed_id_leri_birden_yuzdoksanikiye_kadar_benzersizdir()
+    public void Seed_id_leri_birden_ikiyuzbese_kadar_benzersizdir()
     {
         // Üst sınır 999: identity 1000'den başlar (aşağıdaki test), seed Id'leri o aralığa taşmamalı.
         var ids = Seed().Select(row => (long)row["Id"]!).OrderBy(id => id).ToArray();
-        Assert.Equal(Enumerable.Range(1, 192).Select(i => (long)i).ToArray(), ids);
+        Assert.Equal(Enumerable.Range(1, 205).Select(i => (long)i).ToArray(), ids);
     }
 
     [Fact]
@@ -266,7 +267,20 @@ public class SeedDataTests
             ("Hollow Body Hold", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
             ("L-Sit", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
             ("Dead Hang", ExerciseCategory.Other, ExerciseEquipment.Bodyweight),
-            ("Wall Sit", ExerciseCategory.Legs, ExerciseEquipment.Bodyweight)
+            ("Wall Sit", ExerciseCategory.Legs, ExerciseEquipment.Bodyweight),
+            ("Treadmill", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Walking Pad", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Stationary Bike", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Recumbent Bike", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Spin Bike", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Air Bike", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Elliptical", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Stair Climber", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Stepper", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Rowing Machine", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Ski Erg", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Vertical Climber", ExerciseCategory.Cardio, ExerciseEquipment.Machine),
+            ("Jump Rope", ExerciseCategory.Cardio, ExerciseEquipment.Other)
         ];
 
         var actual = Seed()
@@ -279,7 +293,7 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void Takma_adi_olan_dort_egzersiz_beklenenle_birebir_eslesir()
+    public void Takma_adi_olan_egzersizler_beklenenle_birebir_eslesir()
     {
         // #335: "Aynısı varsa iki isimle de aranabilir" kararı — takma isimler tek yerde sabitlenir,
         // AlternateName kolonu üzerinden aramaya girer (bkz. packages/shared/src/lib/egzersizler.ts).
@@ -289,6 +303,20 @@ public class SeedDataTests
             (72L, "Smith Machine Low Incline Press"),
             (83L, "Chest Fly Machine"),
             (111L, "Dumbell Lateral Raise"),
+            // #647: kardiyo makinelerinin takma adı Türkçe adıdır (arama Türkçe adla da bulur).
+            (193L, "Koşu bandı"),
+            (194L, "Yürüyüş bandı"),
+            (195L, "Kondisyon bisikleti"),
+            (196L, "Yatay bisiklet"),
+            (197L, "Spinning bisikleti"),
+            (198L, "Hava bisikleti"),
+            (199L, "Eliptik bisiklet"),
+            (200L, "Merdiven makinesi"),
+            (201L, "Step aleti"),
+            (202L, "Kürek makinesi"),
+            (203L, "Kayak ergometresi"),
+            (204L, "Dikey tırmanma makinesi"),
+            (205L, "İp atlama"),
         ];
 
         // Satırın anonim nesnesi AlternateName'i hiç belirtmediyse GetSeedData() sözlüğünde
@@ -324,6 +352,7 @@ public class SeedDataTests
             (170L, ExerciseMeasurement.Reps),     // Russian Twist
             .. Enumerable.Range(175, 14).Select(id => ((long)id, ExerciseMeasurement.Reps)),
             .. Enumerable.Range(189, 4).Select(id => ((long)id, ExerciseMeasurement.Duration)),
+            .. Enumerable.Range(193, 13).Select(id => ((long)id, ExerciseMeasurement.Cardio)),
         ];
 
         var actual = Seed()

@@ -29,6 +29,14 @@ public class DeleteBehaviorTests
         Assert.Equal(DeleteBehavior.Cascade, BehaviorOf<SetEntry>("WorkoutSessionId"));
     }
 
+    /// <summary>#647: kardiyo kayıtları setler gibi antrenmanla birlikte gider.</summary>
+    [Fact]
+    public void Session_silinince_kardiyo_kayitlari_da_silinir()
+    {
+        Assert.Equal(DeleteBehavior.Cascade, BehaviorOf<CardioEntry>("WorkoutSessionId"));
+        Assert.Equal(DeleteBehavior.Restrict, BehaviorOf<CardioEntry>("ExerciseId"));
+    }
+
     [Fact]
     public void Egzersiz_gecmis_kayitlari_tutuyorsa_silinemez()
     {

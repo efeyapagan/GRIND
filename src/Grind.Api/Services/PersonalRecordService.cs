@@ -9,6 +9,7 @@ namespace Grind.Api.Services;
 
 public class PersonalRecordService(
     ISetEntryRepository setEntryRepository,
+    ICardioEntryRepository cardioRepository,
     ICurrentUserService currentUser) : IPersonalRecordService
 {
     public async Task<RecordType> EvaluateNewAsync(
@@ -82,12 +83,36 @@ public class PersonalRecordService(
         // kaybediyordu (bkz. spec düzeltme notu, 2026-09-10 final inceleme) — bu yüzden
         // kullanıcının TÜM setleri okunuyor. Bir kullanıcının set sayısı binlere çıkarsa bu
         // gruplama SQL tarafına (GROUP BY) taşınmalı.
+        // #647: kardiyo hareketlerinin özeti kardiyo kayıtlarından (bir hareket ya set ya kardiyo taşır).
+        var cardio = await cardioRepository.GetFinishedForUserAsync(userId, cancellationToken);
+
         return records
             .GroupBy(s => s.ExerciseId)
             .Select(BuildSummary)
             .OfType<ExerciseRecordResponse>()
+            .Concat(cardio.GroupBy(c => c.ExerciseId).Select(BuildCardioSummary))
             .OrderBy(r => r.ExerciseName)
             .ToList();
+    }
+
+    /// <summary>#647: en uzun süre ve (girildiyse) en uzun mesafe; eşitlikte ilk ulaşılan (rekor kuralıyla aynı).</summary>
+    private static ExerciseRecordResponse BuildCardioSummary(IGrouping<long, CardioEntry> group)
+    {
+        var exercise = group.First().Exercise;
+        var longest = group
+            .OrderByDescending(c => c.DurationSeconds).ThenBy(c => c.StartedAt).ThenBy(c => c.Id)
+            .First();
+        var farthest = group
+            .Where(c => c.DistanceKm is not null)
+            .OrderByDescending(c => c.DistanceKm).ThenBy(c => c.StartedAt).ThenBy(c => c.Id)
+            .FirstOrDefault();
+
+        return new ExerciseRecordResponse(
+            group.Key, exercise.Name, exercise.Category,
+            0m, null, longest.StartedAt,
+            null, 0m, longest.StartedAt,
+            exercise.Measurement, longest.DurationSeconds,
+            farthest?.DistanceKm, farthest?.StartedAt);
     }
 
     /// <summary>

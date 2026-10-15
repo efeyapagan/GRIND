@@ -32,7 +32,7 @@ public class WorkoutHistoryServiceTests
 
         var service = new WorkoutHistoryService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
-            new ExerciseRepository(context), new StubCurrentUser(user.Id));
+            new ExerciseRepository(context), new CardioEntryRepository(context), new StubCurrentUser(user.Id));
 
         return (context, user, exercise, service, transaction);
     }

@@ -37,7 +37,7 @@ public class PersonalRecordServiceTests
         await context.SaveChangesAsync();
 
         var service = new PersonalRecordService(
-            new SetEntryRepository(context), new StubCurrentUser(user.Id));
+            new SetEntryRepository(context), new CardioEntryRepository(context), new StubCurrentUser(user.Id));
 
         return (context, user, session, exercise, service, transaction);
     }

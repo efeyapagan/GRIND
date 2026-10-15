@@ -3,20 +3,28 @@ import { useTranslation } from 'react-i18next';
 import { useDil } from '@grind/shared/i18n';
 import type { EgzersizRekoru, Plato } from '@grind/shared/api/queries';
 import { formatTarih, formatWeight } from '@grind/shared/lib/format';
+import { kardiyoOzetParcalari, metreMi, BOS_KARDIYO_DEGERLERI } from '@grind/shared/lib/kardiyo';
 import { kalanSureMetni } from '@grind/shared/lib/dinlenme';
 import Rozet from '../ui/Rozet';
 import CamKart from '../ui/CamKart';
 import AyiricliListe from '../ui/AyiricliListe';
+import { useKardiyoAlanlari } from './useKardiyoAlanlari';
 
 /**
  * web/src/components/RekorKarti.tsx ile ayni: en agir set ve en cok tekrar AYRI; degerler sunucunun.
  * Kendi Rekorlar sekmen ve arkadasin rekorlari (#284) ortak; plato (#72) yalnizca kendi rekorlarinda.
  * #346: sureli harekette tek satir en uzun sure; agirliksiz harekette "en agir set" yalnizca ek agirlikla
  * yapilmis bir set varsa cizilir (0 kg'lik bir crunch'in "en agir seti" anlamsiz).
+ * #647: kardiyoda en uzun sure ve (girildiyse) en uzun mesafe; kurek/kayak ergometresinde mesafe metre.
  */
 export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; plato?: Plato }) {
   const { t } = useTranslation();
   const dil = useDil();
+  const kardiyoAlanlari = useKardiyoAlanlari(rekor.exerciseId);
+  const mesafe =
+    rekor.measurement !== 'Cardio' || rekor.bestDistanceKm === null
+      ? null
+      : kardiyoOzetParcalari({ ...BOS_KARDIYO_DEGERLERI, distanceKm: rekor.bestDistanceKm }, metreMi(kardiyoAlanlari), dil)[0];
 
   return (
     // #591: cam kart (spec Karar 9; gecmis kartiyla ayni kose). #615: olcu satirlari kutu degil, aralarinda
@@ -37,13 +45,22 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
         )}
       </View>
       <AyiricliListe>
-        {rekor.measurement === 'Duration' && rekor.bestDurationSeconds !== null && (
+        {(rekor.measurement === 'Duration' || rekor.measurement === 'Cardio') && rekor.bestDurationSeconds !== null && (
           <View testID="rekor-olcusu" className="flex-col gap-1 py-3">
             <View className="flex-row items-center gap-1.5">
               <Rozet>{t('rekorlar.enUzunSure')}</Rozet>
               <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestWeightAt, dil)}</Text>
             </View>
             <Text className="text-metric text-fg">{kalanSureMetni(rekor.bestDurationSeconds * 1000)}</Text>
+          </View>
+        )}
+        {rekor.measurement === 'Cardio' && mesafe && rekor.bestDistanceAt && (
+          <View testID="rekor-olcusu" className="flex-col gap-1 py-3">
+            <View className="flex-row items-center gap-1.5">
+              <Rozet ton="acik">{t('kardiyo.rekorMesafe')}</Rozet>
+              <Text className="text-label-xs text-muted">· {formatTarih(rekor.bestDistanceAt, dil)}</Text>
+            </View>
+            <Text className="text-metric text-fg">{t(`kardiyo.ozet.${mesafe.anahtar}`, { deger: mesafe.deger })}</Text>
           </View>
         )}
         {(rekor.measurement === 'WeightReps' || (rekor.measurement === 'Reps' && rekor.bestWeight > 0)) && (
@@ -58,7 +75,7 @@ export default function RekorKarti({ rekor, plato }: { rekor: EgzersizRekoru; pl
             </View>
           </View>
         )}
-        {rekor.measurement !== 'Duration' && (
+        {rekor.measurement !== 'Duration' && rekor.measurement !== 'Cardio' && (
           <View testID="rekor-olcusu" className="flex-col gap-1 py-3">
             <View className="flex-row items-center gap-1.5">
               <Rozet ton="acik">{t('rekorlar.enCokTekrar')}</Rozet>

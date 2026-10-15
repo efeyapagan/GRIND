@@ -15,10 +15,10 @@ public class ModelShapeTests
 
         // SessionExercise: antrenmanin hareket listesi (#60/#62). Follow: takip sistemi (#281).
         // FriendRequest: arkadaslik istegi (#628).
-        // UserAvatar: profil fotografi (#280). AiInsightTranslation: yorumun dil basina metni (#199).
+        // CardioEntry: kardiyo kaydi (#647). UserAvatar: profil fotografi (#280). AiInsightTranslation: yorumun dil basina metni (#199).
         string[] expected =
         [
-            "AiInsight", "AiInsightTranslation", "BodyWeightLog", "Exercise", "ExerciseMedia", "Follow",
+            "AiInsight", "AiInsightTranslation", "BodyWeightLog", "CardioEntry", "Exercise", "ExerciseMedia", "Follow",
             "FriendRequest", "MutedNotificationCategory", "SessionExercise", "SetEntry", "TemplateExercise", "User", "UserAvatar",
             "WeeklyTargetChange",
             "WorkoutSession", "WorkoutTemplate"

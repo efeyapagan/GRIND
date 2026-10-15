@@ -1,9 +1,9 @@
 import { request } from '@grind/shared/api/client';
 import { ApiError } from '@grind/shared/api/problem';
-import { kimlikEsle, sablonuBirak, type BekleyenIslem } from './kuyruk';
+import { kimlikEsle, sablonuBirak, type BekleyenIslem, type KimlikTuru } from './kuyruk';
 
 export interface KimlikEslemesi {
-  tur: 'oturum' | 'set' | 'sablon';
+  tur: KimlikTuru;
   gecici: number;
   gercek: number;
 }
@@ -76,6 +76,33 @@ async function gonder(islem: BekleyenIslem): Promise<KimlikEslemesi | null> {
       return null;
     case 'oturumIptal':
       await request(`/sessions/${islem.oturumId}`, { method: 'DELETE' });
+      return null;
+    case 'kardiyoBaslat': {
+      const yanit = await request<{ id: number }>(`/sessions/${islem.oturumId}/cardio`, {
+        method: 'POST',
+        ...govde({
+          exerciseId: islem.exerciseId,
+          ...islem.degerler,
+          clientStartedAt: islem.startedAt,
+          clientRequestId: islem.anahtar,
+        }),
+      });
+      return { tur: 'kardiyo', gecici: islem.kardiyoId, gercek: yanit.id };
+    }
+    case 'kardiyoDurdur':
+      await request(`/cardio/${islem.kardiyoId}/stop`, {
+        method: 'POST',
+        ...govde({ ...islem.degerler, clientStoppedAt: islem.stoppedAt }),
+      });
+      return null;
+    case 'kardiyoDuzelt':
+      await request(`/cardio/${islem.kardiyoId}`, {
+        method: 'PUT',
+        ...govde({ ...islem.degerler, durationSeconds: islem.durationSeconds }),
+      });
+      return null;
+    case 'kardiyoSil':
+      await request(`/cardio/${islem.kardiyoId}`, { method: 'DELETE' });
       return null;
     case 'sablonOlustur': {
       const yanit = await request<{ id: number }>('/templates', {

@@ -145,3 +145,25 @@ test('antrenmandan kaydedilen sablon antrenman kimligiyle gonderilir', async () 
 
   expect(JSON.parse(requestMock.mock.calls[0][1].body)).toMatchObject({ sessionId: 501, clientRequestId: 't1' });
 });
+
+/** #647: Baslat ve Durdur istemci zamaniyla gider; Baslat'in gercek kimligi Durdur'a uygulanir. */
+test('kardiyo istemci zamaniyla gonderilir, kimligi durdurmaya uygulanir', async () => {
+  requestMock.mockImplementation(async (yol: string) => (yol === '/sessions/40/cardio' ? { id: 77 } : {}));
+  const kardiyo: BekleyenIslem[] = [
+    { tur: 'kardiyoBaslat', anahtar: 'k1', oturumId: 40, kardiyoId: -20, exerciseId: 193, degerler: { speedKmh: 9 }, startedAt: '2026-10-03T10:00:00Z' },
+    {
+      tur: 'kardiyoDurdur', anahtar: 'k2', kardiyoId: -20, stoppedAt: '2026-10-03T10:20:00Z',
+      degerler: { speedKmh: 9, inclinePercent: null, level: null, damper: null, distanceKm: 3.2, cadence: null, floors: null, steps: null, jumps: null, watts: null },
+    },
+  ];
+
+  const sonuc = await kuyruguGonder(kardiyo);
+
+  expect(requestMock.mock.calls.map(([yol]) => yol)).toEqual(['/sessions/40/cardio', '/cardio/77/stop']);
+  expect(JSON.parse(requestMock.mock.calls[0][1].body)).toMatchObject({
+    exerciseId: 193, speedKmh: 9, clientStartedAt: '2026-10-03T10:00:00Z', clientRequestId: 'k1',
+  });
+  expect(JSON.parse(requestMock.mock.calls[1][1].body)).toMatchObject({ distanceKm: 3.2, clientStoppedAt: '2026-10-03T10:20:00Z' });
+  expect(sonuc.eslemeler).toEqual([{ tur: 'kardiyo', gecici: -20, gercek: 77 }]);
+});
+

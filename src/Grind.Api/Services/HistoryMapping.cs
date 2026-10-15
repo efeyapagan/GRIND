@@ -1,6 +1,7 @@
 using Grind.Api.Common.Progress;
 using Grind.Api.Common.Rest;
 using Grind.Api.Common.Time;
+using Grind.Api.Models.Dtos.Cardio;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Set;
 using Grind.Api.Models.Entities;
@@ -26,20 +27,29 @@ internal static class HistoryMapping
     public static IReadOnlyList<HistorySessionResponse> ToSessionResponses(
         IReadOnlyList<WorkoutSession> sessions,
         IReadOnlyList<SetEntry> sets,
+        IReadOnlyList<CardioEntry> cardio,
         IReadOnlySet<long> volumeRecordIds,
         long? exerciseId = null)
     {
+        // #647: kardiyo kayıtları antrenmanın İÇİNDE taşınır (arkadaşın geçmişi de aynı eşlemeden geçer).
+        var cardioBySession = cardio
+            .Where(c => exerciseId is null || c.ExerciseId == exerciseId)
+            .GroupBy(c => c.WorkoutSessionId)
+            .ToDictionary(g => g.Key, IReadOnlyList<CardioEntryResponse> (g) => g.Select(CardioMapping.ToResponse).ToList());
         var setsBySession = sets
             .GroupBy(s => s.WorkoutSessionId)
             .ToDictionary(g => g.Key, IReadOnlyList<SetEntry> (g) => g.ToList());
 
         return sessions
-            .Select(s => ToSessionResponse(s, setsBySession.GetValueOrDefault(s.Id, []), volumeRecordIds.Contains(s.Id), exerciseId))
+            .Select(s => ToSessionResponse(
+                s, setsBySession.GetValueOrDefault(s.Id, []), cardioBySession.GetValueOrDefault(s.Id, []),
+                volumeRecordIds.Contains(s.Id), exerciseId))
             .ToList();
     }
 
     private static HistorySessionResponse ToSessionResponse(
-        WorkoutSession session, IReadOnlyList<SetEntry> sets, bool isVolumeRecord, long? exerciseId)
+        WorkoutSession session, IReadOnlyList<SetEntry> sets, IReadOnlyList<CardioEntryResponse> cardio,
+        bool isVolumeRecord, long? exerciseId)
     {
         var rests = RestIntervalCalculator.ForSession(sets);
         // #230: pozisyon da (rest gibi) oturumun TÜM setlerinden hesaplanır -- egzersiz filtresi
@@ -64,7 +74,8 @@ internal static class HistoryMapping
             shown.Count,
             RestIntervalCalculator.Median(shown.Select(s => s.RestSeconds)),
             isVolumeRecord,
-            shown);
+            shown,
+            cardio);
     }
 
     /// <summary>

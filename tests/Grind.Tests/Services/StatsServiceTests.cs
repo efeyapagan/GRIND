@@ -43,7 +43,7 @@ public class StatsServiceTests
         var service = new StatsService(
             new WorkoutSessionRepository(context), new SetEntryRepository(context),
             new BodyWeightLogRepository(context), new UserRepository(context),
-            new WeeklyTargetChangeRepository(context), new ExerciseRepository(context),
+            new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), new CardioEntryRepository(context),
             new StubCurrentUser(user.Id), saat);
 
         return (context, user, exercise, service, saat, transaction);

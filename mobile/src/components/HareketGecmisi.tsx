@@ -61,6 +61,8 @@ const OLCUM_SEKMELERI: Record<EgzersizOlcumu, readonly Sekme[]> = {
   WeightReps: KILOLU_SEKMELER,
   Reps: TEKRAR_SEKMELERI,
   Duration: SURE_SEKMELERI,
+  // #647: kardiyonun ilerleme grafigi yok (kapsam disi); kardiyo hareketinde bu bilesen cizilmez.
+  Cardio: [],
 };
 
 const ARALIKLAR = [

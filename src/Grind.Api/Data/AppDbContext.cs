@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<SessionExercise> SessionExercises => Set<SessionExercise>();
     public DbSet<SetEntry> SetEntries => Set<SetEntry>();
+    public DbSet<CardioEntry> CardioEntries => Set<CardioEntry>();
     public DbSet<BodyWeightLog> BodyWeightLogs => Set<BodyWeightLog>();
     public DbSet<ExerciseMedia> ExerciseMedia => Set<ExerciseMedia>();
     public DbSet<AiInsight> AiInsights => Set<AiInsight>();

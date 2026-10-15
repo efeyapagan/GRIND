@@ -3,6 +3,7 @@ using System.Text;
 using Grind.Api.Common.Records;
 using Grind.Api.Common.Time;
 using Grind.Api.Models.Dtos.BodyWeight;
+using Grind.Api.Models.Dtos.Cardio;
 using Grind.Api.Models.Dtos.Export;
 using Grind.Api.Models.Dtos.History;
 using Grind.Api.Models.Dtos.Record;
@@ -42,6 +43,9 @@ public static class ExportTextFormatter
         "[PR: tekrar] = aynı ağırlıkta o ana kadarki en çok tekrar.",
         "Süreyle ölçülen hareketlerin (plank gibi) setleri saniye olarak yazılır (\"45 sn\"); " +
         "[PR: süre] = o ana kadarki en uzun süre.",
+        "Kardiyo satırları süre (dk/sn), mesafe (km), hız (km/s), eğim (%), seviye, damper, tempo (/dk), kat, adım, " +
+        "atlama ve ortalama watt taşır (yalnızca girilenler); kardiyo hacme sayılmaz. " +
+        "[PR: süre] / [PR: mesafe] = o makinede o ana kadarki en uzun süre / mesafe.",
         "Hareket adının başındaki sayı (\"1.\", \"2.\"...) o oturumda kaçıncı sırada yapıldığıdır; " +
         "sıra performansı etkiler (ör. günün ilk hareketinde daha güçlü olunur) -- karşılaştırma " +
         "yaparken dikkate alınmalıdır."
@@ -133,6 +137,19 @@ public static class ExportTextFormatter
         {
             var head = $"- {SingleLine(record.ExerciseName)} ({record.Category}): ";
 
+            // #647: kardiyoda en uzun süre ve (girildiyse) en uzun mesafe.
+            if (record.Measurement == ExerciseMeasurement.Cardio)
+            {
+                var line = head + $"en uzun {CardioDurationText(record.BestDurationSeconds ?? 0)} ({LocalDateText(record.BestWeightAt)})";
+                if (record.BestDistanceKm is { } km && record.BestDistanceAt is { } at)
+                {
+                    line += Inv($" · en uzun mesafe {km:0.###} km ({LocalDateText(at)})");
+                }
+
+                Line(text, line);
+                continue;
+            }
+
             // #346: süreli harekette tek "en iyi" en uzun süredir; kilo ve tekrar anlamsız.
             if (record.BestDurationSeconds is { } seconds)
             {
@@ -183,7 +200,7 @@ public static class ExportTextFormatter
         Section(text, "Oturumlar");
 
         var gosterilecek = options.SkipEmptySessions
-            ? sessions.Where(s => s.Sets.Count > 0 || !string.IsNullOrWhiteSpace(s.Notes)).ToList()
+            ? sessions.Where(s => s.Sets.Count > 0 || s.Cardio.Count > 0 || !string.IsNullOrWhiteSpace(s.Notes)).ToList()
             : sessions;
 
         if (gosterilecek.Count == 0)
@@ -219,7 +236,7 @@ public static class ExportTextFormatter
             Line(text, $"Zorluk: {DifficultyText(difficulty)}");
         }
 
-        if (session.Sets.Count == 0)
+        if (session.Sets.Count == 0 && session.Cardio.Count == 0)
         {
             Line(text, "(Bu oturumda set girilmedi.)");
             return;
@@ -243,8 +260,46 @@ public static class ExportTextFormatter
                 $"{string.Join(", ", sets.Select((s, i) => SetWithMarks(s, isinma: i < isinmaSayisi)))}");
         }
 
-        Line(text, Inv($"Toplam: {session.SetCount} set, {session.TotalVolume:0.##} kg"));
+        // #647: kardiyo kayıtları başlangıç sırasıyla, kendi satırlarında; hacme girmez.
+        foreach (var cardio in session.Cardio)
+        {
+            Line(text, $"- Kardiyo · {SingleLine(cardio.ExerciseName)}: {CardioText(cardio)}");
+        }
+
+        if (session.Sets.Count > 0)
+        {
+            Line(text, Inv($"Toplam: {session.SetCount} set, {session.TotalVolume:0.##} kg"));
+        }
     }
+
+    /// <summary>#647: "20 dk · 3.2 km · 9 km/s · %6 eğim [PR: mesafe]" — yalnızca girilen kutular.</summary>
+    private static string CardioText(CardioEntryResponse c)
+    {
+        var parts = new List<string> { c.DurationSeconds is { } s ? CardioDurationText(s) : "sürüyor" };
+        if (c.DistanceKm is { } km) parts.Add(Inv($"{km:0.###} km"));
+        if (c.SpeedKmh is { } speed) parts.Add(Inv($"{speed:0.#} km/s"));
+        if (c.InclinePercent is { } incline) parts.Add(Inv($"%{incline:0.#} eğim"));
+        if (c.Level is { } level) parts.Add(Inv($"seviye {level}"));
+        if (c.Damper is { } damper) parts.Add(Inv($"damper {damper}"));
+        if (c.Cadence is { } cadence) parts.Add(Inv($"tempo {cadence}/dk"));
+        if (c.Floors is { } floors) parts.Add(Inv($"{floors} kat"));
+        if (c.Steps is { } steps) parts.Add(Inv($"{steps} adım"));
+        if (c.Jumps is { } jumps) parts.Add(Inv($"{jumps} atlama"));
+        if (c.Watts is { } watts) parts.Add(Inv($"ort. {watts} W"));
+
+        var text = string.Join(" · ", parts);
+        if (c.IsDurationRecord) text += " [PR: süre]";
+        if (c.IsDistanceRecord) text += " [PR: mesafe]";
+        return text;
+    }
+
+    /// <summary>"20 dk", "20 dk 30 sn", "45 sn".</summary>
+    private static string CardioDurationText(int seconds) => (seconds / 60, seconds % 60) switch
+    {
+        (0, var sn) => Inv($"{sn} sn"),
+        (var dk, 0) => Inv($"{dk} dk"),
+        var (dk, sn) => Inv($"{dk} dk {sn} sn"),
+    };
 
     /// <summary>
     /// "Vücut ölçüleri" (issue #119 öncesi "Vücut ağırlığı"): bir kayıtta üç ölçünün (kilo, yağ

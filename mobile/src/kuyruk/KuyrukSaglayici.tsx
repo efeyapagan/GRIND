@@ -16,7 +16,7 @@ const YENIDEN_DENEME_MS = 10_000;
  */
 function dondurulanSorgular() {
   // Sablonlar (dilim 3): bekleyen olusturma/duzenleme varken sunucudan gelen eski liste onlari ezmesin.
-  return [queryKeys.openSession, ['sessionSets'], queryKeys.historyAll, queryKeys.calendarAll, queryKeys.templates, ['template']];
+  return [queryKeys.openSession, ['sessionSets'], ['sessionCardio'], queryKeys.historyAll, queryKeys.calendarAll, queryKeys.templates, ['template']];
 }
 
 export function kuyrukAnahtari(kullaniciAdi: string): string {
@@ -52,6 +52,7 @@ function hepsiniTazele(queryClient: QueryClient) {
   for (const anahtar of [
     queryKeys.openSession,
     ['sessionSets'],
+    ['sessionCardio'],
     queryKeys.historyAll,
     queryKeys.records,
     queryKeys.calendarAll,
@@ -159,6 +160,10 @@ export default function KuyrukSaglayici({ children }: { children: React.ReactNod
       if ('setId' in eslenmis) {
         const gercek = eslemeRef.current.get(`set:${eslenmis.setId}`);
         if (gercek !== undefined) eslenmis = { ...eslenmis, setId: gercek };
+      }
+      if ('kardiyoId' in eslenmis) {
+        const gercek = eslemeRef.current.get(`kardiyo:${eslenmis.kardiyoId}`);
+        if (gercek !== undefined) eslenmis = { ...eslenmis, kardiyoId: gercek };
       }
       sorgulariDondur(queryClient, true);
       yaz(kuyrugaEkle(kuyrukRef.current, eslenmis, gonderilen.current));

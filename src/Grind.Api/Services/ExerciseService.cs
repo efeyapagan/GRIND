@@ -1,3 +1,4 @@
+using Grind.Api.Common.Validation;
 using Grind.Api.Common.Exceptions;
 using Grind.Api.Common.Security;
 using Grind.Api.Data;
@@ -214,7 +215,8 @@ public class ExerciseService(
         exercise.Measurement,
         exercise.IsArchived,
         IsGlobal: exercise.UserId is null,
-        exercise.Media.Select(ToResponse).ToList());
+        exercise.Media.Select(ToResponse).ToList(),
+        CardioFieldCatalog.For(exercise.Id, exercise.Measurement));
 
     private static ExerciseMediaResponse ToResponse(ExerciseMedia media) =>
         new(media.Id, media.MediaType, media.Url, media.CreatedAt);

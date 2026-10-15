@@ -56,8 +56,9 @@ public class ExportServiceTests
             sessions,
             sets,
             bodyWeights,
-            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), currentUser, saat),
-            new PersonalRecordService(sets, currentUser),
+            new CardioEntryRepository(context),
+            new StatsService(sessions, sets, bodyWeights, new UserRepository(context), new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), new CardioEntryRepository(context), currentUser, saat),
+            new PersonalRecordService(sets, new CardioEntryRepository(context), currentUser),
             currentUser,
             saat);
     }
@@ -65,7 +66,7 @@ public class ExportServiceTests
     private static StatsService CreateStats(AppDbContext context, long userId) => new(
         new WorkoutSessionRepository(context), new SetEntryRepository(context),
         new BodyWeightLogRepository(context), new UserRepository(context),
-        new WeeklyTargetChangeRepository(context), new ExerciseRepository(context),
+        new WeeklyTargetChangeRepository(context), new ExerciseRepository(context), new CardioEntryRepository(context),
         new StubCurrentUser(userId),
         new SahteSaat(Simdi));
 

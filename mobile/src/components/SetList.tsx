@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable } from 'react-native';
 import { Flame, Plus, Timer, Zap } from 'lucide-react-native';
 import { useDil } from '@grind/shared/i18n';
-import type { SetKaydi } from '@grind/shared/api/queries';
+import type { KardiyoKaydi, SetKaydi } from '@grind/shared/api/queries';
 import { gecilmisRekorIdleri, rekorRozetiMetni } from '@grind/shared/lib/rekor';
 import { setDegeriMetni } from '@grind/shared/lib/setDegeri';
 import { rirEtiketi } from '@grind/shared/lib/rir';
@@ -11,6 +11,7 @@ import Rozet from '../ui/Rozet';
 import Hap from '../ui/Hap';
 import DinlenmeHapi from '../ui/DinlenmeHapi';
 import SetSatiri from './SetSatiri';
+import KardiyoSatiri from './KardiyoSatiri';
 import CamKart from '../ui/CamKart';
 import CamDolgu from '../ui/CamDolgu';
 import AyiricliListe from '../ui/AyiricliListe';
@@ -20,6 +21,33 @@ import { useIkonRenk } from '../ui/renkler';
 interface OrtakProps {
   sets: SetKaydi[];
   bosDurumMetni?: string;
+  /** #647: gecmiste antrenmanin kardiyo kayitlari -- hareketlerin arasinda, yapildiklari sirayla (salt-okunur). */
+  kardiyolar?: KardiyoKaydi[];
+}
+
+interface KardiyoGrubu {
+  exerciseId: number;
+  exerciseName: string;
+  kayitlar: KardiyoKaydi[];
+}
+
+/** Set ve kardiyo gruplarini ilk kayitlarinin zamanina gore tek siraya dizer (antrenmanda yapildiklari sira). */
+function zamanSirasi(
+  setGruplari: readonly EgzersizGrubu[],
+  kardiyolar: readonly KardiyoKaydi[],
+): ({ tur: 'set'; grup: EgzersizGrubu } | { tur: 'kardiyo'; grup: KardiyoGrubu })[] {
+  const kardiyoGruplari = new Map<number, KardiyoGrubu>();
+  for (const kayit of kardiyolar) {
+    const grup = kardiyoGruplari.get(kayit.exerciseId);
+    if (grup) grup.kayitlar.push(kayit);
+    else kardiyoGruplari.set(kayit.exerciseId, { exerciseId: kayit.exerciseId, exerciseName: kayit.exerciseName, kayitlar: [kayit] });
+  }
+  return [
+    ...setGruplari.map((grup) => ({ tur: 'set' as const, grup, an: Date.parse(grup.sets[0].createdAt) })),
+    ...[...kardiyoGruplari.values()].map((grup) => ({ tur: 'kardiyo' as const, grup, an: Date.parse(grup.kayitlar[0].startedAt) })),
+  ]
+    .sort((a, b) => a.an - b.an)
+    .map(({ an: _an, ...oge }) => oge);
 }
 
 type Props = OrtakProps &
@@ -67,14 +95,31 @@ export default function SetList(props: Props) {
   }, [sets]);
   const gecilmisRekorlar = useMemo(() => gecilmisRekorIdleri(sets), [sets]);
 
-  if (gruplar.length === 0) {
+  const kardiyolar = props.kardiyolar ?? [];
+  if (gruplar.length === 0 && kardiyolar.length === 0) {
     return <Text className="text-body text-muted">{bosDurumMetni}</Text>;
   }
 
   if (props.varyant === 'gecmis') {
     return (
       <View className="flex-col gap-5">
-        {gruplar.map((grup) => (
+        {zamanSirasi(gruplar, kardiyolar).map((oge) => {
+          if (oge.tur === 'kardiyo') {
+            return (
+              <View key={`kardiyo-${oge.grup.exerciseId}`} className="flex-col gap-2">
+                <Text numberOfLines={1} className="px-1 text-body-lg font-semibold text-fg">
+                  {oge.grup.exerciseName}
+                </Text>
+                <AyiricliListe>
+                  {oge.grup.kayitlar.map((kayit) => (
+                    <KardiyoSatiri key={kayit.id} kayit={kayit} />
+                  ))}
+                </AyiricliListe>
+              </View>
+            );
+          }
+          const grup = oge.grup;
+          return (
           <View key={grup.exerciseId} className="flex-col gap-2">
             <View className="flex-row items-center justify-between gap-2 px-1">
               <Text numberOfLines={1} className="flex-1 text-body-lg font-semibold text-fg">
@@ -158,7 +203,8 @@ export default function SetList(props: Props) {
               </Pressable>
             )}
           </View>
-        ))}
+          );
+        })}
       </View>
     );
   }

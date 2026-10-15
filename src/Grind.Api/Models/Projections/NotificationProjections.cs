@@ -15,7 +15,7 @@ public record RecordSessionEvent(long SessionId, DateTime OccurredAt, UserRef Ac
 /// </summary>
 public record RecordSetRow(
     long SessionId, long ExerciseId, string ExerciseName, decimal Weight, int? Reps, int? DurationSeconds,
-    RecordType RecordType, DateTime CreatedAt, int? OrderIndex, ExerciseMeasurement Measurement);
+    RecordType RecordType, DateTime CreatedAt, int? OrderIndex, ExerciseMeasurement Measurement, decimal? DistanceKm = null);
 
 /// <summary>
 /// #419: bir arkadaşın haftalık hedefe sayılabilecek bir antrenmanı. Hangi oturumun hedefi

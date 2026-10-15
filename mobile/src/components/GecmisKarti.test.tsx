@@ -14,6 +14,7 @@ function ornekOturum(gecersizler: Partial<GecmisOturum> = {}): GecmisOturum {
     totalVolume: 3400,
     durationSeconds: null,
     sets: [],
+    cardio: [],
     ...gecersizler,
   };
 }

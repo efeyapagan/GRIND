@@ -16,8 +16,10 @@ import { ChevronLeft, ClipboardList, Plus } from 'lucide-react-native';
 import {
   useExercises,
   useOpenSession,
+  useSessionCardio,
   useSessionSets,
   useTemplate,
+  type KardiyoKaydi,
   type SetKaydi,
 } from '@grind/shared/api/queries';
 import { formatSaat } from '@grind/shared/lib/format';
@@ -31,6 +33,9 @@ import SetList from '../../src/components/SetList';
 import AntrenmanAltAlani from '../../src/components/AntrenmanAltAlani';
 import SetPaneli from '../../src/components/SetPaneli';
 import SetDuzenleyici from '../../src/components/SetDuzenleyici';
+import KardiyoPaneli from '../../src/components/KardiyoPaneli';
+import KardiyoDuzenleyici from '../../src/components/KardiyoDuzenleyici';
+import { useKardiyoHareketleri } from '../../src/components/useKardiyoAlanlari';
 import { useDinlenme } from '../../src/components/useDinlenme';
 import { useAltMenuPayi } from '../../src/ui/KabukTabBar';
 import { useKlavyeYuksekligi } from '../../src/ui/useKlavyeYuksekligi';
@@ -47,6 +52,7 @@ import {
   useKuyrukluAddSessionExercise,
   useKuyrukluDeleteSession,
   useKuyrukluHareketKaldir,
+  useKuyrukluKardiyoSil,
   useKuyrukluReorderSessionExercises,
   useKuyrukluSetSil,
   useKuyrukluStartSession,
@@ -115,7 +121,11 @@ export default function AntrenmanScreen() {
   } = useSessionSets(oturum?.id ?? null);
   const setlerHataliMi = setlerSorgusuHatali && setler === undefined;
   const setlerYuklendi = !setlerYukleniyor && !setlerHataliMi && setler !== undefined;
-  const oturumBos = setlerYuklendi && setler.length === 0;
+  // #647: antrenmanin kardiyo kayitlari (akan dahil). Yalnizca kardiyo yapilmis antrenman bos DEGILDIR: iptal
+  // edilmez, bitirilir.
+  const { data: kardiyolar } = useSessionCardio(oturum?.id ?? null);
+  const kardiyoHareketleri = useKardiyoHareketleri();
+  const oturumBos = setlerYuklendi && setler.length === 0 && (kardiyolar ?? []).length === 0;
   const { data: egzersizler } = useExercises();
   // #174 dilim 2: yazmalar kuyruklu -- cevrimdisiyken kuyruga girer, ekran hemen guncellenir.
   const baslatMutasyonu = useKuyrukluStartSession();
@@ -159,6 +169,9 @@ export default function AntrenmanScreen() {
   // #396: duzenlenen set -- duzenleyici ekranin ortasinda acilir. `panelAcik`a dokunulmaz: odak
   // modundan gelindiyse duzenleyici kapaninca odak karti + set paneli geri gelir.
   const [duzenlenen, setDuzenlenen] = useState<{ kayit: SetKaydi; sira: number } | null>(null);
+  // #647: duzenlenen kardiyo kaydi -- set duzenleyicisiyle ayni yerde acilir.
+  const [duzenlenenKardiyo, setDuzenlenenKardiyo] = useState<KardiyoKaydi | null>(null);
+  const duzenlemeAcik = duzenlenen !== null || duzenlenenKardiyo !== null;
   // Issue #273: "Hareket ekle" acma dugmesi ust basliga tasindiktan sonra bu durumu artik
   // AntrenmanAltAlani degil burasi tutar -- ust baslikla alt alan AYNI paneli acabilsin diye.
   const [hareketEkleAcik, setHareketEkleAcik] = useState(false);
@@ -169,6 +182,12 @@ export default function AntrenmanScreen() {
   const hareketKaldirmayiTamamla = useKuyrukluHareketKaldir();
   const hareketKaldirma = useGecikmeliSilme<BekleyenHareket>(hareketKaldirmayiTamamla);
   const kaldirilanHareketId = hareketKaldirma.bekleyen?.exerciseId;
+
+  const kardiyoSilmeyiTamamla = useKuyrukluKardiyoSil();
+  const kardiyoSilme = useGecikmeliSilme(kardiyoSilmeyiTamamla);
+  const gorunenKardiyolar = (kardiyolar ?? []).filter(
+    (kayit) => kayit.id !== kardiyoSilme.bekleyen?.id && kayit.exerciseId !== kaldirilanHareketId,
+  );
 
   const gorunenSetler = (setler ?? []).filter(
     (kayit) => kayit.id !== setSilme.bekleyen?.id && kayit.exerciseId !== kaldirilanHareketId,
@@ -210,10 +229,11 @@ export default function AntrenmanScreen() {
   // asili kaliyordu (kullanici bulgusu). Durum render sirasinda sifirlanir -- `varsayilanUygulananOturum`
   // ile ayni desen. `oturumYok`: yukleniyor/hata degil, GERCEKTEN oturum yok demek.
   const oturumYok = !oturumYukleniyor && !oturumHataliMi && !oturum;
-  if (oturumYok && (panelAcik || hareketEkleAcik || duzenlenen)) {
+  if (oturumYok && (panelAcik || hareketEkleAcik || duzenlemeAcik)) {
     setPanelAcik(false);
     setHareketEkleAcik(false);
     setDuzenlenen(null);
+    setDuzenlenenKardiyo(null);
   }
 
   function secimYap(exerciseId: number): boolean {
@@ -234,7 +254,7 @@ export default function AntrenmanScreen() {
   // ust kenarina kadar kalan alani doldurur -- ikisi birlikte ekrani kaplar. Onceki "karti panelin
   // ustune kaydir" hizalamasi (#274) bu yuzden kalkti: kart artik zaten panelin ustunde.
   // #396: set duzenlenirken odak karti ve set paneli gizlenir -- duzenleyici ekranda tek basina durur.
-  const odakHareketi = panelAcik && !duzenlenen ? gorunenIlerleme.find((hareket) => hareket.exerciseId === etkinSecim) : undefined;
+  const odakHareketi = panelAcik && !duzenlemeAcik ? gorunenIlerleme.find((hareket) => hareket.exerciseId === etkinSecim) : undefined;
 
   // #385: set eklenince panel kapanmaz, ilk acildigi hale doner (`formSurumu` SetPaneli'ni yeniden
   // kurar). Yalnizca hedefe ULASILAN setten sonra kapanir: set eklenirken hedef henuz dolmamissa
@@ -355,7 +375,7 @@ export default function AntrenmanScreen() {
         contentContainerClassName="flex-grow gap-5 px-4 pt-2 pb-4"
         // Klavye yalnizca set panelinden acilir; liste o an odak kartinin arkasinda. Varsayilan "en
         // alta kay" listeyi camin arkasinda oynatir ve kart kapaninca kullanici baska yerde kalirdi.
-        onKlavyeAcildi={panelAcik || duzenlenen ? kaydirmaYok : undefined}
+        onKlavyeAcildi={panelAcik || duzenlemeAcik ? kaydirmaYok : undefined}
       >
         <View className="flex-col gap-1">
           <View className="flex-row items-start justify-between gap-2">
@@ -466,6 +486,9 @@ export default function AntrenmanScreen() {
                 onSec={kartSec}
                 onSetDuzenle={setiDuzenle}
                 onSiraDegis={siraDegistir}
+                kardiyoHareketleri={kardiyoHareketleri}
+                kardiyolar={gorunenKardiyolar}
+                onKardiyoDuzenle={setDuzenlenenKardiyo}
               />
             ) : (
               <>
@@ -508,6 +531,15 @@ export default function AntrenmanScreen() {
           sureMs={GERI_AL_MS}
           onGeriAl={setSilme.geriAl}
           onSureDoldu={setSilme.sureDoldu}
+        />
+      )}
+      {kardiyoSilme.bekleyen && (
+        <GeriAlSeridi
+          key={`kardiyo-${kardiyoSilme.bekleyen.id}`}
+          mesaj={t('kardiyo.kayitSilindi')}
+          sureMs={GERI_AL_MS}
+          onGeriAl={kardiyoSilme.geriAl}
+          onSureDoldu={kardiyoSilme.sureDoldu}
         />
       )}
       {hareketKaldirma.bekleyen && (
@@ -584,6 +616,12 @@ export default function AntrenmanScreen() {
                 onSetDuzenle={setiDuzenle}
                 onKaldir={() => hareketiKaldirmayaBasla(odakHareketi.exerciseId)}
                 onKapat={() => setPanelAcik(false)}
+                kardiyolar={
+                  kardiyoHareketleri.has(odakHareketi.exerciseId)
+                    ? gorunenKardiyolar.filter((kayit) => kayit.exerciseId === odakHareketi.exerciseId)
+                    : undefined
+                }
+                onKardiyoDuzenle={setDuzenlenenKardiyo}
               />
             </Animated.View>
           </View>
@@ -597,14 +635,26 @@ export default function AntrenmanScreen() {
           style={{ position: 'absolute', left: 0, right: 0, bottom: panelAlti }}
           className="px-4"
         >
-          {panelAcik && !duzenlenen && etkinSecim !== null && seciliEgzersizAdi && (
+          {panelAcik && !duzenlemeAcik && etkinSecim !== null && seciliEgzersizAdi && (
             <Animated.View entering={PANEL_ACILISI} exiting={PANEL_KAPANISI}>
-              <SetPaneli
-                key={formSurumu}
-                egzersizId={etkinSecim}
-                egzersizAdi={seciliEgzersizAdi}
-                onSetEklendi={setEklendi}
-              />
+              {/* #647: kardiyo hareketinde set paneli yerine Baslat/Durdur paneli; kardiyo dinlenme sayacini baslatmaz. */}
+              {kardiyoHareketleri.has(etkinSecim) ? (
+                <KardiyoPaneli
+                  key={etkinSecim}
+                  egzersizId={etkinSecim}
+                  egzersizAdi={seciliEgzersizAdi}
+                  oturumId={gorunenOturum.id}
+                  kardiyolar={gorunenKardiyolar}
+                  onKaydedildi={() => setPanelAcik(false)}
+                />
+              ) : (
+                <SetPaneli
+                  key={formSurumu}
+                  egzersizId={etkinSecim}
+                  egzersizAdi={seciliEgzersizAdi}
+                  onSetEklendi={setEklendi}
+                />
+              )}
             </Animated.View>
           )}
         </View>
@@ -612,13 +662,16 @@ export default function AntrenmanScreen() {
       {/* #396: set duzenleyici ekranin ortasinda -- duzenlemede "Set ekle" paneli olmadigi icin odak
           karti + alt panel duzeni altta bos bir alan birakirdi. Alt menunun (klavye acikken klavyenin)
           ustunde kalan alana ortalanir (`panelAlti`); perde odak katmanindakiyle ayni. */}
-      {duzenlenen && (
+      {duzenlemeAcik && (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <Animated.View entering={FadeIn.duration(150)} exiting={ODAK_KAPANISI} style={StyleSheet.absoluteFill}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('antrenman.duzenlemeyiKapat')}
-              onPress={() => setDuzenlenen(null)}
+              onPress={() => {
+                setDuzenlenen(null);
+                setDuzenlenenKardiyo(null);
+              }}
               className={`flex-1 ${etkinTema === 'acik' ? 'bg-black/20' : 'bg-black/40'}`}
             />
           </Animated.View>
@@ -628,16 +681,29 @@ export default function AntrenmanScreen() {
             className="justify-center px-4"
           >
             <Animated.View entering={odakAcilisi} exiting={ODAK_KAPANISI}>
-              <SetDuzenleyici
-                key={duzenlenen.kayit.id}
-                kayit={duzenlenen.kayit}
-                sira={duzenlenen.sira}
-                onKapat={() => setDuzenlenen(null)}
-                onSil={() => {
-                  setiSilmeyeBasla(duzenlenen.kayit);
-                  setDuzenlenen(null);
-                }}
-              />
+              {duzenlenen && (
+                <SetDuzenleyici
+                  key={duzenlenen.kayit.id}
+                  kayit={duzenlenen.kayit}
+                  sira={duzenlenen.sira}
+                  onKapat={() => setDuzenlenen(null)}
+                  onSil={() => {
+                    setiSilmeyeBasla(duzenlenen.kayit);
+                    setDuzenlenen(null);
+                  }}
+                />
+              )}
+              {duzenlenenKardiyo && (
+                <KardiyoDuzenleyici
+                  key={duzenlenenKardiyo.id}
+                  kayit={duzenlenenKardiyo}
+                  onKapat={() => setDuzenlenenKardiyo(null)}
+                  onSil={() => {
+                    kardiyoSilme.baslat(duzenlenenKardiyo);
+                    setDuzenlenenKardiyo(null);
+                  }}
+                />
+              )}
             </Animated.View>
           </View>
         </View>

@@ -15,6 +15,10 @@ public static class SetMeasurementRules
     {
         switch (measurement)
         {
+            // #647: kardiyo set değil kardiyo kaydı olarak girilir (CardioEntry). Set yolu (ekleme ve düzeltme)
+            // hepsi buradan geçtiği için tek yerde kapanır.
+            case ExerciseMeasurement.Cardio:
+                throw new ValidationException("Kardiyo hareketine set girilmez; kardiyo kaydı olarak başlatılır.");
             case ExerciseMeasurement.WeightReps when durationSeconds is not null:
                 throw new ValidationException("Bu hareket süreyle değil, ağırlık ve tekrarla kaydedilir.");
             case ExerciseMeasurement.Reps when durationSeconds is not null:

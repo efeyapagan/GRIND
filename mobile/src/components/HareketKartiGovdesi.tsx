@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Check, CirclePlay, Plus, X } from 'lucide-react-native';
-import type { HareketIlerlemesi, SetKaydi } from '@grind/shared/api/queries';
+import type { HareketIlerlemesi, KardiyoKaydi, SetKaydi } from '@grind/shared/api/queries';
 import { hedefTamamlandi } from '@grind/shared/lib/ilerleme';
 import { gecilmisRekorIdleri } from '@grind/shared/lib/rekor';
 import SetSatiri from './SetSatiri';
+import KardiyoSatiri from './KardiyoSatiri';
 import IkonDugmesi from '../ui/IkonDugmesi';
 import CamDolgu from '../ui/CamDolgu';
 import AyiricliListe from '../ui/AyiricliListe';
@@ -21,6 +22,9 @@ interface Props {
   onSec?: () => void;
   /** #357: odak kartinda basligin en solundaki kapatma dugmesi -- karti ve set panelini birlikte kapatir. */
   onKapat?: () => void;
+  /** #647: verilirse kardiyo karti -- setler yerine bu hareketin kardiyo kayitlari cizilir, set sayaci cizilmez. */
+  kardiyolar?: KardiyoKaydi[];
+  onKardiyoDuzenle?: (kayit: KardiyoKaydi) => void;
 }
 
 function setSayaci(hareket: HareketIlerlemesi): string {
@@ -33,11 +37,20 @@ function setSayaci(hareket: HareketIlerlemesi): string {
  * Hareket kartinin baslik + set satirlari (#354): liste karti (`HareketKartlari`) ile set paneliyle
  * birlikte acilan odak karti (`OdakKarti`) ayni govdeyi cizer; yuzeyi ve ek ayrintilari cagiran verir.
  */
-export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenle, onSec, onKapat }: Props) {
+export default function HareketKartiGovdesi({
+  hareket,
+  sira,
+  setler,
+  onSetDuzenle,
+  onSec,
+  onKapat,
+  kardiyolar,
+  onKardiyoDuzenle,
+}: Props) {
   const ikonRenk = useIkonRenk();
   const { t } = useTranslation();
   const tamamlandi = hedefTamamlandi(hareket);
-  const sayac = setSayaci(hareket);
+  const sayac = kardiyolar ? '' : setSayaci(hareket);
   const gecilmisRekorlar = useMemo(() => gecilmisRekorIdleri(setler), [setler]);
   const baslik = (
     <>
@@ -58,7 +71,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
         {onSec && <CirclePlay color={ikonRenk.muted} size={18} style={{ opacity: 0.5 }} />}
       </View>
       <View className="shrink-0 flex-row items-center gap-1">
-        <Text className="text-label-xs text-muted uppercase">{sayac}</Text>
+        {sayac !== '' && <Text className="text-label-xs text-muted uppercase">{sayac}</Text>}
         {onSec && <Plus color={ikonRenk.muted} size={14} />}
       </View>
     </>
@@ -69,7 +82,7 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
       {onSec ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${hareket.exerciseName}, ${sayac}`}
+          accessibilityLabel={sayac === '' ? hareket.exerciseName : `${hareket.exerciseName}, ${sayac}`}
           onPress={onSec}
           className="min-h-12 w-full flex-row items-center justify-between gap-2"
         >
@@ -78,7 +91,14 @@ export default function HareketKartiGovdesi({ hareket, sira, setler, onSetDuzenl
       ) : (
         <View className="min-h-12 w-full flex-row items-center justify-between gap-2">{baslik}</View>
       )}
-      {setler.length > 0 && (
+      {kardiyolar && kardiyolar.length > 0 && (
+        <AyiricliListe>
+          {kardiyolar.map((kayit) => (
+            <KardiyoSatiri key={kayit.id} kayit={kayit} onDuzenle={onKardiyoDuzenle} />
+          ))}
+        </AyiricliListe>
+      )}
+      {!kardiyolar && setler.length > 0 && (
         <AyiricliListe>
           {setler.map((kayit, setSirasi) => (
             <SetSatiri

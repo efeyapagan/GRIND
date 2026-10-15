@@ -3,6 +3,7 @@ import type {
   EgzersizOlcumu,
   GecmisOturum,
   HareketIlerlemesi,
+  KardiyoKaydi,
   Sablon,
   SetKaydi,
   TakvimOzeti,
@@ -154,7 +155,12 @@ export function siralaIyimser(oturum: AcikOturum, exerciseIds: number[]): AcikOt
  * Cevrimdisi bitirilen antrenmanin gecmis karti (kullanici karari: gecmiste hemen gorunur). Gonderilince
  * gecmis sunucudan tazelenir ve bu ozet sunucunun kaydiyla degisir.
  */
-export function gecmisOzeti(oturum: AcikOturum, setler: SetKaydi[], endedAt: string): GecmisOturum {
+export function gecmisOzeti(
+  oturum: AcikOturum,
+  setler: SetKaydi[],
+  endedAt: string,
+  kardiyolar: KardiyoKaydi[] = [],
+): GecmisOturum {
   return {
     sessionId: oturum.id,
     startedAt: oturum.startedAt,
@@ -165,6 +171,12 @@ export function gecmisOzeti(oturum: AcikOturum, setler: SetKaydi[], endedAt: str
     setCount: setler.length,
     durationSeconds: Math.max(0, Math.round((Date.parse(endedAt) - Date.parse(oturum.startedAt)) / 1000)),
     sets: setler,
+    // #647: akan kardiyo, sunucudaki arka kapi gibi bitis aninda kapanir.
+    cardio: kardiyolar.map((kayit) =>
+      kayit.durationSeconds !== null
+        ? kayit
+        : { ...kayit, durationSeconds: Math.max(1, Math.round((Date.parse(endedAt) - Date.parse(kayit.startedAt)) / 1000)) },
+    ),
   };
 }
 

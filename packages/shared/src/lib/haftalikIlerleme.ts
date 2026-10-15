@@ -16,7 +16,8 @@ export function hacimHaftalari(haftalar: readonly HaftalikIstatistik[], aralik: 
   return sayi === null ? tamamlanmis : tamamlanmis.slice(-sayi);
 }
 
-export const KAS_GRUPLARI: readonly EgzersizKategorisi[] = ['Push', 'Pull', 'Legs', 'Other'];
+/** #647: Kardiyo, Other'dan once (kayit sayisi; hacme girmez). */
+export const KAS_GRUPLARI: readonly EgzersizKategorisi[] = ['Push', 'Pull', 'Legs', 'Cardio', 'Other'];
 
 export interface KasGrubuSatiri {
   kategori: EgzersizKategorisi;
@@ -29,10 +30,11 @@ function setSayisi(hafta: HaftalikIstatistik, kategori: EgzersizKategorisi): num
   if (kategori === 'Push') return hafta.pushSets;
   if (kategori === 'Pull') return hafta.pullSets;
   if (kategori === 'Legs') return hafta.legsSets;
+  if (kategori === 'Cardio') return hafta.cardioSets;
   return hafta.otherSets;
 }
 
-/** #184: `sira`daki haftanin dort kas grubu satiri (Push, Pull, Legs, Other sirasiyla). */
+/** #184: `sira`daki haftanin kas grubu satirlari (`KAS_GRUPLARI` sirasiyla). */
 export function kasGrubuSatirlari(haftalar: readonly HaftalikIstatistik[], sira: number): KasGrubuSatiri[] {
   const hafta = haftalar[sira];
   const onceki = sira > 0 ? haftalar[sira - 1] : null;

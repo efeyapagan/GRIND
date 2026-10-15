@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { Check, Search } from 'lucide-react-native';
 import type { Egzersiz, EgzersizKategorisi } from '@grind/shared/api/queries';
 import { useTranslation } from 'react-i18next';
-import { egzersizAra, egzersizOner } from '@grind/shared/lib/egzersizler';
+import { egzersizAra, egzersizGorunenAdi, egzersizOner } from '@grind/shared/lib/egzersizler';
 import { useEkranKaydiriciBaglami } from './EkranKaydirici';
 import { useIkonRenk } from './renkler';
 import KategoriHaplari from './KategoriHaplari';
@@ -194,7 +194,7 @@ export default function HareketSecici({
                     numberOfLines={1}
                     className={`min-w-0 flex-1 text-body ${kapali ? 'text-muted opacity-50' : 'text-fg'}`}
                   >
-                    {egzersiz.name}
+                    {egzersizGorunenAdi(egzersiz, sorgu)}
                   </Text>
                   {secili && <Check color={ikonRenk.accent} size={18} />}
                 </Pressable>

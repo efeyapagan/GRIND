@@ -36,8 +36,8 @@ public class WeeklyStatsCalculatorTests
 
         Assert.Equal(
             [
-                new WeeklyStatsRow(new DateOnly(2026, 3, 2), 500m, 1, 0, 0, 0),
-                new WeeklyStatsRow(new DateOnly(2026, 3, 9), 600m, 0, 1, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 3, 2), 500m, 1, 0, 0, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 3, 9), 600m, 0, 1, 0, 0, 0),
             ],
             haftalar);
     }
@@ -52,10 +52,10 @@ public class WeeklyStatsCalculatorTests
 
         Assert.Equal(
             [
-                new WeeklyStatsRow(new DateOnly(2026, 2, 16), 500m, 0, 0, 1, 0),
-                new WeeklyStatsRow(new DateOnly(2026, 2, 23), 0m, 0, 0, 0, 0),
-                new WeeklyStatsRow(new DateOnly(2026, 3, 2), 0m, 0, 0, 0, 0),
-                new WeeklyStatsRow(new DateOnly(2026, 3, 9), 0m, 0, 0, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 2, 16), 500m, 0, 0, 1, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 2, 23), 0m, 0, 0, 0, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 3, 2), 0m, 0, 0, 0, 0, 0),
+                new WeeklyStatsRow(new DateOnly(2026, 3, 9), 0m, 0, 0, 0, 0, 0),
             ],
             haftalar);
     }
@@ -76,6 +76,18 @@ public class WeeklyStatsCalculatorTests
             ],
             Bugun);
 
-        Assert.Equal([new WeeklyStatsRow(new DateOnly(2026, 3, 9), 640m, 1, 0, 0, 2)], haftalar);
+        Assert.Equal([new WeeklyStatsRow(new DateOnly(2026, 3, 9), 640m, 1, 0, 0, 0, 2)], haftalar);
+    }
+
+    /// <summary>#647: kardiyo kaydı kas grubu kartının "Kardiyo" satırına girer, hacme girmez.</summary>
+    [Fact]
+    public void Kardiyo_kaydi_haftanin_kardiyo_sayisina_girer_hacme_girmez()
+    {
+        var an = new DateTime(2026, 3, 10, 15, 0, 0, DateTimeKind.Utc);
+
+        var haftalar = WeeklyStatsCalculator.Build(
+            [Set(an, 100m, 5, ExerciseCategory.Push), Set(an, 0m, null, ExerciseCategory.Cardio)], Bugun);
+
+        Assert.Equal([new WeeklyStatsRow(new DateOnly(2026, 3, 9), 500m, 1, 0, 0, 1, 0)], haftalar);
     }
 }
